@@ -1,0 +1,99 @@
+spring:
+  config:
+    import: "optional:configtree:/run/secrets/"
+  datasource:
+    password: ${MYSQL_USER_PASSWORD:}
+  jpa:
+    open-in-view: false
+    properties:
+      jakarta:
+        persistence:
+          sharedCache:
+            mode: UNSPECIFIED
+      hibernate:
+        transaction:
+          jta:
+            platform: org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform
+      org.hibernate.envers.audit_table_suffix: _audit
+      org.hibernate.envers.audit_strategy: org.hibernate.envers.strategy.internal.ValidityAuditStrategy
+      org.hibernate.envers.audit_strategy_validity_store_revend_timestamp: true
+      org.hibernate.envers.track_entities_changed_in_revision: true
+      org.hibernate.envers.store_data_at_delete: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${fgv-revival.keycloak.url}/realms/${fgv-revival.keycloak.realm}
+  threads:
+    virtual:
+      enabled: true
+  graphql:
+    schema:
+      printer:
+        enabled: true
+      introspection:
+        enabled: false
+    http:
+      path: /api/graphql
+  ai:
+    mcp:
+      server:
+        name: fgv-revival
+        version: 0.1.0
+        type: SYNC
+        protocol: STATELESS
+        streamable-http:
+          mcp-endpoint: /api/mcp
+        capabilities:
+          resource: false
+          prompt: false
+          completion: false
+        instructions: >-
+          FGV Revival supports the steering groups of Chalmersspex revivals. Every call runs with the
+          permissions of the signed-in user and returns only revivals they can see. No tool deletes anything or
+          sends email.
+
+management:
+  server:
+    port: 9000
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+logging:
+  file:
+    path: ./data/log_data
+
+fgv-revival:
+  base-url: ${FGV_REVIVAL_BASE_URL:http://localhost:8081}
+  keycloak:
+    url: ${FGV_REVIVAL_KEYCLOAK_URL:https://auth.fgv.local.nu:8443/auth}
+    realm: ${FGV_REVIVAL_KEYCLOAK_REALM:fgv}
+  security:
+    authorized-parties: ${FGV_REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
+  mcp:
+    authorized-parties: ${FGV_REVIVAL_MCP_AUTHORIZED_PARTIES:fgv-revival-mcp}
+  spexregister:
+    graphql-url: ${FGV_REVIVAL_SPEXREGISTER_GRAPHQL_URL:https://api.register.fgv.local.nu:8443/api/graphql}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  graphql:
+    schema:
+      introspection:
+        enabled: true
+
+server:
+  port: 8081
+
+management:
+  server:
+    port: 9001
