@@ -103,7 +103,7 @@ dependencies {
     integrationTestImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     integrationTestImplementation 'org.testcontainers:testcontainers-mysql'
     integrationTestImplementation 'com.github.dasniko:testcontainers-keycloak:4.4.0'
-    integrationTestImplementation 'org.wiremock:wiremock-standalone:3.13.1'
+    integrationTestImplementation 'org.wiremock:wiremock-standalone:3.13.2'
 
     runtimeOnly 'com.mysql:mysql-connector-j'
     if (System.getProperty("os.name").toLowerCase().contains("mac") && System.getProperty("os.arch").toLowerCase().contains("aarch64")) {
