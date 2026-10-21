@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class AccessIT extends AbstractIntegrationTest {
+class AccessIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aUserWithOnlyASpexregisterRoleIsRefused() {

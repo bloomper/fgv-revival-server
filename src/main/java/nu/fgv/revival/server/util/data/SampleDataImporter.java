@@ -207,7 +207,7 @@ public class SampleDataImporter {
     private List<SpexDto> originalSpex() {
         for (int attempt = 1; ; attempt++) {
             try {
-                final List<SpexDto> spex = spexregisterClient.originalSpexes();
+                final List<SpexDto> spex = spexregisterClient.originalSpex();
 
                 if (spex.isEmpty()) {
                     throw new IllegalStateException("Spexregister has no spex; import its sample data first");

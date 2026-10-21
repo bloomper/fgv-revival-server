@@ -47,7 +47,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SpexServiceTest {
 
-    private static final List<SpexDto> SPEXES = List.of(
+    private static final List<SpexDto> SPEX = List.of(
             new SpexDto(1L, "Ali Baba", 1956, true),
             new SpexDto(2L, "Nobel", 1988, true),
             new SpexDto(3L, "Snorre", 1974, true),
@@ -68,18 +68,18 @@ class SpexServiceTest {
 
     @Test
     void theListIsCachedAndReadOnce() {
-        when(client.originalSpexes()).thenReturn(SPEXES);
+        when(client.originalSpex()).thenReturn(SPEX);
 
         service.search("ali", 20);
         service.search("nobel", 20);
         service.findTitles(List.of(1L, 2L));
 
-        verify(client, times(1)).originalSpexes();
+        verify(client, times(1)).originalSpex();
     }
 
     @Test
     void searchIsLocalAndIgnoresCaseAndAccents() {
-        when(client.originalSpexes()).thenReturn(SPEXES);
+        when(client.originalSpex()).thenReturn(SPEX);
 
         assertThat(service.search("ali", 20)).extracting(SpexDto::title).containsExactly("Ali Baba");
         assertThat(service.search("ALANN", 20)).extracting(SpexDto::title).containsExactly("Ålänningen");
@@ -95,7 +95,7 @@ class SpexServiceTest {
 
     @Test
     void findTitlesResolvesSeveralIdsFromOneList() {
-        when(client.originalSpexes()).thenReturn(SPEXES);
+        when(client.originalSpex()).thenReturn(SPEX);
 
         final Map<Long, SpexDto> titles = service.findTitles(List.of(1L, 3L, 1L));
 
@@ -105,7 +105,7 @@ class SpexServiceTest {
 
     @Test
     void anErrorMakesTitlesUnavailable() {
-        when(client.originalSpexes()).thenThrow(new SpexregisterClient.SpexregisterCallException("down"));
+        when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("down"));
 
         final Map<Long, SpexDto> titles = service.findTitles(List.of(1L));
 
@@ -115,21 +115,21 @@ class SpexServiceTest {
 
     @Test
     void searchFailsWhenSpexregisterIsUnavailable() {
-        when(client.originalSpexes()).thenThrow(new SpexregisterClient.SpexregisterCallException("down"));
+        when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("down"));
 
         assertThatThrownBy(() -> service.search("ali", 20)).isInstanceOf(SpexregisterUnavailableException.class);
     }
 
     @Test
     void requireOriginalAcceptsAnOriginalSpex() {
-        when(client.originalSpexes()).thenReturn(SPEXES);
+        when(client.originalSpex()).thenReturn(SPEX);
 
         service.requireOriginal(2L);
     }
 
     @Test
     void requireOriginalRefusesAnUnknownSpexOrARevival() {
-        when(client.originalSpexes()).thenReturn(SPEXES);
+        when(client.originalSpex()).thenReturn(SPEX);
         when(client.spexById(98L)).thenReturn(Optional.empty());
         when(client.spexById(99L)).thenReturn(Optional.of(new SpexregisterClient.SpexNode("99", "2004", "Ali Baba", true)));
 
@@ -139,7 +139,7 @@ class SpexServiceTest {
 
     @Test
     void requireOriginalFailsOnTimeout() {
-        when(client.originalSpexes()).thenThrow(new SpexregisterClient.SpexregisterCallException("timeout"));
+        when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("timeout"));
 
         assertThatThrownBy(() -> service.requireOriginal(1L)).isInstanceOf(SpexregisterUnavailableException.class);
     }

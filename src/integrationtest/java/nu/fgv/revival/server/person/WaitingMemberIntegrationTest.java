@@ -35,7 +35,7 @@ import static nu.fgv.revival.server.Documents.REVIVALS;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class WaitingMemberIT extends AbstractIntegrationTest {
+class WaitingMemberIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aWaitingDirecteurIsClaimedOnTheFirstRequestWhateverTheCase() {

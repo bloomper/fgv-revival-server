@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class RevivalMcpToolsIT extends AbstractIntegrationTest {
+class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
     private long organising;
     private long approved;

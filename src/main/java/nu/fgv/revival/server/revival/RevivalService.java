@@ -105,9 +105,9 @@ public class RevivalService {
         }
 
         final List<Revival> revivals = repository.findAll(specification, NEWEST_FIRST);
-        final Map<Long, SpexDto> spexes = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
+        final Map<Long, SpexDto> spexById = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
 
-        return revivals.stream().map(revival -> toDto(caller, revival, spexes.get(revival.getSpexId()))).toList();
+        return revivals.stream().map(revival -> toDto(caller, revival, spexById.get(revival.getSpexId()))).toList();
     }
 
     /**

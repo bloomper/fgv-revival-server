@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
- * Reads spexes from Spexregister's GraphQL API with the two queries in contracts/spexregister.md. Nothing else is
+ * Reads spex from Spexregister's GraphQL API with the two queries in contracts/spexregister.md. Nothing else is
  * called and nothing is written. Failures are logged at most once a minute, without the token or the response body.
  *
  * @author Anders Jacobsson
@@ -40,10 +40,10 @@ import java.util.function.Supplier;
 @Component
 public class SpexregisterClient {
 
-    static final int MAX_SPEXES = 500;
+    static final int MAX_SPEX = 500;
 
-    private static final String ORIGINAL_SPEXES = """
-            query OriginalSpexes($first: Int!) {
+    private static final String ORIGINAL_SPEX = """
+            query OriginalSpex($first: Int!) {
                 spexPaged(first: $first, filter: "parent:NULL", sort: ["year"], direction: ASC) {
                     edges { node { id year title } }
                     totalCount
@@ -73,10 +73,10 @@ public class SpexregisterClient {
     /**
      * Every original spex, i.e. not a revival recorded in Spexregister.
      */
-    public List<SpexDto> originalSpexes() {
+    public List<SpexDto> originalSpex() {
         return call(() -> {
-            final ClientGraphQlResponse response = graphQlClient.document(ORIGINAL_SPEXES)
-                    .variable("first", MAX_SPEXES)
+            final ClientGraphQlResponse response = graphQlClient.document(ORIGINAL_SPEX)
+                    .variable("first", MAX_SPEX)
                     .executeSync();
 
             requireValid(response);
@@ -86,8 +86,8 @@ public class SpexregisterClient {
             if (page == null) {
                 throw new SpexregisterCallException("No spexPaged in response");
             }
-            if (page.totalCount() != null && page.totalCount() > MAX_SPEXES) {
-                log.warn("Spexregister has {} original spexes; only the first {} are offered", page.totalCount(), MAX_SPEXES);
+            if (page.totalCount() != null && page.totalCount() > MAX_SPEX) {
+                log.warn("Spexregister has {} original spex; only the first {} are offered", page.totalCount(), MAX_SPEX);
             }
 
             return page.edges().stream()

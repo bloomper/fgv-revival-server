@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class RevivalVisibilityIT extends AbstractIntegrationTest {
+class RevivalVisibilityIntegrationTest extends AbstractIntegrationTest {
 
     private static final List<String> STATUSES = List.of("PROPOSED", "APPROVED", "ORGANISING", "OPEN", "CLOSING", "SETTLING", "ARCHIVED", "REJECTED");
     private static final Map<String, List<String>> VISIBLE = Map.of(

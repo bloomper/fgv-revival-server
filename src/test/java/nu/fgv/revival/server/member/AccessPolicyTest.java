@@ -234,7 +234,7 @@ class AccessPolicyTest {
         }
 
         @Test
-        void onlySuperAdminsSearchSpexesAndCreateRevivals() {
+        void onlySuperAdminsSearchSpexAndCreateRevivals() {
             for (final String role : List.of("OBSERVER", "DIRECTEUR", "STEERING_GROUP", "NONE")) {
                 assertThat(policy.canSearchSpex(caller(role))).as(role).isFalse();
                 assertThat(policy.canCreateRevival(caller(role))).as(role).isFalse();

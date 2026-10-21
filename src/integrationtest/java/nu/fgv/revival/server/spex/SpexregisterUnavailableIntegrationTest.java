@@ -33,7 +33,7 @@ import static nu.fgv.revival.server.Documents.UPDATE;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class SpexregisterUnavailableIT extends AbstractIntegrationTest {
+class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 
     private void assertDegraded(final long id) {
         execute(SUPER_ADMIN, REVIVALS, Map.of())

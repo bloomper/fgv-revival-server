@@ -1,5 +1,5 @@
 extend type Query {
-    "Original spexes in Spexregister matching the query by title. SUPER_ADMIN only. Fails with SPEXREGISTER_UNAVAILABLE."
+    "Original spex in Spexregister matching the query by title. SUPER_ADMIN only. Fails with SPEXREGISTER_UNAVAILABLE."
     spexSearch(query: String!, first: Int = 20): [Spex!]!
 }
 

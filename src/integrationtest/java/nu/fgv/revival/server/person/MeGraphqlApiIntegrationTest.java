@@ -25,7 +25,7 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class MeGraphqlApiIT extends AbstractIntegrationTest {
+class MeGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void meListsGlobalRoles() {

@@ -38,7 +38,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Spexes from Spexregister: one cached list of original spexes, searched locally (research R5). Spexregister being
+ * Spex from Spexregister: one cached list of original spex, searched locally (research R5). Spexregister being
  * unavailable makes titles unavailable and blocks only picking a spex (FR-008a).
  *
  * @author Anders Jacobsson
@@ -75,17 +75,17 @@ public class SpexService {
     }
 
     private Cache cache() {
-        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.ORIGINAL_SPEXES));
+        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.ORIGINAL_SPEX));
     }
 
     /**
-     * The original spexes, from the cache or from Spexregister.
+     * The original spex, from the cache or from Spexregister.
      *
      * @throws SpexregisterUnavailableException when Spexregister cannot be reached
      */
-    List<SpexDto> originalSpexes() {
+    List<SpexDto> originalSpex() {
         try {
-            return Objects.requireNonNull(cache().get(KEY, client::originalSpexes));
+            return Objects.requireNonNull(cache().get(KEY, client::originalSpex));
         } catch (final Cache.ValueRetrievalException e) {
             throw new SpexregisterUnavailableException(e.getCause() != null ? e.getCause() : e);
         } catch (final SpexregisterClient.SpexregisterCallException e) {
@@ -94,7 +94,7 @@ public class SpexService {
     }
 
     /**
-     * Original spexes whose title contains the query, ignoring case and accents. Super admins only.
+     * Original spex whose title contains the query, ignoring case and accents. Super admins only.
      */
     public List<SpexDto> search(final String query, final @Nullable Integer first) {
         accessPolicy.requireSpexSearch(callerService.current());
@@ -102,7 +102,7 @@ public class SpexService {
         final String needle = normalize(query);
         final int limit = first == null || first < 1 ? 20 : Math.min(first, 100);
 
-        return originalSpexes().stream()
+        return originalSpex().stream()
                 .filter(spex -> normalize(spex.title()).contains(needle))
                 .sorted(Comparator.comparing((SpexDto spex) -> normalize(spex.title())).thenComparing(spex -> spex.year() == null ? 0 : spex.year()))
                 .limit(limit)
@@ -110,14 +110,14 @@ public class SpexService {
     }
 
     /**
-     * Titles for several spexes from one cached list. Never fails: while Spexregister is unavailable every spex is
+     * Titles for several spex from one cached list. Never fails: while Spexregister is unavailable every spex is
      * returned as unavailable.
      */
     public Map<Long, SpexDto> findTitles(final Collection<Long> ids) {
         final Map<Long, SpexDto> known;
 
         try {
-            known = originalSpexes().stream().collect(Collectors.toMap(SpexDto::id, Function.identity(), (a, _) -> a));
+            known = originalSpex().stream().collect(Collectors.toMap(SpexDto::id, Function.identity(), (a, _) -> a));
         } catch (final SpexregisterUnavailableException _) {
             return ids.stream().distinct().collect(Collectors.toMap(Function.identity(), SpexDto::unavailable, (a, _) -> a, LinkedHashMap::new));
         }
@@ -135,7 +135,7 @@ public class SpexService {
      * @throws SpexregisterUnavailableException when it cannot be checked
      */
     public void requireOriginal(final Long id) {
-        if (originalSpexes().stream().anyMatch(spex -> spex.id().equals(id))) {
+        if (originalSpex().stream().anyMatch(spex -> spex.id().equals(id))) {
             return;
         }
 

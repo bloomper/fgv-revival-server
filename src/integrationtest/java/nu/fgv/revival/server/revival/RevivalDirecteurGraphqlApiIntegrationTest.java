@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class RevivalDirecteurGraphqlApiIT extends AbstractIntegrationTest {
+class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private long own;
     private long other;

@@ -15,7 +15,7 @@
  */
 
 /**
- * Spexes read from Spexregister (FR-008, research R5).
+ * Spex read from Spexregister (FR-008, research R5).
  */
 @NullMarked
 package nu.fgv.revival.server.spex;

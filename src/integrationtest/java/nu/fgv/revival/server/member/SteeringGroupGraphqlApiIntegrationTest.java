@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class SteeringGroupGraphqlApiIT extends AbstractIntegrationTest {
+class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private long id;
 

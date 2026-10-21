@@ -42,13 +42,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class RevivalAdminGraphqlApiIT extends AbstractIntegrationTest {
+class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Nested
     class AsSuperAdmin {
 
         @Test
-        void spexSearchFindsOriginalSpexes() {
+        void spexSearchFindsOriginalSpex() {
             execute(SUPER_ADMIN, SPEX_SEARCH, Map.of("query", "ali"))
                     .path("spexSearch[*].title").entityList(String.class).containsExactly("Ali Baba")
                     .path("spexSearch[0].year").entity(Integer.class).isEqualTo(1956);

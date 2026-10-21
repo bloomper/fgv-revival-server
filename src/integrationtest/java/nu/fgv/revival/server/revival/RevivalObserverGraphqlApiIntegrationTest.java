@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Anders Jacobsson
  * @since 0.1
  */
-class RevivalObserverGraphqlApiIT extends AbstractIntegrationTest {
+class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private static final List<String> STATUSES = List.of("PROPOSED", "APPROVED", "ORGANISING", "OPEN", "CLOSING", "SETTLING", "ARCHIVED", "REJECTED");
 

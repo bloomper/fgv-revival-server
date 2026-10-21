@@ -229,14 +229,14 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
-     * Spexregister answering with the canned original spexes, the revival spex {@value #SPEX_REVIVAL}, and not found for
+     * Spexregister answering with the canned original spex, the revival spex {@value #SPEX_REVIVAL}, and not found for
      * anything else.
      */
     protected static void spexregisterUp() {
         SPEXREGISTER.resetAll();
         SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
-                .withRequestBody(containing("OriginalSpexes"))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("originalSpexes.json"))));
+                .withRequestBody(containing("OriginalSpex"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("originalSpex.json"))));
         SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
                 .withRequestBody(containing("SpexById"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("spexNotFound.json"))));

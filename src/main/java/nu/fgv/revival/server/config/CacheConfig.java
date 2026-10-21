@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Duration;
 
 /**
- * The only cache: Spexregister's original spexes, kept in memory for 5 minutes as the product spec allows (research R5).
+ * The only cache: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (research R5).
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -35,11 +35,11 @@ import java.time.Duration;
 @EnableCaching
 public class CacheConfig {
 
-    public static final String ORIGINAL_SPEXES = "originalSpexes";
+    public static final String ORIGINAL_SPEX = "originalSpex";
 
     @Bean
     public CacheManager cacheManager() {
-        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(ORIGINAL_SPEXES);
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(ORIGINAL_SPEX);
 
         cacheManager.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(10));
         return cacheManager;
