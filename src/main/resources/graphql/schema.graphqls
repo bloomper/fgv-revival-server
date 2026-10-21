@@ -1,0 +1,17 @@
+# Every operation requires a bearer token from the fgv-revival client with the USER client role. Rules per operation
+# are in specs/001-m1-foundation/contracts/README.md; they are enforced in the service layer.
+
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+scalar Date @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
+scalar Instant @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
+scalar Email
+scalar Year
+scalar Void
+
+type Query
+
+type Mutation

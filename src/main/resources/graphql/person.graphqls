@@ -1,0 +1,25 @@
+extend type Query {
+    "The caller: identity, global roles and the revivals they hold a role in."
+    me: Me!
+}
+
+enum GlobalRole {
+    SUPER_ADMIN
+    OBSERVER
+}
+
+type Me {
+    id: ID!
+    displayName: String
+    email: Email!
+    globalRoles: [GlobalRole!]!
+    "Roles in revivals the caller can currently see."
+    revivalRoles: [RevivalRoleAssignment!]!
+}
+
+"The caller's role in one revival. Named so it is not confused with FGV membership, which M1 never handles."
+type RevivalRoleAssignment {
+    revival: Revival!
+    role: RevivalRole!
+    capabilities: [Capability!]!
+}

@@ -1,0 +1,17 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          fgv-revival-service:
+            # The secret of fgv-revival-service in the committed realm copy, not a real secret
+            client-secret: 0mtInqqUtVD0h0XlHQYEGvYo400HhI9X
+
+logging:
+  file:
+    path: ./build/integrationtest-data/log_data
+
+fgv-revival:
+  base-url: http://localhost:8081
+  mcp:
+    authorized-parties: fgv-revival-mcp,fgv-revival-mcp-unbound

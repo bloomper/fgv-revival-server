@@ -1,0 +1,95 @@
+extend type Query {
+    "Revivals the caller can see (FR-015), newest premiere first, then year descending."
+    revivals(status: [RevivalStatus!]): [Revival!]!
+
+    "A revival the caller can see. Not visible and not found both return null with NOT_FOUND (FR-017)."
+    revival(id: ID!): Revival
+}
+
+extend type Mutation {
+    "SUPER_ADMIN. Creates a revival in PROPOSED (FR-006)."
+    revivalCreate(input: RevivalCreateInput!): Revival!
+
+    "SUPER_ADMIN: every field. Directeur: premiereDate, showDates, venues (FR-009). Refused while ARCHIVED."
+    revivalUpdate(input: RevivalUpdateInput!): Revival!
+
+    "Changes status. SUPER_ADMIN: any. Directeur: next step only (FR-013, FR-014)."
+    revivalStatusChange(input: RevivalStatusChangeInput!): Revival!
+}
+
+enum RevivalStatus {
+    PROPOSED
+    APPROVED
+    ORGANISING
+    OPEN
+    CLOSING
+    SETTLING
+    ARCHIVED
+    REJECTED
+}
+
+type Revival {
+    id: ID!
+    spex: Spex!
+    year: Year!
+    workingTitle: String!
+    premiereDate: Date
+    showDates: [Date!]!
+    venues: [String!]!
+    status: RevivalStatus!
+    "Directeurs and steering group, without removed members. Visible to everyone who can see the revival."
+    members: [RevivalMember!]!
+    "Newest first."
+    statusHistory: [RevivalStatusChange!]!
+    "What the caller may do, computed by the server's AccessPolicy."
+    permissions: RevivalPermissions!
+    version: Int!
+    "Display name of the person, resolved from the stored Keycloak subject. Never an email address."
+    createdBy: String!
+    createdAt: Instant!
+    "Display name, as createdBy."
+    lastModifiedBy: String
+    lastModifiedAt: Instant
+}
+
+type RevivalPermissions {
+    canEditCore: Boolean!
+    canEditDetails: Boolean!
+    allowedStatuses: [RevivalStatus!]!
+    canManageDirecteurs: Boolean!
+    canManageSteeringGroup: Boolean!
+}
+
+type RevivalStatusChange {
+    from: RevivalStatus!
+    to: RevivalStatus!
+    "Display name of the person who made the change."
+    changedBy: String
+    changedAt: Instant!
+}
+
+input RevivalCreateInput {
+    spexId: ID!
+    year: Year!
+    workingTitle: String!
+}
+
+"Omitted fields are left unchanged. Lists replace the whole list."
+input RevivalUpdateInput {
+    id: ID!
+    version: Int!
+    spexId: ID
+    year: Year
+    workingTitle: String
+    premiereDate: Date
+    clearPremiereDate: Boolean = false
+    showDates: [Date!]
+    venues: [String!]
+}
+
+input RevivalStatusChangeInput {
+    id: ID!
+    "The status the caller saw; refused with CONFLICT if it has changed."
+    from: RevivalStatus!
+    to: RevivalStatus!
+}

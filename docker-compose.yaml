@@ -1,18 +1,64 @@
 name: fgv-revival-server
 
-# Local MySQL for bootRun, picked up by spring-boot-docker-compose. Keycloak runs in Spexregister's local stack.
 services:
-  mysql:
+  revival-mysql:
     image: 'mysql:8.4'
     environment:
       MYSQL_DATABASE: fgvrevival
       MYSQL_USER: fgvrevival
       MYSQL_PASSWORD: fgvrevival
       MYSQL_ROOT_PASSWORD: fgvrevival
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     ports:
       - "3307:3306"
     volumes:
       - mysql_db_data:/var/lib/mysql
 
+  revival-api:
+    image: 'bloomper/fgv-revival-server:develop'
+    profiles: [ api ]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://revival-mysql/fgvrevival
+      SPRING_DATASOURCE_USERNAME: fgvrevival
+      SPRING_DATASOURCE_PASSWORD: fgvrevival
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak-server:8080/auth/realms/fgv/protocol/openid-connect/certs
+      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_FGV_TOKEN_URI: http://keycloak-server:8080/auth/realms/fgv/protocol/openid-connect/token
+      LOGGING_FILE_PATH: /data/log_data
+      FGV_REVIVAL_BASE_URL: http://localhost:8081
+      FGV_REVIVAL_SPEXREGISTER_GRAPHQL_URL: http://spexregister-api:8080/api/graphql
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000;printf \"GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3;grep -q \"^HTTP/1.1 200\" <&3" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    depends_on:
+      revival-mysql:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./.docker/revival-api/log_data:/data/log_data
+    networks:
+      - default
+      - fgv
+    secrets:
+      - KEYCLOAK_SERVICE_CLIENT_SECRET
+
 volumes:
   mysql_db_data:
+
+networks:
+  fgv:
+    name: fgv-local
+    external: true
+
+secrets:
+  KEYCLOAK_SERVICE_CLIENT_SECRET:
+    file: .docker/secrets/KEYCLOAK_SERVICE_CLIENT_SECRET

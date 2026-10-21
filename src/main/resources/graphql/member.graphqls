@@ -1,0 +1,57 @@
+extend type Mutation {
+    "SUPER_ADMIN adds DIRECTEUR or STEERING_GROUP. Directeur adds STEERING_GROUP (FR-019, FR-019a)."
+    revivalMemberAdd(input: RevivalMemberAddInput!): RevivalMember!
+
+    "Sets the capabilities of a STEERING_GROUP member. SUPER_ADMIN or directeur."
+    revivalMemberCapabilitiesSet(input: RevivalMemberCapabilitiesInput!): RevivalMember!
+
+    """
+    Removes a member: closes the row and clears its pending email; nothing is deleted.
+    SUPER_ADMIN: any member. Directeur: STEERING_GROUP members only.
+    """
+    revivalMemberRemove(id: ID!): Void
+}
+
+enum RevivalRole {
+    DIRECTEUR
+    STEERING_GROUP
+    PARTICIPANT
+    HELPER
+}
+
+enum Capability {
+    FINANCE
+    CATERING
+    STAFFING
+    COMMS
+}
+
+enum MemberState {
+    WAITING
+    ACTIVE
+}
+
+type RevivalMember {
+    id: ID!
+    role: RevivalRole!
+    capabilities: [Capability!]!
+    state: MemberState!
+    "Null while WAITING."
+    displayName: String
+    "Shown only to SUPER_ADMIN and the revival's directeurs; null for everyone else."
+    email: Email
+    version: Int!
+}
+
+input RevivalMemberAddInput {
+    revivalId: ID!
+    email: Email!
+    role: RevivalRole!
+    capabilities: [Capability!] = []
+}
+
+input RevivalMemberCapabilitiesInput {
+    id: ID!
+    version: Int!
+    capabilities: [Capability!]!
+}

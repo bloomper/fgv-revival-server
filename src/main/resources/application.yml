@@ -19,14 +19,30 @@ spring:
       org.hibernate.envers.audit_strategy_validity_store_revend_timestamp: true
       org.hibernate.envers.track_entities_changed_in_revision: true
       org.hibernate.envers.store_data_at_delete: true
+  messages:
+    basename: messages
+    fallback-to-system-locale: false
+    encoding: UTF-8
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: ${fgv-revival.keycloak.url}/realms/${fgv-revival.keycloak.realm}
+      client:
+        registration:
+          fgv-revival-service:
+            provider: fgv
+            client-id: fgv-revival-service
+            client-secret: ${KEYCLOAK_SERVICE_CLIENT_SECRET:}
+            authorization-grant-type: client_credentials
+        provider:
+          fgv:
+            token-uri: ${fgv-revival.keycloak.url}/realms/${fgv-revival.keycloak.realm}/protocol/openid-connect/token
   threads:
     virtual:
       enabled: true
+  web:
+    locale: sv
   graphql:
     schema:
       printer:
@@ -49,7 +65,7 @@ spring:
           prompt: false
           completion: false
         instructions: >-
-          FGV Revival supports the steering groups of Chalmersspex revivals. Every call runs with the
+          Nyuppsättning supports the steering groups of Chalmersspex revivals. Every call runs with the
           permissions of the signed-in user and returns only revivals they can see. No tool deletes anything or
           sends email.
 

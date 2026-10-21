@@ -1,0 +1,189 @@
+/*
+ * Copyright 2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nu.fgv.revival.server.person;
+
+import lombok.extern.slf4j.Slf4j;
+import nu.fgv.revival.server.member.RevivalMember;
+import nu.fgv.revival.server.member.RevivalMemberRepository;
+import nu.fgv.revival.server.member.RevivalRoleAssignment;
+import nu.fgv.revival.server.util.security.SecurityUtil;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.springframework.util.StringUtils.hasText;
+
+/**
+ * Resolves the caller once per request (research R4): checks the {@code USER} role, records the person, claims revival
+ * roles waiting on their verified email, and loads their active revival roles from the database so changes apply on
+ * the next request (FR-020).
+ *
+ * @author Anders Jacobsson
+ * @since 0.1
+ */
+@Slf4j
+@Service
+public class CallerService {
+
+    static final String REQUEST_ATTRIBUTE = CallerService.class.getName() + ".caller";
+
+    private final PersonRepository personRepository;
+    private final RevivalMemberRepository memberRepository;
+    private final TransactionTemplate transactionTemplate;
+
+    public CallerService(final PersonRepository personRepository,
+                         final RevivalMemberRepository memberRepository,
+                         final PlatformTransactionManager transactionManager) {
+        this.personRepository = personRepository;
+        this.memberRepository = memberRepository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    private static Set<GlobalRole> globalRoles(final Authentication authentication) {
+        final Set<String> authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+        final Set<GlobalRole> roles = EnumSet.noneOf(GlobalRole.class);
+
+        if (authorities.contains(SecurityUtil.ROLE_SUPER_ADMIN)) {
+            roles.add(GlobalRole.SUPER_ADMIN);
+        }
+        if (authorities.contains(SecurityUtil.ROLE_OBSERVER)) {
+            roles.add(GlobalRole.OBSERVER);
+        }
+        return roles;
+    }
+
+    private static boolean hasAccess(final Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(SecurityUtil.ROLE_USER::equals);
+    }
+
+    /**
+     * The current caller. Refuses a caller without a token, or without the {@code USER} role on {@code fgv-revival}
+     * (FR-001).
+     */
+    public Caller current() {
+        final Authentication authentication = SecurityUtil.currentAuthentication()
+                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("No access token"));
+        final Jwt jwt = SecurityUtil.currentJwt()
+                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("No access token"));
+
+        if (!hasAccess(authentication)) {
+            throw new AccessDeniedException("No access to Nyuppsättning");
+        }
+
+        final RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+
+        if (attributes != null && attributes.getAttribute(REQUEST_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST) instanceof final Caller cached) {
+            return cached;
+        }
+
+        final Caller caller = resolve(jwt, globalRoles(authentication));
+
+        if (attributes != null) {
+            attributes.setAttribute(REQUEST_ATTRIBUTE, caller, RequestAttributes.SCOPE_REQUEST);
+        }
+        return caller;
+    }
+
+    private Caller resolve(final Jwt jwt, final Set<GlobalRole> globalRoles) {
+        try {
+            return Objects.requireNonNull(transactionTemplate.execute(_ -> resolveInTransaction(jwt, globalRoles)));
+        } catch (final DataIntegrityViolationException e) {
+            // Two first requests from the same person raced to insert them; the second sees the first's row
+            log.debug("Retrying caller resolution after a concurrent insert");
+            return Objects.requireNonNull(transactionTemplate.execute(_ -> resolveInTransaction(jwt, globalRoles)));
+        }
+    }
+
+    private Caller resolveInTransaction(final Jwt jwt, final Set<GlobalRole> globalRoles) {
+        final Person person = upsertPerson(jwt);
+
+        if (person.isEmailVerified() && hasText(person.getEmail())) {
+            claimWaitingRoles(person);
+        }
+
+        final Map<Long, RevivalRoleAssignment> revivalRoles = new HashMap<>();
+
+        memberRepository.findByPersonIdAndRemovedAtIsNull(person.getId())
+                .forEach(member -> revivalRoles.put(member.getRevivalId(), new RevivalRoleAssignment(member.getRole(), member.getCapabilities())));
+
+        return new Caller(person, globalRoles, revivalRoles);
+    }
+
+    private Person upsertPerson(final Jwt jwt) {
+        final String email = normalizedEmail(jwt.getClaimAsString("email"));
+        final boolean emailVerified = Boolean.TRUE.equals(jwt.getClaimAsBoolean("email_verified"));
+        final String name = jwt.getClaimAsString("name");
+        final Person person = personRepository.findByExternalId(jwt.getSubject()).orElseGet(() -> {
+            final Person created = new Person();
+
+            created.setExternalId(jwt.getSubject());
+            return created;
+        });
+
+        final boolean changed = person.getId() == null
+                || !email.equals(person.getEmail())
+                || emailVerified != person.isEmailVerified()
+                || !Objects.equals(name, person.getDisplayName());
+
+        if (!changed) {
+            return person;
+        }
+
+        person.setEmail(email);
+        person.setEmailVerified(emailVerified);
+        person.setDisplayName(name);
+        return personRepository.saveAndFlush(person);
+    }
+
+    private void claimWaitingRoles(final Person person) {
+        for (final RevivalMember waiting : memberRepository.findByPendingEmailAndRemovedAtIsNull(person.getEmail())) {
+            if (memberRepository.existsByRevivalIdAndPersonIdAndRemovedAtIsNull(waiting.getRevivalId(), person.getId())) {
+                // One role per revival: the waiting entry stays until a directeur or super admin removes one of the two
+                continue;
+            }
+            waiting.setPersonId(person.getId());
+            waiting.setPendingEmail(null);
+            memberRepository.saveAndFlush(waiting);
+        }
+    }
+
+    public static String normalizedEmail(final String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+}
