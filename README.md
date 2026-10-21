@@ -4,7 +4,7 @@
 
 Nyuppsättning Server is the backend of Nyuppsättning, which supports the steering groups of Chalmersspex revivals. It
 is a Spring Boot application with a GraphQL API at `/api/graphql` and an MCP server at `/api/mcp`, backed by MySQL and
-the FGV realm in Keycloak ([fgv-keycloak][1]). It reads spexes from Spexregister. [Nyuppsättning Web][2] is its frontend
+the FGV realm in Keycloak ([fgv-keycloak][1]). It reads spex from Spexregister. [Nyuppsättning Web][2] is its frontend
 and [fgv-revival-deploy][3] runs it on a server.
 
 The product spec, feature specs and plans are in [fgv-revival-spec][4], starting with `docs/product-spec.md`.
@@ -29,7 +29,7 @@ Spexregister is down, revivals still work and only picking a spex is refused.
 ## Running locally
 
 1. Start FGV's local stack in `fgv-infra-deploy/local` (Keycloak, Mailpit and Caddy on
-   `https://*.fgv.local.nu:8443`). Spexregister's local stack is optional; without it spexes show as unavailable.
+   `https://*.fgv.local.nu:8443`). Spexregister's local stack is optional; without it spex show as unavailable.
 2. Make the JVM trust Caddy's local root certificate (`fgv-infra-deploy/local/.docker/caddy/root.crt`), e.g. by
    importing it into the JDK's trust store.
 3. Run the server with the `local` profile. `spring-boot-docker-compose` starts the MySQL in `docker-compose.yaml`:
@@ -50,7 +50,42 @@ docker compose --profile api up -d
 ```
 
 `revival-api` reaches Keycloak and Spexregister by their container names on the `fgv-local` network, so it needs no
-trusted certificate. The profile keeps `bootRun` from starting it.
+trusted certificate. The profile keeps `bootRun` from starting it. It also needs the file
+`.docker/secrets/KEYCLOAK_ADMIN_CLIENT_SECRET`, which may be empty unless sample data is imported.
+
+## Sample data
+
+With `FGV_REVIVAL_IMPORT_SAMPLE_DATA=true`, all data is replaced with sample revivals at every start. The import needs
+the secret of `fgv-admin` in `KEYCLOAK_ADMIN_CLIENT_SECRET` (for `bootRun`) or in
+`.docker/secrets/KEYCLOAK_ADMIN_CLIENT_SECRET` (for `revival-api`).
+
+The sample data is built on Spexregister's, so Spexregister must run with `API_IMPORT_SAMPLE_DATA=true`:
+
+- The spex are read from Spexregister's API. The import waits up to 5 minutes for Spexregister, which answers only
+  once its own import is done.
+- Spexregister's sample user `admin@fgv.nu` becomes super admin. The import refuses to run without it, which keeps it
+  away from real environments.
+
+The other users have one purpose each. The import creates them in Keycloak when they are missing, with the password in
+`SAMPLE_USER_PASSWORD` (default `s3cr3t-s3cr3t`, the same as Spexregister's), and gives them roles on `fgv-revival`:
+
+| User                             | In Nyuppsättning                                                                                                |
+|----------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `admin@fgv.nu`                   | `SUPER_ADMIN`                                                                                                   |
+| `observer@fgv.nu`                | `OBSERVER`                                                                                                      |
+| `directeur@fgv.nu`               | Directeur of one revival in each status from `APPROVED`                                                         |
+| `directeur2@fgv.nu`              | Directeur of the other revival in each status from `APPROVED`                                                   |
+| `steering-group@fgv.nu`          | Steering group member without capabilities in `directeur@fgv.nu`'s revivals, removed from `directeur2@fgv.nu`'s |
+| `steering-group-finance@fgv.nu`  | Steering group member with `FINANCE` in `directeur@fgv.nu`'s revivals                                           |
+| `steering-group-catering@fgv.nu` | The same, with `CATERING`                                                                                       |
+| `steering-group-staffing@fgv.nu` | The same, with `STAFFING`                                                                                       |
+| `steering-group-comms@fgv.nu`    | The same, with `COMMS`                                                                                          |
+| `no-role@fgv.nu`                 | `USER` only                                                                                                     |
+| `invited@fgv.nu`                 | No Keycloak user: waiting in `directeur2@fgv.nu`'s revivals                                                     |
+
+There are two revivals in every status, with show dates, venues, status history and one baseline revision.
+
+Spexregister's import deletes all Keycloak users at every start, so restart Nyuppsättning after Spexregister.
 
 ## Building and testing
 

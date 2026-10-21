@@ -13,5 +13,9 @@ logging:
 
 fgv-revival:
   base-url: http://localhost:8081
+  keycloak:
+    admin:
+      # The secret of fgv-admin in the committed realm copy, not a real secret
+      client-secret: YGXDSS5oiZFf4fnTWfX4LImOToPlVOhF
   mcp:
     authorized-parties: fgv-revival-mcp,fgv-revival-mcp-unbound

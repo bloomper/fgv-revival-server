@@ -90,12 +90,19 @@ fgv-revival:
   keycloak:
     url: ${FGV_REVIVAL_KEYCLOAK_URL:https://auth.fgv.local.nu:8443/auth}
     realm: ${FGV_REVIVAL_KEYCLOAK_REALM:fgv}
+    admin:
+      url: ${FGV_REVIVAL_KEYCLOAK_ADMIN_URL:${fgv-revival.keycloak.url}}
+      client-id: fgv-admin
+      client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
   security:
     authorized-parties: ${FGV_REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
   mcp:
     authorized-parties: ${FGV_REVIVAL_MCP_AUTHORIZED_PARTIES:fgv-revival-mcp}
   spexregister:
     graphql-url: ${FGV_REVIVAL_SPEXREGISTER_GRAPHQL_URL:https://api.register.fgv.local.nu:8443/api/graphql}
+  data:
+    import-sample-data: ${FGV_REVIVAL_IMPORT_SAMPLE_DATA:false}
+    sample-user-password: ${SAMPLE_USER_PASSWORD:s3cr3t-s3cr3t}
 
 ---
 spring:
