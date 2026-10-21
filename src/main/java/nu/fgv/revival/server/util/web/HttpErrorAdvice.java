@@ -1,0 +1,99 @@
+/*
+ * Copyright 2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nu.fgv.revival.server.util.web;
+
+import jakarta.persistence.OptimisticLockException;
+import nu.fgv.revival.server.util.Locales;
+import nu.fgv.revival.server.util.error.BadRequestException;
+import nu.fgv.revival.server.util.error.ConflictException;
+import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import org.jspecify.annotations.Nullable;
+import org.springframework.context.MessageSource;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+
+import java.util.Locale;
+
+/**
+ * Errors of the plain HTTP endpoints as {@code {code, message}} JSON, with the codes and messages GraphQL uses
+ * (specs/003-m2-guide/contracts/http.md). GraphQL has its own resolver.
+ *
+ * @author Anders Jacobsson
+ * @since 0.2
+ */
+@RestControllerAdvice
+public class HttpErrorAdvice {
+
+    private final MessageSource messageSource;
+
+    public HttpErrorAdvice(final MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+
+    public record Error(String code, String message) {
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Error> badRequest(final BadRequestException e, final Locale locale) {
+        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", e.getDetailMessageCode(), e.getDetailMessageArguments(), locale);
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class})
+    public ResponseEntity<Error> missing(final Exception e, final Locale locale) {
+        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "error.guide.import.notWord", null, locale);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Error> tooLarge(final MaxUploadSizeExceededException e, final Locale locale) {
+        return error(HttpStatus.CONTENT_TOO_LARGE, "BAD_REQUEST", "error.guide.import.tooLarge", null, locale);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Error> notFound(final ResourceNotFoundException e, final Locale locale) {
+        return error(HttpStatus.NOT_FOUND, "NOT_FOUND", e.getDetailMessageCode(), e.getDetailMessageArguments(), locale);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Error> conflict(final ConflictException e, final Locale locale) {
+        return error(HttpStatus.CONFLICT, "CONFLICT", e.getDetailMessageCode(), e.getDetailMessageArguments(), locale);
+    }
+
+    @ExceptionHandler({OptimisticLockingFailureException.class, OptimisticLockException.class})
+    public ResponseEntity<Error> staleVersion(final Exception e, final Locale locale) {
+        return error(HttpStatus.CONFLICT, "CONFLICT", "error.conflict", null, locale);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Error> forbidden(final AccessDeniedException e, final Locale locale) {
+        return error(HttpStatus.FORBIDDEN, "FORBIDDEN", "error.forbidden", null, locale);
+    }
+
+    private ResponseEntity<Error> error(final HttpStatus status, final String code, final @Nullable String messageCode,
+                                        final Object @Nullable [] arguments, final Locale locale) {
+        final String key = messageCode == null ? "error.forbidden" : messageCode;
+        final String message = messageSource.getMessage(key, arguments, key, Locales.supported(locale));
+
+        return ResponseEntity.status(status).body(new Error(code, message == null ? key : message));
+    }
+}

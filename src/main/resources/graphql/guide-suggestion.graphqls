@@ -1,0 +1,105 @@
+extend type Query {
+    "Suggestions the caller can see (FR-035), newest first."
+    guideSuggestions(status: [GuideSuggestionStatus!], revivalId: ID): [GuideSuggestion!]!
+}
+
+extend type Mutation {
+    "Directeur or steering group of a visible revival, not ARCHIVED (FR-031)."
+    guideSuggestionCreate(input: GuideSuggestionCreateInput!): GuideSuggestion!
+
+    "SUPER_ADMIN. CONFLICT when the draft's item differs and no resolution is given (FR-033)."
+    guideSuggestionAccept(input: GuideSuggestionAcceptInput!): GuideSuggestion!
+
+    "SUPER_ADMIN."
+    guideSuggestionReject(input: GuideSuggestionRejectInput!): GuideSuggestion!
+
+    "The author only (FR-034)."
+    guideSuggestionWithdraw(id: ID!, version: Int!): GuideSuggestion!
+}
+
+enum GuideSuggestionKind {
+    CHANGE
+    REMOVE
+    ADD
+}
+
+enum GuideSuggestionStatus {
+    OPEN
+    ACCEPTED
+    REJECTED
+    WITHDRAWN
+}
+
+type GuideSuggestion {
+    id: ID!
+    kind: GuideSuggestionKind!
+    status: GuideSuggestionStatus!
+    revival: GuideSuggestionRevival!
+    "Display name of the author, never an email address."
+    author: String
+    "Whether the caller is the author."
+    mine: Boolean!
+    madeOn: GuideVersionSummary!
+    phase: Phase!
+    sectionKey: ID
+    itemKey: ID
+    "The item as it was in madeOn, for CHANGE and REMOVE."
+    item: GuideItemSnapshot
+    proposedType: GuideItemType
+    proposedText: LocalizedText
+    reason: String
+    decidedBy: String
+    decidedAt: Instant
+    decisionReason: String
+    "The version it was published in, once published."
+    publishedIn: GuideVersionSummary
+    "Set when the draft it was accepted into was discarded."
+    reopenedAt: Instant
+    createdAt: Instant!
+    version: Int!
+}
+
+"A suggestion's revival, without the details of a Revival the caller might not otherwise see."
+type GuideSuggestionRevival {
+    id: ID!
+    workingTitle: String!
+    year: Year!
+}
+
+input GuideSuggestionCreateInput {
+    revivalId: ID!
+    versionId: ID!
+    kind: GuideSuggestionKind!
+    "CHANGE, REMOVE."
+    itemKey: ID
+    "ADD."
+    phase: Phase
+    "ADD, optional."
+    sectionKey: ID
+    proposedType: GuideItemType
+    proposedTextSv: String
+    proposedTextEn: String
+    "Required for CHANGE and REMOVE."
+    reason: String
+}
+
+input GuideSuggestionAcceptInput {
+    id: ID!
+    version: Int!
+    note: String
+    "What the draft gets when its item differs from the suggestion's version."
+    resolution: GuideSuggestionResolutionInput
+}
+
+input GuideSuggestionResolutionInput {
+    "For REMOVE: keep the item instead of removing it."
+    keep: Boolean = false
+    type: GuideItemType
+    text: LocalizedTextInput
+}
+
+input GuideSuggestionRejectInput {
+    id: ID!
+    version: Int!
+    reason: String
+}

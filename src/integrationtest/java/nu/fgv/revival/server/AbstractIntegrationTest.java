@@ -20,6 +20,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import jakarta.ws.rs.core.Response;
+import nu.fgv.revival.server.guide.GuideDocxFixtures;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.keycloak.admin.client.Keycloak;
@@ -35,6 +36,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cache.CacheManager;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
 import org.springframework.http.HttpHeaders;
@@ -214,14 +217,15 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void resetState() {
-        jdbcClient.sql("DELETE FROM revival_member_capability").update();
-        jdbcClient.sql("DELETE FROM revival_member").update();
-        jdbcClient.sql("DELETE FROM revival_status_change").update();
-        jdbcClient.sql("DELETE FROM revival_show_date").update();
-        jdbcClient.sql("DELETE FROM revival_venue").update();
-        jdbcClient.sql("DELETE FROM revival").update();
+        for (final String table : List.of("guide_suggestion", "revival_member_capability", "revival_member", "revival_status_change",
+                "revival_guide_version_change", "revival_show_date", "revival_venue", "revival",
+                "guide_import_report", "guide_item", "guide_section", "guide_chapter", "guide_version")) {
+            jdbcClient.sql("DELETE FROM " + table).update();
+        }
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
-                "revival_show_date_audit", "revival_venue_audit", "revival_audit", "revchanges", "revinfo", "person")) {
+                "revival_guide_version_change_audit", "revival_show_date_audit", "revival_venue_audit", "revival_audit",
+                "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",
+                "revchanges", "revinfo", "person")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         cacheManager.getCacheNames().forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
@@ -413,6 +417,72 @@ public abstract class AbstractIntegrationTest {
      */
     protected void login(final String user) {
         graphQl(user).document("{ me { id } }").execute().path("me.id").hasValue();
+    }
+
+    // --- Guide ------------------------------------------------------------------------------------------------------
+
+    /**
+     * Uploads a Word document to {@code POST /api/guide/import} as the user.
+     */
+    protected RestTestClient.ResponseSpec importGuide(final String user, final byte[] document, final String fileName) {
+        return importGuide(user, document, fileName, "en");
+    }
+
+    protected RestTestClient.ResponseSpec importGuide(final String user, final byte[] document, final String fileName, final String language) {
+        final MultipartBodyBuilder body = new MultipartBodyBuilder();
+
+        body.part("file", new ByteArrayResource(document) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        }).contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+        return restTestClient()
+                .post()
+                .uri("/api/guide/import")
+                .header(HttpHeaders.AUTHORIZATION, token(user))
+                .header(HttpHeaders.ACCEPT_LANGUAGE, language)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(body.build())
+                .exchange();
+    }
+
+    /**
+     * Imports the fictitious v5-layout document as super admin and returns the draft's id.
+     */
+    protected long importV5Layout() {
+        final JsonNode result = objectMapper.readTree(Objects.requireNonNull(importGuide(SUPER_ADMIN, GuideDocxFixtures.v5Layout().bytes(), "guide.docx")
+                .expectStatus().isCreated()
+                .expectBody(byte[].class)
+                .returnResult()
+                .getResponseBody()));
+
+        return result.get("draftId").asLong();
+    }
+
+    protected long guideVersion(final long versionId) {
+        return jdbcClient.sql("SELECT version FROM guide_version WHERE id = ?").param(versionId).query(Long.class).single();
+    }
+
+    /**
+     * Publishes the draft as super admin under the label.
+     */
+    protected void publishGuide(final long draftId, final String label) {
+        graphQl(SUPER_ADMIN)
+                .document("mutation($input: GuideDraftPublishInput!) { guideDraftPublish(input: $input) { id status label } }")
+                .variable("input", Map.of("id", draftId, "version", guideVersion(draftId), "label", label))
+                .execute()
+                .path("guideDraftPublish.status").entity(String.class).isEqualTo("PUBLISHED");
+    }
+
+    /**
+     * Imports and publishes the v5-layout document as "v1", and returns the version's id.
+     */
+    protected long publishedGuide() {
+        final long id = importV5Layout();
+
+        publishGuide(id, "v1");
+        return id;
     }
 
     // --- MCP --------------------------------------------------------------------------------------------------------

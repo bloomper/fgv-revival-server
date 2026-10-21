@@ -152,10 +152,15 @@ class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
     @Test
     void theToolIsListedAsReadOnly() {
         final JsonNode tools = mcpRpc(mcpToken(PLAIN_USER), "tools/list", Map.of()).path("result").path("tools");
+        JsonNode listRevivals = null;
 
-        assertThat(tools).hasSize(1);
-        assertThat(tools.get(0).get("name").asString()).isEqualTo("list_revivals");
-        assertThat(tools.get(0).path("annotations").path("readOnlyHint").asBoolean()).isTrue();
-        assertThat(tools.get(0).path("annotations").path("destructiveHint").asBoolean(true)).isFalse();
+        for (final JsonNode tool : tools) {
+            if ("list_revivals".equals(tool.get("name").asString())) {
+                listRevivals = tool;
+            }
+        }
+        assertThat(listRevivals).isNotNull();
+        assertThat(listRevivals.path("annotations").path("readOnlyHint").asBoolean()).isTrue();
+        assertThat(listRevivals.path("annotations").path("destructiveHint").asBoolean(true)).isFalse();
     }
 }

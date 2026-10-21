@@ -37,6 +37,12 @@ type Revival {
     showDates: [Date!]!
     venues: [String!]!
     status: RevivalStatus!
+    "The pinned guide version. Null only before the first version is published (FR-017)."
+    guideVersion: GuideVersionSummary
+    "The latest published version when it is newer than guideVersion, otherwise null (FR-019)."
+    newerGuideVersion: GuideVersionSummary
+    "Newest first."
+    guideVersionHistory: [RevivalGuideVersionChange!]!
     "Directeurs and steering group, without removed members. Visible to everyone who can see the revival."
     members: [RevivalMember!]!
     "Newest first."
@@ -58,6 +64,10 @@ type RevivalPermissions {
     allowedStatuses: [RevivalStatus!]!
     canManageDirecteurs: Boolean!
     canManageSteeringGroup: Boolean!
+    "Directeur or steering group of the revival, visible, not ARCHIVED (FR-031)."
+    canSuggestGuideChange: Boolean!
+    "Published versions the caller may pin this revival to (FR-020). Empty when they may not change it."
+    guideVersionsAllowed: [GuideVersionSummary!]!
 }
 
 type RevivalStatusChange {
@@ -92,4 +102,24 @@ input RevivalStatusChangeInput {
     "The status the caller saw; refused with CONFLICT if it has changed."
     from: RevivalStatus!
     to: RevivalStatus!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN: any published version. Directeur: a newer one (FR-020). Refused while ARCHIVED."
+    revivalGuideVersionChange(input: RevivalGuideVersionChangeInput!): Revival!
+}
+
+type RevivalGuideVersionChange {
+    from: GuideVersionSummary
+    to: GuideVersionSummary!
+    "Display name of the person who made the change."
+    changedBy: String
+    changedAt: Instant!
+}
+
+input RevivalGuideVersionChangeInput {
+    revivalId: ID!
+    "The version the caller saw; refused with CONFLICT if it has changed."
+    fromVersionId: ID
+    toVersionId: ID!
 }

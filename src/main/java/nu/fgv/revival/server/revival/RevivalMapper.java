@@ -38,6 +38,7 @@ public interface RevivalMapper {
     @Mapping(target = "showDates", source = "revival.showDates")
     @Mapping(target = "venues", source = "revival.venues")
     @Mapping(target = "status", source = "revival.status")
+    @Mapping(target = "guideVersionId", source = "revival.guideVersionId")
     @Mapping(target = "version", source = "revival.version")
     @Mapping(target = "createdBy", source = "revival.createdBy")
     @Mapping(target = "createdAt", source = "revival.createdAt")

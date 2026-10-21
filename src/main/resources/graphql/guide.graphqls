@@ -1,0 +1,318 @@
+extend type Query {
+    "Published versions, newest first. Readers of the guide (FR-001–FR-003)."
+    guideVersions: [GuideVersionSummary!]!
+
+    "A published version, or the draft for SUPER_ADMIN. Anything else is NOT_FOUND."
+    guideVersion(id: ID!): GuideVersion
+
+    "The latest published version, or null before the first is published."
+    guideLatestVersion: GuideVersion
+
+    "Search one version (FR-021). Defaults to the latest published version."
+    guideSearch(versionId: ID, query: String!, first: Int = 50): [GuideSearchHit!]!
+
+    "The draft, or null when there is none. SUPER_ADMIN."
+    guideDraft: GuideDraft
+
+    "What changed between two versions the caller can read (FR-016)."
+    guideChanges(fromId: ID!, toId: ID!): GuideChanges!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN. Publishes the draft (FR-014) and pins revivals without a version (FR-018)."
+    guideDraftPublish(input: GuideDraftPublishInput!): GuideVersion!
+
+    "SUPER_ADMIN. Deletes the draft and reopens suggestions accepted into it (FR-015)."
+    guideDraftDiscard(id: ID!, version: Int!): Void
+
+    "SUPER_ADMIN. Copies the latest published version, or creates an empty draft before the first is published."
+    guideDraftStart: GuideDraft!
+
+    "SUPER_ADMIN, draft only, for the rest of this block."
+    guideIntroductionUpdate(input: GuideIntroductionInput!): GuideVersion!
+    guideChapterUpdate(input: GuideChapterInput!): GuideChapter!
+    guideSectionCreate(input: GuideSectionCreateInput!): GuideSection!
+    guideSectionUpdate(input: GuideSectionUpdateInput!): GuideSection!
+    guideSectionMove(input: GuideSectionMoveInput!): GuideChapter!
+    "Refused while the section has items."
+    guideSectionRemove(id: ID!, version: Int!): Void
+    guideItemCreate(input: GuideItemCreateInput!): GuideItem!
+    guideItemUpdate(input: GuideItemUpdateInput!): GuideItem!
+    guideItemMove(input: GuideItemMoveInput!): GuideChapter!
+    guideItemRemove(id: ID!, version: Int!): Void
+}
+
+"The guide's chapters, which are the revival phases A–J (product spec section 4)."
+enum Phase {
+    A
+    B
+    C
+    D
+    E
+    F
+    G
+    H
+    I
+    J
+}
+
+enum GuideVersionStatus {
+    DRAFT
+    PUBLISHED
+}
+
+enum GuideItemType {
+    TIP
+    REQUIREMENT
+    QUESTION
+    TEXT
+}
+
+"Swedish text, and English when there is one (FR-009a). The client picks by language."
+type LocalizedText {
+    sv: String!
+    en: String
+}
+
+type GuideVersionSummary {
+    id: ID!
+    label: String
+    publishedAt: Instant
+}
+
+type GuideVersion {
+    id: ID!
+    status: GuideVersionStatus!
+    "Null while DRAFT."
+    label: String
+    note: String
+    "Markdown."
+    introduction: LocalizedText!
+    chapters: [GuideChapter!]!
+    publishedAt: Instant
+    "Display name, never an email address."
+    publishedBy: String
+    basedOn: GuideVersionSummary
+    version: Int!
+}
+
+type GuideChapter {
+    id: ID!
+    phase: Phase!
+    title: LocalizedText!
+    "Items before the first section."
+    items: [GuideItem!]!
+    sections: [GuideSection!]!
+    version: Int!
+}
+
+type GuideSection {
+    id: ID!
+    "Stable across versions."
+    key: ID!
+    title: LocalizedText!
+    items: [GuideItem!]!
+    version: Int!
+}
+
+type GuideItem {
+    id: ID!
+    "Stable across versions."
+    key: ID!
+    type: GuideItemType!
+    "Markdown."
+    text: LocalizedText!
+    version: Int!
+}
+
+enum GuideImportWarningCode {
+    IMAGE
+    TABLE
+    UNKNOWN_LABEL
+}
+
+type GuideDraft {
+    draft: GuideVersion!
+    "Null unless the draft came from an import."
+    importReport: GuideImportReport
+    "Suggestions accepted into this draft; they reopen if it is discarded."
+    acceptedSuggestionCount: Int!
+    "Introduction, titles and items without English text (FR-009a)."
+    untranslatedCount: Int!
+}
+
+type GuideImportReport {
+    fileName: String!
+    totals: GuideImportCounts!
+    chapters: [GuideImportChapterCounts!]!
+    warnings: [GuideImportWarning!]!
+    createdAt: Instant!
+}
+
+type GuideImportCounts {
+    sections: Int!
+    tips: Int!
+    requirements: Int!
+    questions: Int!
+    texts: Int!
+}
+
+type GuideImportChapterCounts {
+    phase: Phase!
+    counts: GuideImportCounts!
+}
+
+type GuideImportWarning {
+    code: GuideImportWarningCode!
+    phase: Phase
+    sectionTitle: String
+    "The label for UNKNOWN_LABEL; a short description otherwise."
+    detail: String
+}
+
+input GuideDraftPublishInput {
+    id: ID!
+    version: Int!
+    label: String!
+    note: String
+}
+
+enum GuideSearchHitKind {
+    INTRODUCTION
+    CHAPTER_TITLE
+    SECTION_TITLE
+    ITEM
+}
+
+type GuideSearchHit {
+    kind: GuideSearchHitKind!
+    phase: Phase
+    chapterTitle: LocalizedText
+    sectionKey: ID
+    sectionTitle: LocalizedText
+    itemKey: ID
+    itemType: GuideItemType
+    "Plain text around the first match, in the language that matched."
+    snippet: String!
+    matchedLanguage: String!
+}
+
+type GuideChanges {
+    from: GuideVersionSummary!
+    to: GuideVersionSummary!
+    "Languages whose introduction changed."
+    introductionChanged: [String!]!
+    chapters: [GuideChapterChange!]!
+    sections: [GuideSectionChange!]!
+    items: [GuideItemChange!]!
+}
+
+type GuideChapterChange {
+    phase: Phase!
+    "Languages whose title changed."
+    renamed: [String!]!
+    before: LocalizedText!
+    after: LocalizedText!
+}
+
+enum GuideChangeKind {
+    ADDED
+    REMOVED
+    CHANGED
+}
+
+type GuideSectionChange {
+    key: ID!
+    kind: GuideChangeKind!
+    phaseBefore: Phase
+    phaseAfter: Phase
+    "Languages whose title changed."
+    renamed: [String!]!
+    moved: Boolean!
+    "Items it shares with the other version are in a different order."
+    reordered: Boolean!
+    before: LocalizedText
+    after: LocalizedText
+}
+
+type GuideItemChange {
+    key: ID!
+    kind: GuideChangeKind!
+    "Languages whose text changed."
+    reworded: [String!]!
+    retyped: Boolean!
+    moved: Boolean!
+    before: GuideItemSnapshot
+    after: GuideItemSnapshot
+}
+
+type GuideItemSnapshot {
+    phase: Phase!
+    sectionKey: ID
+    sectionTitle: LocalizedText
+    type: GuideItemType!
+    text: LocalizedText!
+}
+
+input LocalizedTextInput {
+    sv: String!
+    "Empty or null clears the English text."
+    en: String
+}
+
+input GuideIntroductionInput {
+    versionId: ID!
+    version: Int!
+    introduction: LocalizedTextInput!
+}
+
+input GuideChapterInput {
+    id: ID!
+    version: Int!
+    title: LocalizedTextInput!
+}
+
+input GuideSectionCreateInput {
+    chapterId: ID!
+    "Null appends."
+    position: Int
+    title: LocalizedTextInput!
+}
+
+input GuideSectionUpdateInput {
+    id: ID!
+    version: Int!
+    title: LocalizedTextInput!
+}
+
+input GuideSectionMoveInput {
+    id: ID!
+    version: Int!
+    chapterId: ID!
+    position: Int!
+}
+
+input GuideItemCreateInput {
+    chapterId: ID!
+    "Null places it before the chapter's first section."
+    sectionId: ID
+    "Null appends."
+    position: Int
+    type: GuideItemType!
+    text: LocalizedTextInput!
+}
+
+input GuideItemUpdateInput {
+    id: ID!
+    version: Int!
+    type: GuideItemType!
+    text: LocalizedTextInput!
+}
+
+input GuideItemMoveInput {
+    id: ID!
+    version: Int!
+    chapterId: ID!
+    sectionId: ID
+    position: Int!
+}

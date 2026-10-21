@@ -26,7 +26,8 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Duration;
 
 /**
- * The only cache: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (research R5).
+ * Two caches: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (M1 research R5),
+ * and published guide versions, which are immutable and so never expire (M2 research R4).
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -36,12 +37,15 @@ import java.time.Duration;
 public class CacheConfig {
 
     public static final String ORIGINAL_SPEX = "originalSpex";
+    public static final String GUIDE_VERSIONS = "guideVersions";
 
     @Bean
     public CacheManager cacheManager() {
-        final CaffeineCacheManager cacheManager = new CaffeineCacheManager(ORIGINAL_SPEX);
+        final CaffeineCacheManager cacheManager = new CaffeineCacheManager();
 
-        cacheManager.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(10));
+        cacheManager.registerCustomCache(ORIGINAL_SPEX,
+                Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(10).build());
+        cacheManager.registerCustomCache(GUIDE_VERSIONS, Caffeine.newBuilder().maximumSize(20).build());
         return cacheManager;
     }
 

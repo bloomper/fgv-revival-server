@@ -30,7 +30,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Stamps {@link AuditSource#WEB} on GraphQL requests, with the reason the web sends in {@code X-Audit-Reason}.
+ * Stamps {@link AuditSource#WEB} on GraphQL requests and the plain HTTP endpoints, with the reason the web sends in
+ * {@code X-Audit-Reason}.
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -62,7 +63,9 @@ public class AuditContextFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(final HttpServletRequest request) {
-        return !graphqlPath.equals(request.getRequestURI());
+        final String path = request.getRequestURI();
+
+        return !graphqlPath.equals(path) && !path.startsWith("/api/guide/") && !path.startsWith("/api/revivals/");
     }
 
     @Override

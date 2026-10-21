@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.audit.AuditContext;
+import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
@@ -66,25 +67,28 @@ public class RevivalService {
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
     private final SpexService spexService;
+    private final RevivalGuideVersions guideVersions;
 
     public RevivalService(final RevivalRepository repository,
                           final RevivalStatusChangeRepository statusChangeRepository,
                           final CallerService callerService,
                           final AccessPolicy accessPolicy,
-                          final SpexService spexService) {
+                          final SpexService spexService,
+                          final RevivalGuideVersions guideVersions) {
         this.repository = repository;
         this.statusChangeRepository = statusChangeRepository;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
         this.spexService = spexService;
+        this.guideVersions = guideVersions;
     }
 
-    private RevivalDto toDto(final Caller caller, final Revival revival, final SpexDto spex) {
-        return REVIVAL_MAPPER.toDto(revival, spex, accessPolicy.permissions(caller, revival));
+    private RevivalDto toDto(final Caller caller, final Revival revival, final SpexDto spex, final List<GuideVersionSummaryDto> published) {
+        return REVIVAL_MAPPER.toDto(revival, spex, accessPolicy.permissions(caller, revival, published));
     }
 
     private RevivalDto toDto(final Caller caller, final Revival revival) {
-        return toDto(caller, revival, spexService.findTitles(List.of(revival.getSpexId())).get(revival.getSpexId()));
+        return toDto(caller, revival, spexService.findTitles(List.of(revival.getSpexId())).get(revival.getSpexId()), guideVersions.published());
     }
 
     private Revival visible(final Caller caller, final Long id) {
@@ -106,8 +110,47 @@ public class RevivalService {
 
         final List<Revival> revivals = repository.findAll(specification, NEWEST_FIRST);
         final Map<Long, SpexDto> spexById = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
+        final List<GuideVersionSummaryDto> published = guideVersions.published();
 
-        return revivals.stream().map(revival -> toDto(caller, revival, spexById.get(revival.getSpexId()))).toList();
+        return revivals.stream().map(revival -> toDto(caller, revival, spexById.get(revival.getSpexId()), published)).toList();
+    }
+
+    /**
+     * Moves a revival to another published version (FR-020). The version the caller saw must still be the pinned one,
+     * as with status changes (M1 research R12). A directeur moves only forward; a super admin to any version.
+     */
+    @Transactional
+    public RevivalDto changeGuideVersion(final Long id, final @Nullable Long fromVersionId, final Long toVersionId) {
+        final Caller caller = callerService.current();
+        final Revival revival = visible(caller, id);
+
+        if (!Objects.equals(revival.getGuideVersionId(), fromVersionId)) {
+            throw new ConflictException("error.guide.version.conflict");
+        }
+
+        final Map<Long, GuideVersionSummaryDto> published = guideVersions.published().stream()
+                .collect(java.util.stream.Collectors.toMap(GuideVersionSummaryDto::id, version -> version));
+        final GuideVersionSummaryDto target = published.get(toVersionId);
+
+        if (target == null || target.publishedAt() == null) {
+            throw new BadRequestException("error.guide.version.notPublished");
+        }
+
+        final GuideVersionSummaryDto current = fromVersionId == null ? null : published.get(fromVersionId);
+
+        accessPolicy.requireGuideVersionChange(caller, revival, current == null ? null : current.publishedAt(), target.publishedAt());
+        AuditContext.operation("revivalGuideVersionChange");
+        guideVersions.change(revival, toVersionId, caller);
+        return toDto(caller, repository.saveAndFlush(revival));
+    }
+
+    /**
+     * Every change of a visible revival's pinned version, newest first.
+     */
+    @Transactional(readOnly = true)
+    public List<RevivalGuideVersionChange> guideVersionHistory(final Long id) {
+        visible(callerService.current(), id);
+        return guideVersions.history(id);
     }
 
     /**
@@ -145,7 +188,10 @@ public class RevivalService {
         revival.setSpexId(dto.spexId());
         revival.setStatus(RevivalStatus.PROPOSED);
 
-        return toDto(caller, repository.saveAndFlush(revival));
+        final Revival saved = repository.saveAndFlush(revival);
+
+        guideVersions.pinToLatest(saved, caller);
+        return toDto(caller, saved);
     }
 
     @Transactional

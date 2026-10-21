@@ -16,6 +16,7 @@
 
 package nu.fgv.revival.server.member;
 
+import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.revival.RevivalStatus;
 
 import java.util.List;
@@ -30,5 +31,12 @@ public record RevivalPermissionsDto(boolean canEditCore,
                                     boolean canEditDetails,
                                     List<RevivalStatus> allowedStatuses,
                                     boolean canManageDirecteurs,
-                                    boolean canManageSteeringGroup) {
+                                    boolean canManageSteeringGroup,
+                                    boolean canSuggestGuideChange,
+                                    List<GuideVersionSummaryDto> guideVersionsAllowed) {
+
+    public RevivalPermissionsDto withGuideVersionsAllowed(final List<GuideVersionSummaryDto> versions) {
+        return new RevivalPermissionsDto(canEditCore, canEditDetails, allowedStatuses, canManageDirecteurs, canManageSteeringGroup,
+                canSuggestGuideChange, List.copyOf(versions));
+    }
 }

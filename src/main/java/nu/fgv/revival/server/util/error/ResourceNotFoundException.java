@@ -34,4 +34,11 @@ public class ResourceNotFoundException extends ResponseStatusException {
         );
     }
 
+    /**
+     * Not found, with its own message, e.g. a revival whose guide is not published yet.
+     */
+    public ResourceNotFoundException(final String messageCode) {
+        super(HttpStatus.NOT_FOUND, null, null, messageCode, null);
+    }
+
 }

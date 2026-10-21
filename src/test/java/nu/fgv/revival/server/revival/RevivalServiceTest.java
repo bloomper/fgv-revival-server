@@ -65,6 +65,8 @@ class RevivalServiceTest {
     private CallerService callerService;
     @Mock
     private SpexService spexService;
+    @Mock
+    private RevivalGuideVersions guideVersions;
 
     private RevivalService service;
 
@@ -74,7 +76,7 @@ class RevivalServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService);
+        service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService, guideVersions);
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(spexService.findTitles(anyCollection())).thenReturn(Map.of(1L, new SpexDto(1L, "Ali Baba", 1956, true)));
@@ -87,6 +89,7 @@ class RevivalServiceTest {
         assertThat(created.status()).isEqualTo(RevivalStatus.PROPOSED);
         assertThat(created.workingTitle()).isEqualTo("Ali Baba 2028");
         verify(spexService).requireOriginal(1L);
+        verify(guideVersions).pinToLatest(any(), any());
     }
 
     @Test

@@ -26,6 +26,21 @@ rules of their own.
 The server calls Spexregister as `fgv-revival-service`, which holds only Spexregister's `REVIVAL` role. While
 Spexregister is down, revivals still work and only picking a spex is refused.
 
+## The guide
+
+JK/FGV's continuity guide lives in package `guide`: published versions that never change, one draft that super admins
+edit, search, the changes between versions, suggestions (`guide.suggestion`) and a PDF. Besides GraphQL it has two
+plain HTTP endpoints:
+
+- `POST /api/guide/import` takes a Word document (multipart part `file`, at most 10 MB) and makes it the first draft.
+  It is refused once a version has been published.
+- `GET /api/guide/versions/{id}/pdf` and `GET /api/revivals/{id}/guide/pdf` return the PDF, with `lang=sv|en`.
+
+To bring guide v5 into an environment, a super admin imports `FGV_JK_Nyuppsättningsguide_v5.docx` from
+`fgv-revival-spec/input_docs/` on the web's *Manage the guide* page, checks the import report and publishes the draft
+as "v5". The document is never committed (constitution V); tests build fictitious documents with POI
+(`GuideDocxFixtures`).
+
 ## Running locally
 
 1. Start FGV's local stack in `fgv-infra-deploy/local` (Keycloak, Mailpit and Caddy on

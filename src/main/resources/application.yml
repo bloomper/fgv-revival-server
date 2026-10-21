@@ -41,6 +41,10 @@ spring:
   threads:
     virtual:
       enabled: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   web:
     locale: sv
   graphql:
@@ -67,7 +71,8 @@ spring:
         instructions: >-
           Nyuppsättning supports the steering groups of Chalmersspex revivals. Every call runs with the
           permissions of the signed-in user and returns only revivals they can see. No tool deletes anything or
-          sends email.
+          sends email. The guide is JK/FGV's continuity guide for revivals, in chapters A–J. Guide tools read the
+          version a revival is pinned to when you give its id.
 
 management:
   server:
@@ -80,6 +85,9 @@ management:
 server:
   port: 8080
   forward-headers-strategy: framework
+  tomcat:
+    # Reads a guide upload over the 10 MB limit to the end, so the client gets a 413 instead of a reset
+    max-swallow-size: 12MB
 
 logging:
   file:

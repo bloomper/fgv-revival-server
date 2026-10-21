@@ -24,8 +24,9 @@ java {
 sourceSets {
     integrationTest {
         java {
-            compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
-            runtimeClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+            // The test output too, for the fictitious Word documents both test suites build (GuideDocxFixtures)
+            compileClasspath += sourceSets.main.output + sourceSets.test.output + configurations.testRuntimeClasspath
+            runtimeClasspath += sourceSets.main.output + sourceSets.test.output + configurations.testRuntimeClasspath
             srcDir file('src/integrationtest/java')
         }
         resources.srcDir file('src/integrationtest/resources')
@@ -84,6 +85,9 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
     implementation 'org.springaicommunity:mcp-server-security:0.1.14'
     implementation 'org.keycloak:keycloak-admin-client:26.0.12'
+    implementation 'org.apache.poi:poi-ooxml:5.5.1'
+    implementation 'com.github.librepdf:openpdf:3.0.5'
+    implementation 'org.commonmark:commonmark:0.24.0'
 
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'

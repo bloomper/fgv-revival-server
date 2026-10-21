@@ -19,9 +19,13 @@ package nu.fgv.revival.server.revival;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
+import java.util.List;
+
 /**
  * @author Anders Jacobsson
  * @since 0.1
  */
 public interface RevivalRepository extends JpaRepository<Revival, Long>, JpaSpecificationExecutor<Revival> {
+
+    List<Revival> findByGuideVersionIdIsNull();
 }

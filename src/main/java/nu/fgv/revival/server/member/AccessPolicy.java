@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.member;
 
 import jakarta.persistence.criteria.Predicate;
+import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalStatus;
@@ -26,8 +27,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +44,9 @@ import static nu.fgv.revival.server.revival.RevivalStatus.ORGANISING;
 import static nu.fgv.revival.server.revival.RevivalStatus.SETTLING;
 
 /**
- * Every authorization rule in M1, in one place (constitution III, research R3). Anything not permitted here is refused.
- * The rules are the visibility table in data-model.md and the operation rules in contracts/README.md.
+ * Every authorization rule, in one place (constitution III, M1 research R3). Anything not permitted here is refused.
+ * The rules are the visibility table in M1's data-model.md and the operation rules in M1's and M2's
+ * contracts/README.md.
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -166,13 +170,98 @@ public class AccessPolicy {
         return caller.isSuperAdmin();
     }
 
+    private static boolean holdsRevivalRole(final Caller caller, final Revival revival) {
+        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
+
+        return assignment != null
+                && (assignment.role() == RevivalRole.DIRECTEUR || assignment.role() == RevivalRole.STEERING_GROUP)
+                && visibleStatuses(assignment.role()).contains(revival.getStatus());
+    }
+
+    /**
+     * Super admins and observers read the guide, and so does anyone who is directeur or steering group of a revival
+     * they can see (M2 research R10). {@code callerRevivals} are the caller's revivals as {@link #visibilityPredicate}
+     * finds them.
+     */
+    public boolean canReadGuide(final Caller caller, final Collection<Revival> callerRevivals) {
+        return seesEverything(caller) || callerRevivals.stream().anyMatch(revival -> holdsRevivalRole(caller, revival));
+    }
+
+    /**
+     * Everyone who can see a revival may read its guide.
+     */
+    public boolean canReadRevivalGuide(final Caller caller, final Revival revival) {
+        return canSee(caller, revival);
+    }
+
+    /**
+     * Reading, editing, importing, publishing and discarding the draft.
+     */
+    public boolean canManageGuide(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    public boolean canSuggest(final Caller caller, final Revival revival) {
+        return holdsRevivalRole(caller, revival) && !isArchived(revival);
+    }
+
+    public boolean canDecideSuggestion(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    public boolean canWithdrawSuggestion(final Caller caller, final Revival revival, final Long authorId) {
+        return authorId.equals(caller.person().getId()) && canSuggest(caller, revival);
+    }
+
+    public boolean canSeeSuggestion(final Caller caller, final Revival revival) {
+        return seesEverything(caller) || canSuggest(caller, revival);
+    }
+
+    /**
+     * Super admins pin a revival that is not archived to any published version. A directeur only moves their revival to
+     * a version published after its current one (FR-020). Versions are compared by publish time, never by label.
+     */
+    public boolean canChangeGuideVersion(final Caller caller, final Revival revival,
+                                         final @Nullable Instant fromPublishedAt, final Instant toPublishedAt) {
+        if (isArchived(revival)) {
+            return false;
+        }
+        if (caller.isSuperAdmin()) {
+            return true;
+        }
+        return isVisibleDirecteur(caller, revival) && (fromPublishedAt == null || toPublishedAt.isAfter(fromPublishedAt));
+    }
+
+    /**
+     * The published versions the caller may pin a revival to, other than the one it follows (FR-020).
+     */
+    public List<GuideVersionSummaryDto> guideVersionsAllowed(final Caller caller, final Revival revival,
+                                                            final List<GuideVersionSummaryDto> published) {
+        final Instant current = published.stream()
+                .filter(version -> version.id().equals(revival.getGuideVersionId()))
+                .map(GuideVersionSummaryDto::publishedAt)
+                .findFirst()
+                .orElse(null);
+
+        return published.stream()
+                .filter(version -> version.publishedAt() != null && !version.id().equals(revival.getGuideVersionId()))
+                .filter(version -> canChangeGuideVersion(caller, revival, current, version.publishedAt()))
+                .toList();
+    }
+
     public RevivalPermissionsDto permissions(final Caller caller, final Revival revival) {
+        return permissions(caller, revival, List.of());
+    }
+
+    public RevivalPermissionsDto permissions(final Caller caller, final Revival revival, final List<GuideVersionSummaryDto> published) {
         return new RevivalPermissionsDto(
                 canEditCore(caller, revival),
                 canEditDetails(caller, revival),
                 allowedStatuses(caller, revival),
                 canManageDirecteurs(caller, revival),
-                canManageSteeringGroup(caller, revival)
+                canManageSteeringGroup(caller, revival),
+                canSuggest(caller, revival),
+                guideVersionsAllowed(caller, revival, published)
         );
     }
 
@@ -208,6 +297,31 @@ public class AccessPolicy {
 
     public void requireSpexSearch(final Caller caller) {
         require(canSearchSpex(caller));
+    }
+
+    public void requireReadGuide(final Caller caller, final Collection<Revival> callerRevivals) {
+        require(canReadGuide(caller, callerRevivals));
+    }
+
+    public void requireManageGuide(final Caller caller) {
+        require(canManageGuide(caller));
+    }
+
+    public void requireSuggest(final Caller caller, final Revival revival) {
+        require(canSuggest(caller, revival));
+    }
+
+    public void requireDecideSuggestion(final Caller caller) {
+        require(canDecideSuggestion(caller));
+    }
+
+    public void requireWithdrawSuggestion(final Caller caller, final Revival revival, final Long authorId) {
+        require(canWithdrawSuggestion(caller, revival, authorId));
+    }
+
+    public void requireGuideVersionChange(final Caller caller, final Revival revival,
+                                          final @Nullable Instant fromPublishedAt, final Instant toPublishedAt) {
+        require(canChangeGuideVersion(caller, revival, fromPublishedAt, toPublishedAt));
     }
 
     private static void require(final boolean permitted) {

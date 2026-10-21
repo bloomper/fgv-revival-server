@@ -76,6 +76,9 @@ public class Revival extends AbstractAuditable {
     @Column(name = "status", nullable = false, length = 16)
     private RevivalStatus status = RevivalStatus.PROPOSED;
 
+    @Column(name = "guide_version_id")
+    private @Nullable Long guideVersionId;
+
     @ElementCollection
     @CollectionTable(name = "revival_show_date", joinColumns = @JoinColumn(name = "revival_id"))
     @Column(name = "show_date", nullable = false)

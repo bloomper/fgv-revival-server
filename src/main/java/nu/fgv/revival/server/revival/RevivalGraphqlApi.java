@@ -16,6 +16,8 @@
 
 package nu.fgv.revival.server.revival;
 
+import nu.fgv.revival.server.guide.GuideService;
+import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.member.RevivalMemberDto;
 import nu.fgv.revival.server.member.RevivalMemberService;
 import nu.fgv.revival.server.member.RevivalRoleAssignmentDto;
@@ -43,11 +45,57 @@ public class RevivalGraphqlApi {
     private final RevivalService service;
     private final RevivalMemberService memberService;
     private final PersonNames personNames;
+    private final GuideService guideService;
 
-    public RevivalGraphqlApi(final RevivalService service, final RevivalMemberService memberService, final PersonNames personNames) {
+    public RevivalGraphqlApi(final RevivalService service, final RevivalMemberService memberService, final PersonNames personNames,
+                             final GuideService guideService) {
         this.service = service;
         this.memberService = memberService;
         this.personNames = personNames;
+        this.guideService = guideService;
+    }
+
+    @SchemaMapping(typeName = "Revival", field = "guideVersion")
+    public @Nullable GuideVersionSummaryDto guideVersion(final RevivalDto revival) {
+        return guideService.summary(revival.guideVersionId());
+    }
+
+    @SchemaMapping(typeName = "Revival", field = "newerGuideVersion")
+    public @Nullable GuideVersionSummaryDto newerGuideVersion(final RevivalDto revival) {
+        final GuideVersionSummaryDto pinned = guideService.summary(revival.guideVersionId());
+
+        return guideService.latestSummary()
+                .filter(latest -> pinned != null && pinned.publishedAt() != null && latest.publishedAt() != null
+                        && latest.publishedAt().isAfter(pinned.publishedAt()))
+                .orElse(null);
+    }
+
+    @SchemaMapping(typeName = "Revival", field = "guideVersionHistory")
+    public List<RevivalGuideVersionChange> guideVersionHistory(final RevivalDto revival) {
+        return service.guideVersionHistory(revival.id());
+    }
+
+    @SchemaMapping(typeName = "RevivalGuideVersionChange", field = "from")
+    public @Nullable GuideVersionSummaryDto changeFrom(final RevivalGuideVersionChange change) {
+        return guideService.summary(change.getFromVersionId());
+    }
+
+    @SchemaMapping(typeName = "RevivalGuideVersionChange", field = "to")
+    public @Nullable GuideVersionSummaryDto changeTo(final RevivalGuideVersionChange change) {
+        return guideService.summary(change.getToVersionId());
+    }
+
+    @SchemaMapping(typeName = "RevivalGuideVersionChange", field = "changedBy")
+    public @Nullable String guideVersionChangedBy(final RevivalGuideVersionChange change, final Locale locale) {
+        return personNames.byIds(List.of(change.getChangedBy()), locale).get(change.getChangedBy());
+    }
+
+    public record RevivalGuideVersionChangeInput(Long revivalId, @Nullable Long fromVersionId, Long toVersionId) {
+    }
+
+    @MutationMapping
+    public RevivalDto revivalGuideVersionChange(@Argument final RevivalGuideVersionChangeInput input) {
+        return service.changeGuideVersion(input.revivalId(), input.fromVersionId(), input.toVersionId());
     }
 
     @QueryMapping
