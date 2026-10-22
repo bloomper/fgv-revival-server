@@ -16,6 +16,7 @@
 
 package nu.fgv.revival.server.audit;
 
+import io.micrometer.context.ContextRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +46,7 @@ public class AuditContextFilter extends OncePerRequestFilter {
 
     public AuditContextFilter(@Value("${spring.graphql.http.path}") final String graphqlPath) {
         this.graphqlPath = graphqlPath;
+        ContextRegistry.getInstance().registerThreadLocalAccessor(new AuditContextAccessor());
     }
 
     private static @Nullable String reasonOf(final HttpServletRequest request) {

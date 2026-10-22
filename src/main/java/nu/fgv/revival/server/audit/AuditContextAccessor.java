@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Carries the {@link AuditContext} onto the threads Spring for GraphQL runs data fetchers on, so revisions made from
- * GraphQL record {@link AuditSource#WEB}. Registered in {@code META-INF/services}.
+ * GraphQL record {@link AuditSource#WEB}. Registered by {@link AuditContextFilter}.
  *
  * @author Anders Jacobsson
  * @since 0.1
