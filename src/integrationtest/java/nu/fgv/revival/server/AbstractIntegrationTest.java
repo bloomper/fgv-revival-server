@@ -17,6 +17,9 @@
 package nu.fgv.revival.server;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.icegreen.greenmail.configuration.GreenMailConfiguration;
+import com.icegreen.greenmail.util.GreenMail;
+import com.icegreen.greenmail.util.ServerSetup;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import jakarta.ws.rs.core.Response;
@@ -117,10 +120,15 @@ public abstract class AbstractIntegrationTest {
             .withCommand("mysqld", "--innodb-flush-log-at-trx-commit=0", "--innodb-doublewrite=0", "--skip-log-bin", "--performance-schema=OFF");
     private static final KeycloakContainer KEYCLOAK = new KeycloakContainer("quay.io/keycloak/keycloak:26.8").withRealmImportFile("/realm/fgv.json");
     protected static final WireMockServer SPEXREGISTER = new WireMockServer(options().dynamicPort());
+    // An SMTP server in the test JVM for the minutes email (M3 research R1)
+    // A fixed free port, so a test can stop and restart it and the application still finds it
+    protected static final GreenMail MAIL = new GreenMail(new ServerSetup(freePort(), null, ServerSetup.PROTOCOL_SMTP))
+            .withConfiguration(GreenMailConfiguration.aConfig().withDisabledAuthentication());
 
     static {
         Startables.deepStart(MYSQL, KEYCLOAK).join();
         SPEXREGISTER.start();
+        MAIL.start();
         prepareKeycloak();
     }
 
@@ -140,6 +148,16 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM);
         registry.add("fgv-revival.keycloak.url", KEYCLOAK::getAuthServerUrl);
         registry.add("fgv-revival.spexregister.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
+        registry.add("spring.mail.host", () -> "localhost");
+        registry.add("spring.mail.port", () -> MAIL.getSmtp().getPort());
+    }
+
+    private static int freePort() {
+        try (java.net.ServerSocket socket = new java.net.ServerSocket(0)) {
+            return socket.getLocalPort();
+        } catch (final java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static void prepareKeycloak() {
@@ -217,19 +235,26 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void resetState() {
-        for (final String table : List.of("guide_suggestion", "revival_member_capability", "revival_member", "revival_status_change",
+        jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
+        jdbcClient.sql("UPDATE minutes_email SET retry_of = NULL").update();
+        for (final String table : List.of("minutes_email_recipient", "minutes_email", "meeting_entry_change", "log_entry_tag",
+                "log_entry", "log_import", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
+                "checklist_item", "checklist", "checklist_template_item", "checklist_template", "guide_suggestion", "revival_member_capability", "revival_member", "revival_status_change",
                 "revival_guide_version_change", "revival_show_date", "revival_venue", "revival",
                 "guide_import_report", "guide_item", "guide_section", "guide_chapter", "guide_version")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
                 "revival_guide_version_change_audit", "revival_show_date_audit", "revival_venue_audit", "revival_audit",
+                "log_entry_tag_audit", "log_entry_audit", "log_import_audit", "meeting_agenda_point_audit", "meeting_attendee_audit",
+                "meeting_audit", "checklist_item_audit", "checklist_audit", "checklist_template_item_audit", "checklist_template_audit",
                 "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",
                 "revchanges", "revinfo", "person")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         cacheManager.getCacheNames().forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
         spexregisterUp();
+        MAIL.reset();
     }
 
     /**
@@ -417,6 +442,29 @@ public abstract class AbstractIntegrationTest {
      */
     protected void login(final String user) {
         graphQl(user).document("{ me { id } }").execute().path("me.id").hasValue();
+    }
+
+    /**
+     * The person id of a user who has logged in.
+     */
+    protected long personId(final String email) {
+        return jdbcClient.sql("SELECT id FROM person WHERE email = ?").param(email).query(Long.class).single();
+    }
+
+    /**
+     * A revival in {@code ORGANISING} with {@link #DIRECTEUR} as directeur and {@link #STEERING_GROUP} in the steering
+     * group, both logged in.
+     */
+    protected long organisingRevival() {
+        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+
+        setStatus(revival, "APPROVED");
+        login(DIRECTEUR);
+        login(STEERING_GROUP);
+        addMember(revival, DIRECTEUR, "DIRECTEUR", List.of());
+        addMember(revival, STEERING_GROUP, "STEERING_GROUP", List.of());
+        setStatus(revival, "ORGANISING");
+        return revival;
     }
 
     // --- Guide ------------------------------------------------------------------------------------------------------

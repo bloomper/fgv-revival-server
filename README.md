@@ -41,6 +41,23 @@ To bring guide v5 into an environment, a super admin imports `FGV_JK_Nyuppsättn
 as "v5". The document is never committed (constitution V); tests build fictitious documents with POI
 (`GuideDocxFixtures`).
 
+## The decision log, meetings and checklists
+
+Each revival's decision log (package `decisionlog`), meetings (`meeting`) and checklists (`checklist`, with templates in
+`checklist.template`) are written by its directeurs and steering group and read by everyone who can see the revival.
+Nothing in them is ever deleted: rows are cancelled, items marked not applicable, templates retired. The guide sync
+(`RevivalGuideSync`) keeps the ten phase checklists' required items and the guide's question rows in line with the
+version a revival is pinned to. Besides GraphQL and the MCP tools, the log has two plain HTTP endpoints for importing an
+Excel log (Ali Baba's or Nobel's layout) into an empty log:
+
+- `POST /api/revivals/{id}/log/import/preview` reads the workbook (multipart part `file`, at most 10 MB) and returns
+  what would be imported, with warnings. Nothing is saved.
+- `POST /api/revivals/{id}/log/import` imports it, with the directeur's choices for unknown owners.
+
+Closed meetings' minutes can be emailed to the steering group. Mail goes through Spring Mail (`spring.mail.*`; the
+password is the `SMTP_PASSWORD` secret), from `fgv-revival.mail.from`, with links to `fgv-revival.web-url`. Without
+`spring.mail.host` the send button is hidden.
+
 ## Running locally
 
 1. Start FGV's local stack in `fgv-infra-deploy/local` (Keycloak, Mailpit and Caddy on
@@ -54,7 +71,8 @@ as "v5". The document is never committed (constitution V); tests build fictitiou
    ```
 
    The API is then on `http://localhost:8081` (`/api/graphql`, `/api/mcp`) and actuator on port 9001.
-   Introspection is on in the `local` profile only.
+   Introspection is on in the `local` profile only. The compose file also starts Mailpit, which catches the minutes:
+   SMTP on port 1025, mail shown on `http://localhost:8025`.
 
 To run the image instead of `bootRun`, on the same port 8081, put the secret of `fgv-revival-service` in
 `.docker/secrets/KEYCLOAK_SERVICE_CLIENT_SECRET` and run:

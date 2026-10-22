@@ -16,6 +16,7 @@
 
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.decisionlog.LogEntryType;
 import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.member.RevivalRoleAssignment;
 import nu.fgv.revival.server.person.Caller;
@@ -23,6 +24,8 @@ import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.RevivalDto;
 import nu.fgv.revival.server.revival.RevivalService;
 import nu.fgv.revival.server.revival.RevivalStatus;
+import nu.fgv.revival.server.revival.RevivalStatusDto;
+import nu.fgv.revival.server.revival.RevivalStatusService;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -31,6 +34,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * MCP tools for revivals. A thin adapter over {@link RevivalService}: the same rules as GraphQL (FR-025). Members,
@@ -43,11 +47,14 @@ import java.util.List;
 public class RevivalMcpTools {
 
     private final RevivalService revivalService;
+    private final RevivalStatusService statusService;
     private final CallerService callerService;
     private final McpToolSupport support;
 
-    public RevivalMcpTools(final RevivalService revivalService, final CallerService callerService, final McpToolSupport support) {
+    public RevivalMcpTools(final RevivalService revivalService, final RevivalStatusService statusService, final CallerService callerService,
+                           final McpToolSupport support) {
         this.revivalService = revivalService;
+        this.statusService = statusService;
         this.callerService = callerService;
         this.support = support;
     }
@@ -58,12 +65,28 @@ public class RevivalMcpTools {
     public McpToolSupport.ListResult<McpRevival> listRevivals(
             @McpToolParam(required = false, description = "Only these statuses: PROPOSED, APPROVED, ORGANISING, OPEN, CLOSING, SETTLING, ARCHIVED or REJECTED")
             final @Nullable List<RevivalStatus> status) {
-        support.audit("list_revivals");
+        return support.call("list_revivals", () -> {
+            final List<RevivalDto> revivals = revivalService.findVisible(status);
+            final Caller caller = callerService.current();
 
-        final List<RevivalDto> revivals = revivalService.findVisible(status);
-        final Caller caller = callerService.current();
+            return new McpToolSupport.ListResult<>(revivals.stream().map(revival -> toMcpRevival(revival, caller)).toList());
+        });
+    }
 
-        return new McpToolSupport.ListResult<>(revivals.stream().map(revival -> toMcpRevival(revival, caller)).toList());
+    @McpTool(name = "get_revival_status",
+            description = "Get a revival's status: its lifecycle status, overdue decision log rows and checklist items, and open guide requirements per phase.",
+            annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
+    public McpRevivalStatus getRevivalStatus(@McpToolParam(description = "A revival you can see") final Long revivalId) {
+        return support.call("get_revival_status", () -> {
+            final RevivalStatusDto status = statusService.status(revivalId, Locale.ENGLISH);
+
+            return new McpRevivalStatus(status.revival(),
+                    status.overdueLogEntries().stream().map(row -> new OverdueLogEntry(row.number(), row.type(), row.text(), McpOwner.of(row.owner()),
+                            row.deadline())).toList(),
+                    status.overdueChecklistItems().stream().map(ChecklistMcpTools::toMcp).map(item -> new OverdueChecklistItem(item.id(), item.checklist(),
+                            item.text(), item.owner(), item.deadline())).toList(),
+                    status.openRequirements());
+        });
     }
 
     private static McpRevival toMcpRevival(final RevivalDto revival, final Caller caller) {
@@ -91,5 +114,21 @@ public class RevivalMcpTools {
                              RevivalStatus status,
                              @Nullable LocalDate premiereDate,
                              @Nullable RevivalRole role) {
+    }
+
+    /**
+     * A revival's status as {@code get_revival_status} returns it (contracts/mcp.md).
+     */
+    public record McpRevivalStatus(RevivalStatusDto.Summary revival,
+                                   List<OverdueLogEntry> overdueLogEntries,
+                                   List<OverdueChecklistItem> overdueChecklistItems,
+                                   List<RevivalStatusDto.OpenRequirements> openRequirements) {
+    }
+
+    public record OverdueLogEntry(int number, LogEntryType type, String text, @Nullable McpOwner owner, @Nullable LocalDate deadline) {
+    }
+
+    public record OverdueChecklistItem(Long id, ChecklistMcpTools.ChecklistRef checklist, ChecklistMcpTools.Text text, @Nullable McpOwner owner,
+                                       @Nullable LocalDate deadline) {
     }
 }

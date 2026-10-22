@@ -26,6 +26,7 @@ import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -67,6 +69,8 @@ class RevivalServiceTest {
     private SpexService spexService;
     @Mock
     private RevivalGuideVersions guideVersions;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private RevivalService service;
 
@@ -76,10 +80,27 @@ class RevivalServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService, guideVersions);
+        service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService, guideVersions, events);
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(spexService.findTitles(anyCollection())).thenReturn(Map.of(1L, new SpexDto(1L, "Ali Baba", 1956, true)));
+    }
+
+    @Test
+    void createPublishesRevivalCreatedBeforePinning() {
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> {
+            final Revival revival = invocation.getArgument(0);
+
+            revival.setId(7L);
+            return revival;
+        });
+
+        service.create(new RevivalCreateDto(1L, 2028, "Ali Baba 2028"));
+
+        final var order = inOrder(events, guideVersions);
+
+        order.verify(events).publishEvent(new RevivalCreated(7L));
+        order.verify(guideVersions).pinToLatest(any(), any());
     }
 
     @Test

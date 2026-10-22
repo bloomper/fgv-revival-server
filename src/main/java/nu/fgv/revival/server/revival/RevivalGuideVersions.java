@@ -23,6 +23,7 @@ import nu.fgv.revival.server.guide.GuideVersionRepository;
 import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.person.Caller;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -41,13 +42,16 @@ public class RevivalGuideVersions {
     private final RevivalRepository revivalRepository;
     private final RevivalGuideVersionChangeRepository changeRepository;
     private final GuideVersionRepository versionRepository;
+    private final ApplicationEventPublisher events;
 
     public RevivalGuideVersions(final RevivalRepository revivalRepository,
                                 final RevivalGuideVersionChangeRepository changeRepository,
-                                final GuideVersionRepository versionRepository) {
+                                final GuideVersionRepository versionRepository,
+                                final ApplicationEventPublisher events) {
         this.revivalRepository = revivalRepository;
         this.changeRepository = changeRepository;
         this.versionRepository = versionRepository;
+        this.events = events;
     }
 
     /**
@@ -99,5 +103,6 @@ public class RevivalGuideVersions {
         change.setChangedBy(caller.person().getId());
         change.setChangedAt(Instant.now());
         changeRepository.save(change);
+        events.publishEvent(new RevivalGuideVersionPinned(revival.getId(), from, versionId));
     }
 }

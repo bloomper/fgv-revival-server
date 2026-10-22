@@ -55,3 +55,36 @@ input RevivalMemberCapabilitiesInput {
     version: Int!
     capabilities: [Capability!]!
 }
+
+"A member of the revival or a free-text name (FR-009). Exactly one of person or name is set."
+type Owner {
+    "A directeur or steering group member, by display name only."
+    person: OwnerPerson
+    "A free-text name for someone outside the steering group."
+    name: String
+}
+
+type OwnerPerson {
+    id: ID!
+    displayName: String
+    "False when the person no longer holds a revival role (counts as no owner for FR-019)."
+    active: Boolean!
+}
+
+"Set one of the two, or neither to clear the owner. Both is BAD_REQUEST."
+input OwnerInput {
+    personId: ID
+    "1–100 characters, trimmed."
+    name: String
+}
+
+"A person shown by display name, never by email address (FR-048)."
+type PersonRef {
+    id: ID!
+    displayName: String
+}
+
+extend type Revival {
+    "Active directeurs and steering group members, who can own rows and checklist items (M3 FR-009)."
+    ownerCandidates: [PersonRef!]!
+}

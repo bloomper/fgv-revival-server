@@ -76,13 +76,13 @@ public class GuideMcpTools {
             @McpToolParam(description = "Word or phrase, at least 2 characters") final String query,
             @McpToolParam(required = false, description = "A revival you can see") final @Nullable Long revivalId,
             @McpToolParam(required = false, description = "1-50, default 20") final @Nullable Integer limit) {
-        support.audit("search_guide");
+        return support.call("search_guide", () -> {
+            final GuideVersionView version = version(revivalId);
+            final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
+            final GuideService.SearchResult result = guideService.search(version.id(), query, first);
 
-        final GuideVersionView version = version(revivalId);
-        final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
-        final GuideService.SearchResult result = guideService.search(version.id(), query, first);
-
-        return new SearchResult(Version.of(result.version()), result.hits().stream().map(Hit::of).toList());
+            return new SearchResult(Version.of(result.version()), result.hits().stream().map(Hit::of).toList());
+        });
     }
 
     @McpTool(name = "get_guide_section",
@@ -92,30 +92,30 @@ public class GuideMcpTools {
             @McpToolParam(description = "A-J") final String chapter,
             @McpToolParam(required = false, description = "A section key from search_guide. Without it, the whole chapter.") final @Nullable String sectionKey,
             @McpToolParam(required = false, description = "A revival you can see") final @Nullable Long revivalId) {
-        support.audit("get_guide_section");
+        return support.call("get_guide_section", () -> {
+            final GuideVersionView version = version(revivalId);
+            final Phase phase;
 
-        final GuideVersionView version = version(revivalId);
-        final Phase phase;
+            try {
+                phase = Phase.valueOf(chapter.strip().toUpperCase(Locale.ROOT));
+            } catch (final IllegalArgumentException e) {
+                throw new ResourceNotFoundException(Phase.class, chapter);
+            }
 
-        try {
-            phase = Phase.valueOf(chapter.strip().toUpperCase(Locale.ROOT));
-        } catch (final IllegalArgumentException e) {
-            throw new ResourceNotFoundException(Phase.class, chapter);
-        }
+            final GuideVersionView.Chapter found = version.chapter(phase);
 
-        final GuideVersionView.Chapter found = version.chapter(phase);
+            if (sectionKey == null) {
+                return new SectionResult(Version.of(version), phase, Text.of(found.title()),
+                        found.items().stream().map(Item::of).toList(), found.sections().stream().map(Section::of).toList());
+            }
 
-        if (sectionKey == null) {
-            return new SectionResult(Version.of(version), phase, Text.of(found.title()),
-                    found.items().stream().map(Item::of).toList(), found.sections().stream().map(Section::of).toList());
-        }
+            final GuideVersionView.Section section = found.sections().stream()
+                    .filter(candidate -> candidate.key().equals(sectionKey))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException(GuideVersionView.Section.class, sectionKey));
 
-        final GuideVersionView.Section section = found.sections().stream()
-                .filter(candidate -> candidate.key().equals(sectionKey))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException(GuideVersionView.Section.class, sectionKey));
-
-        return new SectionResult(Version.of(version), phase, Text.of(found.title()), List.of(), List.of(Section.of(section)));
+            return new SectionResult(Version.of(version), phase, Text.of(found.title()), List.of(), List.of(Section.of(section)));
+        });
     }
 
     @McpTool(name = "suggest_guide_change",
@@ -131,14 +131,14 @@ public class GuideMcpTools {
             @McpToolParam(required = false, description = "Swedish text, Markdown") final @Nullable String textSv,
             @McpToolParam(required = false, description = "English text, Markdown") final @Nullable String textEn,
             @McpToolParam(required = false, description = "Why; required for CHANGE and REMOVE") final @Nullable String reason) {
-        support.audit("suggest_guide_change");
+        return support.call("suggest_guide_change", () -> {
+            final GuideVersionView version = version(revivalId);
+            final Phase phase = chapter == null ? null : Phase.valueOf(chapter.strip().toUpperCase(Locale.ROOT));
+            final GuideSuggestionDto created = suggestionService.create(new GuideSuggestionService.Proposal(
+                    revivalId, version.id(), kind, itemKey, phase, sectionKey, type, textSv, textEn, reason));
 
-        final GuideVersionView version = version(revivalId);
-        final Phase phase = chapter == null ? null : Phase.valueOf(chapter.strip().toUpperCase(Locale.ROOT));
-        final GuideSuggestionDto created = suggestionService.create(new GuideSuggestionService.Proposal(
-                revivalId, version.id(), kind, itemKey, phase, sectionKey, type, textSv, textEn, reason));
-
-        return new SuggestionResult(created.id(), created.status(), created.kind(), new Version(version.id(), version.label(), version.publishedAt()));
+            return new SuggestionResult(created.id(), created.status(), created.kind(), new Version(version.id(), version.label(), version.publishedAt()));
+        });
     }
 
     public record Text(String sv, @Nullable String en) {

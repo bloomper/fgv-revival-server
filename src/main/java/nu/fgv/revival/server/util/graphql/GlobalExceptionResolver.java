@@ -24,6 +24,7 @@ import jakarta.validation.ConstraintViolationException;
 import nu.fgv.revival.server.util.Locales;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
+import nu.fgv.revival.server.util.error.MailUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
 import org.jspecify.annotations.Nullable;
@@ -76,6 +77,7 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
             case final ResourceNotFoundException e -> localized(ErrorType.NOT_FOUND, e, environment);
             case final ConflictException e -> localized(CustomErrorType.CONFLICT, e, environment);
             case final SpexregisterUnavailableException e -> localized(CustomErrorType.SPEXREGISTER_UNAVAILABLE, e, environment);
+            case final MailUnavailableException e -> localized(CustomErrorType.MAIL_UNAVAILABLE, e, environment);
             case final OptimisticLockingFailureException _ -> localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
             case final OptimisticLockException _ -> localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
             default -> null;

@@ -1,0 +1,184 @@
+# M3: a revival's decision log. Rules per operation are in specs/004-m3-log/contracts/README.md; they are enforced in
+# the service layer. There is no delete mutation (FR-010).
+
+extend type Query {
+    "The revival's rows matching every given filter, by number (FR-012). Readers of the revival."
+    logEntries(revivalId: ID!, filter: LogEntryFilter): [LogEntry!]!
+
+    "NOT_FOUND unless the caller can read the row's revival."
+    logEntry(id: ID!): LogEntry
+
+    "Distinct tags in the revival's log, for reuse (FR-014)."
+    logTags(revivalId: ID!): [String!]!
+}
+
+extend type Mutation {
+    "Directeur or steering group, revival visible and not ARCHIVED. With meetingId, the row belongs to that meeting."
+    logEntryCreate(input: LogEntryCreateInput!): LogEntry!
+
+    "As logEntryCreate. Any field but the number (FR-010)."
+    logEntryUpdate(input: LogEntryUpdateInput!): LogEntry!
+
+    "Creates a DECISION answering an open QUESTION, and sets the question to DONE (FR-013)."
+    logEntryAnswer(input: LogEntryAnswerInput!): LogEntryAnswerPayload!
+}
+
+enum LogEntryType {
+    DECISION
+    TODO
+    QUESTION
+}
+
+enum LogEntryStatus {
+    OPEN
+    DONE
+    WAITING
+    CANCELLED
+}
+
+enum LogEntryOrigin {
+    MANUAL
+    IMPORT
+    GUIDE
+}
+
+type LogEntry {
+    id: ID!
+    revivalId: ID!
+    number: Int!
+    date: Date!
+    type: LogEntryType!
+    text: String!
+    status: LogEntryStatus!
+    owner: Owner
+    deadline: Date
+    "OPEN or WAITING with a deadline before today, Europe/Stockholm (FR-011)."
+    overdue: Boolean!
+    comment: String
+    tags: [String!]!
+    meeting: MeetingSummary
+    "The guide item, in the revival's pinned version, if it is still there."
+    guideItem: GuideItem
+    guideItemKey: ID
+    checklistItem: ChecklistItemSummary
+    "On a DECISION: the question it answers."
+    answers: LogEntrySummary
+    "On a QUESTION: the decision answering it."
+    answeredBy: LogEntrySummary
+    origin: LogEntryOrigin!
+    "Display name."
+    createdBy: String
+    createdAt: Instant!
+    "Display name."
+    lastModifiedBy: String
+    lastModifiedAt: Instant
+    version: Int!
+}
+
+type LogEntrySummary {
+    id: ID!
+    number: Int!
+    type: LogEntryType!
+    status: LogEntryStatus!
+}
+
+input LogEntryFilter {
+    "Rows whose owner is the caller."
+    mine: Boolean = false
+    "OPEN or WAITING."
+    open: Boolean = false
+    overdue: Boolean = false
+    "Any of these."
+    types: [LogEntryType!]
+    meetingId: ID
+    "Any of these."
+    tags: [String!]
+    "Matches text, comment and free-text owner, ignoring case and diacritics."
+    text: String
+}
+
+input LogEntryCreateInput {
+    revivalId: ID!
+    "A meeting IN_PROGRESS in the same revival (FR-018)."
+    meetingId: ID
+    "Defaults to today."
+    date: Date
+    type: LogEntryType!
+    text: String!
+    "Defaults to OPEN."
+    status: LogEntryStatus
+    owner: OwnerInput
+    deadline: Date
+    comment: String
+    tags: [String!]
+    guideItemKey: ID
+    checklistItemId: ID
+}
+
+"Fields left out are unchanged. The clear* flags remove a value."
+input LogEntryUpdateInput {
+    id: ID!
+    version: Int!
+    meetingId: ID
+    date: Date
+    type: LogEntryType
+    text: String
+    status: LogEntryStatus
+    owner: OwnerInput
+    clearOwner: Boolean = false
+    deadline: Date
+    clearDeadline: Boolean = false
+    comment: String
+    clearComment: Boolean = false
+    "Replaces the tags."
+    tags: [String!]
+    guideItemKey: ID
+    checklistItemId: ID
+    clearLinks: Boolean = false
+}
+
+input LogEntryAnswerInput {
+    questionId: ID!
+    questionVersion: Int!
+    meetingId: ID
+    text: String!
+    owner: OwnerInput
+    deadline: Date
+    comment: String
+}
+
+type LogEntryAnswerPayload {
+    question: LogEntry!
+    decision: LogEntry!
+}
+
+extend type Query {
+    "The import into this revival, if one was made (FR-042). Readers of the revival."
+    logImport(revivalId: ID!): LogImport
+}
+
+enum LogImportLayout {
+    ALI_BABA
+    NOBEL
+}
+
+type LogImport {
+    fileName: String!
+    layout: LogImportLayout!
+    rowCount: Int!
+    warnings: [LogImportWarning!]!
+    importedBy: PersonRef!
+    importedAt: Instant!
+}
+
+"Codes in specs/004-m3-log/contracts/import.md."
+type LogImportWarning {
+    code: String!
+    sheetRow: Int
+    detail: String
+}
+
+extend type RevivalPermissions {
+    "Directeur, visible, not ARCHIVED, and the log has no row entered by a person yet (FR-004, FR-036)."
+    canImportLog: Boolean!
+}

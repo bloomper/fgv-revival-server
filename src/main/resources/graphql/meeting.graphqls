@@ -1,0 +1,136 @@
+# M3: steering group meetings run from the decision log. Rules per operation are in
+# specs/004-m3-log/contracts/README.md. There is no delete mutation (FR-017).
+
+enum MeetingStatus {
+    PLANNED
+    IN_PROGRESS
+    CLOSED
+    CANCELLED
+}
+
+type MeetingSummary {
+    id: ID!
+    date: Date!
+    title: String
+    status: MeetingStatus!
+}
+
+extend type Query {
+    "Newest first. Readers of the revival."
+    meetings(revivalId: ID!): [MeetingSummary!]!
+    "NOT_FOUND unless the caller can read the meeting's revival."
+    meeting(id: ID!): Meeting
+}
+
+extend type Mutation {
+    "Directeur or steering group, revival visible and not ARCHIVED, for every meeting mutation."
+    meetingCreate(input: MeetingCreateInput!): Meeting!
+    "PLANNED or IN_PROGRESS. Lists replace; frozen once CLOSED."
+    meetingUpdate(input: MeetingUpdateInput!): Meeting!
+    "PLANNED → IN_PROGRESS. The caller becomes recorder. CONFLICT if another meeting is in progress (FR-017)."
+    meetingStart(id: ID!, version: Int!): Meeting!
+    "IN_PROGRESS → CLOSED, producing the minutes. BAD_REQUEST listing the unowned to-dos if FR-019 fails."
+    meetingClose(id: ID!, version: Int!): Meeting!
+    "PLANNED → CANCELLED."
+    meetingCancel(id: ID!, version: Int!): Meeting!
+
+    "CLOSED only. Sends to every recipient (FR-021). MAIL_UNAVAILABLE when mail is not configured or nobody got it."
+    minutesEmailSend(input: MinutesEmailSendInput!): MinutesEmail!
+    "Sends again to the FAILED recipients of that send only."
+    minutesEmailRetry(emailId: ID!): MinutesEmail!
+}
+
+type Meeting {
+    id: ID!
+    revivalId: ID!
+    date: Date!
+    title: String
+    status: MeetingStatus!
+    attendees: [PersonRef!]!
+    othersPresent: String
+    agendaPoints: [String!]!
+    "The open and waiting rows, by number, while PLANNED or IN_PROGRESS (FR-018). Empty once CLOSED or CANCELLED."
+    openEntries: [LogEntry!]!
+    "Rows created in the meeting."
+    entries: [LogEntry!]!
+    recorder: PersonRef
+    startedAt: Instant
+    closedAt: Instant
+    "Set once CLOSED, never changed (FR-020)."
+    minutes: Minutes
+    emails: [MinutesEmail!]!
+    "CLOSED, the caller may write the log, and a mail server is configured (FR-021)."
+    canEmailMinutes: Boolean!
+    "While IN_PROGRESS: TODO rows, OPEN or WAITING, without an active owner, which block closing (FR-019)."
+    blockingEntries: [LogEntrySummary!]!
+    version: Int!
+}
+
+type Minutes {
+    decisions: [MinutesRow!]!
+    todos: [MinutesRow!]!
+    questions: [MinutesRow!]!
+    closed: [MinutesRow!]!
+    agendaPoints: [String!]!
+    attendees: [PersonRef!]!
+    othersPresent: String
+    recorder: PersonRef
+}
+
+"A row as it was when the meeting closed."
+type MinutesRow {
+    entryId: ID!
+    number: Int!
+    type: LogEntryType!
+    text: String!
+    owner: Owner
+    deadline: Date
+    status: LogEntryStatus!
+}
+
+input MeetingCreateInput {
+    revivalId: ID!
+    date: Date!
+    title: String
+    attendeeIds: [ID!]
+    othersPresent: String
+    agendaPoints: [String!]
+}
+
+input MeetingUpdateInput {
+    id: ID!
+    version: Int!
+    date: Date
+    title: String
+    "Replaces the attendees."
+    attendeeIds: [ID!]
+    othersPresent: String
+    "Replaces the agenda points, in order."
+    agendaPoints: [String!]
+}
+
+enum MinutesEmailRecipientStatus {
+    SENT
+    FAILED
+}
+
+type MinutesEmail {
+    id: ID!
+    language: String!
+    sentBy: PersonRef!
+    sentAt: Instant!
+    recipients: [MinutesEmailRecipient!]!
+    "Waiting members, who were not sent to."
+    waitingLeftOut: Int!
+}
+
+type MinutesEmailRecipient {
+    person: PersonRef!
+    status: MinutesEmailRecipientStatus!
+}
+
+input MinutesEmailSendInput {
+    meetingId: ID!
+    "sv or en."
+    language: String!
+}

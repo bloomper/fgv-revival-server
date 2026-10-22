@@ -1,0 +1,165 @@
+# M3: phase and event checklists. Rules per operation are in specs/004-m3-log/contracts/README.md. There is no delete
+# mutation (FR-026).
+
+enum ChecklistItemState {
+    OPEN
+    DONE
+    NOT_APPLICABLE
+}
+
+type ChecklistItemSummary {
+    id: ID!
+    checklistId: ID!
+    text: LocalizedText!
+    state: ChecklistItemState!
+}
+
+extend type Query {
+    "The ten phase checklists A–J, then event checklists by date. Readers of the revival."
+    checklists(revivalId: ID!, includeCancelled: Boolean = false): [ChecklistSummary!]!
+    "NOT_FOUND unless the caller can read the checklist's revival."
+    checklist(id: ID!): Checklist
+    "Items across the revival's checklists matching every given filter (FR-028)."
+    checklistItems(revivalId: ID!, filter: ChecklistItemFilter): [ChecklistItem!]!
+}
+
+extend type Mutation {
+    "Directeur or steering group, revival visible and not ARCHIVED, for every checklist mutation unless noted."
+    eventChecklistCreate(input: EventChecklistCreateInput!): Checklist!
+    "Name and date. Changing the date recomputes deadlines that were not set by hand (FR-023)."
+    eventChecklistUpdate(input: EventChecklistUpdateInput!): Checklist!
+    eventChecklistCancel(id: ID!, version: Int!): Checklist!
+    "Adds the template's items not already in the checklist (FR-032a). Returns the checklist."
+    checklistAddFromTemplate(input: ChecklistAddFromTemplateInput!): Checklist!
+
+    checklistItemCreate(input: ChecklistItemCreateInput!): ChecklistItem!
+    "Text is refused on required items (FR-025)."
+    checklistItemUpdate(input: ChecklistItemUpdateInput!): ChecklistItem!
+    "DONE, OPEN (reopen) or NOT_APPLICABLE. NOT_APPLICABLE on a required item: directeur only, reason required."
+    checklistItemSetState(input: ChecklistItemSetStateInput!): ChecklistItem!
+}
+
+enum ChecklistKind {
+    PHASE
+    EVENT
+}
+
+type ChecklistSummary {
+    id: ID!
+    kind: ChecklistKind!
+    phase: Phase
+    name: String
+    date: Date
+    cancelled: Boolean!
+    openCount: Int!
+    overdueCount: Int!
+    totalCount: Int!
+}
+
+type Checklist {
+    id: ID!
+    revivalId: ID!
+    kind: ChecklistKind!
+    "PHASE: the chapter letter."
+    phase: Phase
+    "PHASE: the chapter's title in the pinned version."
+    chapterTitle: LocalizedText
+    "EVENT."
+    name: String
+    date: Date
+    template: ChecklistTemplateSummary
+    cancelled: Boolean!
+    items: [ChecklistItem!]!
+    "PHASE: the chapter's TIP items in the pinned version (FR-029)."
+    tips: [GuideItem!]!
+    "Templates the caller may add items from (FR-032a)."
+    templatesAvailable: [ChecklistTemplateSummary!]!
+    version: Int!
+}
+
+type ChecklistItem {
+    id: ID!
+    checklist: ChecklistSummary!
+    required: Boolean!
+    "Required items: the guide item's text in the pinned version (FR-025, FR-035). Others: the item's text."
+    text: LocalizedText!
+    state: ChecklistItemState!
+    stateChangedBy: PersonRef
+    stateChangedAt: Instant
+    "The person's reason, or the sync's reason rendered in the reader's language."
+    reason: String
+    owner: Owner
+    deadline: Date
+    deadlineManual: Boolean!
+    "OPEN with a deadline before today (FR-027)."
+    overdue: Boolean!
+    comment: String
+    "Linked guide item, in the pinned version, if it is still there (FR-029)."
+    guideItem: GuideItem
+    guideItemKey: ID
+    "A capability hint from the template while the item has no owner."
+    defaultCapability: Capability
+    "Log rows linked to this item."
+    logEntries: [LogEntrySummary!]!
+    version: Int!
+}
+
+input ChecklistItemFilter {
+    mine: Boolean = false
+    open: Boolean = false
+    overdue: Boolean = false
+    checklistId: ID
+    requiredOnly: Boolean = false
+}
+
+input EventChecklistCreateInput {
+    revivalId: ID!
+    name: String!
+    date: Date
+    "An EVENT template that is not retired. Without it, the checklist starts empty."
+    templateId: ID
+}
+
+input EventChecklistUpdateInput {
+    id: ID!
+    version: Int!
+    name: String
+    date: Date
+    clearDate: Boolean = false
+}
+
+input ChecklistAddFromTemplateInput {
+    checklistId: ID!
+    version: Int!
+    "PHASE: the phase's template (default). EVENT: any EVENT template not retired."
+    templateId: ID
+}
+
+input ChecklistItemCreateInput {
+    checklistId: ID!
+    text: String!
+    owner: OwnerInput
+    deadline: Date
+    comment: String
+    guideItemKey: ID
+}
+
+input ChecklistItemUpdateInput {
+    id: ID!
+    version: Int!
+    text: String
+    owner: OwnerInput
+    clearOwner: Boolean = false
+    "Sets deadlineManual."
+    deadline: Date
+    clearDeadline: Boolean = false
+    comment: String
+    clearComment: Boolean = false
+}
+
+input ChecklistItemSetStateInput {
+    id: ID!
+    version: Int!
+    state: ChecklistItemState!
+    reason: String
+}

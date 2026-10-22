@@ -3,6 +3,8 @@ spring:
     import: "optional:configtree:/run/secrets/"
   datasource:
     password: ${MYSQL_USER_PASSWORD:}
+  mail:
+    password: ${SMTP_PASSWORD:}
   jpa:
     open-in-view: false
     properties:
@@ -72,7 +74,9 @@ spring:
           Nyuppsättning supports the steering groups of Chalmersspex revivals. Every call runs with the
           permissions of the signed-in user and returns only revivals they can see. No tool deletes anything or
           sends email. The guide is JK/FGV's continuity guide for revivals, in chapters A–J. Guide tools read the
-          version a revival is pinned to when you give its id.
+          version a revival is pinned to when you give its id. The decision log holds a revival's decisions, to-dos
+          and questions, numbered per revival. Checklists hold what must be done per phase A–J and per event.
+          Owners are given by display name, or "me".
 
 management:
   server:
@@ -95,6 +99,10 @@ logging:
 
 fgv-revival:
   base-url: ${FGV_REVIVAL_BASE_URL:http://localhost:8081}
+  web-url: ${FGV_REVIVAL_WEB_URL:http://localhost:3001}
+  time-zone: Europe/Stockholm
+  mail:
+    from: ${MAIL_FROM:noreply@localhost}
   keycloak:
     url: ${FGV_REVIVAL_KEYCLOAK_URL:https://auth.fgv.local.nu:8443/auth}
     realm: ${FGV_REVIVAL_KEYCLOAK_REALM:fgv}
@@ -117,6 +125,9 @@ spring:
   config:
     activate:
       on-profile: local
+  mail:
+    host: localhost
+    port: 1025
   graphql:
     schema:
       introspection:

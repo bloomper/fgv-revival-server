@@ -26,5 +26,6 @@ import graphql.ErrorClassification;
  */
 public enum CustomErrorType implements ErrorClassification {
     CONFLICT,
-    SPEXREGISTER_UNAVAILABLE
+    SPEXREGISTER_UNAVAILABLE,
+    MAIL_UNAVAILABLE
 }

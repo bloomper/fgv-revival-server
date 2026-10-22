@@ -177,6 +177,19 @@ public class SampleDataImporter {
 
     private void purgeAllRelevantTables(final JdbcClient jdbcClient) {
         final List<String> tables = List.of(
+                "minutes_email_recipient",
+                "minutes_email",
+                "meeting_entry_change",
+                "log_entry_tag_audit",
+                "log_entry_audit",
+                "log_import_audit",
+                "meeting_agenda_point_audit",
+                "meeting_attendee_audit",
+                "meeting_audit",
+                "checklist_item_audit",
+                "checklist_audit",
+                "guide_suggestion_audit",
+                "revival_guide_version_change_audit",
                 "revival_member_capability_audit",
                 "revival_member_audit",
                 "revival_status_change_audit",
@@ -185,6 +198,17 @@ public class SampleDataImporter {
                 "revival_audit",
                 "revchanges",
                 "revinfo",
+                "log_entry_tag",
+                "log_entry",
+                "log_import",
+                "log_entry_counter",
+                "meeting_agenda_point",
+                "meeting_attendee",
+                "meeting",
+                "checklist_item",
+                "checklist",
+                "guide_suggestion",
+                "revival_guide_version_change",
                 "revival_member_capability",
                 "revival_member",
                 "revival_status_change",
@@ -194,6 +218,8 @@ public class SampleDataImporter {
                 "person"
         );
 
+        jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
+        jdbcClient.sql("UPDATE minutes_email SET retry_of = NULL").update();
         tables.forEach(table ->
                 jdbcClient
                         .sql("DELETE FROM %s".formatted(table))

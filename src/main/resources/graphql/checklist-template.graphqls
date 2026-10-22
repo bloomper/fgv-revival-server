@@ -1,0 +1,123 @@
+# M3: checklist templates for phases and event kinds (FR-030–FR-032a). Rules per operation are in
+# specs/004-m3-log/contracts/README.md. Templates and their items are retired, never deleted.
+
+extend type Query {
+    "Readers of the guide (as M2's guideVersions). Retired templates only for SUPER_ADMIN."
+    checklistTemplates(includeRetired: Boolean = false): [ChecklistTemplate!]!
+    checklistTemplate(id: ID!): ChecklistTemplate
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, for every template mutation."
+    checklistTemplateCreate(input: ChecklistTemplateCreateInput!): ChecklistTemplate!
+    checklistTemplateUpdate(input: ChecklistTemplateUpdateInput!): ChecklistTemplate!
+    "Retired templates are not offered for new checklists; checklists made from them are unchanged (FR-030)."
+    checklistTemplateRetire(id: ID!, version: Int!): ChecklistTemplate!
+    checklistTemplateItemCreate(input: ChecklistTemplateItemCreateInput!): ChecklistTemplateItem!
+    checklistTemplateItemUpdate(input: ChecklistTemplateItemUpdateInput!): ChecklistTemplateItem!
+    checklistTemplateItemMove(id: ID!, version: Int!, position: Int!): ChecklistTemplate!
+    "Retires the item, so checklist items made from it keep their link."
+    checklistTemplateItemRetire(id: ID!, version: Int!): ChecklistTemplate!
+}
+
+enum RelativeDeadlineKind {
+    "amount days; negative is before the date."
+    DAYS
+    "amount Monday–Friday days; negative is before the date."
+    WORKING_DAYS
+    "weekday of the ISO week before the date's week."
+    WEEKDAY_WEEK_BEFORE
+}
+
+enum Weekday {
+    MONDAY
+    TUESDAY
+    WEDNESDAY
+    THURSDAY
+    FRIDAY
+    SATURDAY
+    SUNDAY
+}
+
+type RelativeDeadline {
+    kind: RelativeDeadlineKind!
+    amount: Int
+    weekday: Weekday
+}
+
+input RelativeDeadlineInput {
+    kind: RelativeDeadlineKind!
+    "DAYS, WORKING_DAYS: -365 to 365."
+    amount: Int
+    "WEEKDAY_WEEK_BEFORE."
+    weekday: Weekday
+}
+
+type ChecklistTemplateSummary {
+    id: ID!
+    kind: ChecklistKind!
+    phase: Phase
+    name: LocalizedText
+    retired: Boolean!
+}
+
+type ChecklistTemplate {
+    id: ID!
+    kind: ChecklistKind!
+    phase: Phase
+    "EVENT."
+    name: LocalizedText
+    retired: Boolean!
+    items: [ChecklistTemplateItem!]!
+    version: Int!
+}
+
+type ChecklistTemplateItem {
+    id: ID!
+    position: Int!
+    text: LocalizedText!
+    guideItemKey: ID
+    "In the latest published guide version, if the key is there."
+    guideItem: GuideItem
+    defaultCapability: Capability
+    "EVENT templates only."
+    deadline: RelativeDeadline
+    version: Int!
+}
+
+input ChecklistTemplateCreateInput {
+    kind: ChecklistKind!
+    "PHASE: required; refused if an active template exists for the phase."
+    phase: Phase
+    "EVENT: required."
+    name: LocalizedTextInput
+}
+
+input ChecklistTemplateUpdateInput {
+    id: ID!
+    version: Int!
+    name: LocalizedTextInput
+}
+
+input ChecklistTemplateItemCreateInput {
+    templateId: ID!
+    "Null appends."
+    position: Int
+    text: LocalizedTextInput!
+    guideItemKey: ID
+    defaultCapability: Capability
+    deadline: RelativeDeadlineInput
+}
+
+input ChecklistTemplateItemUpdateInput {
+    id: ID!
+    version: Int!
+    text: LocalizedTextInput
+    guideItemKey: ID
+    clearGuideItem: Boolean = false
+    defaultCapability: Capability
+    clearDefaultCapability: Boolean = false
+    deadline: RelativeDeadlineInput
+    clearDeadline: Boolean = false
+}
+

@@ -46,13 +46,20 @@ public class RevivalGraphqlApi {
     private final RevivalMemberService memberService;
     private final PersonNames personNames;
     private final GuideService guideService;
+    private final RevivalStatusService statusService;
 
     public RevivalGraphqlApi(final RevivalService service, final RevivalMemberService memberService, final PersonNames personNames,
-                             final GuideService guideService) {
+                             final GuideService guideService, final RevivalStatusService statusService) {
         this.service = service;
         this.memberService = memberService;
         this.personNames = personNames;
         this.guideService = guideService;
+        this.statusService = statusService;
+    }
+
+    @SchemaMapping(typeName = "Revival", field = "workSummary")
+    public RevivalWorkSummaryDto workSummary(final RevivalDto revival, final Locale locale) {
+        return statusService.workSummary(revival.id(), locale);
     }
 
     @SchemaMapping(typeName = "Revival", field = "guideVersion")

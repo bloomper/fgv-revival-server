@@ -18,6 +18,7 @@ package nu.fgv.revival.server.member;
 
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.revival.RevivalStatus;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -27,16 +28,19 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.1
  */
-public record RevivalPermissionsDto(boolean canEditCore,
+public record RevivalPermissionsDto(@Nullable Long revivalId,
+                                    boolean canEditCore,
                                     boolean canEditDetails,
                                     List<RevivalStatus> allowedStatuses,
                                     boolean canManageDirecteurs,
                                     boolean canManageSteeringGroup,
                                     boolean canSuggestGuideChange,
-                                    List<GuideVersionSummaryDto> guideVersionsAllowed) {
+                                    List<GuideVersionSummaryDto> guideVersionsAllowed,
+                                    boolean canWriteLog,
+                                    boolean canWaiveRequirement) {
 
     public RevivalPermissionsDto withGuideVersionsAllowed(final List<GuideVersionSummaryDto> versions) {
-        return new RevivalPermissionsDto(canEditCore, canEditDetails, allowedStatuses, canManageDirecteurs, canManageSteeringGroup,
-                canSuggestGuideChange, List.copyOf(versions));
+        return new RevivalPermissionsDto(revivalId, canEditCore, canEditDetails, allowedStatuses, canManageDirecteurs, canManageSteeringGroup,
+                canSuggestGuideChange, List.copyOf(versions), canWriteLog, canWaiveRequirement);
     }
 }

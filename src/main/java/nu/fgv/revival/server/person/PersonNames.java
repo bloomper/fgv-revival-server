@@ -70,6 +70,22 @@ public class PersonNames {
     }
 
     /**
+     * Names for many Keycloak subjects at once, e.g. the audit columns of a list of rows.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, String> bySubjects(final Collection<String> subjects, final Locale locale) {
+        final Map<String, String> people = personRepository.findByExternalIdIn(subjects).stream()
+                .filter(person -> person.getDisplayName() != null)
+                .collect(Collectors.toMap(Person::getExternalId, Person::getDisplayName));
+
+        return subjects.stream().distinct().collect(Collectors.toMap(
+                Function.identity(),
+                subject -> SecurityUtil.SYSTEM.equals(subject)
+                        ? messageSource.getMessage("person.system", null, "System", Locales.supported(locale))
+                        : people.getOrDefault(subject, unknown(locale))));
+    }
+
+    /**
      * Names by person id, e.g. for {@code changed_by}.
      */
     @Transactional(readOnly = true)

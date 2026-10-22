@@ -26,6 +26,7 @@ import nu.fgv.revival.server.spex.SpexService;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
@@ -68,19 +69,22 @@ public class RevivalService {
     private final AccessPolicy accessPolicy;
     private final SpexService spexService;
     private final RevivalGuideVersions guideVersions;
+    private final ApplicationEventPublisher events;
 
     public RevivalService(final RevivalRepository repository,
                           final RevivalStatusChangeRepository statusChangeRepository,
                           final CallerService callerService,
                           final AccessPolicy accessPolicy,
                           final SpexService spexService,
-                          final RevivalGuideVersions guideVersions) {
+                          final RevivalGuideVersions guideVersions,
+                          final ApplicationEventPublisher events) {
         this.repository = repository;
         this.statusChangeRepository = statusChangeRepository;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
         this.spexService = spexService;
         this.guideVersions = guideVersions;
+        this.events = events;
     }
 
     private RevivalDto toDto(final Caller caller, final Revival revival, final SpexDto spex, final List<GuideVersionSummaryDto> published) {
@@ -190,6 +194,7 @@ public class RevivalService {
 
         final Revival saved = repository.saveAndFlush(revival);
 
+        events.publishEvent(new RevivalCreated(saved.getId()));
         guideVersions.pinToLatest(saved, caller);
         return toDto(caller, saved);
     }

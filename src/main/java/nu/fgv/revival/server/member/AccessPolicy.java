@@ -45,7 +45,7 @@ import static nu.fgv.revival.server.revival.RevivalStatus.SETTLING;
 
 /**
  * Every authorization rule, in one place (constitution III, M1 research R3). Anything not permitted here is refused.
- * The rules are the visibility table in M1's data-model.md and the operation rules in M1's and M2's
+ * The rules are the visibility table in M1's data-model.md and the operation rules in M1's, M2's and M3's
  * contracts/README.md.
  *
  * @author Anders Jacobsson
@@ -249,19 +249,60 @@ public class AccessPolicy {
                 .toList();
     }
 
+    /**
+     * Reading a revival's decision log, meetings and checklists: everyone who can see it (M3 research R13).
+     */
+    public boolean canReadRevivalWork(final Caller caller, final Revival revival) {
+        return canSee(caller, revival);
+    }
+
+    /**
+     * Changing a revival's decision log, meetings and checklists: its directeurs and steering group members, while they
+     * can see it and it is not archived (FR-001). Super admins and observers only read (FR-002).
+     */
+    public boolean canWriteRevivalWork(final Caller caller, final Revival revival) {
+        return holdsRevivalRole(caller, revival) && !isArchived(revival);
+    }
+
+    /**
+     * Importing an Excel log: a directeur who can see the revival, not archived (FR-004). Whether the log is still empty
+     * is checked by the import.
+     */
+    public boolean canImportLog(final Caller caller, final Revival revival) {
+        return revival.getId() != null && isVisibleDirecteur(caller, revival) && !isArchived(revival);
+    }
+
+    /**
+     * Marking a guide requirement not applicable: a directeur only (FR-025).
+     */
+    public boolean canWaiveRequirement(final Caller caller, final Revival revival) {
+        return revival.getId() != null && isVisibleDirecteur(caller, revival) && !isArchived(revival);
+    }
+
+    public boolean canReadChecklistTemplates(final Caller caller, final Collection<Revival> callerRevivals) {
+        return canReadGuide(caller, callerRevivals);
+    }
+
+    public boolean canManageChecklistTemplates(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
     public RevivalPermissionsDto permissions(final Caller caller, final Revival revival) {
         return permissions(caller, revival, List.of());
     }
 
     public RevivalPermissionsDto permissions(final Caller caller, final Revival revival, final List<GuideVersionSummaryDto> published) {
         return new RevivalPermissionsDto(
+                revival.getId(),
                 canEditCore(caller, revival),
                 canEditDetails(caller, revival),
                 allowedStatuses(caller, revival),
                 canManageDirecteurs(caller, revival),
                 canManageSteeringGroup(caller, revival),
                 canSuggest(caller, revival),
-                guideVersionsAllowed(caller, revival, published)
+                guideVersionsAllowed(caller, revival, published),
+                canWriteRevivalWork(caller, revival),
+                canWaiveRequirement(caller, revival)
         );
     }
 
@@ -322,6 +363,30 @@ public class AccessPolicy {
     public void requireGuideVersionChange(final Caller caller, final Revival revival,
                                           final @Nullable Instant fromPublishedAt, final Instant toPublishedAt) {
         require(canChangeGuideVersion(caller, revival, fromPublishedAt, toPublishedAt));
+    }
+
+    public void requireReadRevivalWork(final Caller caller, final Revival revival) {
+        require(canReadRevivalWork(caller, revival));
+    }
+
+    public void requireWriteRevivalWork(final Caller caller, final Revival revival) {
+        require(canWriteRevivalWork(caller, revival));
+    }
+
+    public void requireImportLog(final Caller caller, final Revival revival) {
+        require(canImportLog(caller, revival));
+    }
+
+    public void requireWaiveRequirement(final Caller caller, final Revival revival) {
+        require(canWaiveRequirement(caller, revival));
+    }
+
+    public void requireReadChecklistTemplates(final Caller caller, final Collection<Revival> callerRevivals) {
+        require(canReadChecklistTemplates(caller, callerRevivals));
+    }
+
+    public void requireManageChecklistTemplates(final Caller caller) {
+        require(canManageChecklistTemplates(caller));
     }
 
     private static void require(final boolean permitted) {

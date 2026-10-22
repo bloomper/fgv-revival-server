@@ -68,6 +68,10 @@ type RevivalPermissions {
     canSuggestGuideChange: Boolean!
     "Published versions the caller may pin this revival to (FR-020). Empty when they may not change it."
     guideVersionsAllowed: [GuideVersionSummary!]!
+    "Directeur or steering group, visible, not ARCHIVED (M3 FR-001)."
+    canWriteLog: Boolean!
+    "Directeur, visible, not ARCHIVED (M3 FR-025)."
+    canWaiveRequirement: Boolean!
 }
 
 type RevivalStatusChange {
@@ -122,4 +126,19 @@ input RevivalGuideVersionChangeInput {
     "The version the caller saw; refused with CONFLICT if it has changed."
     fromVersionId: ID
     toVersionId: ID!
+}
+
+"Counts for the revival page (M3)."
+type RevivalWorkSummary {
+    "Rows OPEN or WAITING."
+    openEntries: Int!
+    overdueEntries: Int!
+    overdueChecklistItems: Int!
+    "Open items from the guide's requirements."
+    openRequiredItems: Int!
+    meetingInProgress: MeetingSummary
+}
+
+extend type Revival {
+    workSummary: RevivalWorkSummary!
 }

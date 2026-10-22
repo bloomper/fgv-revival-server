@@ -27,7 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 public class ConflictException extends ResponseStatusException {
 
-    public ConflictException(final String messageCode) {
-        super(HttpStatus.CONFLICT, messageCode, null, messageCode, null);
+    public ConflictException(final String messageCode, final Object... arguments) {
+        super(HttpStatus.CONFLICT, messageCode, null, messageCode, arguments);
     }
 }

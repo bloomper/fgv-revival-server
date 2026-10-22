@@ -43,7 +43,10 @@ public class GuideAccess {
         this.revivalRepository = revivalRepository;
     }
 
-    private List<Revival> revivals(final Caller caller) {
+    /**
+     * The revivals that let a member read the guide; empty for those who read it by their role.
+     */
+    public List<Revival> callerRevivals(final Caller caller) {
         if (caller.isSuperAdmin() || caller.isObserver() || caller.revivalRoles().isEmpty()) {
             return List.of();
         }
@@ -51,11 +54,11 @@ public class GuideAccess {
     }
 
     public boolean canRead(final Caller caller) {
-        return accessPolicy.canReadGuide(caller, revivals(caller));
+        return accessPolicy.canReadGuide(caller, callerRevivals(caller));
     }
 
     public void requireRead(final Caller caller) {
-        accessPolicy.requireReadGuide(caller, revivals(caller));
+        accessPolicy.requireReadGuide(caller, callerRevivals(caller));
     }
 
     /**
