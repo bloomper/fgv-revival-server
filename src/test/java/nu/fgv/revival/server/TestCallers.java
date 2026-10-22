@@ -80,7 +80,6 @@ public final class TestCallers {
         revival.setId(REVIVAL_ID);
         revival.setSpexId(1L);
         revival.setYear(2028);
-        revival.setWorkingTitle("Ali Baba 2028");
         revival.setStatus(status);
         revival.setVersion(3L);
         revival.setPremiereDate(LocalDate.of(2028, 2, 10));

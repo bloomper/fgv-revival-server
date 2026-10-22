@@ -44,7 +44,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        id = createRevival(ALI_BABA, 2028);
         setStatus(id, "APPROVED");
         addMember(id, DIRECTEUR, "DIRECTEUR", List.of());
     }

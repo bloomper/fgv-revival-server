@@ -24,19 +24,19 @@ package nu.fgv.revival.server;
  */
 public final class Documents {
 
-    public static final String REVIVALS = "query($status: [RevivalStatus!]) { revivals(status: $status) { id workingTitle status spex { id title available } } }";
+    public static final String REVIVALS = "query($status: [RevivalStatus!]) { revivals(status: $status) { id title status spex { id title available } } }";
     public static final String REVIVAL = """
             query($id: ID!) {
                 revival(id: $id) {
-                    id year workingTitle premiereDate showDates venues status version createdBy createdAt lastModifiedBy
+                    id year title premiereDate showDates venues status version createdBy createdAt lastModifiedBy
                     spex { id title year available }
                     members { id role capabilities state displayName email version }
                     statusHistory { from to changedBy changedAt }
                     permissions { canEditCore canEditDetails allowedStatuses canManageDirecteurs canManageSteeringGroup }
                 }
             }""";
-    public static final String CREATE = "mutation($input: RevivalCreateInput!) { revivalCreate(input: $input) { id status workingTitle spex { title } } }";
-    public static final String UPDATE = "mutation($input: RevivalUpdateInput!) { revivalUpdate(input: $input) { id version workingTitle year premiereDate showDates venues spex { id } } }";
+    public static final String CREATE = "mutation($input: RevivalCreateInput!) { revivalCreate(input: $input) { id status title spex { title } } }";
+    public static final String UPDATE = "mutation($input: RevivalUpdateInput!) { revivalUpdate(input: $input) { id version title year premiereDate showDates venues spex { id } } }";
     public static final String STATUS = "mutation($input: RevivalStatusChangeInput!) { revivalStatusChange(input: $input) { id status } }";
     public static final String MEMBER_ADD = "mutation($input: RevivalMemberAddInput!) { revivalMemberAdd(input: $input) { id role state capabilities email version } }";
     public static final String MEMBER_CAPABILITIES = "mutation($input: RevivalMemberCapabilitiesInput!) { revivalMemberCapabilitiesSet(input: $input) { id capabilities version } }";

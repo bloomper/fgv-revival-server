@@ -99,10 +99,10 @@ class GuidePdfServiceTest {
 
     @Test
     void theTitlePageNamesTheVersionDateAndRevival() throws IOException {
-        final byte[] pdf = service.render(version(GuideVersionStatus.PUBLISHED, List.of()), SWEDISH, new GuidePdfService.RevivalTitle("Ali Baba 2028", 2028));
+        final byte[] pdf = service.render(version(GuideVersionStatus.PUBLISHED, List.of()), SWEDISH, "Ali Baba 2028");
         final String firstPage = new PdfTextExtractor(new PdfReader(pdf)).getTextFromPage(1);
 
-        assertThat(firstPage).contains("Nyuppsättningsguide").contains("Version v5").contains("Publicerad").contains("För Ali Baba 2028 (2028)");
+        assertThat(firstPage).contains("Nyuppsättningsguide").contains("Version v5").contains("Publicerad").contains("För Ali Baba 2028");
     }
 
     @Test

@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -110,6 +111,17 @@ public class SpexService {
     }
 
     /**
+     * The spex from the cached list only, never calling Spexregister.
+     */
+    public Optional<SpexDto> findCached(final Long id) {
+        final Cache.ValueWrapper cached = cache().get(KEY);
+
+        return cached == null || !(cached.get() instanceof final List<?> spex)
+                ? Optional.empty()
+                : spex.stream().map(SpexDto.class::cast).filter(candidate -> candidate.id().equals(id)).findFirst();
+    }
+
+    /**
      * Titles for several spex from one cached list. Never fails: while Spexregister is unavailable every spex is
      * returned as unavailable.
      */
@@ -134,9 +146,11 @@ public class SpexService {
      *
      * @throws SpexregisterUnavailableException when it cannot be checked
      */
-    public void requireOriginal(final Long id) {
-        if (originalSpex().stream().anyMatch(spex -> spex.id().equals(id))) {
-            return;
+    public SpexDto requireOriginal(final Long id) {
+        final Optional<SpexDto> cached = originalSpex().stream().filter(spex -> spex.id().equals(id)).findFirst();
+
+        if (cached.isPresent()) {
+            return cached.get();
         }
 
         // Not in the cached list: it may be new since the list was read, so ask Spexregister directly
@@ -152,5 +166,6 @@ public class SpexService {
             throw new BadRequestException("error.spex.notOriginal", id);
         }
         cache().evict(KEY);
+        return new SpexDto(id, spex.title(), SpexregisterClient.year(spex.year()), true);
     }
 }

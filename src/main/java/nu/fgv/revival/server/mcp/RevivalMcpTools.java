@@ -60,7 +60,7 @@ public class RevivalMcpTools {
     }
 
     @McpTool(name = "list_revivals",
-            description = "List the revivals you can see, with spex, year, working title, status and premiere date. Optionally filter by status.",
+            description = "List the revivals you can see, with spex, year, status and premiere date. Optionally filter by status.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<McpRevival> listRevivals(
             @McpToolParam(required = false, description = "Only these statuses: PROPOSED, APPROVED, ORGANISING, OPEN, CLOSING, SETTLING, ARCHIVED or REJECTED")
@@ -97,7 +97,6 @@ public class RevivalMcpTools {
                 revival.spex().title(),
                 revival.spex().available(),
                 revival.year(),
-                revival.workingTitle(),
                 revival.status(),
                 revival.premiereDate(),
                 assignment == null ? null : assignment.role());
@@ -110,7 +109,6 @@ public class RevivalMcpTools {
                              @Nullable String spexTitle,
                              boolean spexAvailable,
                              Integer year,
-                             String workingTitle,
                              RevivalStatus status,
                              @Nullable LocalDate premiereDate,
                              @Nullable RevivalRole role) {

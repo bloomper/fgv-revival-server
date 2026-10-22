@@ -66,9 +66,6 @@ public class Revival extends AbstractAuditable {
     @Column(name = "year", nullable = false)
     private Integer year;
 
-    @Column(name = "working_title", nullable = false)
-    private String workingTitle;
-
     @Column(name = "premiere_date")
     private @Nullable LocalDate premiereDate;
 

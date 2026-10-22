@@ -31,6 +31,7 @@ import nu.fgv.revival.server.person.PersonNames;
 import nu.fgv.revival.server.person.PersonRepository;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
+import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.MailUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
@@ -78,6 +79,7 @@ public class MinutesEmailService {
     private final AccessPolicy accessPolicy;
     private final TransactionTemplate transactions;
     private final Clock clock;
+    private final RevivalTitles titles;
 
     public MinutesEmailService(final MinutesEmailRepository repository,
                                final MeetingService meetingService,
@@ -89,7 +91,8 @@ public class MinutesEmailService {
                                final CallerService callerService,
                                final AccessPolicy accessPolicy,
                                final TransactionTemplate transactions,
-                               final Clock clock) {
+                               final Clock clock,
+                               final RevivalTitles titles) {
         this.repository = repository;
         this.meetingService = meetingService;
         this.mailer = mailer;
@@ -101,6 +104,7 @@ public class MinutesEmailService {
         this.accessPolicy = accessPolicy;
         this.transactions = transactions;
         this.clock = clock;
+        this.titles = titles;
     }
 
     /**
@@ -220,7 +224,7 @@ public class MinutesEmailService {
 
     private MinutesEmailDto sendTo(final Prepared prepared, final List<Person> people, final int waiting, final @Nullable Long retryOf,
                                    final Locale locale) {
-        final MinutesMailer.Context context = new MinutesMailer.Context(prepared.revival().getWorkingTitle(),
+        final MinutesMailer.Context context = new MinutesMailer.Context(titles.ofCached(prepared.revival(), Locale.of(prepared.language())),
                 Objects.requireNonNullElse(prepared.caller().person().getDisplayName(), ""));
         final Map<Long, MinutesEmailRecipientStatus> results = new LinkedHashMap<>();
 

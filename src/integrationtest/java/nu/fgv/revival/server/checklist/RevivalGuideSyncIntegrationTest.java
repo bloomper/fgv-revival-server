@@ -48,7 +48,7 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aRevivalCreatedBeforeThePublicationGetsEmptyChecklistsThenItsRequirements() {
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
 
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM checklist WHERE revival_id = ? AND kind = 'PHASE'").param(revival).query(Integer.class).single())
                 .isEqualTo(10);
@@ -117,11 +117,11 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
         final long version = publishedGuide();
 
         jdbcClient.sql("""
-                        INSERT INTO revival (spex_id, year, working_title, status, guide_version_id, created_by, created_at, version)
-                        VALUES (?, 2027, 'Snorre 2027', 'ORGANISING', ?, 'system', NOW(6), 0)""")
+                        INSERT INTO revival (spex_id, year, status, guide_version_id, created_by, created_at, version)
+                        VALUES (?, 2027, 'ORGANISING', ?, 'system', NOW(6), 0)""")
                 .param(SNORRE).param(version).update();
 
-        final long revival = jdbcClient.sql("SELECT id FROM revival WHERE working_title = 'Snorre 2027'").query(Long.class).single();
+        final long revival = jdbcClient.sql("SELECT id FROM revival WHERE spex_id = 3 AND year = 2027").query(Long.class).single();
 
         sync.run(new DefaultApplicationArguments());
         sync.run(new DefaultApplicationArguments());
@@ -138,7 +138,7 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
     void aSuperAdminsActionsSyncAlthoughSuperAdminsMayNotWriteChecklists() {
         publishedGuide();
 
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
 
         assertThat(count(revival, "required = 1")).isEqualTo(3);
         expectError(execute(SUPER_ADMIN, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",

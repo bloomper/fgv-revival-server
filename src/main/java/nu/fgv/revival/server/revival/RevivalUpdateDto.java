@@ -31,14 +31,13 @@ public record RevivalUpdateDto(Long id,
                                Long version,
                                @Nullable Long spexId,
                                @Nullable Integer year,
-                               @Nullable String workingTitle,
                                @Nullable LocalDate premiereDate,
                                @Nullable Boolean clearPremiereDate,
                                @Nullable List<LocalDate> showDates,
                                @Nullable List<String> venues) {
 
     boolean changesCore() {
-        return spexId != null || year != null || workingTitle != null;
+        return spexId != null || year != null;
     }
 
     boolean changesDetails() {

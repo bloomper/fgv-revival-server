@@ -34,7 +34,6 @@ import java.util.List;
 public record RevivalDto(Long id,
                          SpexDto spex,
                          Integer year,
-                         String workingTitle,
                          @Nullable LocalDate premiereDate,
                          List<LocalDate> showDates,
                          List<String> venues,

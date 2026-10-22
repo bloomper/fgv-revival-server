@@ -44,7 +44,7 @@ class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void publishedGuideAndARevival() {
         version = publishedGuide();
-        revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        revival = createRevival(ALI_BABA, 2028);
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
         login(STEERING_GROUP);
@@ -85,7 +85,7 @@ class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
                 .expectHeader().valueEquals(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"nyuppsattningsguide-ali-baba-2028-en.pdf\"")
                 .expectBody(byte[].class).returnResult().getResponseBody());
 
-        assertThat(firstPage(pdf)).contains("Revival guide").contains("For Ali Baba 2028 (2028)");
+        assertThat(firstPage(pdf)).contains("Revival guide").contains("For Ali Baba 2028");
     }
 
     @Test

@@ -62,7 +62,8 @@ type GuideSuggestion {
 "A suggestion's revival, without the details of a Revival the caller might not otherwise see."
 type GuideSuggestionRevival {
     id: ID!
-    workingTitle: String!
+    "As Revival.title."
+    title: String!
     year: Year!
 }
 

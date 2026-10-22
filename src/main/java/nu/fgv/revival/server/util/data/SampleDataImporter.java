@@ -65,6 +65,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -402,6 +403,8 @@ public class SampleDataImporter {
         final RevivalStatus[] statuses = RevivalStatus.values();
         final SamplePerson admin = people.get(ADMIN);
 
+        final Set<String> taken = new HashSet<>();
+
         Collections.shuffle(shuffledSpex, rnd);
 
         for (int i = 0; i < NUMBER_OF_SAMPLES_REVIVALS; i++) {
@@ -409,8 +412,22 @@ public class SampleDataImporter {
             final RevivalStatus status = statuses[i % statuses.length];
             final List<RevivalStatus> path = statusPath(status);
             final List<Instant> timeline = timeline(path.size());
-            final SpexDto revivedSpex = shuffledSpex.get(i % shuffledSpex.size());
-            final int year = year(status);
+            int year = year(status);
+            SpexDto revivedSpex = null;
+
+            // One revival per spex and year: try every spex, then the year after (or before, for archived ones)
+            while (revivedSpex == null) {
+                for (int offset = 0; offset < shuffledSpex.size() && revivedSpex == null; offset++) {
+                    final SpexDto candidate = shuffledSpex.get((i + offset) % shuffledSpex.size());
+
+                    if ((candidate.year() == null || candidate.year() <= year) && taken.add(candidate.id() + "/" + year)) {
+                        revivedSpex = candidate;
+                    }
+                }
+                if (revivedSpex == null) {
+                    year += status == RevivalStatus.ARCHIVED ? -1 : 1;
+                }
+            }
             final LocalDate premiereDate = status == RevivalStatus.PROPOSED || status == RevivalStatus.REJECTED ?
                     null :
                     LocalDate.of(year, rnd.nextInt(3, 6), rnd.nextInt(1, 29));
@@ -545,18 +562,15 @@ public class SampleDataImporter {
                                final Instant createdAt,
                                final SamplePerson createdBy) {
         final KeyHolder keyHolder = new GeneratedKeyHolder();
-        final String title = hasText(spex.title()) ? spex.title() : "Spex " + spex.id();
-
         jdbcClient
                 .sql("""
                         INSERT INTO revival
-                            (spex_id, year, working_title, premiere_date, status, created_by, created_at, version)
+                            (spex_id, year, premiere_date, status, created_by, created_at, version)
                         VALUES
-                            (:spexId, :year, :workingTitle, :premiereDate, :status, :createdBy, :createdAt, 0)
+                            (:spexId, :year, :premiereDate, :status, :createdBy, :createdAt, 0)
                         """)
                 .param("spexId", spex.id())
                 .param("year", year)
-                .param("workingTitle", "%s %d".formatted(title, year))
                 .param("premiereDate", premiereDate)
                 .param("status", status.name())
                 .param("createdBy", createdBy.externalId())
@@ -645,8 +659,8 @@ public class SampleDataImporter {
 
         List.of(
                 """
-                        INSERT INTO revival_audit (id, spex_id, year, working_title, premiere_date, status, guide_version_id, version, rev, revtype)
-                        SELECT id, spex_id, year, working_title, premiere_date, status, guide_version_id, version, :rev, 0 FROM revival
+                        INSERT INTO revival_audit (id, spex_id, year, premiere_date, status, guide_version_id, version, rev, revtype)
+                        SELECT id, spex_id, year, premiere_date, status, guide_version_id, version, :rev, 0 FROM revival
                         """,
                 """
                         INSERT INTO revival_show_date_audit (revival_id, show_date, rev, revtype)

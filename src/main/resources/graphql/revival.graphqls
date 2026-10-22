@@ -15,6 +15,9 @@ extend type Mutation {
 
     "Changes status. SUPER_ADMIN: any. Directeur: next step only (FR-013, FR-014)."
     revivalStatusChange(input: RevivalStatusChangeInput!): Revival!
+
+    "SUPER_ADMIN. Removes the revival with everything that belongs to it (constitution IV). Returns its id."
+    revivalDelete(id: ID!, version: Int!): ID!
 }
 
 enum RevivalStatus {
@@ -32,7 +35,8 @@ type Revival {
     id: ID!
     spex: Spex!
     year: Year!
-    workingTitle: String!
+    "The spex's title and the year, e.g. \"Ali Baba 2028\", or a generic name while Spexregister is unavailable."
+    title: String!
     premiereDate: Date
     showDates: [Date!]!
     venues: [String!]!
@@ -72,6 +76,8 @@ type RevivalPermissions {
     canWriteLog: Boolean!
     "Directeur, visible, not ARCHIVED (M3 FR-025)."
     canWaiveRequirement: Boolean!
+    "SUPER_ADMIN (constitution IV)."
+    canDelete: Boolean!
 }
 
 type RevivalStatusChange {
@@ -82,10 +88,13 @@ type RevivalStatusChange {
     changedAt: Instant!
 }
 
+"""
+The year must not be before the original spex nor before the current year, and the spex must not already have a
+revival that year.
+"""
 input RevivalCreateInput {
     spexId: ID!
     year: Year!
-    workingTitle: String!
 }
 
 "Omitted fields are left unchanged. Lists replace the whole list."
@@ -94,7 +103,6 @@ input RevivalUpdateInput {
     version: Int!
     spexId: ID
     year: Year
-    workingTitle: String
     premiereDate: Date
     clearPremiereDate: Boolean = false
     showDates: [Date!]

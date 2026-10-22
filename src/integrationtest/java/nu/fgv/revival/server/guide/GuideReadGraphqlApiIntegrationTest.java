@@ -36,7 +36,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     static final String REVIVAL_GUIDE = "query($id: ID!) { revival(id: $id) { guideVersion { id label } } }";
 
     private long organisingRevivalWithMembers() {
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
@@ -94,7 +94,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     void aWaitingMemberIsRefused() {
         publishedGuide();
 
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         addMember(revival, "waiting" + DOMAIN, "STEERING_GROUP", List.of());

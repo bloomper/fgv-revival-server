@@ -56,7 +56,7 @@ public record GuideSuggestionDto(Long id,
     /**
      * GraphQL's {@code GuideSuggestionRevival}: only what the suggestion needs, not the revival's details.
      */
-    public record Revival(Long id, String workingTitle, Integer year) {
+    public record Revival(Long id, Long spexId, Integer year) {
     }
 
     /**

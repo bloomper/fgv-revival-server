@@ -27,5 +27,7 @@ import java.util.List;
  */
 public interface RevivalRepository extends JpaRepository<Revival, Long>, JpaSpecificationExecutor<Revival> {
 
+    boolean existsBySpexIdAndYearAndIdNot(Long spexId, Integer year, Long id);
+
     List<Revival> findByGuideVersionIdIsNull();
 }

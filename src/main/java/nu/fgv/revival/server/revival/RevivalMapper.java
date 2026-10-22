@@ -33,7 +33,6 @@ public interface RevivalMapper {
 
     @Mapping(target = "id", source = "revival.id")
     @Mapping(target = "year", source = "revival.year")
-    @Mapping(target = "workingTitle", source = "revival.workingTitle")
     @Mapping(target = "premiereDate", source = "revival.premiereDate")
     @Mapping(target = "showDates", source = "revival.showDates")
     @Mapping(target = "venues", source = "revival.venues")

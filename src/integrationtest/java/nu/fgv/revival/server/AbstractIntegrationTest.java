@@ -390,10 +390,10 @@ public abstract class AbstractIntegrationTest {
         return request.execute();
     }
 
-    protected long createRevival(final long spexId, final int year, final String workingTitle) {
+    protected long createRevival(final long spexId, final int year) {
         final String id = graphQl(SUPER_ADMIN)
                 .document("mutation($input: RevivalCreateInput!) { revivalCreate(input: $input) { id } }")
-                .variable("input", Map.of("spexId", spexId, "year", year, "workingTitle", workingTitle))
+                .variable("input", Map.of("spexId", spexId, "year", year))
                 .execute()
                 .path("revivalCreate.id").entity(String.class).get();
 
@@ -456,7 +456,7 @@ public abstract class AbstractIntegrationTest {
      * group, both logged in.
      */
     protected long organisingRevival() {
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);

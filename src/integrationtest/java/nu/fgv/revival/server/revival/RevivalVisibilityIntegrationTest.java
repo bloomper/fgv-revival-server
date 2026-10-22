@@ -67,7 +67,7 @@ class RevivalVisibilityIntegrationTest extends AbstractIntegrationTest {
     @ParameterizedTest(name = "{0} in {1} sees it: {2}")
     @MethodSource("combinations")
     void graphQlAndMcpMatchTheVisibilityTable(final String role, final String status, final boolean visible) {
-        final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long id = createRevival(ALI_BABA, 2028);
         final String user = USERS.get(role);
 
         addMember(id, DIRECTEUR, "DIRECTEUR", List.of());

@@ -21,6 +21,7 @@ import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
+import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,7 @@ public class GuideService {
     private final GuideAccess guideAccess;
     private final Optional<DraftSuggestions> draftSuggestions;
     private final GuidePdfService pdfService;
+    private final RevivalTitles titles;
 
     public GuideService(final GuideVersionRepository versionRepository,
                         final GuideVersionViews views,
@@ -62,7 +64,8 @@ public class GuideService {
                         final AccessPolicy accessPolicy,
                         final GuideAccess guideAccess,
                         final Optional<DraftSuggestions> draftSuggestions,
-                        final GuidePdfService pdfService) {
+                        final GuidePdfService pdfService,
+                        final RevivalTitles titles) {
         this.versionRepository = versionRepository;
         this.views = views;
         this.importService = importService;
@@ -72,6 +75,7 @@ public class GuideService {
         this.guideAccess = guideAccess;
         this.draftSuggestions = draftSuggestions;
         this.pdfService = pdfService;
+        this.titles = titles;
     }
 
     private GuideVersionView load(final Long id) {
@@ -147,8 +151,7 @@ public class GuideService {
     }
 
     /**
-     * A revival's guide as a PDF, with the revival on the title page. Its working title is FGV Revival's own, so this
-     * never calls Spexregister (FR-006).
+     * A revival's guide as a PDF, with the revival on the title page.
      */
     @Transactional(readOnly = true)
     public Pdf revivalPdf(final Long revivalId, final Locale locale) {
@@ -156,8 +159,9 @@ public class GuideService {
         final GuideVersionView version = Optional.ofNullable(revival.getGuideVersionId()).map(this::load)
                 .orElseThrow(() -> new ResourceNotFoundException("error.guide.notPublished"));
 
-        return new Pdf(pdfService.render(version, locale, new GuidePdfService.RevivalTitle(revival.getWorkingTitle(), revival.getYear())),
-                fileName(revival.getWorkingTitle(), locale));
+        final String title = titles.of(revival, locale);
+
+        return new Pdf(pdfService.render(version, locale, title), fileName(title, locale));
     }
 
     private String draftName(final Locale locale) {
@@ -229,7 +233,7 @@ public class GuideService {
     }
 
     /**
-     * The working title and year of a revival the caller can see, for the PDF title page.
+     * A revival the caller can see, for the PDF title page.
      */
     @Transactional(readOnly = true)
     public Revival visibleRevival(final Long revivalId) {

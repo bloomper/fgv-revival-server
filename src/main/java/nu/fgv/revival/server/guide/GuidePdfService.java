@@ -65,13 +65,7 @@ public class GuidePdfService {
         this.messageSource = messageSource;
     }
 
-    /**
-     * The revival on a revival's guide's title page.
-     */
-    public record RevivalTitle(String workingTitle, int year) {
-    }
-
-    public byte[] render(final GuideVersionView version, final Locale locale, final @Nullable RevivalTitle revival) {
+    public byte[] render(final GuideVersionView version, final Locale locale, final @Nullable String revivalTitle) {
         final boolean english = Locale.ENGLISH.getLanguage().equals(locale.getLanguage());
         final PdfFonts body = PdfFonts.helvetica(10.5f);
         final Font title = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 26);
@@ -104,9 +98,9 @@ public class GuidePdfService {
                 cover.add(new Paragraph(message("guide.pdf.published", locale,
                         DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale).format(version.publishedAt().atZone(SWEDEN))), subtitle));
             }
-            if (revival != null) {
+            if (revivalTitle != null) {
                 cover.add(new Paragraph(" "));
-                cover.add(new Paragraph(message("guide.pdf.revival", locale, revival.workingTitle(), revival.year()), subtitle));
+                cover.add(new Paragraph(message("guide.pdf.revival", locale, revivalTitle), subtitle));
             }
             document.add(cover);
             document.newPage();

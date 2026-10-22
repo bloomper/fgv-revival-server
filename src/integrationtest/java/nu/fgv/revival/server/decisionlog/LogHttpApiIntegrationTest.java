@@ -177,7 +177,7 @@ class LogHttpApiIntegrationTest extends AbstractIntegrationTest {
         post(DIRECTEUR, "import", LogWorkbookFixtures.nobel(), null, "en").expectStatus().isCreated();
         post(DIRECTEUR, "import", LogWorkbookFixtures.nobel(), null, "en").expectStatus().isEqualTo(409);
 
-        final long other = createRevival(ALI_BABA, 2029, "Ali Baba 2029");
+        final long other = createRevival(ALI_BABA, 2029);
 
         setStatus(other, "APPROVED");
         addMember(other, DIRECTEUR, "DIRECTEUR", List.of());

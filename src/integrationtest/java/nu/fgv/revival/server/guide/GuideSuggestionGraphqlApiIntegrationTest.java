@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
-    private static final String FIELDS = "id kind status version mine author decidedBy decisionReason reopenedAt revival { workingTitle } madeOn { label } publishedIn { label } item { text { sv } } proposedText { sv }";
+    private static final String FIELDS = "id kind status version mine author decidedBy decisionReason reopenedAt revival { title } madeOn { label } publishedIn { label } item { text { sv } } proposedText { sv }";
     private static final String CREATE = "mutation($input: GuideSuggestionCreateInput!) { guideSuggestionCreate(input: $input) { " + FIELDS + " } }";
     private static final String ACCEPT = "mutation($input: GuideSuggestionAcceptInput!) { guideSuggestionAccept(input: $input) { " + FIELDS + " } }";
     private static final String REJECT = "mutation($input: GuideSuggestionRejectInput!) { guideSuggestionReject(input: $input) { " + FIELDS + " } }";
@@ -49,7 +49,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void publishedGuideAndARevival() {
         version = publishedGuide();
-        revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        revival = createRevival(ALI_BABA, 2028);
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
         login(STEERING_GROUP);
@@ -90,7 +90,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("guideSuggestionCreate.mine").entity(Boolean.class).isEqualTo(true)
                 .path("guideSuggestionCreate.author").entity(String.class).isEqualTo("Stina Styrgrupp")
                 .path("guideSuggestionCreate.madeOn.label").entity(String.class).isEqualTo("v1")
-                .path("guideSuggestionCreate.revival.workingTitle").entity(String.class).isEqualTo("Ali Baba 2028");
+                .path("guideSuggestionCreate.revival.title").entity(String.class).isEqualTo("Ali Baba 2028");
         execute(DIRECTEUR, CREATE, add()).path("guideSuggestionCreate.status").entity(String.class).isEqualTo("OPEN");
 
         expectError(execute(OBSERVER, CREATE, add()), "FORBIDDEN");

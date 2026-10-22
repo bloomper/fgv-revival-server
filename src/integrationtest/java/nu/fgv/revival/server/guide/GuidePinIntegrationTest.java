@@ -57,7 +57,7 @@ class GuidePinIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void twoVersionsAndARevival() {
         v1 = publishedGuide();
-        revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        revival = createRevival(ALI_BABA, 2028);
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
         login(STEERING_GROUP);

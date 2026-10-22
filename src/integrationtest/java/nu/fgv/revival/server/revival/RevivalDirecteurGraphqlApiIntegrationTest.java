@@ -43,9 +43,9 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
 
     @BeforeEach
     void setUp() {
-        own = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
-        other = createRevival(NOBEL, 2029, "Nobel 2029");
-        proposed = createRevival(SNORRE, 2030, "Snorre 2030");
+        own = createRevival(ALI_BABA, 2028);
+        other = createRevival(NOBEL, 2029);
+        proposed = createRevival(SNORRE, 2030);
         setStatus(own, "APPROVED");
         setStatus(other, "APPROVED");
         addMember(own, DIRECTEUR, "DIRECTEUR", List.of());
@@ -70,7 +70,7 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
                 .path("revivalUpdate.premiereDate").entity(String.class).isEqualTo("2028-02-10")
                 .path("revivalUpdate.showDates").entityList(String.class).containsExactly("2028-02-10", "2028-02-12")
                 .path("revivalUpdate.venues").entityList(String.class).containsExactly("Chalmers kårhus");
-        expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "workingTitle", "Mitt spex"))), "FORBIDDEN");
+        expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "year", 2029))), "FORBIDDEN");
     }
 
     @Test

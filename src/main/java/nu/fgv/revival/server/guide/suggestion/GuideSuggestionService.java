@@ -410,7 +410,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 suggestion.getId(),
                 suggestion.getKind(),
                 suggestion.getStatus(),
-                new GuideSuggestionDto.Revival(revival.getId(), revival.getWorkingTitle(), revival.getYear()),
+                new GuideSuggestionDto.Revival(revival.getId(), revival.getSpexId(), revival.getYear()),
                 suggestion.getAuthorId(),
                 suggestion.getAuthorId().equals(caller.person().getId()),
                 GUIDE_MAPPER.toSummary(madeOn),

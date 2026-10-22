@@ -47,14 +47,21 @@ public class RevivalGraphqlApi {
     private final PersonNames personNames;
     private final GuideService guideService;
     private final RevivalStatusService statusService;
+    private final RevivalTitles titles;
 
     public RevivalGraphqlApi(final RevivalService service, final RevivalMemberService memberService, final PersonNames personNames,
-                             final GuideService guideService, final RevivalStatusService statusService) {
+                             final GuideService guideService, final RevivalStatusService statusService, final RevivalTitles titles) {
         this.service = service;
         this.memberService = memberService;
         this.personNames = personNames;
         this.guideService = guideService;
         this.statusService = statusService;
+        this.titles = titles;
+    }
+
+    @SchemaMapping(typeName = "Revival", field = "title")
+    public String title(final RevivalDto revival, final Locale locale) {
+        return titles.of(revival.spex(), revival.year(), locale);
     }
 
     @SchemaMapping(typeName = "Revival", field = "workSummary")
@@ -128,6 +135,12 @@ public class RevivalGraphqlApi {
     @MutationMapping
     public RevivalDto revivalStatusChange(@Argument final RevivalStatusChangeDto input) {
         return service.changeStatus(input);
+    }
+
+    @MutationMapping
+    public Long revivalDelete(@Argument final Long id, @Argument final Long version) {
+        service.delete(id, version);
+        return id;
     }
 
     @SchemaMapping(typeName = "Revival", field = "members")

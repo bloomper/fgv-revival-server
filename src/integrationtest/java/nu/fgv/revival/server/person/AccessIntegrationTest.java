@@ -90,7 +90,7 @@ class AccessIntegrationTest extends AbstractIntegrationTest {
             userId = createUser(realm(admin), email, "Rut", "Borttagen", CLIENT_ID, List.of("USER"));
         }
 
-        final long revivalId = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revivalId = createRevival(ALI_BABA, 2028);
 
         setStatus(revivalId, "APPROVED");
         addMember(revivalId, email, "DIRECTEUR", List.of());

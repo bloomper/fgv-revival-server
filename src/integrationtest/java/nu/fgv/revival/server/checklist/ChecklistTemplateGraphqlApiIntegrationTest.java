@@ -72,7 +72,7 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
     }
 
     private long revivalWithTreasurer() {
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);

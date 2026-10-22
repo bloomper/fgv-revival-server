@@ -40,16 +40,16 @@ class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
                 .path("revivals[0].spex.available").entity(Boolean.class).isEqualTo(false)
                 .path("revivals[0].spex.title").valueIsNull();
         execute(SUPER_ADMIN, REVIVAL, Map.of("id", id)).path("revival.spex.available").entity(Boolean.class).isEqualTo(false);
-        expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2029, "workingTitle", "X"))), "SPEXREGISTER_UNAVAILABLE");
+        expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2029))), "SPEXREGISTER_UNAVAILABLE");
         expectError(execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL))), "SPEXREGISTER_UNAVAILABLE");
         expectError(execute(SUPER_ADMIN, SPEX_SEARCH, Map.of("query", "ali")), "SPEXREGISTER_UNAVAILABLE");
-        execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "workingTitle", "Ali Baba – reservplan", "venues", java.util.List.of("Kårhuset"))))
-                .path("revivalUpdate.workingTitle").entity(String.class).isEqualTo("Ali Baba – reservplan");
+        execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "venues", java.util.List.of("Kårhuset"))))
+                .path("revivalUpdate.title").entity(String.class).isEqualTo("Revival 2028");
     }
 
     @Test
     void anErrorResponse() {
-        final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long id = createRevival(ALI_BABA, 2028);
 
         spexregisterDown(false);
         assertDegraded(id);
@@ -57,7 +57,7 @@ class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aTimeout() {
-        final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long id = createRevival(ALI_BABA, 2028);
 
         spexregisterDown(true);
         assertDegraded(id);

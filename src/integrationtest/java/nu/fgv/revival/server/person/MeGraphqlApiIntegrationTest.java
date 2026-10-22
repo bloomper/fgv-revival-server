@@ -39,19 +39,19 @@ class MeGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void meListsRevivalRolesOnlyForVisibleRevivals() {
-        final long approved = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
-        final long proposed = createRevival(NOBEL, 2030, "Nobel 2030");
+        final long approved = createRevival(ALI_BABA, 2028);
+        final long proposed = createRevival(NOBEL, 2030);
 
         setStatus(approved, "APPROVED");
         addMember(approved, DIRECTEUR, "DIRECTEUR", List.of());
         addMember(proposed, DIRECTEUR, "DIRECTEUR", List.of());
 
         graphQl(DIRECTEUR)
-                .document("{ me { revivalRoles { role capabilities revival { id workingTitle } } } }")
+                .document("{ me { revivalRoles { role capabilities revival { id title } } } }")
                 .execute()
                 .path("me.revivalRoles").entityList(Object.class).hasSize(1)
                 .path("me.revivalRoles[0].role").entity(String.class).isEqualTo("DIRECTEUR")
                 .path("me.revivalRoles[0].capabilities").entityList(String.class).containsExactly("FINANCE", "CATERING", "STAFFING", "COMMS")
-                .path("me.revivalRoles[0].revival.workingTitle").entity(String.class).isEqualTo("Ali Baba 2028");
+                .path("me.revivalRoles[0].revival.title").entity(String.class).isEqualTo("Ali Baba 2028");
     }
 }

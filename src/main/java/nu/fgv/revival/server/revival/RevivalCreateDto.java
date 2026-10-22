@@ -20,5 +20,5 @@ package nu.fgv.revival.server.revival;
  * @author Anders Jacobsson
  * @since 0.1
  */
-public record RevivalCreateDto(Long spexId, Integer year, String workingTitle) {
+public record RevivalCreateDto(Long spexId, Integer year) {
 }

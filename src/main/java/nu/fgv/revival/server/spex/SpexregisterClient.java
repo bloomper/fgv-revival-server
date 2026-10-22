@@ -62,7 +62,7 @@ public class SpexregisterClient {
         this.graphQlClient = spexregisterGraphQlClient;
     }
 
-    private static @Nullable Integer year(final @Nullable String year) {
+    static @Nullable Integer year(final @Nullable String year) {
         try {
             return year == null ? null : Integer.valueOf(year);
         } catch (final NumberFormatException _) {

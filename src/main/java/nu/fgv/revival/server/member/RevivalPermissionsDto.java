@@ -37,10 +37,11 @@ public record RevivalPermissionsDto(@Nullable Long revivalId,
                                     boolean canSuggestGuideChange,
                                     List<GuideVersionSummaryDto> guideVersionsAllowed,
                                     boolean canWriteLog,
-                                    boolean canWaiveRequirement) {
+                                    boolean canWaiveRequirement,
+                                    boolean canDelete) {
 
     public RevivalPermissionsDto withGuideVersionsAllowed(final List<GuideVersionSummaryDto> versions) {
         return new RevivalPermissionsDto(revivalId, canEditCore, canEditDetails, allowedStatuses, canManageDirecteurs, canManageSteeringGroup,
-                canSuggestGuideChange, List.copyOf(versions), canWriteLog, canWaiveRequirement);
+                canSuggestGuideChange, List.copyOf(versions), canWriteLog, canWaiveRequirement, canDelete);
     }
 }

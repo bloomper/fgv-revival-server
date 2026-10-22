@@ -84,7 +84,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("logEntryCreate.createdBy").entity(String.class).isEqualTo("Stina Styrgrupp");
         create(DIRECTEUR, Map.of("type", "DECISION", "text", "Vi spelar i februari"));
 
-        final long other = createRevival(ALI_BABA, 2029, "Ali Baba 2029");
+        final long other = createRevival(ALI_BABA, 2029);
 
         assertThat(jdbcClient.sql("SELECT last_number FROM log_entry_counter WHERE revival_id = ?").param(other).query(Integer.class).single()).isZero();
         assertThat(numbers(STEERING_GROUP, Map.of())).containsExactly(1, 2);

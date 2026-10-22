@@ -39,8 +39,8 @@ class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
     private long approved;
 
     private void createRevivals() {
-        organising = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
-        approved = createRevival(NOBEL, 2029, "Nobel 2029");
+        organising = createRevival(ALI_BABA, 2028);
+        approved = createRevival(NOBEL, 2029);
         setStatus(organising, "ORGANISING");
         setStatus(approved, "APPROVED");
         addMember(organising, DIRECTEUR, "DIRECTEUR", List.of());
@@ -65,11 +65,10 @@ class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
         assertThat(item.get("spexTitle").asString()).isEqualTo("Ali Baba");
         assertThat(item.get("spexAvailable").asBoolean()).isTrue();
         assertThat(item.get("year").asInt()).isEqualTo(2028);
-        assertThat(item.get("workingTitle").asString()).isEqualTo("Ali Baba 2028");
         assertThat(item.get("status").asString()).isEqualTo("ORGANISING");
         assertThat(item.get("premiereDate").asString()).isEqualTo("2028-02-10");
         assertThat(item.get("role").asString()).isEqualTo("DIRECTEUR");
-        assertThat(item.propertyNames()).containsExactlyInAnyOrder("id", "spexTitle", "spexAvailable", "year", "workingTitle", "status", "premiereDate", "role");
+        assertThat(item.propertyNames()).containsExactlyInAnyOrder("id", "spexTitle", "spexAvailable", "year", "status", "premiereDate", "role");
         assertThat(item.toString()).doesNotContain("@");
     }
 

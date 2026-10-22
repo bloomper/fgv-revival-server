@@ -51,13 +51,15 @@ public class RevivalStatusService {
     private final LogEntryService logEntryService;
     private final ChecklistService checklistService;
     private final MeetingService meetingService;
+    private final RevivalTitles titles;
 
     public RevivalStatusService(final RevivalService revivalService, final LogEntryService logEntryService, final ChecklistService checklistService,
-                                final MeetingService meetingService) {
+                                final MeetingService meetingService, final RevivalTitles titles) {
         this.revivalService = revivalService;
         this.logEntryService = logEntryService;
         this.checklistService = checklistService;
         this.meetingService = meetingService;
+        this.titles = titles;
     }
 
     /**
@@ -82,7 +84,7 @@ public class RevivalStatusService {
                 .collect(Collectors.groupingBy(item -> Objects.requireNonNull(item.checklist().phase())));
 
         return new RevivalStatusDto(
-                new RevivalStatusDto.Summary(revival.id(), Objects.requireNonNullElse(revival.spex().title(), revival.workingTitle()), revival.year(),
+                new RevivalStatusDto.Summary(revival.id(), titles.of(revival.spex(), revival.year(), locale), revival.year(),
                         revival.status()),
                 logEntryService.list(revivalId, new LogEntryFilterDto(null, null, true, null, null, null, null), locale),
                 checklistService.items(revivalId, new ChecklistItemFilterDto(null, null, true, null, null), locale),

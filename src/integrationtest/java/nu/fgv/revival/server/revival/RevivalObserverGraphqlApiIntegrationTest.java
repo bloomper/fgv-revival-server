@@ -49,7 +49,7 @@ class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final List<String> ids = new ArrayList<>();
 
         for (final String status : STATUSES) {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba " + status);
+            final long id = createRevival(ALI_BABA, 2028 + ids.size());
 
             addMember(id, DIRECTEUR, "DIRECTEUR", List.of());
             setStatus(id, status);
@@ -65,13 +65,13 @@ class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyMutationIsRefused() {
-        final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long id = createRevival(ALI_BABA, 2028);
 
         setStatus(id, "ORGANISING");
 
         final long steeringGroupMember = addMember(id, STEERING_GROUP, "STEERING_GROUP", List.of());
 
-        expectError(execute(OBSERVER, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028, "workingTitle", "X"))), "FORBIDDEN");
+        expectError(execute(OBSERVER, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028))), "FORBIDDEN");
         expectError(execute(OBSERVER, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "venues", List.of("X")))), "FORBIDDEN");
         expectError(execute(OBSERVER, STATUS, Map.of("input", Map.of("id", id, "from", "ORGANISING", "to", "OPEN"))), "FORBIDDEN");
         expectError(execute(OBSERVER, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "x" + DOMAIN, "role", "STEERING_GROUP"))), "FORBIDDEN");

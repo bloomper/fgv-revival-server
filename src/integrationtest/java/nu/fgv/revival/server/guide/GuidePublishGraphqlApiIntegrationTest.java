@@ -39,7 +39,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void publishingPinsExistingRevivalsAndTheReportIsGone() {
-        final long revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        final long revival = createRevival(ALI_BABA, 2028);
         final long draft = importV5Layout();
 
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
@@ -64,7 +64,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void aRevivalCreatedAfterPublishingIsPinnedToTheLatest() {
         final long version = publishedGuide();
-        final long revival = createRevival(NOBEL, 2027, "Nobel 2027");
+        final long revival = createRevival(NOBEL, 2027);
 
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
                 .path("revival.guideVersion.id").entity(String.class).isEqualTo(String.valueOf(version));

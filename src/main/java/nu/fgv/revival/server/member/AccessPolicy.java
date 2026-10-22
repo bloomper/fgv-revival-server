@@ -170,6 +170,10 @@ public class AccessPolicy {
         return caller.isSuperAdmin();
     }
 
+    public boolean canDeleteRevival(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
     private static boolean holdsRevivalRole(final Caller caller, final Revival revival) {
         final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
 
@@ -302,7 +306,8 @@ public class AccessPolicy {
                 canSuggest(caller, revival),
                 guideVersionsAllowed(caller, revival, published),
                 canWriteRevivalWork(caller, revival),
-                canWaiveRequirement(caller, revival)
+                canWaiveRequirement(caller, revival),
+                canDeleteRevival(caller)
         );
     }
 
@@ -318,6 +323,10 @@ public class AccessPolicy {
 
     public void requireCreateRevival(final Caller caller) {
         require(canCreateRevival(caller));
+    }
+
+    public void requireDeleteRevival(final Caller caller) {
+        require(canDeleteRevival(caller));
     }
 
     public void requireEditCore(final Caller caller, final Revival revival) {

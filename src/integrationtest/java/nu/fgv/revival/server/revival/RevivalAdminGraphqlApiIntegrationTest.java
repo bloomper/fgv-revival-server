@@ -56,41 +56,60 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void aCreatedRevivalIsProposedAndListed() {
-            execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028, "workingTitle", "Ali Baba 2028")))
+            execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028)))
                     .path("revivalCreate.status").entity(String.class).isEqualTo("PROPOSED")
                     .path("revivalCreate.spex.title").entity(String.class).isEqualTo("Ali Baba");
 
             execute(SUPER_ADMIN, REVIVALS, Map.of())
-                    .path("revivals[0].workingTitle").entity(String.class).isEqualTo("Ali Baba 2028")
+                    .path("revivals[0].title").entity(String.class).isEqualTo("Ali Baba 2028")
                     .path("revivals[0].spex.available").entity(Boolean.class).isEqualTo(true);
         }
 
         @Test
         void aRevivalOfASpexRevivalIsRefused() {
-            expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", SPEX_REVIVAL, "year", 2028, "workingTitle", "X"))), "BAD_REQUEST");
+            expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", SPEX_REVIVAL, "year", 2028))), "BAD_REQUEST");
         }
 
         @Test
-        void twoRevivalsOfTheSameSpexInTheSameYearAreAllowed() {
-            createRevival(ALI_BABA, 2028, "Ali Baba 2028");
-            createRevival(ALI_BABA, 2028, "Ali Baba 2028 – Göteborg");
+        void aSecondRevivalOfTheSameSpexInTheSameYearIsRefused() {
+            createRevival(ALI_BABA, 2028);
 
-            execute(SUPER_ADMIN, REVIVALS, Map.of()).path("revivals").entityList(Object.class).hasSize(2);
+            expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028))), "BAD_REQUEST");
+            execute(SUPER_ADMIN, REVIVALS, Map.of()).path("revivals").entityList(Object.class).hasSize(1);
+        }
+
+        @Test
+        void theYearIsNeitherBeforeTheOriginalNorBeforeThisYear() {
+            expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", NOBEL, "year", 1987))), "BAD_REQUEST");
+            expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2020))), "BAD_REQUEST");
+        }
+
+        @Test
+        void aDeletedRevivalIsGoneWithEverythingThatBelongsToIt() {
+            final long id = createRevival(ALI_BABA, 2028);
+
+            addMember(id, DIRECTEUR, "DIRECTEUR", List.of());
+            execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { revivalDelete(id: $id, version: $version) }", Map.of("id", id, "version", version(id)))
+                    .path("revivalDelete").entity(String.class).isEqualTo(String.valueOf(id));
+
+            execute(SUPER_ADMIN, REVIVALS, Map.of()).path("revivals").entityList(Object.class).hasSize(0);
+            assertThat(jdbcClient.sql("SELECT COUNT(*) FROM revival_member").query(Integer.class).single()).isZero();
+            assertThat(jdbcClient.sql("SELECT COUNT(*) FROM revival_audit WHERE id = ? AND revtype = 2").param(id).query(Integer.class).single()).isOne();
         }
 
         @Test
         void coreFieldsCanBeUpdated() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
-            execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL, "year", 2029, "workingTitle", "Nobel 2029")))
-                    .path("revivalUpdate.workingTitle").entity(String.class).isEqualTo("Nobel 2029")
+            execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL, "year", 2029)))
+                    .path("revivalUpdate.title").entity(String.class).isEqualTo("Nobel 2029")
                     .path("revivalUpdate.year").entity(Integer.class).isEqualTo(2029)
                     .path("revivalUpdate.spex.id").entity(String.class).isEqualTo(String.valueOf(NOBEL));
         }
 
         @Test
         void anyStatusCanBeSetIncludingBackwards() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
             for (final String[] step : List.of(
                     new String[]{"PROPOSED", "APPROVED"},
@@ -106,7 +125,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void statusHistoryListsEveryChangeWithWhoAndWhen() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
             setStatus(id, "APPROVED");
             setStatus(id, "REJECTED");
@@ -122,7 +141,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void revisionsRecordTheKeycloakSubjectNeverAnEmail() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
             setStatus(id, "APPROVED");
             addMember(id, "ny-directeur" + DOMAIN, "DIRECTEUR", List.of());
@@ -137,7 +156,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void aDirecteurCanBeAppointedWaitingAndRemoved() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
             setStatus(id, "APPROVED");
 
@@ -157,7 +176,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void theSameEmailTwiceIsRefused() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
             addMember(id, "dubbel" + DOMAIN, "DIRECTEUR", List.of());
 
@@ -166,7 +185,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void participantsCannotBeAdded() {
-            final long id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            final long id = createRevival(ALI_BABA, 2028);
 
             expectError(execute(SUPER_ADMIN, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "p" + DOMAIN, "role", "PARTICIPANT"))), "BAD_REQUEST");
         }
@@ -183,7 +202,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @BeforeEach
         void setUp() {
-            id = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+            id = createRevival(ALI_BABA, 2028);
             setStatus(id, "APPROVED");
             directeurMemberId = addMember(id, DIRECTEUR, "DIRECTEUR", List.of());
         }
@@ -196,8 +215,8 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         })
         void superAdminOperations(final String user, final String globalCode, final String revivalCode) {
             expectError(execute(user, SPEX_SEARCH, Map.of("query", "ali")), globalCode);
-            expectError(execute(user, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028, "workingTitle", "X"))), globalCode);
-            expectError(execute(user, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "workingTitle", "X"))), revivalCode);
+            expectError(execute(user, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028))), globalCode);
+            expectError(execute(user, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "year", 2029))), revivalCode);
             expectError(execute(user, STATUS, Map.of("input", Map.of("id", id, "from", "APPROVED", "to", "REJECTED"))), revivalCode);
             expectError(execute(user, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "x" + DOMAIN, "role", "DIRECTEUR"))), revivalCode);
             expectError(execute(user, MEMBER_REMOVE, Map.of("id", directeurMemberId)), revivalCode);

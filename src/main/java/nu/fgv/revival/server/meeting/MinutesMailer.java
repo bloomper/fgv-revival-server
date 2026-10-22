@@ -73,7 +73,7 @@ public class MinutesMailer {
     /**
      * What the revival and the sender look like in the message.
      */
-    public record Context(String workingTitle, String senderName) {
+    public record Context(String revivalTitle, String senderName) {
     }
 
     public SimpleMailMessage message(final MeetingDto meeting, final Context context, final Locale locale, final String to) {
@@ -82,7 +82,7 @@ public class MinutesMailer {
 
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject(text("minutes.mail.subject", locale, context.workingTitle(),
+        message.setSubject(text("minutes.mail.subject", locale, context.revivalTitle(),
                 meeting.title() != null ? meeting.title() : meeting.date().toString()));
         message.setText(body(meeting, context, locale, heading));
         return message;

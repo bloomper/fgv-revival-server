@@ -43,7 +43,7 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void publishedGuideAndARevival() {
         version = publishedGuide();
-        revival = createRevival(ALI_BABA, 2028, "Ali Baba 2028");
+        revival = createRevival(ALI_BABA, 2028);
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
         login(STEERING_GROUP);

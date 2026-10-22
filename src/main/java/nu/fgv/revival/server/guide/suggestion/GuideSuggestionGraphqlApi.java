@@ -19,6 +19,7 @@ package nu.fgv.revival.server.guide.suggestion;
 import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.person.PersonNames;
+import nu.fgv.revival.server.revival.RevivalTitles;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -40,10 +41,12 @@ public class GuideSuggestionGraphqlApi {
 
     private final GuideSuggestionService service;
     private final PersonNames personNames;
+    private final RevivalTitles titles;
 
-    public GuideSuggestionGraphqlApi(final GuideSuggestionService service, final PersonNames personNames) {
+    public GuideSuggestionGraphqlApi(final GuideSuggestionService service, final PersonNames personNames, final RevivalTitles titles) {
         this.service = service;
         this.personNames = personNames;
+        this.titles = titles;
     }
 
     public record GuideSuggestionCreateInput(Long revivalId, Long versionId, GuideSuggestionKind kind, @Nullable String itemKey,
@@ -91,6 +94,11 @@ public class GuideSuggestionGraphqlApi {
     @MutationMapping
     public GuideSuggestionDto guideSuggestionWithdraw(@Argument final Long id, @Argument final Long version) {
         return service.withdraw(id, version);
+    }
+
+    @SchemaMapping(typeName = "GuideSuggestionRevival", field = "title")
+    public String revivalTitle(final GuideSuggestionDto.Revival revival, final Locale locale) {
+        return titles.of(revival.spexId(), revival.year(), locale);
     }
 
     @SchemaMapping(typeName = "GuideSuggestion", field = "author")

@@ -33,6 +33,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -70,6 +71,8 @@ public class RevivalService {
     private final SpexService spexService;
     private final RevivalGuideVersions guideVersions;
     private final ApplicationEventPublisher events;
+    private final RevivalDeletion deletion;
+    private final Clock clock;
 
     public RevivalService(final RevivalRepository repository,
                           final RevivalStatusChangeRepository statusChangeRepository,
@@ -77,7 +80,9 @@ public class RevivalService {
                           final AccessPolicy accessPolicy,
                           final SpexService spexService,
                           final RevivalGuideVersions guideVersions,
-                          final ApplicationEventPublisher events) {
+                          final ApplicationEventPublisher events,
+                          final RevivalDeletion deletion,
+                          final Clock clock) {
         this.repository = repository;
         this.statusChangeRepository = statusChangeRepository;
         this.callerService = callerService;
@@ -85,6 +90,8 @@ public class RevivalService {
         this.spexService = spexService;
         this.guideVersions = guideVersions;
         this.events = events;
+        this.deletion = deletion;
+        this.clock = clock;
     }
 
     private RevivalDto toDto(final Caller caller, final Revival revival, final SpexDto spex, final List<GuideVersionSummaryDto> published) {
@@ -186,9 +193,14 @@ public class RevivalService {
 
         final Revival revival = new Revival();
 
-        revival.setYear(validYear(dto.year()));
-        revival.setWorkingTitle(validWorkingTitle(dto.workingTitle()));
-        spexService.requireOriginal(dto.spexId());
+        final SpexDto spex = spexService.requireOriginal(dto.spexId());
+        final Integer year = validYear(dto.year(), spex);
+
+        if (year < LocalDate.now(clock).getYear()) {
+            throw new BadRequestException("error.revival.year.past", LocalDate.now(clock).getYear());
+        }
+        requireUnique(dto.spexId(), year, null);
+        revival.setYear(year);
         revival.setSpexId(dto.spexId());
         revival.setStatus(RevivalStatus.PROPOSED);
 
@@ -219,15 +231,14 @@ public class RevivalService {
         }
         AuditContext.operation("revivalUpdate");
 
-        if (dto.year() != null) {
-            revival.setYear(validYear(dto.year()));
-        }
-        if (dto.workingTitle() != null) {
-            revival.setWorkingTitle(validWorkingTitle(dto.workingTitle()));
-        }
-        if (dto.spexId() != null && !dto.spexId().equals(revival.getSpexId())) {
-            spexService.requireOriginal(dto.spexId());
-            revival.setSpexId(dto.spexId());
+        if (dto.changesCore()) {
+            final Long spexId = dto.spexId() != null ? dto.spexId() : revival.getSpexId();
+            final SpexDto spex = spexService.requireOriginal(spexId);
+            final Integer year = validYear(dto.year() != null ? dto.year() : revival.getYear(), spex);
+
+            requireUnique(spexId, year, revival.getId());
+            revival.setSpexId(spexId);
+            revival.setYear(year);
         }
         if (Boolean.TRUE.equals(dto.clearPremiereDate())) {
             revival.setPremiereDate(null);
@@ -245,6 +256,22 @@ public class RevivalService {
         validateDates(revival);
 
         return toDto(caller, repository.saveAndFlush(revival));
+    }
+
+    /**
+     * Removes the revival with everything that belongs to it, which only a super admin may do (constitution IV).
+     */
+    @Transactional
+    public void delete(final Long id, final Long version) {
+        final Caller caller = callerService.current();
+        final Revival revival = visible(caller, id);
+
+        accessPolicy.requireDeleteRevival(caller);
+        if (!Objects.equals(version, revival.getVersion())) {
+            throw new ConflictException("error.conflict");
+        }
+        AuditContext.operation("revivalDelete");
+        deletion.delete(revival);
     }
 
     /**
@@ -277,22 +304,25 @@ public class RevivalService {
         return toDto(caller, saved);
     }
 
-    private static Integer validYear(final @Nullable Integer year) {
+    /**
+     * Within 1948–2100 and not before the original spex.
+     */
+    private static Integer validYear(final @Nullable Integer year, final SpexDto spex) {
         if (year == null || year < MIN_YEAR || year > MAX_YEAR) {
             throw new BadRequestException("error.revival.year", MIN_YEAR, MAX_YEAR);
+        }
+        if (spex.year() != null && year < spex.year()) {
+            throw new BadRequestException("error.revival.year.beforeOriginal", spex.year());
         }
         return year;
     }
 
-    private static String validWorkingTitle(final @Nullable String workingTitle) {
-        if (!hasText(workingTitle)) {
-            throw new BadRequestException("error.revival.workingTitle.blank");
+    private void requireUnique(final Long spexId, final Integer year, final @Nullable Long id) {
+        if (repository.existsBySpexIdAndYearAndIdNot(spexId, year, id == null ? -1L : id)) {
+            throw new BadRequestException("error.revival.duplicate", year);
         }
-        if (workingTitle.trim().length() > 255) {
-            throw new BadRequestException("error.revival.workingTitle.tooLong", 255);
-        }
-        return workingTitle.trim();
     }
+
 
     private static List<String> validVenues(final List<String> venues) {
         if (venues.size() > MAX_VENUES) {
