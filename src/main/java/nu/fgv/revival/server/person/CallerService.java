@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -106,6 +107,12 @@ public class CallerService {
             throw new AccessDeniedException("No access to Nyuppsättning");
         }
 
+        final Caller propagated = CallerContext.current();
+
+        if (propagated != null) {
+            return propagated;
+        }
+
         final RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
 
         if (attributes != null && attributes.getAttribute(REQUEST_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST) instanceof final Caller cached) {
@@ -118,6 +125,26 @@ public class CallerService {
             attributes.setAttribute(REQUEST_ATTRIBUTE, caller, RequestAttributes.SCOPE_REQUEST);
         }
         return caller;
+    }
+
+    /**
+     * The caller, for {@link CallerFilter}: empty without a token or access, and when resolving fails, in which case
+     * {@link #current()} resolves it again and reports the error.
+     */
+    Optional<Caller> resolveEarly() {
+        final Optional<Authentication> authentication = SecurityUtil.currentAuthentication();
+        final Optional<Jwt> jwt = SecurityUtil.currentJwt();
+
+        if (authentication.isEmpty() || jwt.isEmpty() || !hasAccess(authentication.get())) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(resolve(jwt.get(), globalRoles(authentication.get())));
+        } catch (final RuntimeException e) {
+            log.warn("Could not resolve the caller before the request", e);
+            return Optional.empty();
+        }
     }
 
     private Caller resolve(final Jwt jwt, final Set<GlobalRole> globalRoles) {
