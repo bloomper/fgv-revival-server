@@ -151,9 +151,12 @@ public class SampleDataImporter {
         final List<SpexDto> spex = timedResult("Read the spex from Spexregister", this::originalSpex);
         final Map<String, SamplePerson> people;
 
-        try (final Keycloak keycloak = keycloakAdminClient()) {
+        try (final Keycloak keycloak = keycloakAdminClient();
+             final NotificationSuspender.Suspension ignored = NotificationSuspender.suspend(keycloak.realm(keycloakRealm))) {
             people = timedResult("Created the sample users", () -> createSampleUsers(jdbcClient, keycloak.realm(keycloakRealm)));
         }
+
+        timed("Reassigned the published guide versions", () -> reassignGuideVersions(jdbcClient, people.get(ADMIN)));
 
         timed("Created the revivals", () -> createSampleRevivals(jdbcClient, spex, people));
         timed("Seeded the baseline revision", () -> seedBaselineRevision(jdbcClient));

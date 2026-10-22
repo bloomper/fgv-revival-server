@@ -123,6 +123,22 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void keepsTheGuideAndGivesItsPublishedVersionsToTheAdmin() throws SQLException {
+        importSampleData();
+        jdbcClient.sql("""
+                        INSERT INTO guide_version (status, intro_sv, published_at, published_by, created_by, created_at)
+                        SELECT 'PUBLISHED', 'Intro', NOW(6), id, 'test', NOW(6) FROM person WHERE email = ?
+                        """)
+                .param(SampleDataImporter.DIRECTEUR)
+                .update();
+
+        importSampleData();
+
+        assertThat(jdbcClient.sql("SELECT p.email FROM guide_version g JOIN person p ON p.id = g.published_by").query(String.class).list())
+                .containsExactly(SampleDataImporter.ADMIN);
+    }
+
+    @Test
     void theSampleUsersCanLogInWithTheirRoles() throws SQLException {
         importSampleData();
         forgetTokens();
