@@ -17,6 +17,8 @@
 package nu.fgv.revival.server.util.data;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.checklist.RevivalGuideSync;
+import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,6 +49,10 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     private SampleDataImporter importer;
     @Autowired
     private DataSource dataSource;
+    @Autowired
+    private RevivalGuideSync guideSync;
+    @Autowired
+    private SampleActivityImporter activityImporter;
 
     @BeforeAll
     static void createSpexregisterSampleAdmin() {
@@ -108,6 +114,8 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
         assertThat(count("revival_status_change_audit")).isEqualTo(count("revival_status_change"));
         assertThat(count("revival_member_audit")).isEqualTo(count("revival_member"));
         assertThat(count("revival_member_capability_audit")).isEqualTo(count("revival_member_capability"));
+        assertThat(count("revival_guide_version_change_audit")).isEqualTo(count("revival_guide_version_change"));
+        assertThat(count("guide_item_audit")).isEqualTo(count("guide_item"));
     }
 
     @Test
@@ -123,19 +131,101 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void keepsTheGuideAndGivesItsPublishedVersionsToTheAdmin() throws SQLException {
+    void createsAGuideInTwoVersionsAndPinsEveryRevival() throws SQLException {
+        importSampleData();
+
+        assertThat(jdbcClient.sql("SELECT label FROM guide_version WHERE status = 'PUBLISHED' ORDER BY published_at").query(String.class).list())
+                .containsExactly("v1", "v2");
+        assertThat(count("guide_chapter")).isEqualTo(2 * Phase.values().length);
+        assertThat(count("guide_item WHERE type = 'QUESTION'")).isPositive();
+        assertThat(count("revival WHERE guide_version_id IS NULL")).isZero();
+        assertThat(count("revival_guide_version_change")).isEqualTo(count("revival"));
+    }
+
+    @Test
+    void theGuideSyncGivesTheRevivalsRequiredItemsAndQuestions() throws SQLException {
+        importSampleData();
+
+        guideSync.run(null);
+
+        assertThat(count("checklist_item WHERE required = 1")).isPositive();
+        assertThat(count("log_entry WHERE origin = 'GUIDE'")).isPositive();
+    }
+
+    private void importSampleDataAndActivity() throws SQLException {
+        importSampleData();
+        guideSync.run(null);
+        activityImporter.importSampleActivity();
+    }
+
+    @Test
+    void createsPhaseAndEventTemplates() throws SQLException {
+        importSampleData();
+
+        assertThat(count("checklist_template WHERE kind = 'PHASE'")).isPositive();
+        assertThat(jdbcClient.sql("SELECT name_sv FROM checklist_template WHERE kind = 'EVENT'").query(String.class).list())
+                .containsExactlyInAnyOrder(SampleChecklistTemplates.REHEARSAL_WEEKEND, SampleChecklistTemplates.SHOW_WEEKEND);
+        assertThat(count("checklist_template_audit")).isEqualTo(count("checklist_template"));
+    }
+
+    @Test
+    void bringsTheRevivalsToLife() throws SQLException {
+        importSampleDataAndActivity();
+
+        assertThat(count("checklist_item WHERE template_item_id IS NOT NULL")).isPositive();
+        assertThat(count("checklist_item WHERE state = 'DONE'")).isPositive();
+        assertThat(count("checklist_item WHERE state = 'NOT_APPLICABLE'")).isPositive();
+        assertThat(count("checklist WHERE kind = 'EVENT'")).isPositive();
+        assertThat(count("log_entry WHERE origin = 'MANUAL'")).isPositive();
+        assertThat(count("log_entry WHERE answers_entry_id IS NOT NULL")).isPositive();
+        assertThat(count("meeting WHERE status = 'CLOSED' AND minutes IS NULL")).isZero();
+        assertThat(count("meeting WHERE status = 'PLANNED'")).isPositive();
+        assertThat(jdbcClient.sql("SELECT status FROM guide_suggestion").query(String.class).list())
+                .containsExactlyInAnyOrder("ACCEPTED", "REJECTED", "OPEN", "OPEN");
+        assertThat(count("log_entry WHERE id NOT IN (SELECT id FROM log_entry_audit)")).isZero();
+        assertThat(count("checklist_item_audit WHERE state = 'DONE'")).isPositive();
+    }
+
+    @Test
+    void theDirecteurReadsTheMinutesOfAClosedMeeting() throws SQLException {
+        importSampleDataAndActivity();
+        forgetTokens();
+
+        final Long meetingId = jdbcClient.sql("""
+                        SELECT m.id FROM meeting m
+                        JOIN revival_member rm ON rm.revival_id = m.revival_id AND rm.role = 'DIRECTEUR'
+                        JOIN person p ON p.id = rm.person_id
+                        WHERE m.status = 'CLOSED' AND p.email = ?
+                        LIMIT 1
+                        """)
+                .param(SampleDataImporter.DIRECTEUR)
+                .query(Long.class)
+                .single();
+
+        graphQl(SampleDataImporter.DIRECTEUR)
+                .document("query($id: ID!) { meeting(id: $id) { minutes { decisions { number text } closed { number } agendaPoints attendees { id } recorder { id } } } }")
+                .variable("id", meetingId)
+                .execute()
+                .path("meeting.minutes.decisions").entityList(Object.class).hasSizeGreaterThan(1)
+                .path("meeting.minutes.closed").entityList(Object.class).hasSizeGreaterThan(1)
+                .path("meeting.minutes.agendaPoints").entityList(String.class).contains("Budget")
+                .path("meeting.minutes.recorder.id").hasValue();
+    }
+
+    @Test
+    void replacesAGuideCreatedInTheApplication() throws SQLException {
         importSampleData();
         jdbcClient.sql("""
-                        INSERT INTO guide_version (status, intro_sv, published_at, published_by, created_by, created_at)
-                        SELECT 'PUBLISHED', 'Intro', NOW(6), id, 'test', NOW(6) FROM person WHERE email = ?
+                        INSERT INTO guide_version (status, intro_sv, published_by, created_by, created_at)
+                        SELECT 'DRAFT', 'Intro', id, 'test', NOW(6) FROM person WHERE email = ?
                         """)
                 .param(SampleDataImporter.DIRECTEUR)
                 .update();
 
         importSampleData();
 
-        assertThat(jdbcClient.sql("SELECT p.email FROM guide_version g JOIN person p ON p.id = g.published_by").query(String.class).list())
-                .containsExactly(SampleDataImporter.ADMIN);
+        assertThat(count("guide_version")).isEqualTo(2);
+        assertThat(count("guide_version WHERE status = 'DRAFT'")).isZero();
     }
 
     @Test

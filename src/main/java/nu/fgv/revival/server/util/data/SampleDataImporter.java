@@ -19,11 +19,18 @@ package nu.fgv.revival.server.util.data;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.audit.AuditSource;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
+import nu.fgv.revival.server.guide.GuideChapter;
+import nu.fgv.revival.server.guide.GuideItem;
+import nu.fgv.revival.server.guide.GuideSection;
+import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.Revival;
+import nu.fgv.revival.server.revival.RevivalGuideVersionChange;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalStatusChange;
 import nu.fgv.revival.server.spex.SpexDto;
@@ -151,14 +158,16 @@ public class SampleDataImporter {
         final List<SpexDto> spex = timedResult("Read the spex from Spexregister", this::originalSpex);
         final Map<String, SamplePerson> people;
 
-        try (final Keycloak keycloak = keycloakAdminClient();
-             final NotificationSuspender.Suspension ignored = NotificationSuspender.suspend(keycloak.realm(keycloakRealm))) {
-            people = timedResult("Created the sample users", () -> createSampleUsers(jdbcClient, keycloak.realm(keycloakRealm)));
+        try (final Keycloak keycloak = keycloakAdminClient()) {
+            final RealmResource realm = keycloak.realm(keycloakRealm);
+
+            people = timedResult("Created the sample users", () -> NotificationSuspender.whileSuspended(realm, () -> createSampleUsers(jdbcClient, realm)));
         }
 
-        timed("Reassigned the published guide versions", () -> reassignGuideVersions(jdbcClient, people.get(ADMIN)));
+        final List<SampleGuide.Version> guide = timedResult("Created the guide", () -> SampleGuide.insert(jdbcClient, people.get(ADMIN).id(), people.get(ADMIN).externalId()));
 
-        timed("Created the revivals", () -> createSampleRevivals(jdbcClient, spex, people));
+        timed("Created the checklist templates", () -> SampleChecklistTemplates.insert(jdbcClient, people.get(ADMIN).externalId()));
+        timed("Created the revivals", () -> createSampleRevivals(jdbcClient, spex, people, guide));
         timed("Seeded the baseline revision", () -> seedBaselineRevision(jdbcClient));
         log.info("Imported sample data in {} s", Duration.ofNanos(System.nanoTime() - started).toSeconds());
     }
@@ -191,8 +200,14 @@ public class SampleDataImporter {
                 "meeting_audit",
                 "checklist_item_audit",
                 "checklist_audit",
+                "checklist_template_item_audit",
+                "checklist_template_audit",
                 "guide_suggestion_audit",
                 "revival_guide_version_change_audit",
+                "guide_item_audit",
+                "guide_section_audit",
+                "guide_chapter_audit",
+                "guide_version_audit",
                 "revival_member_capability_audit",
                 "revival_member_audit",
                 "revival_status_change_audit",
@@ -210,6 +225,8 @@ public class SampleDataImporter {
                 "meeting",
                 "checklist_item",
                 "checklist",
+                "checklist_template_item",
+                "checklist_template",
                 "guide_suggestion",
                 "revival_guide_version_change",
                 "revival_member_capability",
@@ -218,27 +235,21 @@ public class SampleDataImporter {
                 "revival_show_date",
                 "revival_venue",
                 "revival",
+                "guide_import_report",
+                "guide_item",
+                "guide_section",
+                "guide_chapter",
+                "guide_version",
                 "person"
         );
 
         jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
         jdbcClient.sql("UPDATE minutes_email SET retry_of = NULL").update();
-        jdbcClient.sql("UPDATE guide_version SET published_by = NULL").update();
         tables.forEach(table ->
                 jdbcClient
                         .sql("DELETE FROM %s".formatted(table))
                         .update()
         );
-    }
-
-    /**
-     * Keeps an imported or created guide, but its publishers are deleted along with all other people.
-     */
-    private static void reassignGuideVersions(final JdbcClient jdbcClient, final SamplePerson admin) {
-        jdbcClient
-                .sql("UPDATE guide_version SET published_by = :admin WHERE status = 'PUBLISHED'")
-                .param("admin", admin.id())
-                .update();
     }
 
     /**
@@ -383,7 +394,10 @@ public class SampleDataImporter {
      * group member per capability. In the second, {@value #DIRECTEUR_2} leads alone, with {@value #INVITED} waiting
      * and {@value #STEERING_GROUP} removed.
      */
-    private void createSampleRevivals(final JdbcClient jdbcClient, final List<SpexDto> spex, final Map<String, SamplePerson> people) {
+    private void createSampleRevivals(final JdbcClient jdbcClient,
+                                      final List<SpexDto> spex,
+                                      final Map<String, SamplePerson> people,
+                                      final List<SampleGuide.Version> guide) {
         final List<SpexDto> shuffledSpex = new ArrayList<>(spex);
         final RevivalStatus[] statuses = RevivalStatus.values();
         final SamplePerson admin = people.get(ADMIN);
@@ -401,6 +415,8 @@ public class SampleDataImporter {
                     null :
                     LocalDate.of(year, rnd.nextInt(3, 6), rnd.nextInt(1, 29));
             final long revivalId = insertRevival(jdbcClient, revivedSpex, year, premiereDate, status, timeline.getFirst(), admin);
+
+            pinGuideVersion(jdbcClient, revivalId, guide, timeline.getFirst(), admin);
 
             if (premiereDate != null && path.contains(RevivalStatus.ORGANISING)) {
                 createShowDatesAndVenues(jdbcClient, revivalId, premiereDate);
@@ -453,6 +469,39 @@ public class SampleDataImporter {
                         .update();
             }
         }
+    }
+
+    /**
+     * The latest version when the revival was created, as when a super admin creates one.
+     */
+    private static void pinGuideVersion(final JdbcClient jdbcClient,
+                                        final long revivalId,
+                                        final List<SampleGuide.Version> guide,
+                                        final Instant createdAt,
+                                        final SamplePerson admin) {
+        final long versionId = guide.stream()
+                .filter(version -> !version.publishedAt().isAfter(createdAt))
+                .reduce((first, second) -> second)
+                .orElseThrow()
+                .id();
+
+        jdbcClient
+                .sql("UPDATE revival SET guide_version_id = :versionId WHERE id = :id")
+                .param("versionId", versionId)
+                .param("id", revivalId)
+                .update();
+        jdbcClient
+                .sql("""
+                        INSERT INTO revival_guide_version_change
+                            (revival_id, from_version_id, to_version_id, changed_by, changed_at)
+                        VALUES
+                            (:revivalId, NULL, :versionId, :changedBy, :changedAt)
+                        """)
+                .param("revivalId", revivalId)
+                .param("versionId", versionId)
+                .param("changedBy", admin.id())
+                .param("changedAt", utc(createdAt))
+                .update();
     }
 
     private static List<RevivalStatus> statusPath(final RevivalStatus status) {
@@ -596,8 +645,8 @@ public class SampleDataImporter {
 
         List.of(
                 """
-                        INSERT INTO revival_audit (id, spex_id, year, working_title, premiere_date, status, version, rev, revtype)
-                        SELECT id, spex_id, year, working_title, premiere_date, status, version, :rev, 0 FROM revival
+                        INSERT INTO revival_audit (id, spex_id, year, working_title, premiere_date, status, guide_version_id, version, rev, revtype)
+                        SELECT id, spex_id, year, working_title, premiere_date, status, guide_version_id, version, :rev, 0 FROM revival
                         """,
                 """
                         INSERT INTO revival_show_date_audit (revival_id, show_date, rev, revtype)
@@ -618,10 +667,41 @@ public class SampleDataImporter {
                 """
                         INSERT INTO revival_member_capability_audit (member_id, capability, rev, revtype)
                         SELECT member_id, capability, :rev, 0 FROM revival_member_capability
+                        """,
+                """
+                        INSERT INTO revival_guide_version_change_audit (id, revival_id, from_version_id, to_version_id, changed_by, changed_at, rev, revtype)
+                        SELECT id, revival_id, from_version_id, to_version_id, changed_by, changed_at, :rev, 0 FROM revival_guide_version_change
+                        """,
+                """
+                        INSERT INTO guide_version_audit (id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
+                        SELECT id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
+                        """,
+                """
+                        INSERT INTO guide_chapter_audit (id, version_id, phase, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, phase, title_sv, title_en, version, :rev, 0 FROM guide_chapter
+                        """,
+                """
+                        INSERT INTO guide_section_audit (id, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, chapter_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_section
+                        """,
+                """
+                        INSERT INTO guide_item_audit (id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, rev, revtype)
+                        SELECT id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
+                        """,
+                """
+                        INSERT INTO checklist_template_audit (id, kind, phase, name_sv, name_en, retired_at, version, rev, revtype)
+                        SELECT id, kind, phase, name_sv, name_en, retired_at, version, :rev, 0 FROM checklist_template
+                        """,
+                """
+                        INSERT INTO checklist_template_item_audit (id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
+                                                                   deadline_kind, deadline_amount, deadline_weekday, retired_at, version, rev, revtype)
+                        SELECT id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
+                               deadline_kind, deadline_amount, deadline_weekday, retired_at, version, :rev, 0 FROM checklist_template_item
                         """
         ).forEach(sql -> jdbcClient.sql(sql).param("rev", rev).update());
 
-        Stream.of(Revival.class, RevivalStatusChange.class, RevivalMember.class).forEach(entity -> jdbcClient
+        Stream.of(Revival.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
+                        GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class).forEach(entity -> jdbcClient
                 .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
                 .param("rev", rev)
                 .param("entityName", entity.getName())

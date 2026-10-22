@@ -129,7 +129,22 @@ The other users have one purpose each. The import creates them in Keycloak when 
 | `no-role@fgv.nu`                 | `USER` only                                                                                                     |
 | `invited@fgv.nu`                 | No Keycloak user: waiting in `directeur2@fgv.nu`'s revivals                                                     |
 
-There are two revivals in every status, with show dates, venues, status history and one baseline revision.
+There are two revivals in every status, with show dates, venues, status history and one baseline revision. The
+import also creates:
+
+- A made-up guide, published as `v1` and `v2`. Each revival is pinned to the version that was latest when it was
+  created.
+- Checklist templates for some phases, and the event templates `Rephelg` and `Föreställningshelg`.
+
+Once the application has started and the guide sync has given the revivals their checklists and guide questions, the
+revivals from `APPROVED` to `SETTLING` get activity in line with their status. That means progress in the phase
+checklists, decision log entries and a planned meeting. From `ORGANISING` on they also have event checklists, a
+closed meeting with minutes and answered guide questions. There are guide suggestions as well: one accepted into
+`v2`, one rejected and two open.
+
+The import turns off the Keycloak event listener `fgv-admin-notification` while it creates users, so they aren't
+emailed. That needs the `realm-management` role `manage-events` on `fgv-admin`; without it the import logs a warning
+and the users are emailed.
 
 Spexregister's import deletes all Keycloak users at every start, so restart Nyuppsättning after Spexregister.
 
