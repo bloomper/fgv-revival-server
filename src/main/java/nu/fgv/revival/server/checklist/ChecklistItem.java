@@ -108,6 +108,12 @@ public class ChecklistItem extends AbstractAuditable {
     @Column(name = "deadline_manual", nullable = false)
     private boolean deadlineManual;
 
+    /**
+     * A copy of the template item's rule, so later template changes leave this checklist alone (FR-032).
+     */
+    @Embedded
+    private @Nullable RelativeDeadline relativeDeadline;
+
     @Column(name = "comment", length = COMMENT_MAX_LENGTH)
     private @Nullable String comment;
 

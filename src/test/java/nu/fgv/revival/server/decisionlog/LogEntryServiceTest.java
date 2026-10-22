@@ -123,6 +123,7 @@ class LogEntryServiceTest {
             return entry;
         });
         lenient().when(ownerResolver.validate(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
+        lenient().when(ownerResolver.change(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validate(REVIVAL_ID, invocation.getArgument(2)));
     }
 
     private static LogEntryService.Draft draft(final LogEntryType type, final String text) {

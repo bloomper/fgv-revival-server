@@ -24,7 +24,6 @@ import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.ChecklistService;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.Phase;
-import nu.fgv.revival.server.util.error.BadRequestException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -32,7 +31,6 @@ import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -68,15 +66,8 @@ public class ChecklistMcpTools {
             @McpToolParam(required = false, description = "Words in an event checklist's name, e.g. \"Rehearsal weekend 2\"") final @Nullable String checklist,
             @McpToolParam(required = false, description = "1-200, default 50") final @Nullable Integer limit) {
         return support.call("list_checklist_items", () -> {
-            final @Nullable Phase wantedPhase = phase(phase);
-            final List<String> words = checklist == null ? List.of() : Arrays.stream(checklist.toLowerCase(Locale.ROOT).split("\\s+"))
-                    .filter(word -> !word.isEmpty()).toList();
-            final List<ChecklistItemDto> items = checklistService.items(revivalId, new ChecklistItemFilterDto(mine, open, overdue, null, null), Locale.ENGLISH)
-                    .stream()
-                    .filter(item -> wantedPhase == null || item.checklist().phase() == wantedPhase)
-                    .filter(item -> words.isEmpty() || item.checklist().name() != null
-                            && words.stream().allMatch(item.checklist().name().toLowerCase(Locale.ROOT)::contains))
-                    .toList();
+            final List<ChecklistItemDto> items = checklistService.items(revivalId, new ChecklistItemFilterDto(mine, open, overdue, null, null),
+                    McpToolSupport.phase(phase), checklist, Locale.ENGLISH);
             final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
 
             return new ChecklistItems(items.stream().limit(first).map(ChecklistMcpTools::toMcp).toList(), items.size());
@@ -94,16 +85,6 @@ public class ChecklistMcpTools {
         });
     }
 
-    private static @Nullable Phase phase(final @Nullable String phase) {
-        if (phase == null || phase.isBlank()) {
-            return null;
-        }
-        try {
-            return Phase.valueOf(phase.strip().toUpperCase(Locale.ROOT));
-        } catch (final IllegalArgumentException e) {
-            throw new BadRequestException("error.phase.invalid", phase);
-        }
-    }
 
     static ChecklistItem toMcp(final ChecklistItemDto item) {
         return new ChecklistItem(item.id(),

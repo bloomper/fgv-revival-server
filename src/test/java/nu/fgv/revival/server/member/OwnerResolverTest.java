@@ -176,6 +176,23 @@ class OwnerResolverTest {
     }
 
     @Nested
+    class Change {
+
+        @Test
+        void theCurrentOwnerIsKeptEvenAfterLeavingTheSteeringGroup() {
+            assertThat(resolver.change(REVIVAL_ID, Owner.member(REMOVED), new OwnerInputDto(REMOVED, null))).isEqualTo(Owner.member(REMOVED));
+            assertThat(resolver.change(REVIVAL_ID, Owner.named("Sam"), new OwnerInputDto(null, " Sam "))).isEqualTo(Owner.named("Sam"));
+        }
+
+        @Test
+        void aNewOwnerIsValidated() {
+            assertThat(resolver.change(REVIVAL_ID, Owner.member(REMOVED), new OwnerInputDto(ROBIN, null))).isEqualTo(Owner.member(ROBIN));
+            assertThatThrownBy(() -> resolver.change(REVIVAL_ID, Owner.member(KIM), new OwnerInputDto(REMOVED, null)))
+                    .isInstanceOf(BadRequestException.class);
+        }
+    }
+
+    @Nested
     class Owned {
 
         @Test

@@ -109,6 +109,8 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
         revivalWithTreasurer();
         for (final String user : List.of(OBSERVER, DIRECTEUR, STEERING_GROUP)) {
             execute(user, LIST, Map.of("all", true)).path("checklistTemplates").entityList(Object.class).hasSize(2);
+            execute(user, "query($id: ID!) { checklistTemplate(id: $id) { retired } }", Map.of("id", retired))
+                    .path("checklistTemplate.retired").entity(Boolean.class).isEqualTo(true);
             expectError(execute(user, CREATE, Map.of("input", Map.of("kind", "PHASE", "phase", "D"))), "FORBIDDEN");
             expectError(execute(user, ITEM_CREATE, Map.of("input", Map.of("templateId", template, "text", Map.of("sv", "x")))), "FORBIDDEN");
             expectError(execute(user, "mutation($id: ID!) { checklistTemplateRetire(id: $id, version: 0) { id } }", Map.of("id", template)), "FORBIDDEN");

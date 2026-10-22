@@ -148,6 +148,25 @@ class LogWorkbookParserTest {
         }
 
         @Test
+        void aRowWithOnlyANumberIsBlank() {
+            final ParsedLog log = parser.parse(aliBabaWith(
+                    new Object[]{1, LocalDate.of(2026, 1, 1), "Beslut", "a", null, null, "Öppen", null},
+                    new Object[]{2, null, null, null, null, null, null, null}).bytes());
+
+            assertThat(log.rows()).extracting(ParsedRow::number).containsExactly(1);
+            assertThat(log.warnings()).isEmpty();
+        }
+
+        @Test
+        void ownerNamesDifferingOnlyInSpacingOrCaseAreOneName() {
+            final ParsedLog log = parser.parse(aliBabaWith(
+                    new Object[]{1, LocalDate.of(2026, 1, 1), "Beslut", "a", "Anna  Berg", null, "Öppen", null},
+                    new Object[]{2, LocalDate.of(2026, 1, 1), "Beslut", "b", " anna berg ", null, "Öppen", null}).bytes());
+
+            assertThat(log.owners()).containsExactly(Map.entry("Anna Berg", 2));
+        }
+
+        @Test
         void anEmptyTextIsImportedAsADashWithAWarning() {
             final ParsedLog log = parser.parse(aliBabaWith(new Object[]{1, LocalDate.of(2026, 1, 1), "Beslut", null, "Kim", null, "Klar", null}).bytes());
 

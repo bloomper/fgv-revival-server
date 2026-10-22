@@ -133,7 +133,7 @@ public class GuideMcpTools {
             @McpToolParam(required = false, description = "Why; required for CHANGE and REMOVE") final @Nullable String reason) {
         return support.call("suggest_guide_change", () -> {
             final GuideVersionView version = version(revivalId);
-            final Phase phase = chapter == null ? null : Phase.valueOf(chapter.strip().toUpperCase(Locale.ROOT));
+            final Phase phase = McpToolSupport.phase(chapter);
             final GuideSuggestionDto created = suggestionService.create(new GuideSuggestionService.Proposal(
                     revivalId, version.id(), kind, itemKey, phase, sectionKey, type, textSv, textEn, reason));
 

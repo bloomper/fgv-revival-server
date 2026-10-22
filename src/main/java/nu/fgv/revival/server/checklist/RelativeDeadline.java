@@ -76,6 +76,10 @@ public class RelativeDeadline {
         return new RelativeDeadline(kind, amount, weekday);
     }
 
+    public RelativeDeadline copy() {
+        return new RelativeDeadline(kind, amount, weekday);
+    }
+
     public RelativeDeadlineKind getKind() {
         return kind;
     }

@@ -181,11 +181,12 @@ class ChecklistTemplateServiceTest {
         }
 
         @Test
-        void aRetiredTemplateIsNotFoundForOthers() {
+        void aRetiredTemplateIsStillReadableByIdForChecklistsMadeFromIt() {
             template(ChecklistKind.EVENT).setRetiredAt(Instant.now());
             as(TestCallers.observer());
 
-            assertThatThrownBy(() -> service.get(5L)).isInstanceOf(ResourceNotFoundException.class);
+            assertThat(service.get(5L).retired()).isTrue();
+            assertThatThrownBy(() -> service.get(6L)).isInstanceOf(ResourceNotFoundException.class);
         }
     }
 

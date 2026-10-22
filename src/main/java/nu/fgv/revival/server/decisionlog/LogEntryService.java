@@ -284,7 +284,7 @@ public class LogEntryService {
         if (change.clearOwner()) {
             entry.setOwner(Owner.none());
         } else if (change.owner() != null) {
-            entry.setOwner(ownerResolver.validate(revival.getId(), change.owner()));
+            entry.setOwner(ownerResolver.change(revival.getId(), entry.getOwner(), change.owner()));
         }
         if (change.clearDeadline()) {
             entry.setDeadline(null);

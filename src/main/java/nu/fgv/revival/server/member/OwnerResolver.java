@@ -128,6 +128,19 @@ public class OwnerResolver {
     }
 
     /**
+     * As {@link #validate}, but an input naming the current owner keeps it, even someone no longer in the steering group:
+     * the row keeps them until a member changes the owner (M3 edge cases).
+     */
+    @Transactional(readOnly = true)
+    public Owner change(final Long revivalId, final Owner current, final OwnerInputDto input) {
+        final boolean same = input.personId() != null && input.name() == null
+                ? input.personId().equals(current.getPersonId())
+                : input.personId() == null && input.name() != null && input.name().strip().equals(current.getName());
+
+        return same ? current : validate(revivalId, input);
+    }
+
+    /**
      * Turns the input into an owner: a member who is an active directeur or steering group member, a trimmed name of 1–100
      * characters, or none. Both set is refused.
      */

@@ -33,4 +33,6 @@ public interface MinutesEmailRepository extends Repository<MinutesEmail, Long> {
     Optional<MinutesEmail> findById(Long id);
 
     List<MinutesEmail> findByMeetingIdOrderBySentAtDescIdDesc(Long meetingId);
+
+    boolean existsByRetryOf(Long retryOf);
 }

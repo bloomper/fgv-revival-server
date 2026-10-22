@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -122,9 +123,37 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
         assertThat(recipients()).containsExactly(DIRECTEUR);
         jdbcClient.sql("UPDATE person SET email = ? WHERE id = ?").param(STEERING_GROUP).param(stina).update();
         MAIL.reset();
+        expectError(execute(OBSERVER, RETRY, Map.of("id", emailId)), "FORBIDDEN");
+        expectError(execute(SUPER_ADMIN, RETRY, Map.of("id", emailId)), "FORBIDDEN");
         execute(DIRECTEUR, RETRY, Map.of("id", emailId))
                 .path("minutesEmailRetry.recipients[*].person.displayName").entityList(String.class).containsExactly("Stina Styrgrupp");
         assertThat(recipients()).containsExactly(STEERING_GROUP);
+
+        MAIL.reset();
+        expectError(execute(DIRECTEUR, RETRY, Map.of("id", emailId)), "BAD_REQUEST");
+        assertThat(recipients()).isEmpty();
+    }
+
+    @Test
+    void aRetryNeedsSomeoneToSendToAndRevealsNothingToOutsiders() {
+        final long stina = personId(STEERING_GROUP);
+
+        jdbcClient.sql("UPDATE person SET email = 'inte en adress' WHERE id = ?").param(stina).update();
+
+        final String emailId = execute(DIRECTEUR, SEND, Map.of("input", Map.of("meetingId", meeting, "language", "sv")))
+                .path("minutesEmailSend.id").entity(String.class).get();
+
+        jdbcClient.sql("UPDATE revival_member SET removed_at = NOW() WHERE revival_id = ? AND person_id = ?").params(revival, stina).update();
+        expectError(execute(DIRECTEUR, RETRY, Map.of("id", emailId)), "BAD_REQUEST");
+        assertThat(jdbcClient.sql("SELECT COUNT(*) FROM minutes_email").query(Integer.class).single()).isEqualTo(1);
+
+        login(PLAIN_USER);
+        final List<String> messages = new ArrayList<>();
+
+        for (final String id : List.of(emailId, "999999")) {
+            execute(PLAIN_USER, RETRY, Map.of("id", id)).errors().satisfy(errors -> messages.add(errors.getFirst().getMessage()));
+        }
+        assertThat(messages).hasSize(2).allSatisfy(message -> assertThat(message).isEqualTo(messages.getFirst()));
     }
 
     @Test

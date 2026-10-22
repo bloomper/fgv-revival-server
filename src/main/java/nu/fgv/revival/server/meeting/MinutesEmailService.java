@@ -131,7 +131,12 @@ public class MinutesEmailService {
     public MinutesEmailDto retry(final Long emailId, final Locale locale) {
         final Earlier earlier = Objects.requireNonNull(transactions.execute(status -> {
             final MinutesEmail email = repository.findById(emailId).orElseThrow(() -> new ResourceNotFoundException(MinutesEmail.class, emailId));
+            final Meeting meeting = readableMeeting(email);
 
+            accessPolicy.requireWriteRevivalWork(callerService.current(), revivalRepository.findById(meeting.getRevivalId()).orElseThrow());
+            if (repository.existsByRetryOf(email.getId())) {
+                throw new BadRequestException("error.mail.nothingToRetry");
+            }
             return new Earlier(email.getId(), email.getMeetingId(), email.getLanguage(), email.getRecipients().stream()
                     .filter(recipient -> recipient.status() == MinutesEmailRecipientStatus.FAILED)
                     .map(MinutesEmailRecipient::personId)
@@ -147,7 +152,21 @@ public class MinutesEmailService {
                 .filter(person -> earlier.failed().contains(person.getId()))
                 .toList();
 
+        if (people.isEmpty()) {
+            throw new BadRequestException("error.mail.nothingToRetry");
+        }
         return sendTo(prepared, people, 0, earlier.id(), locale);
+    }
+
+    /**
+     * The send's meeting, or not found for the send itself, so a refusal does not tell whether the send exists.
+     */
+    private Meeting readableMeeting(final MinutesEmail email) {
+        try {
+            return meetingService.readable(email.getMeetingId());
+        } catch (final ResourceNotFoundException e) {
+            throw new ResourceNotFoundException(MinutesEmail.class, email.getId());
+        }
     }
 
     private record Earlier(Long id, Long meetingId, String language, Set<Long> failed) {

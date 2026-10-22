@@ -251,7 +251,7 @@ public class LogImportService {
     }
 
     private static String key(final String name) {
-        return name.strip().toLowerCase(Locale.ROOT);
+        return name.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     /**

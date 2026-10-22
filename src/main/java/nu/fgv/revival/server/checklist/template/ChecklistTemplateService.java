@@ -126,9 +126,8 @@ public class ChecklistTemplateService {
 
     @Transactional(readOnly = true)
     public ChecklistTemplateDto get(final Long id) {
-        final Caller caller = readable();
+        readable();
         final ChecklistTemplate template = templateRepository.findById(id)
-                .filter(found -> !found.isRetired() || accessPolicy.canManageChecklistTemplates(caller))
                 .orElseThrow(() -> new ResourceNotFoundException(ChecklistTemplate.class, id));
 
         return toDto(template);

@@ -142,6 +142,8 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
                 .containsExactly("MCP");
 
         assertThat(refused(call(OBSERVER, "suggest_guide_change", Map.of("revivalId", revival, "kind", "REMOVE", "itemKey", itemKey, "reason", "x")))).isTrue();
+        assertThat(call(STEERING_GROUP, "suggest_guide_change", Map.of("revivalId", revival, "kind", "ADD", "chapter", "K", "type", "TIP",
+                "textSv", "x")).toString()).contains("BAD_REQUEST").contains("There is no phase");
     }
 
     @Test

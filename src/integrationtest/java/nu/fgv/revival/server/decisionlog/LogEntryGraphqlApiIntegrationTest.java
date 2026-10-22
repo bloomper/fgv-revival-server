@@ -91,6 +91,19 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void aRowKeepsAnOwnerWhoLeftTheSteeringGroupWhenOtherFieldsChange() {
+        final long dana = personId(DIRECTEUR);
+        final long row = create(STEERING_GROUP, Map.of("type", "TODO", "text", "Boka RunAn", "owner", Map.of("personId", dana)));
+
+        jdbcClient.sql("UPDATE revival_member SET removed_at = NOW() WHERE revival_id = ? AND person_id = ?").params(revival, dana).update();
+
+        execute(STEERING_GROUP, UPDATE, Map.of("input", Map.of("id", row, "version", rowVersion(row), "text", "Boka RunAn och Kalle",
+                "owner", Map.of("personId", dana))))
+                .path("logEntryUpdate.text").entity(String.class).isEqualTo("Boka RunAn och Kalle")
+                .path("logEntryUpdate.owner.person.active").entity(Boolean.class).isEqualTo(false);
+    }
+
+    @Test
     void rowsCreatedAtTheSameTimeGetConsecutiveNumbers() throws Exception {
         final int writers = 6;
         final CountDownLatch start = new CountDownLatch(1);

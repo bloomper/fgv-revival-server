@@ -18,6 +18,7 @@ package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.audit.AuditSource;
+import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
@@ -46,6 +47,20 @@ public class McpToolSupport {
 
     public McpToolSupport(final MessageSource messageSource) {
         this.messageSource = messageSource;
+    }
+
+    /**
+     * A phase A–J from a tool argument, ignoring case; none for blank.
+     */
+    static @Nullable Phase phase(final @Nullable String phase) {
+        if (phase == null || phase.isBlank()) {
+            return null;
+        }
+        try {
+            return Phase.valueOf(phase.strip().toUpperCase(Locale.ROOT));
+        } catch (final IllegalArgumentException e) {
+            throw new BadRequestException("error.phase.invalid", phase);
+        }
     }
 
     /**

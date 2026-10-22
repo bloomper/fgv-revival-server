@@ -17,6 +17,9 @@
 
 package nu.fgv.revival.server.checklist;
 
+import nu.fgv.revival.server.guide.GuideVersion;
+import nu.fgv.revival.server.guide.GuideVersionRepository;
+import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
 import nu.fgv.revival.server.revival.Revival;
@@ -27,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -44,12 +48,14 @@ public class ChecklistTexts {
     private final RevivalRepository revivalRepository;
     private final GuideVersionViews guideVersionViews;
     private final ChecklistItemRepository itemRepository;
+    private final GuideVersionRepository versionRepository;
 
     public ChecklistTexts(final RevivalRepository revivalRepository, final GuideVersionViews guideVersionViews,
-                          final ChecklistItemRepository itemRepository) {
+                          final ChecklistItemRepository itemRepository, final GuideVersionRepository versionRepository) {
         this.revivalRepository = revivalRepository;
         this.guideVersionViews = guideVersionViews;
         this.itemRepository = itemRepository;
+        this.versionRepository = versionRepository;
     }
 
     /**
@@ -66,14 +72,16 @@ public class ChecklistTexts {
     public Map<Long, GuideVersionView.Text> texts(final Collection<ChecklistItem> items) {
         final Map<Long, Optional<GuideVersionView>> versions = new HashMap<>();
         final Map<Long, GuideVersionView.Text> texts = new HashMap<>();
+        final Map<String, GuideVersionView.Text> removed = new HashMap<>();
 
         for (final ChecklistItem item : items) {
             if (item.isRequired()) {
+                final String key = Objects.requireNonNull(item.getGuideItemKey());
                 final GuideVersionView.@Nullable Item guideItem = versions.computeIfAbsent(item.getRevivalId(), this::pinnedVersion)
-                        .flatMap(version -> version.item(Objects.requireNonNull(item.getGuideItemKey())))
+                        .flatMap(version -> version.item(key))
                         .orElse(null);
 
-                texts.put(item.getId(), guideItem == null ? GuideVersionView.Text.plain("", null) : guideItem.text());
+                texts.put(item.getId(), guideItem != null ? guideItem.text() : removed.computeIfAbsent(key, this::lastText));
             } else {
                 texts.put(item.getId(), GuideVersionView.Text.plain(Objects.requireNonNull(item.getText()), null));
             }
@@ -96,5 +104,20 @@ public class ChecklistTexts {
         items.forEach(item -> summaries.put(item.getId(),
                 new ChecklistItemSummaryDto(item.getId(), item.getChecklistId(), texts.get(item.getId()), item.getState())));
         return summaries;
+    }
+
+    /**
+     * The text of a requirement no longer in the pinned version, from the newest published version that has it (FR-034).
+     */
+    private GuideVersionView.Text lastText(final String key) {
+        final List<GuideVersion> published = versionRepository.findByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED);
+
+        return published.stream()
+                .map(version -> guideVersionViews.find(version.getId()))
+                .filter(Objects::nonNull)
+                .flatMap(version -> version.item(key).stream())
+                .map(GuideVersionView.Item::text)
+                .findFirst()
+                .orElse(GuideVersionView.Text.plain("", null));
     }
 }

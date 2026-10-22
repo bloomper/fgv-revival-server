@@ -53,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -195,11 +196,23 @@ public class ChecklistService {
 
     @Transactional(readOnly = true)
     public List<ChecklistItemDto> items(final Long revivalId, final @Nullable ChecklistItemFilterDto filter, final Locale locale) {
+        return items(revivalId, filter, null, null, locale);
+    }
+
+    /**
+     * As {@link #items(Long, ChecklistItemFilterDto, Locale)}, also limited to one phase's checklist or to event
+     * checklists whose name has every given word, ignoring case (MCP's list_checklist_items).
+     */
+    @Transactional(readOnly = true)
+    public List<ChecklistItemDto> items(final Long revivalId, final @Nullable ChecklistItemFilterDto filter, final @Nullable Phase phase,
+                                        final @Nullable String checklistName, final Locale locale) {
         final Caller caller = callerService.current();
 
         visible(caller, revivalId);
 
         final ChecklistItemFilterDto actual = filter == null ? ChecklistItemFilterDto.none() : filter;
+        final List<String> words = checklistName == null ? List.of()
+                : Arrays.stream(checklistName.toLowerCase(Locale.ROOT).split("\\s+")).filter(word -> !word.isEmpty()).toList();
         final LocalDate today = today();
         final Map<Long, Checklist> checklists = checklistRepository.findByRevivalId(revivalId).stream()
                 .collect(Collectors.toMap(Checklist::getId, Function.identity()));
@@ -210,6 +223,8 @@ public class ChecklistService {
                 .filter(item -> !Boolean.TRUE.equals(actual.overdue()) || item.isOverdue(today))
                 .filter(item -> actual.checklistId() == null || item.getChecklistId().equals(actual.checklistId()))
                 .filter(item -> !Boolean.TRUE.equals(actual.requiredOnly()) || item.isRequired())
+                .filter(item -> phase == null || checklists.get(item.getChecklistId()).getPhase() == phase)
+                .filter(item -> words.isEmpty() || hasWords(checklists.get(item.getChecklistId()).getName(), words))
                 .sorted(Comparator.comparing((ChecklistItem item) -> checklists.get(item.getChecklistId()), ORDER)
                         .thenComparingInt(ChecklistItem::getPosition)
                         .thenComparing(ChecklistItem::getId))
@@ -379,7 +394,7 @@ public class ChecklistService {
         if (change.clearOwner()) {
             item.setOwner(Owner.none());
         } else if (change.owner() != null) {
-            item.setOwner(ownerResolver.validate(item.getRevivalId(), change.owner()));
+            item.setOwner(ownerResolver.change(item.getRevivalId(), item.getOwner(), change.owner()));
         }
         if (change.clearDeadline() && item.getDeadline() != null) {
             item.setDeadline(null);
@@ -484,7 +499,8 @@ public class ChecklistService {
             item.setGuideItemKey(templateItem.getGuideItemKey());
             item.setTemplateItemId(templateItem.getId());
             item.setDefaultCapability(templateItem.getDefaultCapability());
-            item.setDeadline(deadline(templateItem, checklist.getDate()));
+            item.setRelativeDeadline(templateItem.getDeadline() == null ? null : templateItem.getDeadline().copy());
+            item.setDeadline(deadline(item.getRelativeDeadline(), checklist.getDate()));
             item.setDeadlineManual(false);
             item.setOwner(defaultOwner(templateItem.getDefaultCapability(), steeringGroup));
             itemRepository.save(item);
@@ -582,22 +598,13 @@ public class ChecklistService {
     // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void recomputeDeadlines(final Checklist checklist) {
-        final List<ChecklistItem> fromTemplate = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId()).stream()
+        itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId()).stream()
                 .filter(item -> item.getTemplateItemId() != null && !item.isDeadlineManual())
-                .toList();
-        final Map<Long, ChecklistTemplateItem> templateItems = templateItemRepository.findAllById(
-                        fromTemplate.stream().map(ChecklistItem::getTemplateItemId).toList()).stream()
-                .collect(Collectors.toMap(ChecklistTemplateItem::getId, Function.identity()));
-
-        for (final ChecklistItem item : fromTemplate) {
-            final @Nullable ChecklistTemplateItem templateItem = templateItems.get(item.getTemplateItemId());
-
-            item.setDeadline(templateItem == null ? null : deadline(templateItem, checklist.getDate()));
-        }
+                .forEach(item -> item.setDeadline(deadline(item.getRelativeDeadline(), checklist.getDate())));
     }
 
-    private static @Nullable LocalDate deadline(final ChecklistTemplateItem templateItem, final @Nullable LocalDate date) {
-        return date == null || templateItem.getDeadline() == null ? null : templateItem.getDeadline().apply(date);
+    private static @Nullable LocalDate deadline(final @Nullable RelativeDeadline rule, final @Nullable LocalDate date) {
+        return date == null || rule == null ? null : rule.apply(date);
     }
 
     /**
@@ -707,6 +714,10 @@ public class ChecklistService {
             throw new ConflictException("error.conflict");
         }
         return item;
+    }
+
+    private static boolean hasWords(final @Nullable String name, final List<String> words) {
+        return name != null && words.stream().allMatch(name.toLowerCase(Locale.ROOT)::contains);
     }
 
     static String validText(final String text) {

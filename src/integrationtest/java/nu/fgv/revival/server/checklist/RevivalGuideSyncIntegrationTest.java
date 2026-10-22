@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
-    private static final String DRAFT = "{ guideDraft { draft { id chapters { id phase items { id key type version } } } } }";
+    private static final String DRAFT = "{ guideDraft { draft { id chapters { id phase items { id key type version text { sv } } } } } }";
 
     @Autowired
     private RevivalGuideSync sync;
@@ -99,7 +99,9 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
         final long checklistA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND phase = 'A'").param(revival).query(Long.class).single();
 
-        execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { state reason stateChangedBy { displayName } } } }", Map.of("id", checklistA))
+        execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { state reason text { sv } stateChangedBy { displayName } } } }",
+                Map.of("id", checklistA))
+                .path("checklist.items[0].text.sv").entity(String.class).isEqualTo(String.valueOf(((Map<?, ?>) requirementA.get("text")).get("sv")))
                 .path("checklist.items[0].state").entity(String.class).isEqualTo("NOT_APPLICABLE")
                 .path("checklist.items[0].reason").entity(String.class).isEqualTo("Removed from the guide in v2")
                 .path("checklist.items[0].stateChangedBy").valueIsNull();

@@ -176,7 +176,7 @@ public final class LogWorkbookParser {
             final Map<String, String> values = new HashMap<>();
 
             header.columns().forEach((name, column) -> values.put(name, text(row.getCell(column))));
-            if (values.values().stream().allMatch(String::isEmpty)) {
+            if (values.entrySet().stream().filter(value -> !"nr".equals(value.getKey())).allMatch(value -> value.getValue().isEmpty())) {
                 continue;
             }
             if (header.columns().keySet().stream().allMatch(name -> values.get(name).equalsIgnoreCase(name))) {
@@ -305,7 +305,9 @@ public final class LogWorkbookParser {
         return text;
     }
 
-    private static @Nullable String owner(final String name, final int sheetRow, final List<LogImportWarning> warnings) {
+    private static @Nullable String owner(final String written, final int sheetRow, final List<LogImportWarning> warnings) {
+        final String name = written.replaceAll("\\s+", " ");
+
         if (name.isEmpty()) {
             return null;
         }

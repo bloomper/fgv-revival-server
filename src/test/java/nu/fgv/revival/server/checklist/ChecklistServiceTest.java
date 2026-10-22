@@ -142,6 +142,7 @@ class ChecklistServiceTest {
         lenient().when(ownerViews.toDtos(anyCollection(), any())).thenReturn(Map.of());
         lenient().when(texts.texts(anyCollection())).thenReturn(Map.of());
         lenient().when(ownerResolver.validate(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
+        lenient().when(ownerResolver.change(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validate(REVIVAL_ID, invocation.getArgument(2)));
         lenient().when(itemRepository.findByChecklistIdInOrderByPositionAscIdAsc(anyList())).thenReturn(List.of());
     }
 
@@ -220,6 +221,19 @@ class ChecklistServiceTest {
 
             assertThat(item.getDeadline()).isEqualTo(TODAY.plusDays(3));
             assertThat(item.isDeadlineManual()).isTrue();
+        }
+
+        @Test
+        void theOwnerIsChangedAgainstTheStoredOne() {
+            final ChecklistItem item = item(false);
+            final OwnerInputDto owner = new OwnerInputDto(PERSON_ID, null);
+
+            item.setOwner(Owner.member(PERSON_ID));
+            when(ownerResolver.change(REVIVAL_ID, Owner.member(PERSON_ID), owner)).thenReturn(Owner.member(PERSON_ID));
+            service.updateItem(new ChecklistService.ItemChange(7L, 2L, "Ny", owner, false, null, false, null, false), Locale.ENGLISH);
+
+            assertThat(item.getOwner()).isEqualTo(Owner.member(PERSON_ID));
+            assertThat(item.getText()).isEqualTo("Ny");
         }
 
         @Test
@@ -574,6 +588,13 @@ class ChecklistServiceTest {
 
             assertThat(copyOf(venue).getText()).isEqualTo("Boka replokal");
             assertThat(copyOf(venue).getDeadline()).isEqualTo(LocalDate.of(2027, 11, 6));
+
+            final Checklist created = checklists.get(EVENT_ID);
+
+            service.updateEventChecklist(new ChecklistService.EventChecklistChange(EVENT_ID, created.getVersion(), null, SATURDAY.plusWeeks(1), false),
+                    Locale.ENGLISH);
+
+            assertThat(copyOf(venue).getDeadline()).isEqualTo(LocalDate.of(2027, 11, 13));
         }
 
         @Test
