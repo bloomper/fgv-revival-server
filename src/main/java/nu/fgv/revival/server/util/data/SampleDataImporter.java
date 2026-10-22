@@ -223,11 +223,22 @@ public class SampleDataImporter {
 
         jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
         jdbcClient.sql("UPDATE minutes_email SET retry_of = NULL").update();
+        jdbcClient.sql("UPDATE guide_version SET published_by = NULL").update();
         tables.forEach(table ->
                 jdbcClient
                         .sql("DELETE FROM %s".formatted(table))
                         .update()
         );
+    }
+
+    /**
+     * Keeps an imported or created guide, but its publishers are deleted along with all other people.
+     */
+    private static void reassignGuideVersions(final JdbcClient jdbcClient, final SamplePerson admin) {
+        jdbcClient
+                .sql("UPDATE guide_version SET published_by = :admin WHERE status = 'PUBLISHED'")
+                .param("admin", admin.id())
+                .update();
     }
 
     /**
