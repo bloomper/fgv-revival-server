@@ -31,6 +31,11 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * The checklist MCP tools and get_revival_status (M3 FR-043, FR-044).
+ *
+ * @author Anders Jacobsson
+ */
 class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));
@@ -101,6 +106,8 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
         assertThat(phaseA.at("/items/0/required").asBoolean()).isTrue();
         assertThat(phaseA.at("/items/0/checklist/phase").asString()).isEqualTo("A");
         assertThat(phaseA.at("/items/0/text/sv").asString()).startsWith("Nyuppsättningen ska godkännas");
+        assertThat(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "phase", "K")).toString())
+                .contains("BAD_REQUEST").contains("There is no phase");
 
         final JsonNode byName = result(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "checklist", "rephelg 2", "limit", 1)));
 

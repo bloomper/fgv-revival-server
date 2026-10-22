@@ -192,6 +192,16 @@ class RevivalGuideSyncTest {
     }
 
     @Test
+    void aVersionThatOnlyReordersAChapterReordersItsItems() {
+        service.ensurePhaseChecklists(REVIVAL_ID);
+        service.syncRequiredItems(REVIVAL_ID, version("v5", requirement("f1", Phase.F), requirement("f2", Phase.F), requirement("f3", Phase.F)));
+
+        service.syncRequiredItems(REVIVAL_ID, version("v6", requirement("f3", Phase.F), requirement("f1", Phase.F), requirement("f2", Phase.F)));
+
+        assertThat(order(Phase.F)).containsExactly("f3", "f1", "f2");
+    }
+
+    @Test
     void runningTwiceChangesNothing() {
         service.ensurePhaseChecklists(REVIVAL_ID);
         final GuideVersionView version = version("v5", requirement("a1", Phase.A), requirement("j1", Phase.J));

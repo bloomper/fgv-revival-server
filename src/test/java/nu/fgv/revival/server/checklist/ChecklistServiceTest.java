@@ -223,6 +223,25 @@ class ChecklistServiceTest {
         }
 
         @Test
+        void anUnchangedDeadlineStaysComputed() {
+            final ChecklistItem item = item(false);
+
+            item.setDeadline(TODAY.plusDays(3));
+            service.updateItem(new ChecklistService.ItemChange(7L, 2L, "Ny", null, false, TODAY.plusDays(3), false, null, false), Locale.ENGLISH);
+
+            assertThat(item.isDeadlineManual()).isFalse();
+        }
+
+        @Test
+        void itemsOfACancelledChecklistAreReadOnly() {
+            item(false);
+            checklist.setCancelledAt(java.time.Instant.now());
+
+            assertThatThrownBy(() -> service.updateItem(change("Ny", null), Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
+            assertThatThrownBy(() -> service.setState(7L, 2L, ChecklistItemState.DONE, null, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
+        }
+
+        @Test
         void aStaleVersionIsAConflict() {
             item(false);
 

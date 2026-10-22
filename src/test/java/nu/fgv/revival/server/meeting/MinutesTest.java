@@ -101,13 +101,14 @@ class MinutesTest {
                 change(2, MeetingEntryChangeKind.UPDATED),
                 change(4, MeetingEntryChangeKind.UPDATED),
                 change(1, MeetingEntryChangeKind.ANSWERED),
+                change(1, MeetingEntryChangeKind.CLOSED),
                 change(10, MeetingEntryChangeKind.CREATED)
         ), Map.of(7L, decision, 8L, todo, 3L, assigned, 9L, question, 2L, closed, 4L, updated, 1L, answered, 10L, answer));
 
         assertThat(minutes.decisions()).extracting(Minutes.Row::number).containsExactly(7, 10);
         assertThat(minutes.todos()).extracting(Minutes.Row::number).containsExactly(3, 8);
         assertThat(minutes.questions()).extracting(Minutes.Row::number).containsExactly(9);
-        assertThat(minutes.closed()).extracting(Minutes.Row::number).containsExactly(2);
+        assertThat(minutes.closed()).extracting(Minutes.Row::number).containsExactly(1, 2);
         assertThat(minutes.todos().get(1)).isEqualTo(new Minutes.Row(8L, 8, LogEntryType.TODO, "Rad 8", KIM, null, LocalDate.of(2026, 11, 1),
                 LogEntryStatus.OPEN));
         assertThat(minutes.todos().getFirst().ownerName()).isEqualTo("Sam");

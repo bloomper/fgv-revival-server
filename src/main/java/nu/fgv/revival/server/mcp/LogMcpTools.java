@@ -64,7 +64,7 @@ public class LogMcpTools {
     }
 
     @McpTool(name = "list_log_entries",
-            description = "List rows of a revival's decision log. Filters combine: mine, open (open or waiting), overdue, types, tag and text.",
+            description = "List rows of a revival's decision log. Filters combine: mine, open (open or waiting), overdue, types, meeting, tag and text.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public LogEntries listLogEntries(
             @McpToolParam(description = "A revival you can see") final Long revivalId,
@@ -72,11 +72,12 @@ public class LogMcpTools {
             @McpToolParam(required = false, description = "OPEN or WAITING") final @Nullable Boolean open,
             @McpToolParam(required = false, description = "Open rows past their deadline") final @Nullable Boolean overdue,
             @McpToolParam(required = false, description = "DECISION, TODO or QUESTION") final @Nullable List<LogEntryType> types,
+            @McpToolParam(required = false, description = "Rows created in this meeting, by its id") final @Nullable Long meeting,
             @McpToolParam(required = false, description = "A tag") final @Nullable String tag,
             @McpToolParam(required = false, description = "Words in the text, comment or owner name") final @Nullable String text,
             @McpToolParam(required = false, description = "1-200, default 50. The first rows by number.") final @Nullable Integer limit) {
         return support.call("list_log_entries", () -> {
-            final List<LogEntryDto> rows = logEntryService.list(revivalId, new LogEntryFilterDto(mine, open, overdue, types, null,
+            final List<LogEntryDto> rows = logEntryService.list(revivalId, new LogEntryFilterDto(mine, open, overdue, types, meeting,
                     tag == null || tag.isBlank() ? null : List.of(tag.strip()), text), Locale.ENGLISH);
             final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
 

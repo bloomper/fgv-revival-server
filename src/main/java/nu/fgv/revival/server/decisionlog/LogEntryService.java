@@ -367,7 +367,7 @@ public class LogEntryService {
         final LogEntry savedQuestion = repository.saveAndFlush(question);
 
         if (answer.meetingId() != null) {
-            meetingRecorder.record(answer.meetingId(), savedQuestion.getId(), EnumSet.of(MeetingEntryChangeKind.ANSWERED), caller.person().getId());
+            meetingRecorder.record(answer.meetingId(), savedQuestion.getId(), EnumSet.of(MeetingEntryChangeKind.ANSWERED, MeetingEntryChangeKind.CLOSED), caller.person().getId());
             meetingRecorder.record(answer.meetingId(), savedDecision.getId(), EnumSet.of(MeetingEntryChangeKind.CREATED), caller.person().getId());
         }
         return new Answered(toDto(savedQuestion, locale), toDto(savedDecision, locale));

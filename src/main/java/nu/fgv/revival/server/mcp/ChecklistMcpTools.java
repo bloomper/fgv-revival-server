@@ -24,7 +24,7 @@ import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.ChecklistService;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.Phase;
-import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.error.BadRequestException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -101,7 +101,7 @@ public class ChecklistMcpTools {
         try {
             return Phase.valueOf(phase.strip().toUpperCase(Locale.ROOT));
         } catch (final IllegalArgumentException e) {
-            throw new ResourceNotFoundException(Phase.class, phase);
+            throw new BadRequestException("error.phase.invalid", phase);
         }
     }
 

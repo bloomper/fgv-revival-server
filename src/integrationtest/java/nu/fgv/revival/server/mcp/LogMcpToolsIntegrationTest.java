@@ -24,6 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import tools.jackson.databind.JsonNode;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,11 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * The decision log MCP tools apply the web application's rules, with owners by display name (M3 FR-043, FR-045).
+ *
+ * @author Anders Jacobsson
+ */
 class LogMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
     private long revival;
@@ -84,10 +90,22 @@ class LogMcpToolsIntegrationTest extends AbstractIntegrationTest {
             assertThat(mcp).isNotEmpty().isEqualTo(web);
         }
 
+        final long meeting = Long.parseLong(execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
+                Map.of("input", Map.of("revivalId", revival, "date", LocalDate.now().toString()))).path("meetingCreate.id").entity(String.class).get());
+
+        execute(STEERING_GROUP, "mutation($id: ID!, $version: Int!) { meetingStart(id: $id, version: $version) { id } }",
+                Map.of("id", meeting, "version", jdbcClient.sql("SELECT version FROM meeting WHERE id = ?").param(meeting).query(Long.class).single()));
+        execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
+                Map.of("input", Map.of("revivalId", revival, "type", "DECISION", "text", "Vi spelar i RunAn", "meetingId", meeting)));
+
+        final JsonNode inMeeting = result(call(STEERING_GROUP, "list_log_entries", Map.of("revivalId", revival, "meeting", meeting)));
+
+        assertThat(inMeeting.get("items")).singleElement().satisfies(row -> assertThat(row.get("number").asInt()).isEqualTo(4));
+
         final JsonNode limited = result(call(STEERING_GROUP, "list_log_entries", Map.of("revivalId", revival, "limit", 2)));
 
         assertThat(limited.get("items")).hasSize(2);
-        assertThat(limited.get("total").asInt()).isEqualTo(3);
+        assertThat(limited.get("total").asInt()).isEqualTo(4);
     }
 
     @Test

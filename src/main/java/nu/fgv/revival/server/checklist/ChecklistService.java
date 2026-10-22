@@ -55,7 +55,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -382,10 +381,10 @@ public class ChecklistService {
         } else if (change.owner() != null) {
             item.setOwner(ownerResolver.validate(item.getRevivalId(), change.owner()));
         }
-        if (change.clearDeadline()) {
+        if (change.clearDeadline() && item.getDeadline() != null) {
             item.setDeadline(null);
             item.setDeadlineManual(true);
-        } else if (change.deadline() != null) {
+        } else if (change.deadline() != null && !change.deadline().equals(item.getDeadline())) {
             item.setDeadline(change.deadline());
             item.setDeadlineManual(true);
         }
@@ -530,8 +529,6 @@ public class ChecklistService {
         final Map<String, Integer> guideOrder = new HashMap<>();
         final Map<String, ChecklistItem> required = itemRepository.findByRevivalIdAndRequiredTrue(revivalId).stream()
                 .collect(Collectors.toMap(item -> Objects.requireNonNull(item.getGuideItemKey()), Function.identity()));
-        final Set<Long> touched = new HashSet<>();
-
         for (int index = 0; index < requirements.size(); index++) {
             final GuideVersionView.Item requirement = requirements.get(index);
             final Checklist checklist = phases.get(requirement.phase());
@@ -547,11 +544,8 @@ public class ChecklistService {
                 created.setGuideItemKey(requirement.key());
                 created.setPosition(Integer.MAX_VALUE / 2 + index);
                 required.put(requirement.key(), itemRepository.save(created));
-                touched.add(checklist.getId());
             } else if (!item.getChecklistId().equals(checklist.getId())) {
-                touched.add(item.getChecklistId());
                 item.setChecklistId(checklist.getId());
-                touched.add(checklist.getId());
             }
         }
         for (final ChecklistItem item : required.values()) {
@@ -564,7 +558,7 @@ public class ChecklistService {
                 item.setReasonArg(version.label());
             }
         }
-        touched.forEach(checklistId -> renumber(checklistId, guideOrder));
+        phases.values().forEach(checklist -> renumber(checklist.getId(), guideOrder));
     }
 
     /**
@@ -706,6 +700,9 @@ public class ChecklistService {
             throw new ResourceNotFoundException(ChecklistItem.class, id);
         }
         accessPolicy.requireWriteRevivalWork(caller, revival);
+        if (checklistRepository.findById(item.getChecklistId()).map(Checklist::isCancelled).orElse(false)) {
+            throw new BadRequestException("error.checklist.cancelled");
+        }
         if (!Objects.equals(version, item.getVersion())) {
             throw new ConflictException("error.conflict");
         }

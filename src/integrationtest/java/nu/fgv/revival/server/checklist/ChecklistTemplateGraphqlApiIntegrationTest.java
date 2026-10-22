@@ -27,6 +27,11 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Checklist templates over GraphQL: the super admin edits them, other roles only read (M3 FR-003, FR-030–FR-032).
+ *
+ * @author Anders Jacobsson
+ */
 class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private static final String TEMPLATE_FIELDS = "id kind phase name { sv en } retired version "

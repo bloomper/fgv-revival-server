@@ -27,6 +27,11 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Every kind of relative deadline computed from a checklist date (M3 FR-031, SC-010).
+ *
+ * @author Anders Jacobsson
+ */
 class RelativeDeadlineTest {
 
     @ParameterizedTest

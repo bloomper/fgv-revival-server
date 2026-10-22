@@ -41,6 +41,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Nothing in the decision log, meetings or checklists can be deleted, by any route (M3 SC-005, constitution IV).
+ *
+ * @author Anders Jacobsson
  */
 class NoDeleteIntegrationTest extends AbstractIntegrationTest {
 

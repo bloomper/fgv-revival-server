@@ -60,6 +60,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The rules for checklist templates and their items (M3 FR-030–FR-032).
+ *
+ * @author Anders Jacobsson
+ */
 @ExtendWith(MockitoExtension.class)
 class ChecklistTemplateServiceTest {
 
