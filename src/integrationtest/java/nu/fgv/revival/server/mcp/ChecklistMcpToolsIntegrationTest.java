@@ -101,13 +101,14 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
             assertThat(ids(result(call(STEERING_GROUP, "list_checklist_items", arguments)))).isNotEmpty().isEqualTo(web);
         }
 
-        final JsonNode phaseA = result(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "phase", "a")));
+        final JsonNode phaseA = result(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "chapter", "1")));
 
         assertThat(phaseA.at("/items/0/required").asBoolean()).isTrue();
-        assertThat(phaseA.at("/items/0/checklist/phase").asString()).isEqualTo("A");
+        assertThat(phaseA.at("/items/0/checklist/chapterKey").asString()).isEqualTo("A");
+        assertThat(phaseA.at("/items/0/checklist/chapterTitle/sv").asString()).isEqualTo("Först: godkännande och tajmning");
         assertThat(phaseA.at("/items/0/text/sv").asString()).startsWith("Nyuppsättningen ska godkännas");
-        assertThat(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "phase", "K")).toString())
-                .contains("BAD_REQUEST").contains("There is no phase");
+        assertThat(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "chapter", "K")).toString())
+                .contains("BAD_REQUEST").contains("There is no chapter");
 
         final JsonNode byName = result(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "checklist", "rephelg 2", "limit", 1)));
 
@@ -148,7 +149,7 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
         assertThat(status.get("overdueChecklistItems")).hasSize(1);
         assertThat(status.at("/overdueChecklistItems/0/checklist/name").asString()).isEqualTo("Rephelg 2");
         assertThat(status.get("openRequirements")).hasSize(10);
-        assertThat(status.at("/openRequirements/0/phase").asString()).isEqualTo("A");
+        assertThat(status.at("/openRequirements/0/chapterKey").asString()).isEqualTo("A");
         assertThat(status.at("/openRequirements/0/open").asInt()).isEqualTo(1);
         assertThat(status.at("/openRequirements/1/total").asInt()).isZero();
 

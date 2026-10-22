@@ -2,29 +2,29 @@ CREATE TABLE IF NOT EXISTS checklist_template
 (
     id                     BIGINT AUTO_INCREMENT NOT NULL,
     kind                   VARCHAR(8)            NOT NULL,
-    phase                  CHAR(1)               NULL,
+    chapter_key            CHAR(36)              NULL,
     name_sv                VARCHAR(255)          NULL,
     name_en                VARCHAR(255)          NULL,
     retired_at             DATETIME(6)           NULL,
-    phase_marker           CHAR(1) AS (IF(retired_at IS NULL, phase, NULL)) STORED,
+    chapter_marker         CHAR(36) AS (IF(retired_at IS NULL, chapter_key, NULL)) STORED,
     created_by             VARCHAR(255)          NOT NULL,
     created_at             DATETIME(6)           NOT NULL,
     last_modified_by       VARCHAR(255)          NULL,
     last_modified_at       DATETIME(6)           NULL,
     version                BIGINT                NULL,
     CONSTRAINT PK_CHECKLIST_TEMPLATE PRIMARY KEY (id),
-    -- One active template per phase
-    CONSTRAINT UC_CHECKLIST_TEMPLATE_PHASE UNIQUE (phase_marker),
-    CONSTRAINT CK_CHECKLIST_TEMPLATE_KIND CHECK (kind IN ('PHASE', 'EVENT')),
-    CONSTRAINT CK_CHECKLIST_TEMPLATE_PHASE CHECK ((kind = 'PHASE' AND phase IS NOT NULL) OR (kind = 'EVENT' AND phase IS NULL)),
-    CONSTRAINT CK_CHECKLIST_TEMPLATE_NAME CHECK (kind = 'PHASE' OR name_sv IS NOT NULL)
+    -- One active template per chapter
+    CONSTRAINT UC_CHECKLIST_TEMPLATE_CHAPTER UNIQUE (chapter_marker),
+    CONSTRAINT CK_CHECKLIST_TEMPLATE_KIND CHECK (kind IN ('CHAPTER', 'EVENT')),
+    CONSTRAINT CK_CHECKLIST_TEMPLATE_CHAPTER CHECK ((kind = 'CHAPTER' AND chapter_key IS NOT NULL) OR (kind = 'EVENT' AND chapter_key IS NULL)),
+    CONSTRAINT CK_CHECKLIST_TEMPLATE_NAME CHECK (kind = 'CHAPTER' OR name_sv IS NOT NULL)
 ) DEFAULT CHARSET = utf8mb4;
 
 CREATE TABLE IF NOT EXISTS checklist_template_audit
 (
     id                     BIGINT                NOT NULL,
     kind                   VARCHAR(8)            NULL,
-    phase                  CHAR(1)               NULL,
+    chapter_key            CHAR(36)              NULL,
     name_sv                VARCHAR(255)          NULL,
     name_en                VARCHAR(255)          NULL,
     retired_at             DATETIME(6)           NULL,

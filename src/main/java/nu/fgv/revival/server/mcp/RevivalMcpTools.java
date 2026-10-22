@@ -74,7 +74,7 @@ public class RevivalMcpTools {
     }
 
     @McpTool(name = "get_revival_status",
-            description = "Get a revival's status: its lifecycle status, overdue decision log rows and checklist items, and open guide requirements per phase.",
+            description = "Get a revival's status: its lifecycle status, overdue decision log rows and checklist items, and open guide requirements per chapter.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpRevivalStatus getRevivalStatus(@McpToolParam(description = "A revival you can see") final Long revivalId) {
         return support.call("get_revival_status", () -> {
@@ -85,7 +85,7 @@ public class RevivalMcpTools {
                             row.deadline())).toList(),
                     status.overdueChecklistItems().stream().map(ChecklistMcpTools::toMcp).map(item -> new OverdueChecklistItem(item.id(), item.checklist(),
                             item.text(), item.owner(), item.deadline())).toList(),
-                    status.openRequirements());
+                    status.openRequirements().stream().map(OpenRequirements::of).toList());
         });
     }
 
@@ -120,7 +120,16 @@ public class RevivalMcpTools {
     public record McpRevivalStatus(RevivalStatusDto.Summary revival,
                                    List<OverdueLogEntry> overdueLogEntries,
                                    List<OverdueChecklistItem> overdueChecklistItems,
-                                   List<RevivalStatusDto.OpenRequirements> openRequirements) {
+                                   List<OpenRequirements> openRequirements) {
+    }
+
+    public record OpenRequirements(String chapterKey, ChecklistMcpTools.@Nullable Text chapterTitle, int open, int total) {
+
+        static OpenRequirements of(final RevivalStatusDto.OpenRequirements requirements) {
+            return new OpenRequirements(requirements.chapterKey(),
+                    requirements.chapterTitle() == null ? null : ChecklistMcpTools.Text.of(requirements.chapterTitle()),
+                    requirements.open(), requirements.total());
+        }
     }
 
     public record OverdueLogEntry(int number, LogEntryType type, String text, @Nullable McpOwner owner, @Nullable LocalDate deadline) {

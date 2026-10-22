@@ -38,9 +38,9 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String REVIVAL_GUIDE = "query($id: ID!) { revival(id: $id) { id guideVersion { id label publishedAt } } }";
 
     @Test
-    void publishingPinsExistingRevivalsAndTheReportIsGone() {
+    void publishingPinsExistingRevivals() {
         final long revival = createRevival(ALI_BABA, 2028);
-        final long draft = importV5Layout();
+        final long draft = draftV5Layout();
 
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
                 .path("revival.guideVersion").valueIsNull();
@@ -55,7 +55,6 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
                 .path("revival.guideVersion.id").entity(String.class).isEqualTo(String.valueOf(draft))
                 .path("revival.guideVersion.label").entity(String.class).isEqualTo("v5");
-        assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_import_report").query(Long.class).single()).isZero();
         assertThat(jdbcClient.sql("SELECT from_version_id IS NULL FROM revival_guide_version_change WHERE revival_id = ?")
                 .param(revival).query(Boolean.class).single()).isTrue();
         graphQl(SUPER_ADMIN).document("{ guideDraft { draft { id } } }").execute().path("guideDraft").valueIsNull();
@@ -72,20 +71,19 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void discardingDeletesTheDraft() {
-        final long draft = importV5Layout();
+        final long draft = draftV5Layout();
 
         graphQl(SUPER_ADMIN).document(DISCARD).variable("id", draft).variable("version", guideVersion(draft)).execute()
                 .errors().verify();
 
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_version").query(Long.class).single()).isZero();
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_item").query(Long.class).single()).isZero();
-        assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_import_report").query(Long.class).single()).isZero();
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_item_audit WHERE revtype = 2").query(Long.class).single()).isPositive();
     }
 
     @Test
     void aStaleVersionIsAConflict() {
-        final long draft = importV5Layout();
+        final long draft = draftV5Layout();
 
         expectError(graphQl(SUPER_ADMIN).document(PUBLISH)
                 .variable("input", Map.of("id", draft, "version", guideVersion(draft) + 1, "label", "v5"))
@@ -94,7 +92,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyoneButSuperAdminsIsRefused() {
-        final long draft = importV5Layout();
+        final long draft = draftV5Layout();
 
         for (final String user : List.of(OBSERVER, DIRECTEUR, STEERING_GROUP, PLAIN_USER)) {
             expectError(graphQl(user).document(PUBLISH)
@@ -108,7 +106,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void publishingIsAuditedWithTheActor() {
-        final long draft = importV5Layout();
+        final long draft = draftV5Layout();
 
         publishGuide(draft, "v5");
 

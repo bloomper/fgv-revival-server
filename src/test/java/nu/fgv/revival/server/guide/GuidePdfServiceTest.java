@@ -65,20 +65,20 @@ class GuidePdfServiceTest {
     private static GuideVersionView version(final GuideVersionStatus status, final List<GuideVersionView.Item> extraItems) {
         final List<GuideVersionView.Chapter> chapters = new ArrayList<>();
 
-        for (final Phase phase : Phase.values()) {
+        for (final String key : GuideTestChapters.KEYS) {
             final List<GuideVersionView.Item> items = new ArrayList<>();
 
-            if (phase == Phase.A) {
-                items.add(new GuideVersionView.Item(1L, "a1", phase, null, GuideItemType.REQUIREMENT,
+            if (key.equals("A")) {
+                items.add(new GuideVersionView.Item(1L, "a1", key, null, GuideItemType.REQUIREMENT,
                         text("Godkänn av **JK** och [FGV](https://fgv.example.org).", "Approved by **JK** and [FGV](https://fgv.example.org)."), 0L));
-                items.add(new GuideVersionView.Item(2L, "a2", phase, null, GuideItemType.TEXT, text("Löptext på svenska – med åäö é.", null), 0L));
+                items.add(new GuideVersionView.Item(2L, "a2", key, null, GuideItemType.TEXT, text("Löptext på svenska – med åäö é.", null), 0L));
                 items.addAll(extraItems);
             }
-            chapters.add(new GuideVersionView.Chapter((long) phase.ordinal(), phase, GuideVersionView.Text.plain("Kapitel " + phase, phase == Phase.A ? "Chapter A" : null),
+            chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key), key, GuideVersionView.Text.plain("Kapitel " + key, key.equals("A") ? "Chapter A" : null),
                     items,
-                    phase == Phase.B ? List.of(new GuideVersionView.Section(20L, "kalas", phase, GuideVersionView.Text.plain("Kalaslokal", null), List.of(
-                            new GuideVersionView.Item(3L, "b1", phase, "kalas", GuideItemType.TIP, text("Kontrollera sprittillstånd.\n\n- en punkt\n- två", null), 0L),
-                            new GuideVersionView.Item(4L, "b2", phase, "kalas", GuideItemType.QUESTION, text("Vilka datum?", null), 0L)), 0L)) : List.of(),
+                    key.equals("B") ? List.of(new GuideVersionView.Section(20L, "kalas", key, GuideVersionView.Text.plain("Kalaslokal", null), List.of(
+                            new GuideVersionView.Item(3L, "b1", key, "kalas", GuideItemType.TIP, text("Kontrollera sprittillstånd.\n\n- en punkt\n- två", null), 0L),
+                            new GuideVersionView.Item(4L, "b2", key, "kalas", GuideItemType.QUESTION, text("Vilka datum?", null), 0L)), 0L)) : List.of(),
                     0L));
         }
         return new GuideVersionView(1L, status, status == GuideVersionStatus.PUBLISHED ? "v5" : null, null,
@@ -109,13 +109,13 @@ class GuidePdfServiceTest {
     void everyItemIsThereInOrderWithItsTypeInTheChosenLanguage() throws IOException {
         final String swedish = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of()), SWEDISH, null));
 
-        assertThat(swedish).contains("Innehåll", "Inledning", "Välkommen till guiden.", "A. Kapitel A", "Krav", "Godkänn av JK och FGV.",
-                "Kalaslokal", "Praktiska tips", "Kontrollera sprittillstånd.", "en punkt", "Att ta reda på", "Vilka datum?", "J. Kapitel J");
+        assertThat(swedish).contains("Innehåll", "Inledning", "Välkommen till guiden.", "1. Kapitel A", "Krav", "Godkänn av JK och FGV.",
+                "Kalaslokal", "Praktiska tips", "Kontrollera sprittillstånd.", "en punkt", "Att ta reda på", "Vilka datum?", "10. Kapitel J");
         assertThat(swedish.indexOf("Godkänn av")).isLessThan(swedish.indexOf("Kontrollera sprittillstånd"));
 
         final String english = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of()), Locale.ENGLISH, null));
 
-        assertThat(english).contains("Contents", "A. Chapter A", "Requirement", "Approved by JK and FGV.", "Tip", "To find out", "Not translated");
+        assertThat(english).contains("Contents", "1. Chapter A", "Requirement", "Approved by JK and FGV.", "Tip", "To find out", "Not translated");
     }
 
     @Test
@@ -123,7 +123,7 @@ class GuidePdfServiceTest {
         final PdfReader reader = new PdfReader(service.render(version(GuideVersionStatus.PUBLISHED, List.of()), SWEDISH, null));
         final List<Map<String, Object>> bookmarks = SimpleBookmark.getBookmarkList(reader);
 
-        assertThat(bookmarks).extracting(bookmark -> bookmark.get("Title")).contains("A. Kapitel A", "J. Kapitel J");
+        assertThat(bookmarks).extracting(bookmark -> bookmark.get("Title")).contains("1. Kapitel A", "10. Kapitel J");
 
         int links = 0;
 
@@ -148,7 +148,7 @@ class GuidePdfServiceTest {
     @Test
     void swedishCharactersRenderAndOthersBecomeAQuestionMark() throws IOException {
         final String text = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of(
-                new GuideVersionView.Item(9L, "a9", Phase.A, null, GuideItemType.TEXT, text("Pil → och emoji 🎭.", null), 0L))), SWEDISH, null));
+                new GuideVersionView.Item(9L, "a9", "A", null, GuideItemType.TEXT, text("Pil → och emoji 🎭.", null), 0L))), SWEDISH, null));
 
         assertThat(text).contains("åäö é").contains("–");
         assertThat(GuideMarkdown.pdfSafe("Pil → och emoji 🎭.")).isEqualTo("Pil ? och emoji ?.");
@@ -159,7 +159,7 @@ class GuidePdfServiceTest {
         try (final ServerSocket socket = new ServerSocket(0)) {
             final String image = "![bild](http://127.0.0.1:%d/x.png)".formatted(socket.getLocalPort());
             final String text = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of(
-                    new GuideVersionView.Item(9L, "a9", Phase.A, null, GuideItemType.TEXT,
+                    new GuideVersionView.Item(9L, "a9", "A", null, GuideItemType.TEXT,
                             text("# En rubrik\n\n`kod` och <b>html</b>\n\nFöre " + image + " efter.", null), 0L))), SWEDISH, null));
 
             assertThat(text).contains("En rubrik", "kod", "<b>html</b>", "Före", "efter.");
@@ -180,7 +180,7 @@ class GuidePdfServiceTest {
 
         for (int index = 0; index < 150; index++) {
             paragraph.put(index, "Punkt %d med **fetstil**, *kursiv* och en [länk](https://example.org/%d). ".formatted(index, index).repeat(4));
-            many.add(new GuideVersionView.Item(100L + index, "k" + index, Phase.A, null, GuideItemType.TIP, text(paragraph.get(index), null), 0L));
+            many.add(new GuideVersionView.Item(100L + index, "k" + index, "A", null, GuideItemType.TIP, text(paragraph.get(index), null), 0L));
         }
 
         final Instant start = Instant.now();

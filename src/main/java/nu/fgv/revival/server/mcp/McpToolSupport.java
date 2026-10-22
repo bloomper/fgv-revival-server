@@ -18,7 +18,7 @@ package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.audit.AuditSource;
-import nu.fgv.revival.server.guide.Phase;
+import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
@@ -50,17 +50,19 @@ public class McpToolSupport {
     }
 
     /**
-     * A phase A–J from a tool argument, ignoring case; none for blank.
+     * A chapter of the version from a tool argument: its key, or its number counting from 1.
      */
-    static @Nullable Phase phase(final @Nullable String phase) {
-        if (phase == null || phase.isBlank()) {
-            return null;
+    static GuideVersionView.Chapter chapter(final GuideVersionView version, final String chapter) {
+        final String wanted = chapter.strip();
+
+        if (wanted.chars().allMatch(Character::isDigit) && !wanted.isEmpty()) {
+            final int number = Integer.parseInt(wanted);
+
+            if (number >= 1 && number <= version.chapters().size()) {
+                return version.chapters().get(number - 1);
+            }
         }
-        try {
-            return Phase.valueOf(phase.strip().toUpperCase(Locale.ROOT));
-        } catch (final IllegalArgumentException e) {
-            throw new BadRequestException("error.phase.invalid", phase);
-        }
+        return version.chapter(wanted).orElseThrow(() -> new BadRequestException("error.chapter.invalid", chapter, version.chapters().size()));
     }
 
     /**

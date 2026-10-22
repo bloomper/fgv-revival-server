@@ -23,9 +23,12 @@ import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
 import nu.fgv.revival.server.guide.GuideAccess;
+import nu.fgv.revival.server.guide.GuideVersion;
+import nu.fgv.revival.server.guide.GuideVersionPublished;
 import nu.fgv.revival.server.guide.GuideVersionRepository;
+import nu.fgv.revival.server.guide.GuideVersionStatus;
+import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
@@ -97,6 +100,22 @@ class ChecklistTemplateServiceTest {
                 .thenAnswer(invocation -> items.stream().filter(item -> !item.isRetired()).toList());
     }
 
+    /**
+     * The latest published version, with chapters of the given keys and nothing in them.
+     */
+    private GuideVersionView latestWithChapters(final String... keys) {
+        final GuideVersion latest = new GuideVersion();
+        final GuideVersionView view = new GuideVersionView(1L, GuideVersionStatus.PUBLISHED, "v1", null, null, null, null, 0L,
+                GuideVersionView.Text.plain("", null), java.util.Arrays.stream(keys)
+                .map(key -> new GuideVersionView.Chapter((long) key.hashCode(), key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L))
+                .toList());
+
+        latest.setId(1L);
+        lenient().when(versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)).thenReturn(Optional.of(latest));
+        lenient().when(guideVersionViews.find(1L)).thenReturn(view);
+        return view;
+    }
+
     private void as(final Caller caller) {
         lenient().when(callerService.current()).thenReturn(caller);
     }
@@ -106,7 +125,7 @@ class ChecklistTemplateServiceTest {
 
         template.setId(5L);
         template.setKind(kind);
-        template.setPhase(kind == ChecklistKind.PHASE ? Phase.B : null);
+        template.setChapterKey(kind == ChecklistKind.CHAPTER ? "B" : null);
         template.setNameSv(kind == ChecklistKind.EVENT ? "Rephelg" : null);
         template.setVersion(0L);
         lenient().when(templateRepository.findById(5L)).thenReturn(Optional.of(template));
@@ -134,17 +153,62 @@ class ChecklistTemplateServiceTest {
     class Templates {
 
         @Test
-        void aPhaseTemplateNeedsAPhase() {
-            assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.PHASE, null, null)))
-                    .isInstanceOf(BadRequestException.class);
+        void aChapterTemplateNeedsAChapterOfTheLatestVersion() {
+            latestWithChapters("A", "B");
+
+            assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, null, null)))
+                    .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.template.chapter.required"));
+            assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, "X", null)))
+                    .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.template.chapter.unknown"));
+            assertThat(service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, "B", null)).chapterKey()).isEqualTo("B");
         }
 
         @Test
-        void aSecondActiveTemplateForAPhaseIsAConflict() {
-            when(templateRepository.findByPhaseAndRetiredAtIsNull(Phase.B)).thenReturn(Optional.of(new ChecklistTemplate()));
+        void aSecondActiveTemplateForAChapterIsAConflict() {
+            latestWithChapters("A", "B");
+            when(templateRepository.findByChapterKeyAndRetiredAtIsNull("B")).thenReturn(Optional.of(new ChecklistTemplate()));
 
-            assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.PHASE, Phase.B, null)))
+            assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, "B", null)))
                     .isInstanceOf(ConflictException.class);
+        }
+
+        @Test
+        void publishingAVersionWithoutAChapterRetiresItsTemplate() {
+            final ChecklistTemplate kept = new ChecklistTemplate();
+            final ChecklistTemplate orphaned = new ChecklistTemplate();
+
+            kept.setKind(ChecklistKind.CHAPTER);
+            kept.setChapterKey("A");
+            orphaned.setKind(ChecklistKind.CHAPTER);
+            orphaned.setChapterKey("B");
+            latestWithChapters("A");
+            when(templateRepository.findByKindAndRetiredAtIsNullOrderByNameSvAscIdAsc(ChecklistKind.CHAPTER)).thenReturn(List.of(kept, orphaned));
+
+            service.guideVersionPublished(new GuideVersionPublished(1L));
+
+            assertThat(kept.isRetired()).isFalse();
+            assertThat(orphaned.isRetired()).isTrue();
+        }
+
+        @Test
+        void chapterTemplatesAreListedInTheLatestVersionsChapterOrderBeforeEventTemplates() {
+            final ChecklistTemplate event = new ChecklistTemplate();
+            final ChecklistTemplate second = new ChecklistTemplate();
+            final ChecklistTemplate first = new ChecklistTemplate();
+
+            event.setId(1L);
+            event.setKind(ChecklistKind.EVENT);
+            event.setNameSv("Rephelg");
+            second.setId(2L);
+            second.setKind(ChecklistKind.CHAPTER);
+            second.setChapterKey("B");
+            first.setId(3L);
+            first.setKind(ChecklistKind.CHAPTER);
+            first.setChapterKey("A");
+            latestWithChapters("A", "B");
+            when(templateRepository.findByRetiredAtIsNullOrderByNameSvAscIdAsc()).thenReturn(List.of(event, second, first));
+
+            assertThat(service.list(false)).extracting(ChecklistTemplateDto::id).containsExactly(3L, 2L, 1L);
         }
 
         @Test
@@ -172,12 +236,12 @@ class ChecklistTemplateServiceTest {
         @Test
         void retiredTemplatesAreListedOnlyForSuperAdminsWhoAskForThem() {
             service.list(true);
-            verify(templateRepository).findAllByOrderByKindAscPhaseAscNameSvAscIdAsc();
+            verify(templateRepository).findAllByOrderByNameSvAscIdAsc();
 
             as(TestCallers.steeringGroup());
             when(guideAccess.callerRevivals(any())).thenReturn(List.of(TestCallers.revival(RevivalStatus.ORGANISING)));
             service.list(true);
-            verify(templateRepository).findByRetiredAtIsNullOrderByKindAscPhaseAscNameSvAscIdAsc();
+            verify(templateRepository).findByRetiredAtIsNullOrderByNameSvAscIdAsc();
         }
 
         @Test
@@ -204,7 +268,7 @@ class ChecklistTemplateServiceTest {
 
         @Test
         void phaseTemplateItemsHaveNoDeadline() {
-            template(ChecklistKind.PHASE);
+            template(ChecklistKind.CHAPTER);
 
             assertThatThrownBy(() -> service.createItem(newItem("Boka", RelativeDeadline.of(RelativeDeadlineKind.DAYS, -14, null))))
                     .isInstanceOf(BadRequestException.class);
@@ -279,7 +343,7 @@ class ChecklistTemplateServiceTest {
         item(1L, 0);
         as(caller);
 
-        assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.PHASE, Phase.A, null)))
+        assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, "A", null)))
                 .isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service.update(5L, 0L, null)).isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service.retire(5L, 0L)).isInstanceOf(AccessDeniedException.class);

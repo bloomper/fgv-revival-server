@@ -48,6 +48,13 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
 
     private static final List<String> M3_PREFIXES = List.of("logEntry", "logImport", "meeting", "minutes", "eventChecklist", "checklist");
     private static final List<String> M3_PACKAGES = List.of("decisionlog", "meeting", "checklist");
+    /**
+     * The one exception: the guide sync deletes a revival's checklist for a chapter, with its items, when the revival
+     * moves to a guide version without that chapter.
+     */
+    private static final Map<String, List<String>> GUIDE_SYNC_DELETES = Map.of(
+            "ChecklistRepository", List.of("delete"),
+            "ChecklistItemRepository", List.of("deleteAll"));
 
     @Autowired
     private GraphQlSource graphQlSource;
@@ -96,7 +103,8 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
         for (final Class<?> repository : repositories) {
             assertThat(CrudRepository.class.isAssignableFrom(repository)).as(repository.getSimpleName()).isFalse();
             assertThat(JpaSpecificationExecutor.class.isAssignableFrom(repository)).as(repository.getSimpleName()).isFalse();
-            assertThat(Arrays.stream(repository.getMethods()).map(Method::getName))
+            assertThat(Arrays.stream(repository.getMethods()).map(Method::getName)
+                    .filter(name -> !GUIDE_SYNC_DELETES.getOrDefault(repository.getSimpleName(), List.of()).contains(name)))
                     .as(repository.getSimpleName())
                     .noneMatch(name -> name.startsWith("delete") || name.startsWith("remove"));
         }

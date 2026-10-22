@@ -24,13 +24,11 @@ import nu.fgv.revival.server.checklist.ChecklistService;
 import nu.fgv.revival.server.decisionlog.LogEntryDto;
 import nu.fgv.revival.server.decisionlog.LogEntryFilterDto;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.meeting.MeetingService;
 import nu.fgv.revival.server.meeting.MeetingStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -78,20 +76,21 @@ public class RevivalStatusService {
     @Transactional(readOnly = true)
     public RevivalStatusDto status(final Long revivalId, final Locale locale) {
         final RevivalDto revival = revivalService.findById(revivalId);
-        final Map<Phase, List<ChecklistItemDto>> required = checklistService.items(revivalId,
+        final Map<String, List<ChecklistItemDto>> required = checklistService.items(revivalId,
                         new ChecklistItemFilterDto(null, null, null, null, true), locale).stream()
-                .filter(item -> item.checklist().phase() != null)
-                .collect(Collectors.groupingBy(item -> Objects.requireNonNull(item.checklist().phase())));
+                .filter(item -> item.checklist().chapterKey() != null)
+                .collect(Collectors.groupingBy(item -> Objects.requireNonNull(item.checklist().chapterKey())));
 
         return new RevivalStatusDto(
                 new RevivalStatusDto.Summary(revival.id(), titles.of(revival.spex(), revival.year(), locale), revival.year(),
                         revival.status()),
                 logEntryService.list(revivalId, new LogEntryFilterDto(null, null, true, null, null, null, null), locale),
                 checklistService.items(revivalId, new ChecklistItemFilterDto(null, null, true, null, null), locale),
-                Arrays.stream(Phase.values()).map(phase -> {
-                    final List<ChecklistItemDto> items = required.getOrDefault(phase, List.of());
+                // Every chapter checklist, in the guide's order, also those without requirements
+                checklistService.list(revivalId, false).stream().filter(checklist -> checklist.chapterKey() != null).map(checklist -> {
+                    final List<ChecklistItemDto> items = required.getOrDefault(checklist.chapterKey(), List.of());
 
-                    return new RevivalStatusDto.OpenRequirements(phase,
+                    return new RevivalStatusDto.OpenRequirements(Objects.requireNonNull(checklist.chapterKey()), checklist.chapterTitle(),
                             (int) items.stream().filter(item -> item.state() == ChecklistItemState.OPEN).count(), items.size());
                 }).toList());
     }

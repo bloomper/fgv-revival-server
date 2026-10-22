@@ -25,6 +25,7 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import static org.springframework.util.StringUtils.hasText;
 
@@ -45,37 +47,39 @@ import static org.springframework.util.StringUtils.hasText;
 @Service
 public class GuideDraftService {
 
+    private static final Pattern LABEL = Pattern.compile("v\\d{1,9}");
+
     private final GuideVersionRepository versionRepository;
     private final GuideChapterRepository chapterRepository;
     private final GuideSectionRepository sectionRepository;
     private final GuideItemRepository itemRepository;
-    private final GuideImportReportRepository reportRepository;
     private final GuideVersionViews views;
     private final RevivalGuideVersions revivalGuideVersions;
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
     private final List<DraftDiscardListener> discardListeners;
+    private final ApplicationEventPublisher events;
 
     public GuideDraftService(final GuideVersionRepository versionRepository,
                              final GuideChapterRepository chapterRepository,
                              final GuideSectionRepository sectionRepository,
                              final GuideItemRepository itemRepository,
-                             final GuideImportReportRepository reportRepository,
                              final GuideVersionViews views,
                              final RevivalGuideVersions revivalGuideVersions,
                              final CallerService callerService,
                              final AccessPolicy accessPolicy,
-                             @Lazy final List<DraftDiscardListener> discardListeners) {
+                             @Lazy final List<DraftDiscardListener> discardListeners,
+                             final ApplicationEventPublisher events) {
         this.versionRepository = versionRepository;
         this.chapterRepository = chapterRepository;
         this.sectionRepository = sectionRepository;
         this.itemRepository = itemRepository;
-        this.reportRepository = reportRepository;
         this.views = views;
         this.revivalGuideVersions = revivalGuideVersions;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
         this.discardListeners = discardListeners;
+        this.events = events;
     }
 
     /**
@@ -108,7 +112,7 @@ public class GuideDraftService {
     }
 
     /**
-     * Starts the draft: a copy of the latest published version with the same keys (research R3), or ten empty chapters
+     * Starts the draft: a copy of the latest published version with the same keys (research R3), or an empty draft
      * before the first version is published (FR-012).
      */
     @Transactional
@@ -128,14 +132,6 @@ public class GuideDraftService {
         draft.setStatus(GuideVersionStatus.DRAFT);
         if (latest == null) {
             versionRepository.saveAndFlush(draft);
-            for (final Phase phase : Phase.values()) {
-                final GuideChapter chapter = new GuideChapter();
-
-                chapter.setVersionId(draft.getId());
-                chapter.setPhase(phase);
-                chapter.setTitleSv(phase.name());
-                chapterRepository.save(chapter);
-            }
             return draft.getId();
         }
 
@@ -151,11 +147,12 @@ public class GuideDraftService {
         final java.util.Map<Long, Long> chapterIds = new java.util.HashMap<>();
         final java.util.Map<Long, Long> sectionIds = new java.util.HashMap<>();
 
-        for (final GuideChapter source : chapterRepository.findByVersionIdOrderByPhase(fromVersionId)) {
+        for (final GuideChapter source : chapterRepository.findByVersionIdOrderByPosition(fromVersionId)) {
             final GuideChapter copy = new GuideChapter();
 
             copy.setVersionId(toVersionId);
-            copy.setPhase(source.getPhase());
+            copy.setKey(source.getKey());
+            copy.setPosition(source.getPosition());
             copy.setTitleSv(source.getTitleSv());
             copy.setTitleEn(source.getTitleEn());
             chapterRepository.save(copy);
@@ -207,7 +204,7 @@ public class GuideDraftService {
         return itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(GuideItem.class, id));
     }
 
-    private static void requireVersion(final nu.fgv.revival.server.util.AbstractAuditable entity, final @Nullable Long expected) {
+    static void requireVersion(final nu.fgv.revival.server.util.AbstractAuditable entity, final @Nullable Long expected) {
         if (!Objects.equals(entity.getVersion(), expected)) {
             throw new ConflictException("error.conflict");
         }
@@ -221,6 +218,17 @@ public class GuideDraftService {
             throw new BadRequestException("error.guide.position");
         }
         return position;
+    }
+
+    private void renumberChapters(final List<GuideChapter> chapters) {
+        for (int position = 0; position < chapters.size(); position++) {
+            final GuideChapter chapter = chapters.get(position);
+
+            if (!Objects.equals(chapter.getPosition(), position)) {
+                chapter.setPosition(position);
+                chapterRepository.save(chapter);
+            }
+        }
     }
 
     private void renumberSections(final List<GuideSection> sections) {
@@ -282,8 +290,31 @@ public class GuideDraftService {
     }
 
     /**
-     * Renames a chapter. Chapters are never added, removed or reordered (FR-008).
+     * Adds a chapter with a new key. A null position appends it.
      */
+    @Transactional
+    public Long createChapter(final Long versionId, final @Nullable Integer position, final @Nullable String sv, final @Nullable String en) {
+        manager();
+
+        final GuideVersion draft = draftOf(versionId);
+
+        AuditContext.operation("guideChapterCreate");
+
+        final List<GuideChapter> chapters = new java.util.ArrayList<>(chapterRepository.findByVersionIdOrderByPosition(draft.getId()));
+        final GuideChapter chapter = new GuideChapter();
+
+        chapter.setVersionId(draft.getId());
+        chapter.setKey(java.util.UUID.randomUUID().toString());
+        chapter.setPosition(chapters.size());
+        chapter.setTitleSv(GuideRules.titleSv(sv));
+        chapter.setTitleEn(GuideRules.titleEn(en));
+        chapters.add(insertAt(position, chapters.size()), chapter);
+        chapterRepository.save(chapter);
+        renumberChapters(chapters);
+        chapterRepository.flush();
+        return chapter.getId();
+    }
+
     @Transactional
     public Long updateChapter(final Long id, final Long expectedVersion, final @Nullable String sv, final @Nullable String en) {
         manager();
@@ -296,6 +327,49 @@ public class GuideDraftService {
         chapter.setTitleSv(GuideRules.titleSv(sv));
         chapter.setTitleEn(GuideRules.titleEn(en));
         chapterRepository.saveAndFlush(chapter);
+        return chapter.getVersionId();
+    }
+
+    @Transactional
+    public Long moveChapter(final Long id, final Long expectedVersion, final int position) {
+        manager();
+
+        final GuideChapter chapter = chapter(id);
+
+        draftOf(chapter.getVersionId());
+        requireVersion(chapter, expectedVersion);
+        AuditContext.operation("guideChapterMove");
+
+        final List<GuideChapter> chapters = new java.util.ArrayList<>(chapterRepository.findByVersionIdOrderByPosition(chapter.getVersionId()));
+
+        chapters.removeIf(candidate -> candidate.getId().equals(id));
+        chapters.add(insertAt(position, chapters.size()), chapter);
+        renumberChapters(chapters);
+        chapterRepository.flush();
+        return chapter.getVersionId();
+    }
+
+    /**
+     * Removes a chapter with its sections and items. Revivals keep their checklist for it until they move to a version
+     * without it, when the guide sync deletes the checklist.
+     */
+    @Transactional
+    public Long removeChapter(final Long id, final Long expectedVersion) {
+        manager();
+
+        final GuideChapter chapter = chapter(id);
+
+        draftOf(chapter.getVersionId());
+        requireVersion(chapter, expectedVersion);
+        AuditContext.operation("guideChapterRemove");
+        itemRepository.deleteAll(itemRepository.findByChapterId(id));
+        itemRepository.flush();
+        sectionRepository.deleteAll(sectionRepository.findByChapterIdOrderByPosition(id));
+        sectionRepository.flush();
+        chapterRepository.delete(chapter);
+        chapterRepository.flush();
+        renumberChapters(new java.util.ArrayList<>(chapterRepository.findByVersionIdOrderByPosition(chapter.getVersionId())));
+        chapterRepository.flush();
         return chapter.getVersionId();
     }
 
@@ -536,29 +610,29 @@ public class GuideDraftService {
     }
 
     /**
-     * Publishes the draft under a label unique among all versions (FR-014), pins every revival without a version to it
-     * (FR-018) and drops the import report (FR-027). The draft's id becomes the version's id.
+     * Publishes the draft as the next version, "v" and one more than the highest number in use (FR-014), and pins every
+     * revival without a version to it (FR-018). The draft's id becomes the version's id.
      */
     @Transactional
-    public GuideVersionView publish(final Long id, final Long expectedVersion, final @Nullable String label, final @Nullable String note) {
+    public GuideVersionView publish(final Long id, final Long expectedVersion, final @Nullable String note) {
         final Caller caller = manager();
         final GuideVersion draft = requireDraft(version(id));
 
         requireVersion(draft, expectedVersion);
         AuditContext.operation("guideDraftPublish");
 
-        final String validLabel = validLabel(label);
+        final String validNote = validNote(note);
 
         requireComplete(draft);
         draft.setStatus(GuideVersionStatus.PUBLISHED);
-        draft.setLabel(validLabel);
-        draft.setNote(validNote(note));
+        draft.setLabel(nextLabel());
+        draft.setNote(validNote);
         draft.setPublishedAt(Instant.now());
         draft.setPublishedBy(caller.person().getId());
         versionRepository.saveAndFlush(draft);
-        revivalGuideVersions.pinUnpinned(draft, caller);
-        reportRepository.deleteByVersionId(draft.getId());
         views.evict(draft.getId());
+        revivalGuideVersions.pinUnpinned(draft, caller);
+        events.publishEvent(new GuideVersionPublished(draft.getId()));
         return Objects.requireNonNull(views.find(draft.getId()));
     }
 
@@ -581,31 +655,26 @@ public class GuideDraftService {
         views.evict(draft.getId());
     }
 
-    private void deleteContent(final Long versionId) {
+    /**
+     * Deletes a version's chapters, sections and items, for a version about to be deleted.
+     */
+    void deleteContent(final Long versionId) {
         itemRepository.deleteByVersionId(versionId);
         itemRepository.flush();
         sectionRepository.deleteByVersionId(versionId);
         sectionRepository.flush();
         chapterRepository.deleteByVersionId(versionId);
         chapterRepository.flush();
-        reportRepository.deleteByVersionId(versionId);
-        reportRepository.flush();
     }
 
-    private String validLabel(final @Nullable String label) {
-        if (!hasText(label)) {
-            throw new BadRequestException("error.guide.label.blank");
-        }
+    private String nextLabel() {
+        final int highest = versionRepository.findLabels().stream()
+                .filter(label -> LABEL.matcher(label).matches())
+                .mapToInt(label -> Integer.parseInt(label.substring(1)))
+                .max()
+                .orElse(0);
 
-        final String trimmed = label.strip();
-
-        if (trimmed.length() > GuideRules.MAX_LABEL) {
-            throw new BadRequestException("error.guide.label.tooLong", GuideRules.MAX_LABEL);
-        }
-        if (versionRepository.existsByLabelIgnoreCase(trimmed)) {
-            throw new BadRequestException("error.guide.label.duplicate", trimmed);
-        }
-        return trimmed;
+        return "v" + (highest + 1);
     }
 
     private static @Nullable String validNote(final @Nullable String note) {
@@ -619,8 +688,8 @@ public class GuideDraftService {
     }
 
     private void requireComplete(final GuideVersion draft) {
-        final List<GuideChapter> chapters = chapterRepository.findByVersionIdOrderByPhase(draft.getId());
-        final boolean blank = chapters.size() != Phase.values().length
+        final List<GuideChapter> chapters = chapterRepository.findByVersionIdOrderByPosition(draft.getId());
+        final boolean blank = chapters.isEmpty()
                 || chapters.stream().anyMatch(chapter -> !hasText(chapter.getTitleSv()))
                 || sectionRepository.findByVersionIdOrderByChapterIdAscPositionAsc(draft.getId()).stream().anyMatch(section -> !hasText(section.getTitleSv()))
                 || itemRepository.findByVersionIdOrderByChapterIdAscPositionAsc(draft.getId()).stream().anyMatch(item -> !hasText(item.getTextSv()));

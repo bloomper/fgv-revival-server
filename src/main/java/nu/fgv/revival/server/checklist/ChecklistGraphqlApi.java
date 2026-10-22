@@ -20,7 +20,12 @@ package nu.fgv.revival.server.checklist;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateSummaryDto;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.decisionlog.LogEntrySummaryDto;
+import nu.fgv.revival.server.guide.GuideService;
+import nu.fgv.revival.server.guide.GuideVersionStatus;
+import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.member.OwnerInputDto;
+import nu.fgv.revival.server.revival.RevivalDto;
+import nu.fgv.revival.server.util.error.BadRequestException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
@@ -47,10 +52,12 @@ public class ChecklistGraphqlApi {
 
     private final ChecklistService service;
     private final LogEntryService logEntryService;
+    private final GuideService guideService;
 
-    public ChecklistGraphqlApi(final ChecklistService service, final LogEntryService logEntryService) {
+    public ChecklistGraphqlApi(final ChecklistService service, final LogEntryService logEntryService, final GuideService guideService) {
         this.service = service;
         this.logEntryService = logEntryService;
+        this.guideService = guideService;
     }
 
     public record ChecklistItemCreateInput(Long checklistId, String text, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
@@ -88,6 +95,21 @@ public class ChecklistGraphqlApi {
     public List<ChecklistItemDto> checklistItems(@Argument final Long revivalId, @Argument final @Nullable ChecklistItemFilterDto filter,
                                                  final Locale locale) {
         return service.items(revivalId, filter, locale);
+    }
+
+    @QueryMapping
+    public ChapterRemovalImpactDto guideChapterRemovalImpact(@Argument final String chapterKey) {
+        return service.chapterRemovalImpact(chapterKey);
+    }
+
+    @SchemaMapping(typeName = "Revival")
+    public List<ChecklistRemovalDto> guideVersionChangeImpact(final RevivalDto revival, @Argument final Long toId) {
+        final GuideVersionView target = guideService.findById(toId);
+
+        if (target.status() != GuideVersionStatus.PUBLISHED) {
+            throw new BadRequestException("error.guide.version.notPublished");
+        }
+        return service.removalsOnVersionChange(revival.id(), target);
     }
 
     @MutationMapping

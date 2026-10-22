@@ -47,4 +47,6 @@ public interface ChecklistItemRepository extends Repository<ChecklistItem, Long>
     List<ChecklistItem> findByRevivalIdAndRequiredTrue(Long revivalId);
 
     List<ChecklistItem> findByRevivalId(Long revivalId);
+
+    void deleteAll(Iterable<ChecklistItem> items);
 }

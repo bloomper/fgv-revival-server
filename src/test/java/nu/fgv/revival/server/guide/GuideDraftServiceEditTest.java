@@ -39,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -103,8 +102,6 @@ class GuideDraftServiceEditTest {
         @Mock
         private GuideItemRepository itemRepository;
         @Mock
-        private GuideImportReportRepository reportRepository;
-        @Mock
         private GuideVersionViews views;
         @Mock
         private RevivalGuideVersions revivalGuideVersions;
@@ -115,8 +112,8 @@ class GuideDraftServiceEditTest {
 
         @BeforeEach
         void setUp() {
-            service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository, reportRepository,
-                    views, revivalGuideVersions, callerService, new AccessPolicy(), List.of());
+            service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
+                    views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(), event -> { });
             lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
             lenient().when(versionRepository.saveAndFlush(any())).thenAnswer(invocation -> {
                 final GuideVersion version = invocation.getArgument(0);
@@ -136,16 +133,13 @@ class GuideDraftServiceEditTest {
         }
 
         @Test
-        void beforeTheFirstPublicationTheDraftHasTenEmptyChapters() {
+        void beforeTheFirstPublicationTheDraftHasNoChapters() {
             when(versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)).thenReturn(Optional.empty());
 
             service.start();
 
-            final ArgumentCaptor<GuideChapter> chapters = ArgumentCaptor.forClass(GuideChapter.class);
-
-            verify(chapterRepository, times(10)).save(chapters.capture());
-            assertThat(chapters.getAllValues()).extracting(GuideChapter::getPhase).containsExactly(Phase.values());
-            assertThat(chapters.getAllValues()).allSatisfy(chapter -> assertThat(chapter.getVersionId()).isEqualTo(20L));
+            verify(versionRepository).saveAndFlush(any());
+            verify(chapterRepository, never()).save(any());
         }
 
         @Test
@@ -159,7 +153,8 @@ class GuideDraftServiceEditTest {
             latest.setIntroSv("Inledning");
             latest.setIntroEn("Introduction");
             chapter.setId(50L);
-            chapter.setPhase(Phase.A);
+            chapter.setKey("chapter-key");
+            chapter.setPosition(0);
             chapter.setTitleSv("Först");
             section.setId(60L);
             section.setChapterId(50L);
@@ -174,7 +169,7 @@ class GuideDraftServiceEditTest {
             item.setType(GuideItemType.TIP);
             item.setTextSv("Tips");
             when(versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)).thenReturn(Optional.of(latest));
-            when(chapterRepository.findByVersionIdOrderByPhase(5L)).thenReturn(List.of(chapter));
+            when(chapterRepository.findByVersionIdOrderByPosition(5L)).thenReturn(List.of(chapter));
             when(sectionRepository.findByVersionIdOrderByChapterIdAscPositionAsc(5L)).thenReturn(List.of(section));
             when(itemRepository.findByVersionIdOrderByChapterIdAscPositionAsc(5L)).thenReturn(List.of(item));
             when(chapterRepository.save(any())).thenAnswer(invocation -> {
@@ -193,14 +188,18 @@ class GuideDraftServiceEditTest {
             service.start();
 
             final ArgumentCaptor<GuideVersion> draft = ArgumentCaptor.forClass(GuideVersion.class);
+            final ArgumentCaptor<GuideChapter> chapterCopy = ArgumentCaptor.forClass(GuideChapter.class);
             final ArgumentCaptor<GuideSection> sectionCopy = ArgumentCaptor.forClass(GuideSection.class);
             final ArgumentCaptor<GuideItem> itemCopy = ArgumentCaptor.forClass(GuideItem.class);
 
             verify(versionRepository).saveAndFlush(draft.capture());
+            verify(chapterRepository).save(chapterCopy.capture());
             verify(sectionRepository).save(sectionCopy.capture());
             verify(itemRepository).save(itemCopy.capture());
             assertThat(draft.getValue().getBasedOnId()).isEqualTo(5L);
             assertThat(draft.getValue().getIntroEn()).isEqualTo("Introduction");
+            assertThat(chapterCopy.getValue().getKey()).isEqualTo("chapter-key");
+            assertThat(chapterCopy.getValue().getPosition()).isZero();
             assertThat(sectionCopy.getValue().getKey()).isEqualTo("section-key");
             assertThat(sectionCopy.getValue().getChapterId()).isEqualTo(51L);
             assertThat(itemCopy.getValue().getKey()).isEqualTo("item-key");

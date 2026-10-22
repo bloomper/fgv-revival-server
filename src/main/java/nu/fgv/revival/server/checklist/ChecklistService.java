@@ -18,30 +18,31 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.audit.AuditContext;
-import nu.fgv.revival.server.member.RevivalRole;
-import nu.fgv.revival.server.member.RevivalMemberRepository;
-import nu.fgv.revival.server.member.RevivalMember;
-import nu.fgv.revival.server.member.Capability;
-import nu.fgv.revival.server.checklist.template.ChecklistTemplateSummaryDto;
-import nu.fgv.revival.server.checklist.template.ChecklistTemplateRepository;
-import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemRepository;
-import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemRepository;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplateRepository;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplateSummaryDto;
+import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.AccessPolicy;
+import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.member.OwnerDto;
 import nu.fgv.revival.server.member.OwnerInputDto;
 import nu.fgv.revival.server.member.OwnerResolver;
 import nu.fgv.revival.server.member.OwnerViews;
 import nu.fgv.revival.server.member.PersonRefDto;
+import nu.fgv.revival.server.member.RevivalMember;
+import nu.fgv.revival.server.member.RevivalMemberRepository;
+import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.person.PersonNames;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
+import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
@@ -78,12 +79,6 @@ public class ChecklistService {
 
     private static final Locale SWEDISH = Locale.of("sv");
 
-    private static final Comparator<Checklist> ORDER = Comparator
-            .comparing((Checklist checklist) -> checklist.getKind() == ChecklistKind.PHASE ? 0 : 1)
-            .thenComparing(checklist -> checklist.getPhase() == null ? "" : checklist.getPhase().name())
-            .thenComparing(Checklist::getDate, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(Checklist::getId);
-
     private final ChecklistRepository checklistRepository;
     private final ChecklistItemRepository itemRepository;
     private final ChecklistTexts texts;
@@ -98,6 +93,7 @@ public class ChecklistService {
     private final PersonNames personNames;
     private final MessageSource messageSource;
     private final Clock clock;
+    private final LogEntryService logEntries;
 
     public ChecklistService(final ChecklistRepository checklistRepository,
                             final ChecklistItemRepository itemRepository,
@@ -112,7 +108,8 @@ public class ChecklistService {
                             final OwnerViews ownerViews,
                             final PersonNames personNames,
                             final MessageSource messageSource,
-                            final Clock clock) {
+                            final Clock clock,
+                            final LogEntryService logEntries) {
         this.checklistRepository = checklistRepository;
         this.itemRepository = itemRepository;
         this.texts = texts;
@@ -127,6 +124,7 @@ public class ChecklistService {
         this.personNames = personNames;
         this.messageSource = messageSource;
         this.clock = clock;
+        this.logEntries = logEntries;
     }
 
     public record NewItem(Long checklistId, String text, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
@@ -162,7 +160,7 @@ public class ChecklistService {
 
         final List<Checklist> checklists = checklistRepository.findByRevivalId(revivalId).stream()
                 .filter(checklist -> includeCancelled || !checklist.isCancelled())
-                .sorted(ORDER)
+                .sorted(order(revivalId))
                 .toList();
 
         return new ArrayList<>(summaries(checklists).values());
@@ -173,12 +171,12 @@ public class ChecklistService {
         final Checklist checklist = readable(callerService.current(), id);
         final List<ChecklistItem> items = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(id);
         final Optional<GuideVersionView> version = texts.pinnedVersion(checklist.getRevivalId());
-        final List<GuideVersionView.Item> tips = checklist.getPhase() == null ? List.of()
-                : version.map(view -> view.items().filter(item -> item.phase() == checklist.getPhase() && item.type() == GuideItemType.TIP).toList())
+        final List<GuideVersionView.Item> tips = checklist.getChapterKey() == null ? List.of()
+                : version.map(view -> view.items().filter(item -> item.chapterKey().equals(checklist.getChapterKey()) && item.type() == GuideItemType.TIP).toList())
                 .orElse(List.of());
 
-        return new ChecklistDto(checklist.getId(), checklist.getRevivalId(), checklist.getKind(), checklist.getPhase(),
-                checklist.getPhase() == null ? null : version.map(view -> view.chapter(checklist.getPhase()).title()).orElse(null),
+        return new ChecklistDto(checklist.getId(), checklist.getRevivalId(), checklist.getKind(), checklist.getChapterKey(),
+                chapterTitle(version, checklist),
                 checklist.getName(), checklist.getDate(), checklist.getTemplateId(), checklist.isCancelled(), toDtos(items, locale), tips,
                 checklist.getVersion());
     }
@@ -200,11 +198,11 @@ public class ChecklistService {
     }
 
     /**
-     * As {@link #items(Long, ChecklistItemFilterDto, Locale)}, also limited to one phase's checklist or to event
+     * As {@link #items(Long, ChecklistItemFilterDto, Locale)}, also limited to one chapter's checklist or to event
      * checklists whose name has every given word, ignoring case (MCP's list_checklist_items).
      */
     @Transactional(readOnly = true)
-    public List<ChecklistItemDto> items(final Long revivalId, final @Nullable ChecklistItemFilterDto filter, final @Nullable Phase phase,
+    public List<ChecklistItemDto> items(final Long revivalId, final @Nullable ChecklistItemFilterDto filter, final @Nullable String chapterKey,
                                         final @Nullable String checklistName, final Locale locale) {
         final Caller caller = callerService.current();
 
@@ -223,9 +221,9 @@ public class ChecklistService {
                 .filter(item -> !Boolean.TRUE.equals(actual.overdue()) || item.isOverdue(today))
                 .filter(item -> actual.checklistId() == null || item.getChecklistId().equals(actual.checklistId()))
                 .filter(item -> !Boolean.TRUE.equals(actual.requiredOnly()) || item.isRequired())
-                .filter(item -> phase == null || checklists.get(item.getChecklistId()).getPhase() == phase)
+                .filter(item -> chapterKey == null || chapterKey.equals(checklists.get(item.getChecklistId()).getChapterKey()))
                 .filter(item -> words.isEmpty() || hasWords(checklists.get(item.getChecklistId()).getName(), words))
-                .sorted(Comparator.comparing((ChecklistItem item) -> checklists.get(item.getChecklistId()), ORDER)
+                .sorted(Comparator.comparing((ChecklistItem item) -> checklists.get(item.getChecklistId()), order(revivalId))
                         .thenComparingInt(ChecklistItem::getPosition)
                         .thenComparing(ChecklistItem::getId))
                 .toList();
@@ -243,7 +241,7 @@ public class ChecklistService {
     }
 
     /**
-     * The templates the caller may add items from (FR-032a): a phase checklist's phase template, or any event template.
+     * The templates the caller may add items from (FR-032a): a chapter checklist's chapter template, or any event template.
      * None for those who cannot write, or on a cancelled checklist.
      */
     @Transactional(readOnly = true)
@@ -254,8 +252,8 @@ public class ChecklistService {
             return List.of();
         }
 
-        final List<ChecklistTemplate> templates = checklist.kind() == ChecklistKind.PHASE
-                ? templateRepository.findByPhaseAndRetiredAtIsNull(Objects.requireNonNull(checklist.phase())).stream().toList()
+        final List<ChecklistTemplate> templates = checklist.kind() == ChecklistKind.CHAPTER
+                ? templateRepository.findByChapterKeyAndRetiredAtIsNull(Objects.requireNonNull(checklist.chapterKey())).stream().toList()
                 : templateRepository.findByKindAndRetiredAtIsNullOrderByNameSvAscIdAsc(ChecklistKind.EVENT);
 
         return templates.stream().map(ChecklistTemplateSummaryDto::of).toList();
@@ -296,7 +294,7 @@ public class ChecklistService {
         final Checklist checklist = changeableChecklist(change.id(), change.version());
 
         if (checklist.getKind() != ChecklistKind.EVENT) {
-            throw new BadRequestException("error.checklist.phase.edit");
+            throw new BadRequestException("error.checklist.chapter.edit");
         }
         AuditContext.operation("eventChecklistUpdate");
         if (change.name() != null) {
@@ -318,7 +316,7 @@ public class ChecklistService {
         final Checklist checklist = changeableChecklist(id, version);
 
         if (checklist.getKind() != ChecklistKind.EVENT) {
-            throw new BadRequestException("error.checklist.phase.cancel");
+            throw new BadRequestException("error.checklist.chapter.cancel");
         }
         AuditContext.operation("eventChecklistCancel");
         checklist.setCancelledAt(clock.instant());
@@ -328,19 +326,19 @@ public class ChecklistService {
 
     /**
      * Adds the template's items the checklist does not have yet, whatever their state; existing items are left alone
-     * (FR-032a). A phase checklist uses its phase's template unless one is named.
+     * (FR-032a). A chapter checklist uses its chapter's template unless one is named.
      */
     @Transactional
     public ChecklistDto addFromTemplate(final Long checklistId, final Long version, final @Nullable Long templateId, final Locale locale) {
         final Checklist checklist = changeableChecklist(checklistId, version);
         final ChecklistTemplate template;
 
-        if (checklist.getKind() == ChecklistKind.PHASE) {
+        if (checklist.getKind() == ChecklistKind.CHAPTER) {
             template = templateId == null
-                    ? templateRepository.findByPhaseAndRetiredAtIsNull(Objects.requireNonNull(checklist.getPhase()))
+                    ? templateRepository.findByChapterKeyAndRetiredAtIsNull(Objects.requireNonNull(checklist.getChapterKey()))
                     .orElseThrow(() -> new BadRequestException("error.checklist.template.kind"))
                     : activeTemplate(templateId);
-            if (template.getKind() != ChecklistKind.PHASE || template.getPhase() != checklist.getPhase()) {
+            if (template.getKind() != ChecklistKind.CHAPTER || !Objects.equals(template.getChapterKey(), checklist.getChapterKey())) {
                 throw new BadRequestException("error.checklist.template.kind");
             }
         } else {
@@ -460,12 +458,12 @@ public class ChecklistService {
     // --- Internal, for the guide sync and templates (research R10); callers have checked access -----------------------
 
     /**
-     * Adds a phase template's items to phase checklists the sync has just created (User Story 5, scenario 8).
+     * Adds a chapter template's items to chapter checklists the sync has just created (User Story 5, scenario 8).
      */
     @Transactional
-    public void addPhaseTemplateItems(final List<Checklist> created) {
+    public void addChapterTemplateItems(final List<Checklist> created) {
         for (final Checklist checklist : created) {
-            templateRepository.findByPhaseAndRetiredAtIsNull(Objects.requireNonNull(checklist.getPhase()))
+            templateRepository.findByChapterKeyAndRetiredAtIsNull(Objects.requireNonNull(checklist.getChapterKey()))
                     .ifPresent(template -> addTemplateItems(checklist, template, SWEDISH));
         }
     }
@@ -510,22 +508,22 @@ public class ChecklistService {
     }
 
     /**
-     * Creates the ten phase checklists a revival lacks. Returns the ones created.
+     * Creates a checklist for each chapter of the version the revival lacks. Returns the ones created.
      */
     @Transactional
-    public List<Checklist> ensurePhaseChecklists(final Long revivalId) {
-        final Set<Phase> existing = checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.PHASE).stream()
-                .map(Checklist::getPhase)
+    public List<Checklist> ensureChapterChecklists(final Long revivalId, final GuideVersionView version) {
+        final Set<String> existing = checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.CHAPTER).stream()
+                .map(Checklist::getChapterKey)
                 .collect(Collectors.toSet());
         final List<Checklist> created = new ArrayList<>();
 
-        for (final Phase phase : Phase.values()) {
-            if (!existing.contains(phase)) {
+        for (final GuideVersionView.Chapter chapter : version.chapters()) {
+            if (!existing.contains(chapter.key())) {
                 final Checklist checklist = new Checklist();
 
                 checklist.setRevivalId(revivalId);
-                checklist.setKind(ChecklistKind.PHASE);
-                checklist.setPhase(phase);
+                checklist.setKind(ChecklistKind.CHAPTER);
+                checklist.setChapterKey(chapter.key());
                 created.add(checklistRepository.save(checklist));
             }
         }
@@ -533,21 +531,93 @@ public class ChecklistService {
     }
 
     /**
+     * Deletes the revival's checklists for chapters the version no longer has, with their items, after unlinking the
+     * log rows that point at those items (log rows are never deleted). Runs after {@link #syncRequiredItems}, so
+     * requirements that moved to another chapter have taken their required items along.
+     */
+    @Transactional
+    public void deleteRemovedChapterChecklists(final Long revivalId, final GuideVersionView version) {
+        final Set<String> chapters = version.chapters().stream().map(GuideVersionView.Chapter::key).collect(Collectors.toSet());
+
+        for (final Checklist checklist : checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.CHAPTER)) {
+            if (chapters.contains(checklist.getChapterKey())) {
+                continue;
+            }
+
+            final List<ChecklistItem> items = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId());
+
+            logEntries.unlinkChecklistItems(items.stream().map(ChecklistItem::getId).toList());
+            itemRepository.deleteAll(items);
+            checklistRepository.delete(checklist);
+        }
+    }
+
+    /**
+     * What moving the revival to the version would delete: its chapter checklists for chapters the version does not
+     * have, with the items that would go with them. Required items whose requirement the version keeps in another
+     * chapter move instead, so they are not counted.
+     */
+    @Transactional(readOnly = true)
+    public List<ChecklistRemovalDto> removalsOnVersionChange(final Long revivalId, final GuideVersionView target) {
+        visible(callerService.current(), revivalId);
+
+        final Set<String> chapters = target.chapters().stream().map(GuideVersionView.Chapter::key).collect(Collectors.toSet());
+        final Set<String> requirements = target.items().filter(item -> item.type() == GuideItemType.REQUIREMENT)
+                .map(GuideVersionView.Item::key).collect(Collectors.toSet());
+        final Optional<GuideVersionView> current = texts.pinnedVersion(revivalId);
+        final List<ChecklistRemovalDto> removals = new ArrayList<>();
+
+        for (final Checklist checklist : checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.CHAPTER).stream().sorted(order(revivalId)).toList()) {
+            if (chapters.contains(checklist.getChapterKey())) {
+                continue;
+            }
+
+            final List<ChecklistItem> items = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId()).stream()
+                    .filter(item -> !item.isRequired() || !requirements.contains(item.getGuideItemKey()))
+                    .toList();
+
+            removals.add(new ChecklistRemovalDto(checklist.getId(), Objects.requireNonNull(checklist.getChapterKey()), chapterTitle(current, checklist),
+                    items.size(), (int) items.stream().filter(item -> item.getState() == ChecklistItemState.DONE).count(),
+                    logEntries.countLinkedToChecklistItems(items.stream().map(ChecklistItem::getId).toList())));
+        }
+        return removals;
+    }
+
+    /**
+     * What removing the chapter from the guide would delete, over every revival that is not archived: their checklists
+     * for it and the items in them. An upper bound, since required items follow their requirement if it moves to another
+     * chapter first. Super admins only.
+     */
+    @Transactional(readOnly = true)
+    public ChapterRemovalImpactDto chapterRemovalImpact(final String chapterKey) {
+        accessPolicy.requireManageGuide(callerService.current());
+
+        final List<Checklist> checklists = checklistRepository.findByKindAndChapterKey(ChecklistKind.CHAPTER, chapterKey).stream()
+                .filter(checklist -> revivalRepository.findById(checklist.getRevivalId())
+                        .map(revival -> revival.getStatus() != RevivalStatus.ARCHIVED).orElse(false))
+                .toList();
+        final List<ChecklistItem> items = itemRepository.findByChecklistIdInOrderByPositionAscIdAsc(checklists.stream().map(Checklist::getId).toList());
+
+        return new ChapterRemovalImpactDto(chapterKey, checklists.size(), items.size(),
+                (int) items.stream().filter(item -> item.getState() == ChecklistItemState.DONE).count());
+    }
+
+    /**
      * Makes the revival's required items match the requirements of a guide version: one item per requirement in its
-     * phase's checklist, required items first in guide order, and open items for requirements no longer in the version
+     * chapter's checklist, required items first in guide order, and open items for requirements no longer in the version
      * marked not applicable (FR-034).
      */
     @Transactional
     public void syncRequiredItems(final Long revivalId, final GuideVersionView version) {
-        final Map<Phase, Checklist> phases = checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.PHASE).stream()
-                .collect(Collectors.toMap(Checklist::getPhase, Function.identity()));
+        final Map<String, Checklist> chapters = checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.CHAPTER).stream()
+                .collect(Collectors.toMap(checklist -> Objects.requireNonNull(checklist.getChapterKey()), Function.identity()));
         final List<GuideVersionView.Item> requirements = version.items().filter(item -> item.type() == GuideItemType.REQUIREMENT).toList();
         final Map<String, Integer> guideOrder = new HashMap<>();
         final Map<String, ChecklistItem> required = itemRepository.findByRevivalIdAndRequiredTrue(revivalId).stream()
                 .collect(Collectors.toMap(item -> Objects.requireNonNull(item.getGuideItemKey()), Function.identity()));
         for (int index = 0; index < requirements.size(); index++) {
             final GuideVersionView.Item requirement = requirements.get(index);
-            final Checklist checklist = phases.get(requirement.phase());
+            final Checklist checklist = chapters.get(requirement.chapterKey());
             final ChecklistItem item = required.get(requirement.key());
 
             guideOrder.put(requirement.key(), index);
@@ -574,7 +644,7 @@ public class ChecklistService {
                 item.setReasonArg(version.label());
             }
         }
-        phases.values().forEach(checklist -> renumber(checklist.getId(), guideOrder));
+        chapters.values().forEach(checklist -> renumber(checklist.getId(), guideOrder));
     }
 
     /**
@@ -745,8 +815,31 @@ public class ChecklistService {
         return trimmed;
     }
 
+    /**
+     * Chapter checklists first, in the order of the chapters in the pinned version, then event checklists by date.
+     */
+    private Comparator<Checklist> order(final Long revivalId) {
+        final List<GuideVersionView.Chapter> chapters = texts.pinnedVersion(revivalId).map(GuideVersionView::chapters).orElse(List.of());
+        final Map<String, Integer> positions = new HashMap<>();
+
+        for (int index = 0; index < chapters.size(); index++) {
+            positions.put(chapters.get(index).key(), index);
+        }
+        return Comparator
+                .comparing((Checklist checklist) -> checklist.getKind() == ChecklistKind.CHAPTER ? 0 : 1)
+                .thenComparing(checklist -> checklist.getChapterKey() == null ? -1 : positions.getOrDefault(checklist.getChapterKey(), Integer.MAX_VALUE))
+                .thenComparing(Checklist::getDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(Checklist::getId);
+    }
+
+    private static GuideVersionView.@Nullable Text chapterTitle(final Optional<GuideVersionView> version, final Checklist checklist) {
+        return checklist.getChapterKey() == null ? null
+                : version.flatMap(view -> view.chapter(Objects.requireNonNull(checklist.getChapterKey()))).map(GuideVersionView.Chapter::title).orElse(null);
+    }
+
     Map<Long, ChecklistSummaryDto> summaries(final List<Checklist> checklists) {
         final LocalDate today = today();
+        final Map<Long, Optional<GuideVersionView>> versions = new HashMap<>();
         final Map<Long, List<ChecklistItem>> items = itemRepository.findByChecklistIdInOrderByPositionAscIdAsc(
                         checklists.stream().map(Checklist::getId).toList()).stream()
                 .collect(Collectors.groupingBy(ChecklistItem::getChecklistId));
@@ -755,7 +848,8 @@ public class ChecklistService {
         for (final Checklist checklist : checklists) {
             final List<ChecklistItem> own = items.getOrDefault(checklist.getId(), List.of());
 
-            summaries.put(checklist.getId(), new ChecklistSummaryDto(checklist.getId(), checklist.getKind(), checklist.getPhase(),
+            summaries.put(checklist.getId(), new ChecklistSummaryDto(checklist.getId(), checklist.getKind(), checklist.getChapterKey(),
+                    chapterTitle(versions.computeIfAbsent(checklist.getRevivalId(), texts::pinnedVersion), checklist),
                     checklist.getName(), checklist.getDate(), checklist.isCancelled(),
                     (int) own.stream().filter(item -> item.getState() == ChecklistItemState.OPEN).count(),
                     (int) own.stream().filter(item -> item.isOverdue(today)).count(), own.size()));

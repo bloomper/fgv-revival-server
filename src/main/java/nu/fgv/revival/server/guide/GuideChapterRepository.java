@@ -27,9 +27,9 @@ import java.util.Optional;
  */
 public interface GuideChapterRepository extends JpaRepository<GuideChapter, Long> {
 
-    List<GuideChapter> findByVersionIdOrderByPhase(Long versionId);
+    List<GuideChapter> findByVersionIdOrderByPosition(Long versionId);
 
-    Optional<GuideChapter> findByVersionIdAndPhase(Long versionId, Phase phase);
+    Optional<GuideChapter> findByVersionIdAndKey(Long versionId, String key);
 
     void deleteByVersionId(Long versionId);
 }

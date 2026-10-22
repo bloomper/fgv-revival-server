@@ -17,7 +17,7 @@
 
 package nu.fgv.revival.server.checklist;
 
-import nu.fgv.revival.server.guide.Phase;
+import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
@@ -28,6 +28,6 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistSummaryDto(Long id, ChecklistKind kind, @Nullable Phase phase, @Nullable String name, @Nullable LocalDate date,
+public record ChecklistSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey, GuideVersionView.@Nullable Text chapterTitle, @Nullable String name, @Nullable LocalDate date,
                                   boolean cancelled, int openCount, int overdueCount, int totalCount) {
 }

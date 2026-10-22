@@ -18,8 +18,6 @@ package nu.fgv.revival.server.guide;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,7 +30,7 @@ import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One of a version's ten chapters. Its phase identifies it across versions.
+ * A chapter of a version. Its key identifies it across versions; position orders it within the version.
  *
  * @author Anders Jacobsson
  * @since 0.2
@@ -52,9 +50,11 @@ public class GuideChapter extends AbstractAuditable {
     @Column(name = "version_id", nullable = false, updatable = false)
     private Long versionId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "phase", nullable = false, updatable = false, length = 1, columnDefinition = "CHAR(1)")
-    private Phase phase;
+    @Column(name = "`key`", nullable = false, updatable = false, length = 36, columnDefinition = "CHAR(36)")
+    private String key;
+
+    @Column(name = "position", nullable = false)
+    private Integer position;
 
     @Column(name = "title_sv", nullable = false)
     private String titleSv;

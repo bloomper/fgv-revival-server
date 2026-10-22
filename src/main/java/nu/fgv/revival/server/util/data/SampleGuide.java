@@ -17,7 +17,6 @@
 package nu.fgv.revival.server.util.data;
 
 import nu.fgv.revival.server.guide.GuideItemType;
-import nu.fgv.revival.server.guide.Phase;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -59,6 +58,20 @@ final class SampleGuide {
             Remember that the journey matters as much as the result: the rehearsal weekends and parties are what you \
             will remember.""";
 
+    static final String CHAPTER_A = "chapter-a";
+    static final String CHAPTER_B = "chapter-b";
+    static final String CHAPTER_C = "chapter-c";
+    static final String CHAPTER_D = "chapter-d";
+    static final String CHAPTER_E = "chapter-e";
+    static final String CHAPTER_F = "chapter-f";
+    static final String CHAPTER_G = "chapter-g";
+    static final String CHAPTER_H = "chapter-h";
+    static final String CHAPTER_I = "chapter-i";
+    static final String CHAPTER_J = "chapter-j";
+
+    private static final List<String> CHAPTERS = List.of(CHAPTER_A, CHAPTER_B, CHAPTER_C, CHAPTER_D, CHAPTER_E, CHAPTER_F, CHAPTER_G,
+            CHAPTER_H, CHAPTER_I, CHAPTER_J);
+
     private SampleGuide() {
     }
 
@@ -71,7 +84,7 @@ final class SampleGuide {
     private record Section(String name, String title, List<Item> items) {
     }
 
-    private record Chapter(Phase phase, String titleSv, String titleEn, List<Item> items, List<Section> sections) {
+    private record Chapter(String name, String titleSv, String titleEn, List<Item> items, List<Section> sections) {
     }
 
     /**
@@ -97,7 +110,7 @@ final class SampleGuide {
         }
 
         return List.of(
-                new Chapter(Phase.A, "Godkännande från JK och FGV", "Approval from JK and FGV",
+                new Chapter(CHAPTER_A, "Godkännande från JK och FGV", "Approval from JK and FGV",
                         List.of(
                                 new Item("a-intro", TEXT, "Innan något annat görs behöver ni klartecken och en ungefärlig tidpunkt, så att nyuppsättningar inte krockar med varandra eller med årets spex."),
                                 new Item("a-contact", TIP, "Kontakta FGV:s och JK:s ordförande. Mycket kan skötas via mejl, men gå gärna på något styrelsemöte."),
@@ -105,7 +118,7 @@ final class SampleGuide {
                                 new Item("a-approval", REQUIREMENT, "Nyuppsättningen och dess ungefärliga tidpunkt ska godkännas av JK och FGV innan lokaler bokas.")
                         ),
                         List.of()),
-                new Chapter(Phase.B, "Lokaler och tidslinje", "Venues and timeline",
+                new Chapter(CHAPTER_B, "Lokaler och tidslinje", "Venues and timeline",
                         List.of(
                                 new Item("b-intro", TEXT, "Lokaler för föreställning och kalas blir ofta bokade ett år i förväg, så boka dem så snart ni har klartecken.")
                         ),
@@ -124,7 +137,7 @@ final class SampleGuide {
                                         new Item("b-timeline-current", QUESTION, "När planerar årets och nästa års spex sina helger?")
                                 ))
                         )),
-                new Chapter(Phase.C, "Budget", "Budget",
+                new Chapter(CHAPTER_C, "Budget", "Budget",
                         List.of(
                                 new Item("c-intro", TEXT, "Budgeten styr var ni kan spela och hur stort kalas ni har råd med, så ta fram den tidigt."),
                                 new Item("c-buffer", TIP, "Sätt av en buffert och titta i tidigare nyuppsättningars budgetar."),
@@ -134,7 +147,7 @@ final class SampleGuide {
                                         : new Item("c-budget", REQUIREMENT, "Budget ska upprättas av direktionen innan ni drar några kostnader.")
                         ),
                         List.of()),
-                new Chapter(Phase.D, "Organisation", "Organisation",
+                new Chapter(CHAPTER_D, "Organisation", "Organisation",
                         List.of(
                                 new Item("d-intro", TEXT, "Med lokaler, tidslinje och budget på plats är det dags att bemanna och fördela ansvar.")
                         ),
@@ -149,33 +162,33 @@ final class SampleGuide {
                                         new Item("d-bank-invoices", QUESTION, "Kan ni beställa via kåren och få kårpris, eller går fakturorna direkt till er?")
                                 ))
                         )),
-                new Chapter(Phase.E, "Tillgångar", "Assets",
+                new Chapter(CHAPTER_E, "Tillgångar", "Assets",
                         List.of(
                                 new Item("e-inventory", TIP, "Inventera manus, noter, rekvisita och kostymer i förråden tidigt."),
                                 new Item("e-storage", QUESTION, "Vilka förråd får ni använda, och vem har nycklarna?"),
                                 new Item("e-return", REQUIREMENT, "Lånat material ska återlämnas i samma skick efter föreställningarna.")
                         ),
                         List.of()),
-                new Chapter(Phase.F, "Repetitioner", "Rehearsals", rehearsalTips, List.of()),
-                new Chapter(Phase.G, "Marknadsföring och biljetter", "Marketing and tickets",
+                new Chapter(CHAPTER_F, "Repetitioner", "Rehearsals", rehearsalTips, List.of()),
+                new Chapter(CHAPTER_G, "Marknadsföring och biljetter", "Marketing and tickets",
                         List.of(
                                 new Item("g-channels", TIP, "Använd FGV:s nyhetsbrev, hemsidan och spexets sociala medier."),
                                 new Item("g-sponsors", TIP, "Var kreativ med spons, tidigare spexare har ofta kontakter."),
                                 new Item("g-tickets", QUESTION, "Vilken biljettförsäljning använder ni, och när öppnar den?")
                         ),
                         List.of()),
-                new Chapter(Phase.H, "Föreställnings- och kalashelgen", "Show and party weekend",
+                new Chapter(CHAPTER_H, "Föreställnings- och kalashelgen", "Show and party weekend",
                         List.of(
                                 new Item("h-staffing", TIP, "Kalaset är en lika stor apparat som föreställningen, så bemanna båda."),
                                 new Item("h-safety", REQUIREMENT, "Utrymningsvägar och brandregler i lokalen ska gås igenom med alla som jobbar.")
                         ),
                         List.of()),
-                new Chapter(Phase.I, "Turné", "Tour",
+                new Chapter(CHAPTER_I, "Turné", "Tour",
                         List.of(
                                 new Item("i-optional", TEXT, "En turné är frivillig och lika mycket jobb som föreställningshelgen. Det är helt legitimt att tacka nej.")
                         ),
                         List.of()),
-                new Chapter(Phase.J, "Avslut", "Closing",
+                new Chapter(CHAPTER_J, "Avslut", "Closing",
                         List.of(
                                 new Item("j-handover", TIP, "Lämna över budget, beslutslogg och erfarenheter till nästa nyuppsättning."),
                                 new Item("j-accounts", REQUIREMENT, "Slutredovisningen ska lämnas till FGV inom tre månader efter sista föreställningen.")
@@ -209,16 +222,18 @@ final class SampleGuide {
                 .param("publishedBy", publishedBy)
                 .param("createdBy", createdBy));
 
-        for (final Chapter chapter : chapters) {
+        for (int chapterPosition = 0; chapterPosition < chapters.size(); chapterPosition++) {
+            final Chapter chapter = chapters.get(chapterPosition);
             final long chapterId = insert(jdbcClient
                     .sql("""
                             INSERT INTO guide_chapter
-                                (version_id, phase, title_sv, title_en, created_by, created_at, version)
+                                (version_id, `key`, position, title_sv, title_en, created_by, created_at, version)
                             VALUES
-                                (:versionId, :phase, :titleSv, :titleEn, :createdBy, :createdAt, 0)
+                                (:versionId, :key, :position, :titleSv, :titleEn, :createdBy, :createdAt, 0)
                             """)
                     .param("versionId", versionId)
-                    .param("phase", chapter.phase().name())
+                    .param("key", key(chapter.name()))
+                    .param("position", chapterPosition)
                     .param("titleSv", chapter.titleSv())
                     .param("titleEn", chapter.titleEn())
                     .param("createdBy", createdBy)
@@ -283,6 +298,18 @@ final class SampleGuide {
 
         statement.update(keyHolder);
         return Objects.requireNonNull(keyHolder.getKey()).longValue();
+    }
+
+    /**
+     * A sample chapter's place in the guide, counting from 0, by its key.
+     */
+    static int chapterIndex(final String key) {
+        for (int index = 0; index < CHAPTERS.size(); index++) {
+            if (key(CHAPTERS.get(index)).equals(key)) {
+                return index;
+            }
+        }
+        throw new IllegalArgumentException(key);
     }
 
     static String key(final String name) {

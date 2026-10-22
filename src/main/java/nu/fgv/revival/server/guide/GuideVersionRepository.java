@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,5 +36,6 @@ public interface GuideVersionRepository extends JpaRepository<GuideVersion, Long
 
     boolean existsByStatus(GuideVersionStatus status);
 
-    boolean existsByLabelIgnoreCase(String label);
+    @Query("select v.label from GuideVersion v where v.label is not null")
+    List<String> findLabels();
 }

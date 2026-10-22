@@ -20,7 +20,6 @@ import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideSearch;
 import nu.fgv.revival.server.guide.GuideService;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionDto;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionKind;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionService;
@@ -34,7 +33,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * MCP tools for the guide (specs/003-m2-guide/contracts/mcp.md). A thin adapter over {@link GuideService} and
@@ -86,26 +84,18 @@ public class GuideMcpTools {
     }
 
     @McpTool(name = "get_guide_section",
-            description = "Read a chapter (A-J) or one of its sections from the revival guide, with every item's type and text. Give a revival id to read the version that revival follows.",
+            description = "Read a chapter or one of its sections from the revival guide, with every item's type and text. Give a revival id to read the version that revival follows.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public SectionResult getGuideSection(
-            @McpToolParam(description = "A-J") final String chapter,
+            @McpToolParam(description = "The chapter's number, counting from 1, or its key from search_guide") final String chapter,
             @McpToolParam(required = false, description = "A section key from search_guide. Without it, the whole chapter.") final @Nullable String sectionKey,
             @McpToolParam(required = false, description = "A revival you can see") final @Nullable Long revivalId) {
         return support.call("get_guide_section", () -> {
             final GuideVersionView version = version(revivalId);
-            final Phase phase;
-
-            try {
-                phase = Phase.valueOf(chapter.strip().toUpperCase(Locale.ROOT));
-            } catch (final IllegalArgumentException e) {
-                throw new ResourceNotFoundException(Phase.class, chapter);
-            }
-
-            final GuideVersionView.Chapter found = version.chapter(phase);
+            final GuideVersionView.Chapter found = McpToolSupport.chapter(version, chapter);
 
             if (sectionKey == null) {
-                return new SectionResult(Version.of(version), phase, Text.of(found.title()),
+                return new SectionResult(Version.of(version), found.key(), Text.of(found.title()),
                         found.items().stream().map(Item::of).toList(), found.sections().stream().map(Section::of).toList());
             }
 
@@ -114,7 +104,7 @@ public class GuideMcpTools {
                     .findFirst()
                     .orElseThrow(() -> new ResourceNotFoundException(GuideVersionView.Section.class, sectionKey));
 
-            return new SectionResult(Version.of(version), phase, Text.of(found.title()), List.of(), List.of(Section.of(section)));
+            return new SectionResult(Version.of(version), found.key(), Text.of(found.title()), List.of(), List.of(Section.of(section)));
         });
     }
 
@@ -125,7 +115,7 @@ public class GuideMcpTools {
             @McpToolParam(description = "The revival you suggest from") final Long revivalId,
             @McpToolParam(description = "CHANGE, REMOVE or ADD") final GuideSuggestionKind kind,
             @McpToolParam(required = false, description = "CHANGE, REMOVE: the item's key from search_guide or get_guide_section") final @Nullable String itemKey,
-            @McpToolParam(required = false, description = "ADD: the chapter, A-J") final @Nullable String chapter,
+            @McpToolParam(required = false, description = "ADD: the chapter's number, counting from 1, or its key") final @Nullable String chapter,
             @McpToolParam(required = false, description = "ADD: the section to add to") final @Nullable String sectionKey,
             @McpToolParam(required = false, description = "TIP, REQUIREMENT, QUESTION or TEXT") final @Nullable GuideItemType type,
             @McpToolParam(required = false, description = "Swedish text, Markdown") final @Nullable String textSv,
@@ -133,9 +123,9 @@ public class GuideMcpTools {
             @McpToolParam(required = false, description = "Why; required for CHANGE and REMOVE") final @Nullable String reason) {
         return support.call("suggest_guide_change", () -> {
             final GuideVersionView version = version(revivalId);
-            final Phase phase = McpToolSupport.phase(chapter);
+            final String chapterKey = chapter == null || chapter.isBlank() ? null : McpToolSupport.chapter(version, chapter).key();
             final GuideSuggestionDto created = suggestionService.create(new GuideSuggestionService.Proposal(
-                    revivalId, version.id(), kind, itemKey, phase, sectionKey, type, textSv, textEn, reason));
+                    revivalId, version.id(), kind, itemKey, chapterKey, sectionKey, type, textSv, textEn, reason));
 
             return new SuggestionResult(created.id(), created.status(), created.kind(), new Version(version.id(), version.label(), version.publishedAt()));
         });
@@ -155,11 +145,11 @@ public class GuideMcpTools {
         }
     }
 
-    public record Hit(GuideSearch.HitKind kind, @Nullable Phase phase, @Nullable Text chapterTitle, @Nullable String sectionKey,
+    public record Hit(GuideSearch.HitKind kind, @Nullable String chapterKey, @Nullable Text chapterTitle, @Nullable String sectionKey,
                       @Nullable Text sectionTitle, @Nullable String itemKey, @Nullable GuideItemType itemType, String snippet) {
 
         static Hit of(final GuideSearch.Hit hit) {
-            return new Hit(hit.kind(), hit.phase(), hit.chapterTitle() == null ? null : Text.of(hit.chapterTitle()), hit.sectionKey(),
+            return new Hit(hit.kind(), hit.chapterKey(), hit.chapterTitle() == null ? null : Text.of(hit.chapterTitle()), hit.sectionKey(),
                     hit.sectionTitle() == null ? null : Text.of(hit.sectionTitle()), hit.itemKey(), hit.itemType(), hit.snippet());
         }
     }
@@ -181,7 +171,7 @@ public class GuideMcpTools {
         }
     }
 
-    public record SectionResult(Version version, Phase phase, Text chapterTitle, List<Item> items, List<Section> sections) {
+    public record SectionResult(Version version, String chapterKey, Text chapterTitle, List<Item> items, List<Section> sections) {
     }
 
     public record SuggestionResult(Long id, GuideSuggestionStatus status, GuideSuggestionKind kind, Version version) {

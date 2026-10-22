@@ -28,7 +28,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
@@ -37,7 +36,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * A revival's checklist: one per phase A–J, or an event checklist with a name and an optional date (FR-022, FR-023).
+ * A revival's checklist: one per chapter of its pinned guide version, or an event checklist with a name and an optional date (FR-022, FR-023).
  * Never deleted; an event checklist can be cancelled.
  *
  * @author Anders Jacobsson
@@ -64,9 +63,8 @@ public class Checklist extends AbstractAuditable {
     @Column(name = "kind", nullable = false, updatable = false, length = 8)
     private ChecklistKind kind;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "phase", updatable = false, length = 1, columnDefinition = "CHAR(1)")
-    private @Nullable Phase phase;
+    @Column(name = "chapter_key", updatable = false, length = 36, columnDefinition = "CHAR(36)")
+    private @Nullable String chapterKey;
 
     @Column(name = "name", length = NAME_MAX_LENGTH)
     private @Nullable String name;

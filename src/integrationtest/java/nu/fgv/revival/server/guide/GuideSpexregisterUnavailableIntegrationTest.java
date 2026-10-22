@@ -68,7 +68,7 @@ class GuideSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTes
     void importingAndPublishingWork() {
         spexregisterDown(false);
 
-        final long draft = importV5Layout();
+        final long draft = draftV5Layout();
 
         publishGuide(draft, "v1");
         graphQl(SUPER_ADMIN).document(GuideReadGraphqlApiIntegrationTest.VERSIONS).execute()

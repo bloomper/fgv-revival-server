@@ -26,5 +26,10 @@ import java.time.Instant;
  * @author Anders Jacobsson
  * @since 0.2
  */
-public record GuideVersionSummaryDto(Long id, @Nullable String label, @Nullable Instant publishedAt) {
+public record GuideVersionSummaryDto(Long id,
+                                     @Nullable String label,
+                                     @Nullable String note,
+                                     @Nullable Instant publishedAt,
+                                     @Nullable Long publishedBy,
+                                     Long version) {
 }

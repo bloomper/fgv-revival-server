@@ -73,9 +73,9 @@ spring:
         instructions: >-
           Nyuppsättning supports the steering groups of Chalmersspex revivals. Every call runs with the
           permissions of the signed-in user and returns only revivals they can see. No tool deletes anything or
-          sends email. The guide is JK/FGV's continuity guide for revivals, in chapters A–J. Guide tools read the
+          sends email. The guide is JK/FGV's continuity guide for revivals, in chapters. Guide tools read the
           version a revival is pinned to when you give its id. The decision log holds a revival's decisions, to-dos
-          and questions, numbered per revival. Checklists hold what must be done per phase A–J and per event.
+          and questions, numbered per revival. Checklists hold what must be done per guide chapter and per event.
           Owners are given by display name, or "me".
 
 management:

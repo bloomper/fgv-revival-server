@@ -29,25 +29,23 @@ Spexregister is down, revivals still work and only picking a spex is refused.
 ## The guide
 
 JK/FGV's continuity guide lives in package `guide`: published versions that never change, one draft that super admins
-edit, search, the changes between versions, suggestions (`guide.suggestion`) and a PDF. Besides GraphQL it has two
-plain HTTP endpoints:
+edit, search, the changes between versions, suggestions (`guide.suggestion`) and a PDF. A version has any number of
+chapters, each with a key that stays the same across versions; super admins add, rename, reorder and remove them in
+the draft. Besides GraphQL it has two plain HTTP endpoints, `GET /api/guide/versions/{id}/pdf` and
+`GET /api/revivals/{id}/guide/pdf`, which return the PDF, with `lang=sv|en`.
 
-- `POST /api/guide/import` takes a Word document (multipart part `file`, at most 10 MB) and makes it the first draft.
-  It is refused once a version has been published.
-- `GET /api/guide/versions/{id}/pdf` and `GET /api/revivals/{id}/guide/pdf` return the PDF, with `lang=sv|en`.
-
-To bring guide v5 into an environment, a super admin imports `FGV_JK_Nyuppsättningsguide_v5.docx` from
-`fgv-revival-spec/input_docs/` on the web's *Manage the guide* page, checks the import report and publishes the draft
-as "v5". The document is never committed (constitution V); tests build fictitious documents with POI
-(`GuideDocxFixtures`).
+To bring guide v5 into an environment, a super admin types it into the first draft on the web's *Manage the guide*
+page and publishes it as "v5". The document is never committed (constitution V).
 
 ## The decision log, meetings and checklists
 
 Each revival's decision log (package `decisionlog`), meetings (`meeting`) and checklists (`checklist`, with templates in
 `checklist.template`) are written by its directeurs and steering group and read by everyone who can see the revival.
 Nothing in them is ever deleted: rows are cancelled, items marked not applicable, templates retired. The guide sync
-(`RevivalGuideSync`) keeps the ten phase checklists' required items and the guide's question rows in line with the
-version a revival is pinned to. Besides GraphQL and the MCP tools, the log has two plain HTTP endpoints for importing an
+(`RevivalGuideSync`) keeps a revival's chapter checklists, one per chapter, their required items and the guide's
+question rows in line with the version a revival is pinned to. When a revival moves to a version without a chapter,
+its checklist for that chapter is deleted with its items, after required items have followed their requirements to
+other chapters; log rows linked to the deleted items stay, without the link. Besides GraphQL and the MCP tools, the log has two plain HTTP endpoints for importing an
 Excel log (Ali Baba's or Nobel's layout) into an empty log:
 
 - `POST /api/revivals/{id}/log/import/preview` reads the workbook (multipart part `file`, at most 10 MB) and returns
@@ -134,10 +132,10 @@ import also creates:
 
 - A made-up guide, published as `v1` and `v2`. Each revival is pinned to the version that was latest when it was
   created.
-- Checklist templates for some phases, and the event templates `Rephelg` and `Föreställningshelg`.
+- Checklist templates for some chapters, and the event templates `Rephelg` and `Föreställningshelg`.
 
 Once the application has started and the guide sync has given the revivals their checklists and guide questions, the
-revivals from `APPROVED` to `SETTLING` get activity in line with their status. That means progress in the phase
+revivals from `APPROVED` to `SETTLING` get activity in line with their status. That means progress in the chapter
 checklists, decision log entries and a planned meeting. From `ORGANISING` on they also have event checklists, a
 closed meeting with minutes and answered guide questions. There are guide suggestions as well: one accepted into
 `v2`, one rejected and two open.

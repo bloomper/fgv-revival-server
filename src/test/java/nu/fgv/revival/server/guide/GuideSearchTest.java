@@ -40,8 +40,8 @@ class GuideSearchTest {
         return new GuideVersionView.Text(sv, en, MARKDOWN.plainText(sv), en == null ? null : MARKDOWN.plainText(en));
     }
 
-    static GuideVersionView.Item item(final String key, final Phase phase, final String sectionKey, final GuideItemType type, final String sv, final String en) {
-        return new GuideVersionView.Item(1L, key, phase, sectionKey, type, text(sv, en), 0L);
+    static GuideVersionView.Item item(final String key, final String chapter, final String sectionKey, final GuideItemType type, final String sv, final String en) {
+        return new GuideVersionView.Item(1L, key, chapter, sectionKey, type, text(sv, en), 0L);
     }
 
     /**
@@ -50,17 +50,17 @@ class GuideSearchTest {
     static GuideVersionView version() {
         final List<GuideVersionView.Chapter> chapters = new java.util.ArrayList<>();
 
-        for (final Phase phase : Phase.values()) {
-            switch (phase) {
-                case A -> chapters.add(new GuideVersionView.Chapter(1L, phase, GuideVersionView.Text.plain("Först: godkännande", "First: approval"),
-                        List.of(item("a1", phase, null, GuideItemType.REQUIREMENT, "Kontakta **JK** via kåren.", "Contact JK through the student union.")),
+        for (final String key : GuideTestChapters.KEYS) {
+            switch (key) {
+                case "A" -> chapters.add(new GuideVersionView.Chapter(1L, key, GuideVersionView.Text.plain("Först: godkännande", "First: approval"),
+                        List.of(item("a1", key, null, GuideItemType.REQUIREMENT, "Kontakta **JK** via kåren.", "Contact JK through the student union.")),
                         List.of(), 0L));
-                case B -> chapters.add(new GuideVersionView.Chapter(2L, phase, GuideVersionView.Text.plain("Boka lokaler", null), List.of(),
-                        List.of(new GuideVersionView.Section(3L, "kalas", phase, GuideVersionView.Text.plain("Kalaslokal", "Party venue"), List.of(
-                                item("b1", phase, "kalas", GuideItemType.TIP, "Kontrollera sprittillstånd i vald lokal.", null),
-                                item("b2", phase, "kalas", GuideItemType.TIP, "Se [kårens sida](https://example.org/kar) om bokning.", null)), 0L)),
+                case "B" -> chapters.add(new GuideVersionView.Chapter(2L, key, GuideVersionView.Text.plain("Boka lokaler", null), List.of(),
+                        List.of(new GuideVersionView.Section(3L, "kalas", key, GuideVersionView.Text.plain("Kalaslokal", "Party venue"), List.of(
+                                item("b1", key, "kalas", GuideItemType.TIP, "Kontrollera sprittillstånd i vald lokal.", null),
+                                item("b2", key, "kalas", GuideItemType.TIP, "Se [kårens sida](https://example.org/kar) om bokning.", null)), 0L)),
                         0L));
-                default -> chapters.add(new GuideVersionView.Chapter((long) phase.ordinal() + 10, phase, GuideVersionView.Text.plain("Kapitel " + phase, null), List.of(), List.of(), 0L));
+                default -> chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key) + 10, key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L));
             }
         }
         return new GuideVersionView(1L, GuideVersionStatus.PUBLISHED, "v1", null, null, null, null, 0L,
@@ -73,7 +73,7 @@ class GuideSearchTest {
 
         assertThat(hits).singleElement().satisfies(hit -> {
             assertThat(hit.kind()).isEqualTo(HitKind.ITEM);
-            assertThat(hit.phase()).isEqualTo(Phase.B);
+            assertThat(hit.chapterKey()).isEqualTo("B");
             assertThat(hit.sectionKey()).isEqualTo("kalas");
             assertThat(hit.sectionTitle().sv()).isEqualTo("Kalaslokal");
             assertThat(hit.itemKey()).isEqualTo("b1");
@@ -123,11 +123,11 @@ class GuideSearchTest {
 
     @Test
     void resultsAreInGuideOrderAndLimited() {
-        assertThat(GuideSearch.search(version(), "lokal", 50)).extracting(Hit::kind, Hit::phase)
+        assertThat(GuideSearch.search(version(), "lokal", 50)).extracting(Hit::kind, Hit::chapterKey)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(HitKind.CHAPTER_TITLE, Phase.B),
-                        org.assertj.core.groups.Tuple.tuple(HitKind.SECTION_TITLE, Phase.B),
-                        org.assertj.core.groups.Tuple.tuple(HitKind.ITEM, Phase.B));
+                        org.assertj.core.groups.Tuple.tuple(HitKind.CHAPTER_TITLE, "B"),
+                        org.assertj.core.groups.Tuple.tuple(HitKind.SECTION_TITLE, "B"),
+                        org.assertj.core.groups.Tuple.tuple(HitKind.ITEM, "B"));
         assertThat(GuideSearch.search(version(), "lokal", 2)).extracting(Hit::kind).containsExactly(HitKind.CHAPTER_TITLE, HitKind.SECTION_TITLE);
     }
 

@@ -1,4 +1,4 @@
-# M3: checklist templates for phases and event kinds (FR-030–FR-032a). Rules per operation are in
+# M3: checklist templates for guide chapters and event kinds (FR-030–FR-032a). Rules per operation are in
 # specs/004-m3-log/contracts/README.md. Templates and their items are retired, never deleted.
 
 extend type Query {
@@ -56,7 +56,9 @@ input RelativeDeadlineInput {
 type ChecklistTemplateSummary {
     id: ID!
     kind: ChecklistKind!
-    phase: Phase
+    chapterKey: ID
+    "CHAPTER: the chapter's title in the latest published version, or null when it no longer has the chapter."
+    chapterTitle: LocalizedText
     name: LocalizedText
     retired: Boolean!
 }
@@ -64,7 +66,9 @@ type ChecklistTemplateSummary {
 type ChecklistTemplate {
     id: ID!
     kind: ChecklistKind!
-    phase: Phase
+    chapterKey: ID
+    "CHAPTER: the chapter's title in the latest published version, or null when it no longer has the chapter."
+    chapterTitle: LocalizedText
     "EVENT."
     name: LocalizedText
     retired: Boolean!
@@ -87,8 +91,8 @@ type ChecklistTemplateItem {
 
 input ChecklistTemplateCreateInput {
     kind: ChecklistKind!
-    "PHASE: required; refused if an active template exists for the phase."
-    phase: Phase
+    "CHAPTER: required, a chapter of the latest published version; refused if an active template exists for it."
+    chapterKey: ID
     "EVENT: required."
     name: LocalizedTextInput
 }

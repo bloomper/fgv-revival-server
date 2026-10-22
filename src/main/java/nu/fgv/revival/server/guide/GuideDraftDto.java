@@ -16,8 +16,6 @@
 
 package nu.fgv.revival.server.guide;
 
-import org.jspecify.annotations.Nullable;
-
 /**
  * GraphQL's {@code GuideDraft}.
  *
@@ -25,7 +23,6 @@ import org.jspecify.annotations.Nullable;
  * @since 0.2
  */
 public record GuideDraftDto(GuideVersionView draft,
-                            @Nullable GuideImportReportDto importReport,
                             int acceptedSuggestionCount,
                             int untranslatedCount) {
 }

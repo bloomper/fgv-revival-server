@@ -34,7 +34,6 @@ import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
@@ -109,7 +108,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                            Long versionId,
                            GuideSuggestionKind kind,
                            @Nullable String itemKey,
-                           @Nullable Phase phase,
+                           @Nullable String chapterKey,
                            @Nullable String sectionKey,
                            @Nullable GuideItemType proposedType,
                            @Nullable String proposedTextSv,
@@ -192,7 +191,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                     throw new BadRequestException("error.suggestion.content.required");
                 }
                 suggestion.setItemKey(item.key());
-                suggestion.setPhase(item.phase());
+                suggestion.setChapterKey(item.chapterKey());
                 if (proposal.kind() == GuideSuggestionKind.CHANGE) {
                     suggestion.setProposedType(proposal.proposedType());
                     suggestion.setProposedTextSv(sv);
@@ -200,19 +199,23 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 }
             }
             case ADD -> {
-                if (proposal.phase() == null) {
-                    throw new BadRequestException("error.suggestion.phase.required");
+                if (proposal.chapterKey() == null) {
+                    throw new BadRequestException("error.suggestion.chapter.required");
                 }
+
+                final GuideVersionView.Chapter chapter = view.chapter(proposal.chapterKey())
+                        .orElseThrow(() -> new BadRequestException("error.suggestion.chapter.unknown"));
+
                 if (proposal.proposedType() == null) {
                     throw new BadRequestException("error.suggestion.type.required");
                 }
                 if (sv == null && en == null) {
                     throw new BadRequestException("error.guide.text.blank");
                 }
-                if (proposal.sectionKey() != null && view.chapter(proposal.phase()).sections().stream().noneMatch(section -> section.key().equals(proposal.sectionKey()))) {
+                if (proposal.sectionKey() != null && chapter.sections().stream().noneMatch(section -> section.key().equals(proposal.sectionKey()))) {
                     throw new BadRequestException("error.suggestion.section.unknown");
                 }
-                suggestion.setPhase(proposal.phase());
+                suggestion.setChapterKey(chapter.key());
                 suggestion.setSectionKey(proposal.sectionKey());
                 suggestion.setProposedType(proposal.proposedType());
                 suggestion.setProposedTextSv(sv);
@@ -247,7 +250,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         switch (suggestion.getKind()) {
             case CHANGE, REMOVE -> applyToItem(suggestion, draftId, resolution);
             case ADD -> {
-                final GuideChapter chapter = chapterRepository.findByVersionIdAndPhase(draftId, suggestion.getPhase()).orElseThrow();
+                final GuideChapter chapter = draftChapter(draftId, suggestion.getChapterKey());
                 final Long sectionId = suggestion.getSectionKey() == null ? null : sectionRepository.findByVersionIdAndKey(draftId, suggestion.getSectionKey())
                         .filter(section -> section.getChapterId().equals(chapter.getId()))
                         .map(GuideSection::getId)
@@ -301,10 +304,18 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         if (current != null) {
             draftService.changeItem(current, type, sv, en);
         } else {
-            final GuideChapter chapter = chapterRepository.findByVersionIdAndPhase(draftId, original.phase()).orElseThrow();
+            final GuideChapter chapter = draftChapter(draftId, original.chapterKey());
 
             draftService.addItem(chapter, null, null, type, GuideRules.itemTextSv(sv), GuideRules.itemTextEn(en));
         }
+    }
+
+    /**
+     * The draft's chapter with the key. CONFLICT when the draft no longer has it: the super admin removed it after the
+     * suggestion was made.
+     */
+    private GuideChapter draftChapter(final Long draftId, final String chapterKey) {
+        return chapterRepository.findByVersionIdAndKey(draftId, chapterKey).orElseThrow(() -> new ConflictException("error.suggestion.chapter.removed"));
     }
 
     @Transactional
@@ -372,6 +383,11 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         return repository.countByAcceptedIntoVersionId(draftId);
     }
 
+    @Override
+    public int madeOn(final Long versionId) {
+        return repository.countByVersionId(versionId);
+    }
+
     /**
      * The draft a suggestion was accepted into is being discarded: the suggestion opens again (clarification
      * 2026-10-21).
@@ -394,7 +410,8 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         final Revival revival = known != null ? known : revivalRepository.findById(suggestion.getRevivalId()).orElseThrow();
         final GuideVersionView madeOn = Objects.requireNonNull(views.find(suggestion.getVersionId()));
         final GuideChanges.ItemSnapshot item = suggestion.getItemKey() == null ? null : madeOn.item(suggestion.getItemKey())
-                .map(found -> new GuideChanges.ItemSnapshot(found.phase(), found.sectionKey(),
+                .map(found -> new GuideChanges.ItemSnapshot(new GuideChanges.ChapterRef(found.chapterKey(),
+                        madeOn.chapter(found.chapterKey()).orElseThrow().title()), found.sectionKey(),
                         found.sectionKey() == null ? null : madeOn.section(found.sectionKey()).map(GuideVersionView.Section::title).orElse(null),
                         found.type(), found.text()))
                 .orElse(null);
@@ -414,7 +431,8 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 suggestion.getAuthorId(),
                 suggestion.getAuthorId().equals(caller.person().getId()),
                 GUIDE_MAPPER.toSummary(madeOn),
-                suggestion.getPhase(),
+                suggestion.getChapterKey(),
+                madeOn.chapter(suggestion.getChapterKey()).map(GuideVersionView.Chapter::title).orElse(null),
                 suggestion.getSectionKey(),
                 suggestion.getItemKey(),
                 item,

@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package nu.fgv.revival.server.guide;
 
+import java.util.List;
+
 /**
- * What an import could not carry over, or carried over as plain text (contracts/import.md).
+ * The chapter keys the tests use for a guide in the old shape of ten chapters: A–J, in order.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 0.3
  */
-public enum GuideImportWarningCode {
+public final class GuideTestChapters {
 
-    IMAGE,
-    TABLE,
-    UNKNOWN_LABEL
+    public static final List<String> KEYS = List.of("A", "B", "C", "D", "E", "F", "G", "H", "I", "J");
+
+    private GuideTestChapters() {
+    }
 }

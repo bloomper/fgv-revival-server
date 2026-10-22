@@ -83,24 +83,24 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
             final JsonNode found = result(call(STEERING_GROUP, "search_guide", arguments));
             final List<String> mcp = new ArrayList<>();
             final List<String> web = graphQl(STEERING_GROUP)
-                    .document("query($query: String!, $versionId: ID) { guideSearch(query: $query, versionId: $versionId, first: 20) { kind phase itemKey sectionKey } }")
+                    .document("query($query: String!, $versionId: ID) { guideSearch(query: $query, versionId: $versionId, first: 20) { kind chapterKey itemKey sectionKey } }")
                     .variable("query", "ti").variable("versionId", version)
                     .execute()
                     .path("guideSearch[*]").entityList(Map.class).get().stream()
-                    .map(hit -> hit.get("kind") + "/" + hit.get("phase") + "/" + hit.get("itemKey") + "/" + hit.get("sectionKey"))
+                    .map(hit -> hit.get("kind") + "/" + hit.get("chapterKey") + "/" + hit.get("itemKey") + "/" + hit.get("sectionKey"))
                     .toList();
 
             assertThat(found.at("/version/id").asLong()).isEqualTo(version);
-            found.get("items").forEach(hit -> mcp.add(hit.get("kind").asString() + "/" + text(hit, "phase") + "/" + text(hit, "itemKey") + "/" + text(hit, "sectionKey")));
+            found.get("items").forEach(hit -> mcp.add(hit.get("kind").asString() + "/" + text(hit, "chapterKey") + "/" + text(hit, "itemKey") + "/" + text(hit, "sectionKey")));
             assertThat(mcp).isNotEmpty().isEqualTo(web);
         }
     }
 
     @Test
     void getGuideSectionReturnsAChapterOrOneSectionInBothLanguages() {
-        final JsonNode chapter = result(call(DIRECTEUR, "get_guide_section", Map.of("chapter", "b", "revivalId", revival)));
+        final JsonNode chapter = result(call(DIRECTEUR, "get_guide_section", Map.of("chapter", "2", "revivalId", revival)));
 
-        assertThat(chapter.get("phase").asString()).isEqualTo("B");
+        assertThat(chapter.get("chapterKey").asString()).isEqualTo("B");
         assertThat(chapter.at("/chapterTitle/sv").asString()).isEqualTo("Boka lokaler och lägg fast er tidslinje");
         assertThat(chapter.get("sections")).hasSize(2);
         assertThat(chapter.at("/sections/0/items/0/text").has("en")).isTrue();
@@ -143,7 +143,7 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(refused(call(OBSERVER, "suggest_guide_change", Map.of("revivalId", revival, "kind", "REMOVE", "itemKey", itemKey, "reason", "x")))).isTrue();
         assertThat(call(STEERING_GROUP, "suggest_guide_change", Map.of("revivalId", revival, "kind", "ADD", "chapter", "K", "type", "TIP",
-                "textSv", "x")).toString()).contains("BAD_REQUEST").contains("There is no phase");
+                "textSv", "x")).toString()).contains("BAD_REQUEST").contains("There is no chapter");
     }
 
     @Test

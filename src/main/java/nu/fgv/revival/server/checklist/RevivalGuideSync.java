@@ -41,7 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Keeps a revival's phase checklists, required items and guide question rows in line with the guide version it is
+ * Keeps a revival's chapter checklists, required items and guide question rows in line with the guide version it is
  * pinned to (FR-022, FR-033, FR-034, research R10). Idempotent. Runs in the transaction of the pin or creation that
  * triggered it, so both succeed or fail together, and once at startup for every revival that is not archived.
  *
@@ -103,17 +103,20 @@ public class RevivalGuideSync implements ApplicationRunner {
     }
 
     /**
-     * Phase checklists, required items and question rows for one revival, in the caller's transaction.
+     * Chapter checklists, required items and question rows for one revival, in the caller's transaction. A revival
+     * without a pinned version has no chapter checklists. Checklists for chapters the version no longer has are deleted
+     * after the required items have followed their requirements.
      */
     public void sync(final Long revivalId) {
         counters.ensure(revivalId);
-        final List<Checklist> created = checklistService.ensurePhaseChecklists(revivalId);
-
         texts.pinnedVersion(revivalId).ifPresent(version -> {
+            final List<Checklist> created = checklistService.ensureChapterChecklists(revivalId, version);
+
             checklistService.syncRequiredItems(revivalId, version);
+            checklistService.deleteRemovedChapterChecklists(revivalId, version);
             logEntryService.createGuideQuestions(revivalId, questions(version));
+            checklistService.addChapterTemplateItems(created);
         });
-        checklistService.addPhaseTemplateItems(created);
     }
 
     private static Map<String, String> questions(final GuideVersionView version) {

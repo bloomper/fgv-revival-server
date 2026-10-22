@@ -236,7 +236,6 @@ public class SampleDataImporter {
                 "revival_show_date",
                 "revival_venue",
                 "revival",
-                "guide_import_report",
                 "guide_item",
                 "guide_section",
                 "guide_chapter",
@@ -510,9 +509,8 @@ public class SampleDataImporter {
         jdbcClient
                 .sql("""
                         INSERT INTO revival_guide_version_change
-                            (revival_id, from_version_id, to_version_id, changed_by, changed_at)
-                        VALUES
-                            (:revivalId, NULL, :versionId, :changedBy, :changedAt)
+                            (revival_id, from_version_id, to_version_id, to_label, changed_by, changed_at)
+                        SELECT :revivalId, NULL, id, label, :changedBy, :changedAt FROM guide_version WHERE id = :versionId
                         """)
                 .param("revivalId", revivalId)
                 .param("versionId", versionId)
@@ -683,16 +681,16 @@ public class SampleDataImporter {
                         SELECT member_id, capability, :rev, 0 FROM revival_member_capability
                         """,
                 """
-                        INSERT INTO revival_guide_version_change_audit (id, revival_id, from_version_id, to_version_id, changed_by, changed_at, rev, revtype)
-                        SELECT id, revival_id, from_version_id, to_version_id, changed_by, changed_at, :rev, 0 FROM revival_guide_version_change
+                        INSERT INTO revival_guide_version_change_audit (id, revival_id, from_version_id, to_version_id, from_label, to_label, changed_by, changed_at, rev, revtype)
+                        SELECT id, revival_id, from_version_id, to_version_id, from_label, to_label, changed_by, changed_at, :rev, 0 FROM revival_guide_version_change
                         """,
                 """
                         INSERT INTO guide_version_audit (id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
                         SELECT id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
                         """,
                 """
-                        INSERT INTO guide_chapter_audit (id, version_id, phase, title_sv, title_en, version, rev, revtype)
-                        SELECT id, version_id, phase, title_sv, title_en, version, :rev, 0 FROM guide_chapter
+                        INSERT INTO guide_chapter_audit (id, version_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_chapter
                         """,
                 """
                         INSERT INTO guide_section_audit (id, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
@@ -703,8 +701,8 @@ public class SampleDataImporter {
                         SELECT id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
                         """,
                 """
-                        INSERT INTO checklist_template_audit (id, kind, phase, name_sv, name_en, retired_at, version, rev, revtype)
-                        SELECT id, kind, phase, name_sv, name_en, retired_at, version, :rev, 0 FROM checklist_template
+                        INSERT INTO checklist_template_audit (id, kind, chapter_key, name_sv, name_en, retired_at, version, rev, revtype)
+                        SELECT id, kind, chapter_key, name_sv, name_en, retired_at, version, :rev, 0 FROM checklist_template
                         """,
                 """
                         INSERT INTO checklist_template_item_audit (id, template_id, position, text_sv, text_en, guide_item_key, default_capability,

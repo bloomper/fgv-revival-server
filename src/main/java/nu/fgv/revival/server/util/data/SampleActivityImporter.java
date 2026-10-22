@@ -33,7 +33,6 @@ import nu.fgv.revival.server.decisionlog.LogEntryRepository;
 import nu.fgv.revival.server.decisionlog.LogEntryStatus;
 import nu.fgv.revival.server.decisionlog.LogEntryType;
 import nu.fgv.revival.server.guide.GuideItemType;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionKind;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionRepository;
@@ -254,8 +253,8 @@ public class SampleActivityImporter {
     // --- Checklists ---------------------------------------------------------------------------------------------------
 
     private void progressPhaseChecklists(final SampleRevival revival, final int phasesDone) {
-        for (final Checklist checklist : checklistRepository.findByRevivalIdAndKind(revival.id(), ChecklistKind.PHASE)) {
-            final int phase = Objects.requireNonNull(checklist.getPhase()).ordinal();
+        for (final Checklist checklist : checklistRepository.findByRevivalIdAndKind(revival.id(), ChecklistKind.CHAPTER)) {
+            final int phase = SampleGuide.chapterIndex(Objects.requireNonNull(checklist.getChapterKey()));
             final List<ChecklistItem> items = checklistItemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId());
 
             if (phase > phasesDone) {
@@ -511,7 +510,7 @@ public class SampleActivityImporter {
         final SampleRevival first = revivals.getFirst();
         final SampleRevival last = revivals.getLast();
 
-        final GuideSuggestion accepted = suggestion(first, versions.getFirst(), GuideSuggestionKind.ADD, null, Phase.F, GuideItemType.TIP,
+        final GuideSuggestion accepted = suggestion(first, versions.getFirst(), GuideSuggestionKind.ADD, null, SampleGuide.CHAPTER_F, GuideItemType.TIP,
                 "Filma genrepet, det är ovärderligt för de som missade en rephelg.", "Flera i ensemblen missade sista rephelgen.");
 
         accepted.setStatus(GuideSuggestionStatus.ACCEPTED);
@@ -519,7 +518,7 @@ public class SampleActivityImporter {
         accepted.setDecidedAt(secondPublished.minus(Duration.ofDays(3)));
         accepted.setAcceptedIntoVersionId(versions.getLast());
 
-        final GuideSuggestion rejected = suggestion(last, versions.getLast(), GuideSuggestionKind.REMOVE, "i-optional", Phase.I, null, null,
+        final GuideSuggestion rejected = suggestion(last, versions.getLast(), GuideSuggestionKind.REMOVE, "i-optional", SampleGuide.CHAPTER_I, null, null,
                 "Ingen gör turné längre.");
 
         rejected.setStatus(GuideSuggestionStatus.REJECTED);
@@ -527,9 +526,9 @@ public class SampleActivityImporter {
         rejected.setDecidedAt(Instant.now().minus(Duration.ofDays(5)));
         rejected.setDecisionReason("Turnéer förekommer fortfarande, och kapitlet säger redan att de är frivilliga.");
 
-        final GuideSuggestion change = suggestion(first, versions.getLast(), GuideSuggestionKind.CHANGE, "c-buffer", Phase.C, GuideItemType.TIP,
+        final GuideSuggestion change = suggestion(first, versions.getLast(), GuideSuggestionKind.CHANGE, "c-buffer", SampleGuide.CHAPTER_C, GuideItemType.TIP,
                 "Sätt av minst tio procent av budgeten som buffert.", "Ett konkret belopp är lättare att följa.");
-        final GuideSuggestion add = suggestion(last, versions.getLast(), GuideSuggestionKind.ADD, null, Phase.G, GuideItemType.TIP,
+        final GuideSuggestion add = suggestion(last, versions.getLast(), GuideSuggestionKind.ADD, null, SampleGuide.CHAPTER_G, GuideItemType.TIP,
                 "Lägg upp evenemanget i sociala medier minst två månader före premiären.", null);
 
         suggestionRepository.saveAll(List.of(accepted, rejected, change, add));
@@ -539,7 +538,7 @@ public class SampleActivityImporter {
                                               final long versionId,
                                               final GuideSuggestionKind kind,
                                               final @Nullable String item,
-                                              final Phase phase,
+                                              final String chapter,
                                               final @Nullable GuideItemType type,
                                               final @Nullable String text,
                                               final @Nullable String reason) {
@@ -550,7 +549,7 @@ public class SampleActivityImporter {
         suggestion.setVersionId(versionId);
         suggestion.setKind(kind);
         suggestion.setItemKey(item == null ? null : SampleGuide.key(item));
-        suggestion.setPhase(phase);
+        suggestion.setChapterKey(SampleGuide.key(chapter));
         suggestion.setProposedType(type);
         suggestion.setProposedTextSv(text);
         suggestion.setReason(reason);

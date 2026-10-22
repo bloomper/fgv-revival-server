@@ -23,17 +23,17 @@ import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemRepository;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateRepository;
-import nu.fgv.revival.server.member.Capability;
-import nu.fgv.revival.server.member.RevivalMember;
-import nu.fgv.revival.server.member.RevivalMemberRepository;
-import nu.fgv.revival.server.member.RevivalRole;
+import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.AccessPolicy;
+import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.member.OwnerInputDto;
 import nu.fgv.revival.server.member.OwnerResolver;
 import nu.fgv.revival.server.member.OwnerViews;
+import nu.fgv.revival.server.member.RevivalMember;
+import nu.fgv.revival.server.member.RevivalMemberRepository;
+import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.person.PersonNames;
@@ -111,6 +111,8 @@ class ChecklistServiceTest {
     private PersonNames personNames;
     @Mock
     private MessageSource messageSource;
+    @Mock
+    private LogEntryService logEntryService;
 
     private ChecklistService service;
     private Revival revival;
@@ -120,13 +122,13 @@ class ChecklistServiceTest {
     void setUp() {
         service = new ChecklistService(checklistRepository, itemRepository, texts, templateRepository, templateItemRepository, memberRepository,
                 revivalRepository, callerService, new AccessPolicy(),
-                ownerResolver, ownerViews, personNames, messageSource, TestClocks.at(TODAY));
+                ownerResolver, ownerViews, personNames, messageSource, TestClocks.at(TODAY), logEntryService);
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         checklist = new Checklist();
         checklist.setId(CHECKLIST_ID);
         checklist.setRevivalId(REVIVAL_ID);
-        checklist.setKind(ChecklistKind.PHASE);
-        checklist.setPhase(Phase.B);
+        checklist.setKind(ChecklistKind.CHAPTER);
+        checklist.setChapterKey("B");
         lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
         lenient().when(checklistRepository.findById(CHECKLIST_ID)).thenReturn(Optional.of(checklist));
@@ -486,12 +488,12 @@ class ChecklistServiceTest {
         }
 
         @Test
-        void aRetiredOrPhaseTemplateIsRefused() {
+        void aRetiredOrChapterTemplateIsRefused() {
             template.setRetiredAt(java.time.Instant.now());
             assertThatThrownBy(() -> create(SATURDAY, 5L, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
 
             template.setRetiredAt(null);
-            template.setKind(ChecklistKind.PHASE);
+            template.setKind(ChecklistKind.CHAPTER);
             assertThatThrownBy(() -> create(SATURDAY, 5L, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
         }
 
@@ -563,19 +565,19 @@ class ChecklistServiceTest {
         }
 
         @Test
-        void aPhaseChecklistAddsFromItsPhasesTemplate() {
+        void aChapterChecklistAddsFromItsChaptersTemplate() {
             checklist.setVersion(0L);
-            template.setKind(ChecklistKind.PHASE);
-            template.setPhase(Phase.B);
+            template.setKind(ChecklistKind.CHAPTER);
+            template.setChapterKey("B");
             venue.setDeadline(null);
             keys.setDeadline(null);
-            when(templateRepository.findByPhaseAndRetiredAtIsNull(Phase.B)).thenReturn(Optional.of(template));
+            when(templateRepository.findByChapterKeyAndRetiredAtIsNull("B")).thenReturn(Optional.of(template));
 
             service.addFromTemplate(CHECKLIST_ID, 0L, null, Locale.ENGLISH);
 
             assertThat(saved).hasSize(2).allSatisfy(item -> assertThat(item.getChecklistId()).isEqualTo(CHECKLIST_ID));
 
-            template.setPhase(Phase.C);
+            template.setChapterKey("C");
             assertThatThrownBy(() -> service.addFromTemplate(CHECKLIST_ID, 0L, 5L, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
         }
 

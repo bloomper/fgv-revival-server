@@ -38,15 +38,18 @@ public class GuideGraphqlApi {
 
     private final GuideService service;
     private final GuideDraftService draftService;
+    private final GuideVersionService versionService;
     private final PersonNames personNames;
 
-    public GuideGraphqlApi(final GuideService service, final GuideDraftService draftService, final PersonNames personNames) {
+    public GuideGraphqlApi(final GuideService service, final GuideDraftService draftService, final GuideVersionService versionService,
+                           final PersonNames personNames) {
         this.service = service;
         this.draftService = draftService;
+        this.versionService = versionService;
         this.personNames = personNames;
     }
 
-    public record GuideDraftPublishInput(Long id, Long version, @Nullable String label, @Nullable String note) {
+    public record GuideDraftPublishInput(Long id, Long version, @Nullable String note) {
     }
 
     @QueryMapping
@@ -77,7 +80,12 @@ public class GuideGraphqlApi {
 
     @MutationMapping
     public GuideVersionView guideDraftPublish(@Argument final GuideDraftPublishInput input) {
-        return draftService.publish(input.id(), input.version(), input.label(), input.note());
+        return draftService.publish(input.id(), input.version(), input.note());
+    }
+
+    @MutationMapping
+    public void guideVersionDelete(@Argument final Long id, @Argument final Long version) {
+        versionService.delete(id, version);
     }
 
     @MutationMapping
@@ -96,7 +104,13 @@ public class GuideGraphqlApi {
     public record GuideIntroductionInput(Long versionId, Long version, LocalizedTextInput introduction) {
     }
 
+    public record GuideChapterCreateInput(Long versionId, @Nullable Integer position, LocalizedTextInput title) {
+    }
+
     public record GuideChapterInput(Long id, Long version, LocalizedTextInput title) {
+    }
+
+    public record GuideChapterMoveInput(Long id, Long version, int position) {
     }
 
     public record GuideSectionCreateInput(Long chapterId, @Nullable Integer position, LocalizedTextInput title) {
@@ -126,6 +140,21 @@ public class GuideGraphqlApi {
     @MutationMapping
     public GuideVersionView guideIntroductionUpdate(@Argument final GuideIntroductionInput input) {
         return service.findById(draftService.updateIntroduction(input.versionId(), input.version(), input.introduction().sv(), input.introduction().en()));
+    }
+
+    @MutationMapping
+    public GuideVersionView.Chapter guideChapterCreate(@Argument final GuideChapterCreateInput input) {
+        return service.draftChapter(draftService.createChapter(input.versionId(), input.position(), input.title().sv(), input.title().en()));
+    }
+
+    @MutationMapping
+    public GuideVersionView guideChapterMove(@Argument final GuideChapterMoveInput input) {
+        return service.findById(draftService.moveChapter(input.id(), input.version(), input.position()));
+    }
+
+    @MutationMapping
+    public void guideChapterRemove(@Argument final Long id, @Argument final Long version) {
+        draftService.removeChapter(id, version);
     }
 
     @MutationMapping
@@ -178,6 +207,26 @@ public class GuideGraphqlApi {
     @SchemaMapping(typeName = "GuideVersion", field = "publishedBy")
     public @Nullable String publishedBy(final GuideVersionView version, final Locale locale) {
         return version.publishedBy() == null ? null : personNames.byIds(List.of(version.publishedBy()), locale).get(version.publishedBy());
+    }
+
+    @SchemaMapping(typeName = "GuideVersionSummary", field = "publishedBy")
+    public @Nullable String summaryPublishedBy(final GuideVersionSummaryDto version, final Locale locale) {
+        return version.publishedBy() == null ? null : personNames.byIds(List.of(version.publishedBy()), locale).get(version.publishedBy());
+    }
+
+    @SchemaMapping(typeName = "GuideVersionSummary", field = "revivalCount")
+    public int revivalCount(final GuideVersionSummaryDto version) {
+        return versionService.usage(version.id()).revivalCount();
+    }
+
+    @SchemaMapping(typeName = "GuideVersionSummary", field = "suggestionCount")
+    public int suggestionCount(final GuideVersionSummaryDto version) {
+        return versionService.usage(version.id()).suggestionCount();
+    }
+
+    @SchemaMapping(typeName = "GuideVersionSummary", field = "deletable")
+    public boolean deletable(final GuideVersionSummaryDto version) {
+        return versionService.usage(version.id()).deletable();
     }
 
     @SchemaMapping(typeName = "GuideVersion", field = "basedOn")

@@ -17,8 +17,8 @@
 package nu.fgv.revival.server.guide;
 
 /**
- * How many suggestions were accepted into a draft, so the discard confirmation can say how many will reopen (FR-015).
- * Implemented by the suggestions; kept as an interface so {@code guide} does not depend on {@code guide.suggestion}.
+ * How many suggestions were accepted into a draft, so the discard confirmation can say how many will reopen (FR-015),
+ * and how many were made on a version, which keeps it from being deleted. Implemented by the suggestions; kept as an interface so {@code guide} does not depend on {@code guide.suggestion}.
  *
  * @author Anders Jacobsson
  * @since 0.2
@@ -26,4 +26,6 @@ package nu.fgv.revival.server.guide;
 public interface DraftSuggestions {
 
     int acceptedInto(Long draftId);
+
+    int madeOn(Long versionId);
 }

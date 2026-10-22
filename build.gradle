@@ -24,7 +24,7 @@ java {
 sourceSets {
     integrationTest {
         java {
-            // The test output too, for the fictitious Word documents both test suites build (GuideDocxFixtures)
+            // The test output too, for the fixtures both test suites share (e.g. GuideTestChapters)
             compileClasspath += sourceSets.main.output + sourceSets.test.output + configurations.testRuntimeClasspath
             runtimeClasspath += sourceSets.main.output + sourceSets.test.output + configurations.testRuntimeClasspath
             srcDir file('src/integrationtest/java')

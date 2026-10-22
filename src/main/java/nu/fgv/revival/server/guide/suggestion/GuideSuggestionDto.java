@@ -19,7 +19,7 @@ package nu.fgv.revival.server.guide.suggestion;
 import nu.fgv.revival.server.guide.GuideChanges;
 import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
-import nu.fgv.revival.server.guide.Phase;
+import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -38,7 +38,8 @@ public record GuideSuggestionDto(Long id,
                                  Long authorId,
                                  boolean mine,
                                  GuideVersionSummaryDto madeOn,
-                                 Phase phase,
+                                 String chapterKey,
+                                 GuideVersionView.@Nullable Text chapterTitle,
                                  @Nullable String sectionKey,
                                  @Nullable String itemKey,
                                  GuideChanges.@Nullable ItemSnapshot item,

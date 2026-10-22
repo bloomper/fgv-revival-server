@@ -72,17 +72,17 @@ public class GuideVersionViews {
     }
 
     private GuideVersionView load(final GuideVersion version) {
-        final List<GuideChapter> chapters = chapterRepository.findByVersionIdOrderByPhase(version.getId());
+        final List<GuideChapter> chapters = chapterRepository.findByVersionIdOrderByPosition(version.getId());
         final List<GuideSection> sections = sectionRepository.findByVersionIdOrderByChapterIdAscPositionAsc(version.getId());
         final List<GuideItem> items = itemRepository.findByVersionIdOrderByChapterIdAscPositionAsc(version.getId());
         final Map<Long, GuideChapter> chaptersById = chapters.stream().collect(Collectors.toMap(GuideChapter::getId, Function.identity()));
         final Map<Long, GuideSection> sectionsById = sections.stream().collect(Collectors.toMap(GuideSection::getId, Function.identity()));
 
         final List<GuideVersionView.Chapter> chapterViews = chapters.stream()
-                .sorted(Comparator.comparing(GuideChapter::getPhase))
+                .sorted(Comparator.comparing(GuideChapter::getPosition))
                 .map(chapter -> new GuideVersionView.Chapter(
                         chapter.getId(),
-                        chapter.getPhase(),
+                        chapter.getKey(),
                         GuideVersionView.Text.plain(chapter.getTitleSv(), chapter.getTitleEn()),
                         items.stream()
                                 .filter(item -> item.getChapterId().equals(chapter.getId()) && item.getSectionId() == null)
@@ -95,7 +95,7 @@ public class GuideVersionViews {
                                 .map(section -> new GuideVersionView.Section(
                                         section.getId(),
                                         section.getKey(),
-                                        chapter.getPhase(),
+                                        chapter.getKey(),
                                         GuideVersionView.Text.plain(section.getTitleSv(), section.getTitleEn()),
                                         items.stream()
                                                 .filter(item -> section.getId().equals(item.getSectionId()))
@@ -124,7 +124,7 @@ public class GuideVersionViews {
         return new GuideVersionView.Item(
                 item.getId(),
                 item.getKey(),
-                chapter.getPhase(),
+                chapter.getKey(),
                 section == null ? null : section.getKey(),
                 item.getType(),
                 text(item.getTextSv(), item.getTextEn()),

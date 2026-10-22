@@ -18,13 +18,13 @@
 package nu.fgv.revival.server.checklist;
 
 /**
- * A checklist, or a template, for one of the phases A–J or for an event (FR-022, FR-023, FR-030).
+ * A checklist, or a template, for a guide chapter or for an event (FR-022, FR-023, FR-030).
  *
  * @author Anders Jacobsson
  * @since 0.3
  */
 public enum ChecklistKind {
 
-    PHASE,
+    CHAPTER,
     EVENT
 }

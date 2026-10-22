@@ -67,7 +67,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     private Map<String, Object> add() {
-        return Map.of("input", Map.of("revivalId", revival, "versionId", version, "kind", "ADD", "phase", "E", "proposedType", "REQUIREMENT",
+        return Map.of("input", Map.of("revivalId", revival, "versionId", version, "kind", "ADD", "chapterKey", "E", "proposedType", "REQUIREMENT",
                 "proposedTextSv", "Förrådet ska inventeras innan första rephelgen."));
     }
 
@@ -129,7 +129,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(SUPER_ADMIN, ACCEPT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id)))).errors().verify();
 
         assertThat(jdbcClient.sql("""
-                SELECT c.phase FROM guide_item i JOIN guide_chapter c ON c.id = i.chapter_id
+                SELECT c.`key` FROM guide_item i JOIN guide_chapter c ON c.id = i.chapter_id
                 WHERE i.version_id = ? AND i.text_sv = 'Förrådet ska inventeras innan första rephelgen.'""")
                 .param(draftId()).query(String.class).single()).isEqualTo("E");
     }

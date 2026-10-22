@@ -1,4 +1,4 @@
-# M3: phase and event checklists. Rules per operation are in specs/004-m3-log/contracts/README.md. There is no delete
+# M3: chapter and event checklists. Rules per operation are in specs/004-m3-log/contracts/README.md. There is no delete
 # mutation (FR-026).
 
 enum ChecklistItemState {
@@ -15,12 +15,44 @@ type ChecklistItemSummary {
 }
 
 extend type Query {
-    "The ten phase checklists A–J, then event checklists by date. Readers of the revival."
+    "One checklist per chapter of the pinned guide version, in the guide's order, then event checklists by date. Readers of the revival."
     checklists(revivalId: ID!, includeCancelled: Boolean = false): [ChecklistSummary!]!
     "NOT_FOUND unless the caller can read the checklist's revival."
     checklist(id: ID!): Checklist
     "Items across the revival's checklists matching every given filter (FR-028)."
     checklistItems(revivalId: ID!, filter: ChecklistItemFilter): [ChecklistItem!]!
+    """
+    What removing the chapter from the guide would delete, over revivals that are not archived, once they move to a
+    version without it. An upper bound: required items follow their requirement if it moves to another chapter first.
+    SUPER_ADMIN.
+    """
+    guideChapterRemovalImpact(chapterKey: ID!): GuideChapterRemovalImpact!
+}
+
+extend type Revival {
+    "The chapter checklists that moving to the version would delete. Readers of the revival."
+    guideVersionChangeImpact(toId: ID!): [ChecklistRemoval!]!
+}
+
+type GuideChapterRemovalImpact {
+    chapterKey: ID!
+    "Revivals with a checklist for the chapter."
+    revivalCount: Int!
+    itemCount: Int!
+    doneCount: Int!
+}
+
+"A chapter checklist that a change of guide version would delete, with the items that would go with it."
+type ChecklistRemoval {
+    checklistId: ID!
+    chapterKey: ID!
+    "In the revival's current version."
+    chapterTitle: LocalizedText
+    "Required items whose requirement moves to another chapter are not counted: they move along."
+    itemCount: Int!
+    doneCount: Int!
+    "Log rows linked to those items. They stay, without the link."
+    linkedLogEntryCount: Int!
 }
 
 extend type Mutation {
@@ -40,14 +72,16 @@ extend type Mutation {
 }
 
 enum ChecklistKind {
-    PHASE
+    CHAPTER
     EVENT
 }
 
 type ChecklistSummary {
     id: ID!
     kind: ChecklistKind!
-    phase: Phase
+    chapterKey: ID
+    "CHAPTER: the chapter's title in the pinned version."
+    chapterTitle: LocalizedText
     name: String
     date: Date
     cancelled: Boolean!
@@ -60,9 +94,9 @@ type Checklist {
     id: ID!
     revivalId: ID!
     kind: ChecklistKind!
-    "PHASE: the chapter letter."
-    phase: Phase
-    "PHASE: the chapter's title in the pinned version."
+    "CHAPTER: the chapter's key."
+    chapterKey: ID
+    "CHAPTER: the chapter's title in the pinned version."
     chapterTitle: LocalizedText
     "EVENT."
     name: String
@@ -70,7 +104,7 @@ type Checklist {
     template: ChecklistTemplateSummary
     cancelled: Boolean!
     items: [ChecklistItem!]!
-    "PHASE: the chapter's TIP items in the pinned version (FR-029)."
+    "CHAPTER: the chapter's TIP items in the pinned version (FR-029)."
     tips: [GuideItem!]!
     "Templates the caller may add items from (FR-032a)."
     templatesAvailable: [ChecklistTemplateSummary!]!
@@ -131,7 +165,7 @@ input EventChecklistUpdateInput {
 input ChecklistAddFromTemplateInput {
     checklistId: ID!
     version: Int!
-    "PHASE: the phase's template (default). EVENT: any EVENT template not retired."
+    "CHAPTER: the chapter's template (default). EVENT: any EVENT template not retired."
     templateId: ID
 }
 

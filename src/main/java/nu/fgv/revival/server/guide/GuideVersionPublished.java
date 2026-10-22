@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package nu.fgv.revival.server.guide;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Optional;
-
 /**
+ * A draft was published as a version. Published in the publishing transaction, so what depends on the chapters, such
+ * as checklist templates, follows in the same one.
+ *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 0.3
  */
-public interface GuideImportReportRepository extends JpaRepository<GuideImportReport, Long> {
-
-    Optional<GuideImportReport> findByVersionId(Long versionId);
-
-    void deleteByVersionId(Long versionId);
+public record GuideVersionPublished(Long versionId) {
 }

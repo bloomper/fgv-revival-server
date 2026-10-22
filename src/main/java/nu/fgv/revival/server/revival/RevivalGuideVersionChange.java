@@ -54,8 +54,17 @@ public class RevivalGuideVersionChange {
     @Column(name = "from_version_id", updatable = false)
     private @Nullable Long fromVersionId;
 
-    @Column(name = "to_version_id", nullable = false, updatable = false)
-    private Long toVersionId;
+    /**
+     * Null once the version has been deleted; the labels below still name it.
+     */
+    @Column(name = "to_version_id", updatable = false)
+    private @Nullable Long toVersionId;
+
+    @Column(name = "from_label", length = 32, updatable = false)
+    private @Nullable String fromLabel;
+
+    @Column(name = "to_label", nullable = false, length = 32, updatable = false)
+    private String toLabel;
 
     @Column(name = "changed_by", nullable = false, updatable = false)
     private Long changedBy;

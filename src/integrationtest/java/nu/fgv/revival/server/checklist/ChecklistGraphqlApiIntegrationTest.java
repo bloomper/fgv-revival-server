@@ -29,7 +29,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase checklists over GraphQL against MySQL and Keycloak (US4, FR-022–FR-029).
+ * Chapter checklists over GraphQL against MySQL and Keycloak (US4, FR-022–FR-029).
  *
  * @author Anders Jacobsson
  * @since 0.3
@@ -37,9 +37,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     static final String ITEM_FIELDS = "id required text { sv en } state reason deadline deadlineManual overdue comment version "
-            + "owner { name person { displayName } } stateChangedBy { displayName } guideItem { key type } checklist { id phase } logEntries { number }";
-    private static final String LIST = "query($id: ID!) { checklists(revivalId: $id) { id kind phase openCount overdueCount totalCount } }";
-    private static final String GET = "query($id: ID!) { checklist(id: $id) { id phase chapterTitle { sv } tips { type text { sv } } items { " + ITEM_FIELDS + " } } }";
+            + "owner { name person { displayName } } stateChangedBy { displayName } guideItem { key type } checklist { id chapterKey chapterTitle { sv } } logEntries { number }";
+    private static final String LIST = "query($id: ID!) { checklists(revivalId: $id) { id kind chapterKey openCount overdueCount totalCount } }";
+    private static final String GET = "query($id: ID!) { checklist(id: $id) { id chapterKey chapterTitle { sv } tips { type text { sv } } items { " + ITEM_FIELDS + " } } }";
     private static final String ITEMS = "query($id: ID!, $filter: ChecklistItemFilter) { checklistItems(revivalId: $id, filter: $filter) { id text { sv } } }";
     static final String SET_STATE = "mutation($input: ChecklistItemSetStateInput!) { checklistItemSetState(input: $input) { " + ITEM_FIELDS + " } }";
     private static final String CREATE = "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { " + ITEM_FIELDS + " } }";
@@ -54,13 +54,13 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         revival = organisingRevival();
     }
 
-    long phaseChecklist(final String phase) {
-        return jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND phase = ?").param(revival).param(phase).query(Long.class).single();
+    long chapterChecklist(final String chapter) {
+        return jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = ?").param(revival).param(chapter).query(Long.class).single();
     }
 
-    long requiredItem(final String phase) {
-        return jdbcClient.sql("SELECT i.id FROM checklist_item i JOIN checklist c ON c.id = i.checklist_id WHERE c.revival_id = ? AND c.phase = ? AND i.required = 1")
-                .param(revival).param(phase).query(Long.class).single();
+    long requiredItem(final String chapter) {
+        return jdbcClient.sql("SELECT i.id FROM checklist_item i JOIN checklist c ON c.id = i.checklist_id WHERE c.revival_id = ? AND c.chapter_key = ? AND i.required = 1")
+                .param(revival).param(chapter).query(Long.class).single();
     }
 
     long itemVersion(final long id) {
@@ -68,18 +68,18 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void aRevivalHasTenPhaseChecklistsWithTheGuidesRequirementsAndTips() {
+    void aRevivalHasAChecklistPerChapterWithTheGuidesRequirementsAndTips() {
         execute(STEERING_GROUP, LIST, Map.of("id", revival))
-                .path("checklists[*].phase").entityList(String.class).containsExactly("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
+                .path("checklists[*].chapterKey").entityList(String.class).containsExactly("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
                 .path("checklists[0].openCount").entity(Integer.class).isEqualTo(1)
                 .path("checklists[1].totalCount").entity(Integer.class).isEqualTo(0);
-        execute(STEERING_GROUP, GET, Map.of("id", phaseChecklist("A")))
+        execute(STEERING_GROUP, GET, Map.of("id", chapterChecklist("A")))
                 .path("checklist.chapterTitle.sv").entity(String.class).isEqualTo("Först: godkännande och tajmning")
                 .path("checklist.tips[*].type").entityList(String.class).containsExactly("TIP", "TIP")
                 .path("checklist.items[0].required").entity(Boolean.class).isEqualTo(true)
                 .path("checklist.items[0].text.sv").entity(String.class).isEqualTo("Nyuppsättningen ska godkännas av JK och FGV innan arbetet startar.")
                 .path("checklist.items[0].guideItem.type").entity(String.class).isEqualTo("REQUIREMENT");
-        execute(STEERING_GROUP, GET, Map.of("id", phaseChecklist("J")))
+        execute(STEERING_GROUP, GET, Map.of("id", chapterChecklist("J")))
                 .path("checklist.items[0].text.sv").entity(String.class).isEqualTo("Ett eventuellt lån ska återbetalas.");
         execute(STEERING_GROUP, "query($id: ID!) { logEntries(revivalId: $id) { number type status text origin owner { name } } }", Map.of("id", revival))
                 .path("logEntries[0].type").entity(String.class).isEqualTo("QUESTION")
@@ -109,7 +109,7 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void membersAddAndWorkItemsAndFilterThem() {
         final long stina = personId(STEERING_GROUP);
-        final String created = execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("checklistId", phaseChecklist("B"), "text", "Boka RunAn",
+        final String created = execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("checklistId", chapterChecklist("B"), "text", "Boka RunAn",
                 "owner", Map.of("personId", stina), "deadline", TODAY.minusDays(1).toString())))
                 .path("checklistItemCreate.deadlineManual").entity(Boolean.class).isEqualTo(true)
                 .path("checklistItemCreate.overdue").entity(Boolean.class).isEqualTo(true)
@@ -132,7 +132,7 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { checklistItem { id state text { sv } } } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "TODO", "text", "Följ upp", "checklistItemId", item)))
                 .path("logEntryCreate.checklistItem.text.sv").entity(String.class).isEqualTo("Boka RunAn och Kårhuset");
-        execute(STEERING_GROUP, GET, Map.of("id", phaseChecklist("B")))
+        execute(STEERING_GROUP, GET, Map.of("id", chapterChecklist("B")))
                 .path("checklist.items[0].logEntries[*].number").entityList(Integer.class).containsExactly(2);
     }
 
@@ -143,17 +143,17 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         for (final String user : List.of(SUPER_ADMIN, OBSERVER)) {
             execute(user, LIST, Map.of("id", revival)).path("checklists").entityList(Object.class).hasSize(10);
             expectError(execute(user, SET_STATE, Map.of("input", Map.of("id", item, "version", itemVersion(item), "state", "DONE"))), "FORBIDDEN");
-            expectError(execute(user, CREATE, Map.of("input", Map.of("checklistId", phaseChecklist("C"), "text", "x"))), "FORBIDDEN");
+            expectError(execute(user, CREATE, Map.of("input", Map.of("checklistId", chapterChecklist("C"), "text", "x"))), "FORBIDDEN");
         }
         login(PLAIN_USER);
         expectError(execute(PLAIN_USER, LIST, Map.of("id", revival)), "NOT_FOUND");
-        expectError(execute(PLAIN_USER, GET, Map.of("id", phaseChecklist("C"))), "NOT_FOUND");
+        expectError(execute(PLAIN_USER, GET, Map.of("id", chapterChecklist("C"))), "NOT_FOUND");
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM checklist_item WHERE revival_id = ?").param(revival).query(Integer.class).single()).isEqualTo(3);
     }
 
     @Test
     void theRevivalPageCountsOpenAndOverdueWork() {
-        execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("checklistId", phaseChecklist("B"), "text", "Boka RunAn",
+        execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("checklistId", chapterChecklist("B"), "text", "Boka RunAn",
                 "deadline", TODAY.minusDays(1).toString())));
         execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "TODO", "text", "Försenad", "deadline", TODAY.minusDays(1).toString())));

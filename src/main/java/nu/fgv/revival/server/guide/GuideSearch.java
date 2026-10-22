@@ -50,7 +50,7 @@ public final class GuideSearch {
     }
 
     public record Hit(HitKind kind,
-                      @Nullable Phase phase,
+                      @Nullable String chapterKey,
                       GuideVersionView.@Nullable Text chapterTitle,
                       @Nullable String sectionKey,
                       GuideVersionView.@Nullable Text sectionTitle,
@@ -76,17 +76,17 @@ public final class GuideSearch {
                 hits.add(new Hit(HitKind.INTRODUCTION, null, null, null, null, null, null, match.snippet(), match.language())));
         for (final GuideVersionView.Chapter chapter : version.chapters()) {
             matcher.match(chapter.title()).ifPresent(match ->
-                    hits.add(new Hit(HitKind.CHAPTER_TITLE, chapter.phase(), chapter.title(), null, null, null, null, match.snippet(), match.language())));
+                    hits.add(new Hit(HitKind.CHAPTER_TITLE, chapter.key(), chapter.title(), null, null, null, null, match.snippet(), match.language())));
             for (final GuideVersionView.Item item : chapter.items()) {
                 matcher.match(item.text()).ifPresent(match ->
-                        hits.add(new Hit(HitKind.ITEM, chapter.phase(), chapter.title(), null, null, item.key(), item.type(), match.snippet(), match.language())));
+                        hits.add(new Hit(HitKind.ITEM, chapter.key(), chapter.title(), null, null, item.key(), item.type(), match.snippet(), match.language())));
             }
             for (final GuideVersionView.Section section : chapter.sections()) {
                 matcher.match(section.title()).ifPresent(match ->
-                        hits.add(new Hit(HitKind.SECTION_TITLE, chapter.phase(), chapter.title(), section.key(), section.title(), null, null, match.snippet(), match.language())));
+                        hits.add(new Hit(HitKind.SECTION_TITLE, chapter.key(), chapter.title(), section.key(), section.title(), null, null, match.snippet(), match.language())));
                 for (final GuideVersionView.Item item : section.items()) {
                     matcher.match(item.text()).ifPresent(match ->
-                            hits.add(new Hit(HitKind.ITEM, chapter.phase(), chapter.title(), section.key(), section.title(), item.key(), item.type(), match.snippet(), match.language())));
+                            hits.add(new Hit(HitKind.ITEM, chapter.key(), chapter.title(), section.key(), section.title(), item.key(), item.type(), match.snippet(), match.language())));
                 }
             }
         }

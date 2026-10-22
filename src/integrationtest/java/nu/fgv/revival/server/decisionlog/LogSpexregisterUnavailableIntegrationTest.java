@@ -92,7 +92,7 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
     @Test
     void checklistsWork() {
         final int before = spexregisterCalls();
-        final long phaseA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND phase = 'A'").param(revival).query(Long.class).single();
+        final long phaseA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival).query(Long.class).single();
         final long required = jdbcClient.sql("SELECT id FROM checklist_item WHERE checklist_id = ?").param(phaseA).query(Long.class).single();
         final long event = Long.parseLong(execute(STEERING_GROUP, "mutation($input: EventChecklistCreateInput!) { eventChecklistCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "name", "Rephelg 2", "date", "2027-11-20"))).errors().verify()

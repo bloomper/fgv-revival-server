@@ -30,4 +30,6 @@ public interface GuideSuggestionRepository extends JpaRepository<GuideSuggestion
     List<GuideSuggestion> findByAcceptedIntoVersionId(Long versionId);
 
     int countByAcceptedIntoVersionId(Long versionId);
+
+    int countByVersionId(Long versionId);
 }

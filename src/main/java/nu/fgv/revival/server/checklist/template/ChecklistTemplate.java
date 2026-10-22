@@ -29,7 +29,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.checklist.ChecklistKind;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
@@ -38,7 +37,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A super admin's checklist template for a phase or an event kind (FR-030). Retired, never deleted, so checklist items
+ * A super admin's checklist template for a guide chapter or an event kind (FR-030). Retired, never deleted, so checklist items
  * can refer to its items.
  *
  * @author Anders Jacobsson
@@ -62,9 +61,8 @@ public class ChecklistTemplate extends AbstractAuditable {
     @Column(name = "kind", nullable = false, updatable = false, length = 8)
     private ChecklistKind kind;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "phase", updatable = false, length = 1, columnDefinition = "CHAR(1)")
-    private @Nullable Phase phase;
+    @Column(name = "chapter_key", updatable = false, length = 36, columnDefinition = "CHAR(36)")
+    private @Nullable String chapterKey;
 
     @Column(name = "name_sv", length = NAME_MAX_LENGTH)
     private @Nullable String nameSv;
@@ -76,8 +74,8 @@ public class ChecklistTemplate extends AbstractAuditable {
     private @Nullable Instant retiredAt;
 
     @NotAudited
-    @Column(name = "phase_marker", insertable = false, updatable = false, length = 1, columnDefinition = "CHAR(1)")
-    private @Nullable String phaseMarker;
+    @Column(name = "chapter_marker", insertable = false, updatable = false, length = 36, columnDefinition = "CHAR(36)")
+    private @Nullable String chapterMarker;
 
     public boolean isRetired() {
         return retiredAt != null;

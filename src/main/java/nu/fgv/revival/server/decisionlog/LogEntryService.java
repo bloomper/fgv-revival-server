@@ -404,6 +404,29 @@ public class LogEntryService {
         });
     }
 
+    /**
+     * Clears the link to checklist items the guide sync is about to delete. The rows stay: log rows are never deleted.
+     * Internal, for the guide sync.
+     */
+    @Transactional
+    public void unlinkChecklistItems(final Collection<Long> checklistItemIds) {
+        if (checklistItemIds.isEmpty()) {
+            return;
+        }
+        repository.findByChecklistItemIdIn(checklistItemIds).forEach(entry -> {
+            entry.setChecklistItemId(null);
+            repository.save(entry);
+        });
+    }
+
+    /**
+     * The number of log rows linked to any of the checklist items. Unchecked: for callers that have checked access.
+     */
+    @Transactional(readOnly = true)
+    public int countLinkedToChecklistItems(final Collection<Long> checklistItemIds) {
+        return checklistItemIds.isEmpty() ? 0 : (int) repository.countByChecklistItemIdIn(checklistItemIds);
+    }
+
     // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private Revival visible(final Caller caller, final Long revivalId) {

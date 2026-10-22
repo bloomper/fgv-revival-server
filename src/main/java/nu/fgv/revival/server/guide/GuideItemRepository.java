@@ -34,6 +34,8 @@ public interface GuideItemRepository extends JpaRepository<GuideItem, Long> {
 
     List<GuideItem> findByChapterIdAndSectionIdIsNullOrderByPosition(Long chapterId);
 
+    List<GuideItem> findByChapterId(Long chapterId);
+
     Optional<GuideItem> findByVersionIdAndKey(Long versionId, String key);
 
     boolean existsBySectionId(Long sectionId);

@@ -18,14 +18,13 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * A checklist as GraphQL's {@code Checklist}. A phase checklist's title and tips come from the pinned guide version
+ * A checklist as GraphQL's {@code Checklist}. A chapter checklist's title and tips come from the pinned guide version
  * (FR-029).
  *
  * @author Anders Jacobsson
@@ -34,7 +33,7 @@ import java.util.List;
 public record ChecklistDto(Long id,
                            Long revivalId,
                            ChecklistKind kind,
-                           @Nullable Phase phase,
+                           @Nullable String chapterKey,
                            GuideVersionView.@Nullable Text chapterTitle,
                            @Nullable String name,
                            @Nullable LocalDate date,

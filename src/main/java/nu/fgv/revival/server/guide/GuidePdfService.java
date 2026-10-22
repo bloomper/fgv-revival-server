@@ -107,11 +107,12 @@ public class GuidePdfService {
 
             // Table of contents, linked to the chapters and sections
             document.add(new Paragraph(message("guide.pdf.contents", locale), chapterFont));
-            for (final GuideVersionView.Chapter chapter : version.chapters()) {
-                final Chunk entry = new Chunk(GuideMarkdown.pdfSafe(message("guide.pdf.chapter", locale, chapter.phase().name(), text(chapter.title(), english))), body.normal());
+            for (int index = 0; index < version.chapters().size(); index++) {
+                final GuideVersionView.Chapter chapter = version.chapters().get(index);
+                final Chunk entry = new Chunk(GuideMarkdown.pdfSafe(message("guide.pdf.chapter", locale, index + 1, text(chapter.title(), english))), body.normal());
                 final Paragraph line = new Paragraph(entry);
 
-                entry.setLocalGoto("chapter-" + chapter.phase());
+                entry.setLocalGoto("chapter-" + chapter.key());
                 line.setSpacingBefore(4);
                 document.add(line);
                 for (final GuideVersionView.Section section : chapter.sections()) {
@@ -135,9 +136,9 @@ public class GuidePdfService {
             int number = 1;
 
             for (final GuideVersionView.Chapter chapter : version.chapters()) {
-                final Chunk heading = new Chunk(GuideMarkdown.pdfSafe(message("guide.pdf.chapter", locale, chapter.phase().name(), text(chapter.title(), english))), chapterFont);
+                final Chunk heading = new Chunk(GuideMarkdown.pdfSafe(message("guide.pdf.chapter", locale, number, text(chapter.title(), english))), chapterFont);
 
-                heading.setLocalDestination("chapter-" + chapter.phase());
+                heading.setLocalDestination("chapter-" + chapter.key());
 
                 final Chapter pdfChapter = new Chapter(new Paragraph(heading), number++);
 

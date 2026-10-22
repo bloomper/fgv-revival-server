@@ -19,7 +19,6 @@ package nu.fgv.revival.server.checklist.template;
 
 import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -30,11 +29,11 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistTemplateDto(Long id, ChecklistKind kind, @Nullable Phase phase, GuideVersionView.@Nullable Text name, boolean retired,
+public record ChecklistTemplateDto(Long id, ChecklistKind kind, @Nullable String chapterKey, GuideVersionView.@Nullable Text name, boolean retired,
                                    List<ChecklistTemplateItemDto> items, Long version) {
 
     public static ChecklistTemplateDto of(final ChecklistTemplate template, final List<ChecklistTemplateItem> items) {
-        return new ChecklistTemplateDto(template.getId(), template.getKind(), template.getPhase(), ChecklistTemplateSummaryDto.name(template),
+        return new ChecklistTemplateDto(template.getId(), template.getKind(), template.getChapterKey(), ChecklistTemplateSummaryDto.name(template),
                 template.isRetired(), items.stream().map(ChecklistTemplateItemDto::of).toList(), template.getVersion());
     }
 }

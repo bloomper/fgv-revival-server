@@ -122,8 +122,13 @@ extend type Mutation {
 }
 
 type RevivalGuideVersionChange {
+    "Null when there was none, or the version has since been deleted."
     from: GuideVersionSummary
-    to: GuideVersionSummary!
+    "Null when the version has since been deleted."
+    to: GuideVersionSummary
+    "The labels at the time, kept when a version is deleted."
+    fromLabel: String
+    toLabel: String!
     "Display name of the person who made the change."
     changedBy: String
     changedAt: Instant!

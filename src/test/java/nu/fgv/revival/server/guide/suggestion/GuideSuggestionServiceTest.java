@@ -22,12 +22,12 @@ import nu.fgv.revival.server.guide.GuideDraftService;
 import nu.fgv.revival.server.guide.GuideItemRepository;
 import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideSectionRepository;
+import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.guide.GuideVersionRepository;
 import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.Revival;
@@ -93,19 +93,19 @@ class GuideSuggestionServiceTest {
         final GuideVersionView.Text text = new GuideVersionView.Text("Ett tips.", null, "Ett tips.", null);
         final List<GuideVersionView.Chapter> chapters = new ArrayList<>();
 
-        for (final Phase phase : Phase.values()) {
-            chapters.add(new GuideVersionView.Chapter((long) phase.ordinal(), phase, GuideVersionView.Text.plain("Kapitel " + phase, null),
-                    phase == Phase.B ? List.of(new GuideVersionView.Item(1L, "tip", phase, null, GuideItemType.TIP, text, 0L)) : List.of(),
-                    phase == Phase.B ? List.of(new GuideVersionView.Section(2L, "kalas", phase, GuideVersionView.Text.plain("Kalas", null), List.of(), 0L)) : List.of(),
+        for (final String key : GuideTestChapters.KEYS) {
+            chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key), key, GuideVersionView.Text.plain("Kapitel " + key, null),
+                    key.equals("B") ? List.of(new GuideVersionView.Item(1L, "tip", key, null, GuideItemType.TIP, text, 0L)) : List.of(),
+                    key.equals("B") ? List.of(new GuideVersionView.Section(2L, "kalas", key, GuideVersionView.Text.plain("Kalas", null), List.of(), 0L)) : List.of(),
                     0L));
         }
         return new GuideVersionView(VERSION_ID, GuideVersionStatus.PUBLISHED, "v1", null, Instant.now(), null, null, 0L,
                 GuideVersionView.Text.plain("", null), chapters);
     }
 
-    private static GuideSuggestionService.Proposal proposal(final GuideSuggestionKind kind, final String itemKey, final Phase phase, final String sectionKey,
+    private static GuideSuggestionService.Proposal proposal(final GuideSuggestionKind kind, final String itemKey, final String chapterKey, final String sectionKey,
                                                             final GuideItemType type, final String sv, final String reason) {
-        return new GuideSuggestionService.Proposal(REVIVAL_ID, VERSION_ID, kind, itemKey, phase, sectionKey, type, sv, null, reason);
+        return new GuideSuggestionService.Proposal(REVIVAL_ID, VERSION_ID, kind, itemKey, chapterKey, sectionKey, type, sv, null, reason);
     }
 
     @BeforeEach
@@ -146,23 +146,26 @@ class GuideSuggestionServiceTest {
         final GuideSuggestionDto created = service.create(proposal(GuideSuggestionKind.CHANGE, "tip", null, null, null, "Ny text.", "För att"));
 
         assertThat(created.status()).isEqualTo(GuideSuggestionStatus.OPEN);
-        assertThat(created.phase()).isEqualTo(Phase.B);
+        assertThat(created.chapterKey()).isEqualTo("B");
+        assertThat(created.chapterTitle().sv()).isEqualTo("Kapitel B");
         assertThat(created.mine()).isTrue();
         assertThat(created.item().text().sv()).isEqualTo("Ett tips.");
     }
 
     @Test
-    void anAddNeedsAPhaseATypeAndTextAndAKnownSection() {
+    void anAddNeedsAKnownChapterATypeAndTextAndAKnownSection() {
         assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, null, null, GuideItemType.TIP, "Nytt.", null)))
-                .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.phase.required"));
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, Phase.B, null, null, "Nytt.", null)))
+                .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.chapter.required"));
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "X", null, GuideItemType.TIP, "Nytt.", null)))
+                .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.chapter.unknown"));
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "B", null, null, "Nytt.", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.type.required"));
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, Phase.B, null, GuideItemType.TIP, " ", null)))
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "B", null, GuideItemType.TIP, " ", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.guide.text.blank"));
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, Phase.C, "kalas", GuideItemType.TIP, "Nytt.", null)))
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "C", "kalas", GuideItemType.TIP, "Nytt.", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.section.unknown"));
 
-        assertThat(service.create(proposal(GuideSuggestionKind.ADD, null, Phase.B, "kalas", GuideItemType.REQUIREMENT, "Nytt krav.", null)).sectionKey())
+        assertThat(service.create(proposal(GuideSuggestionKind.ADD, null, "B", "kalas", GuideItemType.REQUIREMENT, "Nytt krav.", null)).sectionKey())
                 .isEqualTo("kalas");
     }
 
@@ -201,7 +204,7 @@ class GuideSuggestionServiceTest {
         suggestion.setAuthorId(TestCallers.PERSON_ID + 1);
         suggestion.setVersionId(VERSION_ID);
         suggestion.setKind(GuideSuggestionKind.REMOVE);
-        suggestion.setPhase(Phase.B);
+        suggestion.setChapterKey("B");
         suggestion.setItemKey("tip");
         suggestion.setVersion(0L);
         when(repository.findById(9L)).thenReturn(Optional.of(suggestion));

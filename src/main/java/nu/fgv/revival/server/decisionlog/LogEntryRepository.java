@@ -55,6 +55,10 @@ public interface LogEntryRepository extends Repository<LogEntry, Long> {
 
     List<LogEntry> findByChecklistItemIdOrderByNumberAsc(Long checklistItemId);
 
+    List<LogEntry> findByChecklistItemIdIn(Collection<Long> checklistItemIds);
+
+    long countByChecklistItemIdIn(Collection<Long> checklistItemIds);
+
     List<LogEntry> findByMeetingIdOrderByNumberAsc(Long meetingId);
 
     @Query("SELECT DISTINCT t FROM LogEntry e JOIN e.tags t WHERE e.revivalId = :revivalId ORDER BY t")

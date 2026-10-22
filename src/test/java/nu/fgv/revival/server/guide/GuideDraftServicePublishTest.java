@@ -26,21 +26,18 @@ import nu.fgv.revival.server.util.error.ConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -66,45 +63,48 @@ class GuideDraftServicePublishTest {
     @Mock
     private GuideItemRepository itemRepository;
     @Mock
-    private GuideImportReportRepository reportRepository;
-    @Mock
     private GuideVersionViews views;
     @Mock
     private RevivalGuideVersions revivalGuideVersions;
     @Mock
     private CallerService callerService;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private final GuideDraftService.DraftDiscardListener listener = mock(GuideDraftService.DraftDiscardListener.class);
     private GuideDraftService service;
     private GuideVersion draft;
 
     private static List<GuideChapter> chapters(final String firstTitle) {
-        return Arrays.stream(Phase.values()).map(phase -> {
+        return GuideTestChapters.KEYS.stream().map(key -> {
             final GuideChapter chapter = new GuideChapter();
 
-            chapter.setPhase(phase);
-            chapter.setTitleSv(phase == Phase.A ? firstTitle : "Kapitel " + phase);
+            chapter.setKey(key);
+            chapter.setPosition(GuideTestChapters.KEYS.indexOf(key));
+            chapter.setTitleSv(key.equals("A") ? firstTitle : "Kapitel " + key);
             return chapter;
         }).toList();
     }
 
     @BeforeEach
     void setUp() {
-        service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository, reportRepository,
-                views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener));
+        service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
+                views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener), events);
         draft = new GuideVersion();
         draft.setId(DRAFT_ID);
         draft.setVersion(2L);
         draft.setStatus(GuideVersionStatus.DRAFT);
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
         lenient().when(versionRepository.findById(DRAFT_ID)).thenReturn(Optional.of(draft));
-        lenient().when(chapterRepository.findByVersionIdOrderByPhase(DRAFT_ID)).thenReturn(chapters("Först"));
+        lenient().when(chapterRepository.findByVersionIdOrderByPosition(DRAFT_ID)).thenReturn(chapters("Först"));
         lenient().when(views.find(DRAFT_ID)).thenReturn(mock(GuideVersionView.class));
     }
 
     @Test
-    void publishSetsTheFieldsPinsRevivalsAndDropsTheReport() {
-        service.publish(DRAFT_ID, 2L, " v5 ", "Första versionen i appen");
+    void publishSetsTheFieldsPinsRevivalsAndTellsListeners() {
+        when(versionRepository.findLabels()).thenReturn(List.of("v1", "v4", "v2"));
+
+        service.publish(DRAFT_ID, 2L, " Första versionen i appen ");
 
         assertThat(draft.getStatus()).isEqualTo(GuideVersionStatus.PUBLISHED);
         assertThat(draft.getLabel()).isEqualTo("v5");
@@ -112,54 +112,58 @@ class GuideDraftServicePublishTest {
         assertThat(draft.getPublishedAt()).isNotNull();
         assertThat(draft.getPublishedBy()).isEqualTo(TestCallers.PERSON_ID);
 
-        final InOrder order = inOrder(versionRepository, revivalGuideVersions, reportRepository, views);
+        final InOrder order = inOrder(versionRepository, views, revivalGuideVersions, events);
 
         order.verify(versionRepository).saveAndFlush(draft);
-        order.verify(revivalGuideVersions).pinUnpinned(any(), any(Caller.class));
-        order.verify(reportRepository).deleteByVersionId(DRAFT_ID);
         order.verify(views).evict(DRAFT_ID);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "  "})
-    void aBlankLabelIsRefused(final String label) {
-        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, label, null))
-                .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.label.blank"));
+        order.verify(revivalGuideVersions).pinUnpinned(any(), any(Caller.class));
+        order.verify(events).publishEvent(new GuideVersionPublished(DRAFT_ID));
     }
 
     @Test
-    void aLabelOver32CharactersIsRefused() {
-        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, "v".repeat(33), null))
-                .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.label.tooLong"));
+    void theFirstVersionIsV1AndLabelsNotOfTheFormAreIgnored() {
+        when(versionRepository.findLabels()).thenReturn(List.of("2024", "v2b"));
+
+        service.publish(DRAFT_ID, 2L, null);
+
+        assertThat(draft.getLabel()).isEqualTo("v1");
+        assertThat(draft.getNote()).isNull();
     }
 
     @Test
-    void aLabelInUseIsRefused() {
-        when(versionRepository.existsByLabelIgnoreCase("v5")).thenReturn(true);
-
-        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, "v5", null))
-                .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.label.duplicate"));
+    void aNoteOver2000CharactersIsRefused() {
+        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, "x".repeat(2001)))
+                .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.note.tooLong"));
         verify(revivalGuideVersions, never()).pinUnpinned(any(), any());
     }
 
     @Test
     void aDraftWithABlankTitleIsRefused() {
-        when(chapterRepository.findByVersionIdOrderByPhase(DRAFT_ID)).thenReturn(chapters(" "));
+        when(chapterRepository.findByVersionIdOrderByPosition(DRAFT_ID)).thenReturn(chapters(" "));
 
-        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, "v5", null))
+        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, null))
                 .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.incomplete"));
     }
 
     @Test
+    void aDraftWithoutChaptersIsRefused() {
+        when(chapterRepository.findByVersionIdOrderByPosition(DRAFT_ID)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, null))
+                .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.incomplete"));
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
     void aStaleVersionIsAConflict() {
-        assertThatThrownBy(() -> service.publish(DRAFT_ID, 1L, "v5", null)).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.publish(DRAFT_ID, 1L, null)).isInstanceOf(ConflictException.class);
     }
 
     @Test
     void aPublishedVersionIsNotADraft() {
         draft.setStatus(GuideVersionStatus.PUBLISHED);
 
-        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, "v6", null))
+        assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, null))
                 .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.published"));
         assertThatThrownBy(() -> service.discard(DRAFT_ID, 2L))
                 .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.guide.published"));
@@ -169,7 +173,7 @@ class GuideDraftServicePublishTest {
     void onlySuperAdminsPublishOrDiscard() {
         for (final Caller caller : List.of(TestCallers.observer(), TestCallers.directeur(), TestCallers.steeringGroup(), TestCallers.nobody())) {
             when(callerService.current()).thenReturn(caller);
-            assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, "v5", null)).isInstanceOf(AccessDeniedException.class);
+            assertThatThrownBy(() -> service.publish(DRAFT_ID, 2L, null)).isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.discard(DRAFT_ID, 2L)).isInstanceOf(AccessDeniedException.class);
         }
         verify(versionRepository, never()).saveAndFlush(any());
@@ -180,13 +184,12 @@ class GuideDraftServicePublishTest {
     void discardTellsListenersThenDeletesEverything() {
         service.discard(DRAFT_ID, 2L);
 
-        final InOrder order = inOrder(listener, itemRepository, sectionRepository, chapterRepository, reportRepository, versionRepository);
+        final InOrder order = inOrder(listener, itemRepository, sectionRepository, chapterRepository, versionRepository);
 
         order.verify(listener).draftDiscarded(DRAFT_ID);
         order.verify(itemRepository).deleteByVersionId(DRAFT_ID);
         order.verify(sectionRepository).deleteByVersionId(DRAFT_ID);
         order.verify(chapterRepository).deleteByVersionId(DRAFT_ID);
-        order.verify(reportRepository).deleteByVersionId(DRAFT_ID);
         order.verify(versionRepository).delete(draft);
     }
 
@@ -194,6 +197,5 @@ class GuideDraftServicePublishTest {
     void discardWithAStaleVersionIsAConflict() {
         assertThatThrownBy(() -> service.discard(DRAFT_ID, 9L)).isInstanceOf(ConflictException.class);
         verify(versionRepository, never()).delete(any());
-        verify(versionRepository, never()).existsByLabelIgnoreCase(anyString());
     }
 }

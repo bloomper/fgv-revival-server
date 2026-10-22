@@ -18,7 +18,6 @@
 package nu.fgv.revival.server.checklist.template;
 
 import nu.fgv.revival.server.checklist.ChecklistKind;
-import nu.fgv.revival.server.guide.Phase;
 import org.springframework.data.repository.Repository;
 
 import java.util.List;
@@ -38,11 +37,11 @@ public interface ChecklistTemplateRepository extends Repository<ChecklistTemplat
 
     Optional<ChecklistTemplate> findById(Long id);
 
-    List<ChecklistTemplate> findAllByOrderByKindAscPhaseAscNameSvAscIdAsc();
+    List<ChecklistTemplate> findAllByOrderByNameSvAscIdAsc();
 
-    List<ChecklistTemplate> findByRetiredAtIsNullOrderByKindAscPhaseAscNameSvAscIdAsc();
+    List<ChecklistTemplate> findByRetiredAtIsNullOrderByNameSvAscIdAsc();
 
     List<ChecklistTemplate> findByKindAndRetiredAtIsNullOrderByNameSvAscIdAsc(ChecklistKind kind);
 
-    Optional<ChecklistTemplate> findByPhaseAndRetiredAtIsNull(Phase phase);
+    Optional<ChecklistTemplate> findByChapterKeyAndRetiredAtIsNull(String chapterKey);
 }

@@ -40,7 +40,9 @@ type GuideSuggestion {
     "Whether the caller is the author."
     mine: Boolean!
     madeOn: GuideVersionSummary!
-    phase: Phase!
+    chapterKey: ID!
+    "In madeOn."
+    chapterTitle: LocalizedText
     sectionKey: ID
     itemKey: ID
     "The item as it was in madeOn, for CHANGE and REMOVE."
@@ -74,7 +76,7 @@ input GuideSuggestionCreateInput {
     "CHANGE, REMOVE."
     itemKey: ID
     "ADD."
-    phase: Phase
+    chapterKey: ID
     "ADD, optional."
     sectionKey: ID
     proposedType: GuideItemType

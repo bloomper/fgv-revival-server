@@ -22,7 +22,6 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.jspecify.annotations.Nullable;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -61,21 +60,13 @@ public class HttpErrorAdvice {
     }
 
     @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class})
-    public ResponseEntity<Error> missing(final Exception e, final Locale locale, final HttpServletRequest request) {
-        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", logImport(request) ? "error.log.import.notExcel" : "error.guide.import.notWord", null, locale);
+    public ResponseEntity<Error> missing(final Exception e, final Locale locale) {
+        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "error.log.import.notExcel", null, locale);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<Error> tooLarge(final MaxUploadSizeExceededException e, final Locale locale, final HttpServletRequest request) {
-        return error(HttpStatus.CONTENT_TOO_LARGE, "BAD_REQUEST", logImport(request) ? "error.log.import.tooLarge" : "error.guide.import.tooLarge",
-                null, locale);
-    }
-
-    /**
-     * The decision log's Excel import (M3) gets its own upload messages; everything else is the guide's Word import.
-     */
-    private static boolean logImport(final HttpServletRequest request) {
-        return request.getRequestURI().matches(".*/api/revivals/[^/]+/log/import.*");
+    public ResponseEntity<Error> tooLarge(final MaxUploadSizeExceededException e, final Locale locale) {
+        return error(HttpStatus.CONTENT_TOO_LARGE, "BAD_REQUEST", "error.log.import.tooLarge", null, locale);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

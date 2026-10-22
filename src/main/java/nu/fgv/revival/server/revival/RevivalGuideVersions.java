@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Which guide version a revival follows, and the append-only record of every change (FR-017, FR-018, FR-020). The
@@ -91,6 +92,10 @@ public class RevivalGuideVersions {
         pin(revival, toVersionId, caller);
     }
 
+    private @Nullable String label(final Long versionId) {
+        return versionRepository.findById(versionId).map(GuideVersion::getLabel).orElse(null);
+    }
+
     private void pin(final Revival revival, final Long versionId, final Caller caller) {
         final @Nullable Long from = revival.getGuideVersionId();
         final RevivalGuideVersionChange change = new RevivalGuideVersionChange();
@@ -100,6 +105,8 @@ public class RevivalGuideVersions {
         change.setRevivalId(revival.getId());
         change.setFromVersionId(from);
         change.setToVersionId(versionId);
+        change.setFromLabel(from == null ? null : label(from));
+        change.setToLabel(Objects.requireNonNull(label(versionId)));
         change.setChangedBy(caller.person().getId());
         change.setChangedAt(Instant.now());
         changeRepository.save(change);

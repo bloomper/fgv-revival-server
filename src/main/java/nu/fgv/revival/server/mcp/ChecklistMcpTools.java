@@ -22,8 +22,9 @@ import nu.fgv.revival.server.checklist.ChecklistItemFilterDto;
 import nu.fgv.revival.server.checklist.ChecklistItemState;
 import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.ChecklistService;
+import nu.fgv.revival.server.guide.GuideService;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
+import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -47,27 +48,32 @@ public class ChecklistMcpTools {
     static final int MAX_LIMIT = 200;
 
     private final ChecklistService checklistService;
+    private final GuideService guideService;
     private final McpToolSupport support;
 
-    public ChecklistMcpTools(final ChecklistService checklistService, final McpToolSupport support) {
+    public ChecklistMcpTools(final ChecklistService checklistService, final GuideService guideService, final McpToolSupport support) {
         this.checklistService = checklistService;
+        this.guideService = guideService;
         this.support = support;
     }
 
     @McpTool(name = "list_checklist_items",
-            description = "List items in a revival's checklists: one per phase A-J with the guide's requirements, and event checklists. Filters combine: mine, open, overdue, phase, checklist name.",
+            description = "List items in a revival's checklists: one per guide chapter with the guide's requirements, and event checklists. Filters combine: mine, open, overdue, chapter, checklist name.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public ChecklistItems listChecklistItems(
             @McpToolParam(description = "A revival you can see") final Long revivalId,
             @McpToolParam(required = false, description = "Items you own") final @Nullable Boolean mine,
             @McpToolParam(required = false, description = "Items not done and not marked not applicable") final @Nullable Boolean open,
             @McpToolParam(required = false, description = "Open items past their deadline") final @Nullable Boolean overdue,
-            @McpToolParam(required = false, description = "A-J: that phase's checklist") final @Nullable String phase,
+            @McpToolParam(required = false, description = "That chapter's checklist: the chapter's number, counting from 1, or its key") final @Nullable String chapter,
             @McpToolParam(required = false, description = "Words in an event checklist's name, e.g. \"Rehearsal weekend 2\"") final @Nullable String checklist,
             @McpToolParam(required = false, description = "1-200, default 50") final @Nullable Integer limit) {
         return support.call("list_checklist_items", () -> {
+            final String chapterKey = chapter == null || chapter.isBlank() ? null
+                    : McpToolSupport.chapter(guideService.forRevival(revivalId).orElseThrow(() -> new ResourceNotFoundException("error.guide.notPublished")),
+                    chapter).key();
             final List<ChecklistItemDto> items = checklistService.items(revivalId, new ChecklistItemFilterDto(mine, open, overdue, null, null),
-                    McpToolSupport.phase(phase), checklist, Locale.ENGLISH);
+                    chapterKey, checklist, Locale.ENGLISH);
             final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
 
             return new ChecklistItems(items.stream().limit(first).map(ChecklistMcpTools::toMcp).toList(), items.size());
@@ -88,12 +94,14 @@ public class ChecklistMcpTools {
 
     static ChecklistItem toMcp(final ChecklistItemDto item) {
         return new ChecklistItem(item.id(),
-                new ChecklistRef(item.checklist().kind(), item.checklist().name(), item.checklist().phase(), item.checklist().date()),
+                new ChecklistRef(item.checklist().kind(), item.checklist().name(), item.checklist().chapterKey(),
+                        item.checklist().chapterTitle() == null ? null : Text.of(item.checklist().chapterTitle()), item.checklist().date()),
                 item.required(), Text.of(item.text()), item.state(), item.overdue(), McpOwner.of(item.owner()),
                 item.deadline(), item.comment());
     }
 
-    public record ChecklistRef(ChecklistKind kind, @Nullable String name, @Nullable Phase phase, @Nullable LocalDate date) {
+    public record ChecklistRef(ChecklistKind kind, @Nullable String name, @Nullable String chapterKey, @Nullable Text chapterTitle,
+                               @Nullable LocalDate date) {
     }
 
     public record Text(String sv, @Nullable String en) {

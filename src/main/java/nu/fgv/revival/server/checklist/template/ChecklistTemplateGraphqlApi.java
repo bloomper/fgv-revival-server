@@ -22,13 +22,13 @@ import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
 import nu.fgv.revival.server.guide.GuideGraphqlApi.LocalizedTextInput;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.Capability;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.time.DayOfWeek;
@@ -59,7 +59,7 @@ public class ChecklistTemplateGraphqlApi {
         }
     }
 
-    public record ChecklistTemplateCreateInput(ChecklistKind kind, @Nullable Phase phase, @Nullable LocalizedTextInput name) {
+    public record ChecklistTemplateCreateInput(ChecklistKind kind, @Nullable String chapterKey, @Nullable LocalizedTextInput name) {
     }
 
     public record ChecklistTemplateUpdateInput(Long id, Long version, @Nullable LocalizedTextInput name) {
@@ -92,7 +92,7 @@ public class ChecklistTemplateGraphqlApi {
 
     @MutationMapping
     public ChecklistTemplateDto checklistTemplateCreate(@Argument final ChecklistTemplateCreateInput input) {
-        return service.create(new ChecklistTemplateService.NewTemplate(input.kind(), input.phase(), texts(input.name())));
+        return service.create(new ChecklistTemplateService.NewTemplate(input.kind(), input.chapterKey(), texts(input.name())));
     }
 
     @MutationMapping
@@ -127,6 +127,16 @@ public class ChecklistTemplateGraphqlApi {
     @MutationMapping
     public ChecklistTemplateDto checklistTemplateItemRetire(@Argument final Long id, @Argument final Long version) {
         return service.retireItem(id, version);
+    }
+
+    @SchemaMapping(typeName = "ChecklistTemplate")
+    public GuideVersionView.@Nullable Text chapterTitle(final ChecklistTemplateDto template) {
+        return service.chapterTitle(template.chapterKey());
+    }
+
+    @SchemaMapping(typeName = "ChecklistTemplateSummary", field = "chapterTitle")
+    public GuideVersionView.@Nullable Text summaryChapterTitle(final ChecklistTemplateSummaryDto template) {
+        return service.chapterTitle(template.chapterKey());
     }
 
     @BatchMapping(typeName = "ChecklistTemplateItem", field = "guideItem")

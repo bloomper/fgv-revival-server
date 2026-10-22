@@ -13,26 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package nu.fgv.revival.server.guide;
+package nu.fgv.revival.server.checklist;
 
 /**
- * The guide's chapters, which are the revival phases A–J (product spec, section 4). Fixed: a draft may rename a
- * chapter but not add, remove or reorder one (FR-008).
+ * What removing a chapter from the guide would delete once revivals move to a version without it: their checklists
+ * for the chapter and the items in them.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 0.3
  */
-public enum Phase {
-
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-    I,
-    J
+public record ChapterRemovalImpactDto(String chapterKey, int revivalCount, int itemCount, int doneCount) {
 }

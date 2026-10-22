@@ -47,7 +47,6 @@ public class GuideService {
 
     private final GuideVersionRepository versionRepository;
     private final GuideVersionViews views;
-    private final GuideImportService importService;
     private final RevivalRepository revivalRepository;
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
@@ -58,7 +57,6 @@ public class GuideService {
 
     public GuideService(final GuideVersionRepository versionRepository,
                         final GuideVersionViews views,
-                        final GuideImportService importService,
                         final RevivalRepository revivalRepository,
                         final CallerService callerService,
                         final AccessPolicy accessPolicy,
@@ -68,7 +66,6 @@ public class GuideService {
                         final RevivalTitles titles) {
         this.versionRepository = versionRepository;
         this.views = views;
-        this.importService = importService;
         this.revivalRepository = revivalRepository;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
@@ -262,7 +259,6 @@ public class GuideService {
 
                     return new GuideDraftDto(
                             view,
-                            importService.report(version.getId()).orElse(null),
                             draftSuggestions.map(suggestions -> suggestions.acceptedInto(version.getId())).orElse(0),
                             untranslated(view));
                 })

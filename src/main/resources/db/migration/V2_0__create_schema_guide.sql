@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS guide_chapter
 (
     id                     BIGINT AUTO_INCREMENT NOT NULL,
     version_id             BIGINT                NOT NULL,
-    phase                  CHAR(1)               NOT NULL,
+    `key`                  CHAR(36)              NOT NULL,
+    position               INT                   NOT NULL,
     title_sv               VARCHAR(255)          NOT NULL,
     title_en               VARCHAR(255)          NULL,
     created_by             VARCHAR(255)          NOT NULL,
@@ -40,8 +41,10 @@ CREATE TABLE IF NOT EXISTS guide_chapter
     version                BIGINT                NULL,
     CONSTRAINT PK_GUIDE_CHAPTER PRIMARY KEY (id),
     CONSTRAINT FK_GUIDE_CHAPTER_ON_VERSION FOREIGN KEY (version_id) REFERENCES guide_version (id),
-    CONSTRAINT UC_GUIDE_CHAPTER_VERSION_PHASE UNIQUE (version_id, phase)
+    CONSTRAINT UC_GUIDE_CHAPTER_VERSION_KEY UNIQUE (version_id, `key`)
 ) DEFAULT CHARSET = utf8mb4;
+
+CREATE INDEX IX_GUIDE_CHAPTER_ON_VERSION_POSITION ON guide_chapter (version_id, position);
 
 CREATE TABLE IF NOT EXISTS guide_section
 (
@@ -93,20 +96,6 @@ CREATE TABLE IF NOT EXISTS guide_item
 
 CREATE INDEX IX_GUIDE_ITEM_ON_CHAPTER_SECTION_POSITION ON guide_item (chapter_id, section_id, position);
 
-CREATE TABLE IF NOT EXISTS guide_import_report
-(
-    id                     BIGINT AUTO_INCREMENT NOT NULL,
-    version_id             BIGINT                NOT NULL,
-    file_name              VARCHAR(255)          NOT NULL,
-    counts                 JSON                  NOT NULL,
-    warnings               JSON                  NOT NULL,
-    created_by             VARCHAR(255)          NOT NULL,
-    created_at             DATETIME(6)           NOT NULL,
-    CONSTRAINT PK_GUIDE_IMPORT_REPORT PRIMARY KEY (id),
-    CONSTRAINT FK_GUIDE_IMPORT_REPORT_ON_VERSION FOREIGN KEY (version_id) REFERENCES guide_version (id) ON DELETE CASCADE,
-    CONSTRAINT UC_GUIDE_IMPORT_REPORT_VERSION UNIQUE (version_id)
-) DEFAULT CHARSET = utf8mb4;
-
 CREATE TABLE IF NOT EXISTS guide_version_audit
 (
     id                     BIGINT                NOT NULL,
@@ -134,7 +123,8 @@ CREATE TABLE IF NOT EXISTS guide_chapter_audit
 (
     id                     BIGINT                NOT NULL,
     version_id             BIGINT                NULL,
-    phase                  CHAR(1)               NULL,
+    `key`                  CHAR(36)              NULL,
+    position               INT                   NULL,
     title_sv               VARCHAR(255)          NULL,
     title_en               VARCHAR(255)          NULL,
     version                BIGINT                NULL,

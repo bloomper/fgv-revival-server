@@ -49,8 +49,8 @@ public record GuideVersionView(Long id,
         return status == GuideVersionStatus.DRAFT;
     }
 
-    public Chapter chapter(final Phase phase) {
-        return chapters.stream().filter(chapter -> chapter.phase() == phase).findFirst().orElseThrow();
+    public Optional<Chapter> chapter(final String key) {
+        return chapters.stream().filter(chapter -> chapter.key().equals(key)).findFirst();
     }
 
     public Optional<Section> section(final String key) {
@@ -86,7 +86,7 @@ public record GuideVersionView(Long id,
         }
     }
 
-    public record Chapter(Long id, Phase phase, Text title, List<Item> items, List<Section> sections, Long version) {
+    public record Chapter(Long id, String key, Text title, List<Item> items, List<Section> sections, Long version) {
 
         public Chapter {
             items = List.copyOf(items);
@@ -94,13 +94,13 @@ public record GuideVersionView(Long id,
         }
     }
 
-    public record Section(Long id, String key, Phase phase, Text title, List<Item> items, Long version) {
+    public record Section(Long id, String key, String chapterKey, Text title, List<Item> items, Long version) {
 
         public Section {
             items = List.copyOf(items);
         }
     }
 
-    public record Item(Long id, String key, Phase phase, @Nullable String sectionKey, GuideItemType type, Text text, Long version) {
+    public record Item(Long id, String key, String chapterKey, @Nullable String sectionKey, GuideItemType type, Text text, Long version) {
     }
 }

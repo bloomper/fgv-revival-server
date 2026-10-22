@@ -28,7 +28,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.guide.GuideItemType;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
@@ -69,9 +68,8 @@ public class GuideSuggestion extends AbstractAuditable {
     @Column(name = "item_key", updatable = false, length = 36, columnDefinition = "CHAR(36)")
     private @Nullable String itemKey;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "phase", nullable = false, updatable = false, length = 1, columnDefinition = "CHAR(1)")
-    private Phase phase;
+    @Column(name = "chapter_key", nullable = false, updatable = false, length = 36, columnDefinition = "CHAR(36)")
+    private String chapterKey;
 
     @Column(name = "section_key", updatable = false, length = 36, columnDefinition = "CHAR(36)")
     private @Nullable String sectionKey;

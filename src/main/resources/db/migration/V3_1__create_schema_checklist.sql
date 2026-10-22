@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS checklist
     id                     BIGINT AUTO_INCREMENT NOT NULL,
     revival_id             BIGINT                NOT NULL,
     kind                   VARCHAR(8)            NOT NULL,
-    phase                  CHAR(1)               NULL,
+    chapter_key            CHAR(36)              NULL,
     name                   VARCHAR(255)          NULL,
     event_date             DATE                  NULL,
     template_id            BIGINT                NULL,
@@ -16,11 +16,11 @@ CREATE TABLE IF NOT EXISTS checklist
     CONSTRAINT PK_CHECKLIST PRIMARY KEY (id),
     CONSTRAINT FK_CHECKLIST_ON_REVIVAL FOREIGN KEY (revival_id) REFERENCES revival (id),
     CONSTRAINT FK_CHECKLIST_ON_TEMPLATE FOREIGN KEY (template_id) REFERENCES checklist_template (id),
-    -- One phase checklist per phase; event checklists have no phase, and nulls do not collide
-    CONSTRAINT UC_CHECKLIST_REVIVAL_PHASE UNIQUE (revival_id, phase),
-    CONSTRAINT CK_CHECKLIST_KIND CHECK (kind IN ('PHASE', 'EVENT')),
-    CONSTRAINT CK_CHECKLIST_SHAPE CHECK ((kind = 'PHASE' AND phase IS NOT NULL AND name IS NULL AND event_date IS NULL AND cancelled_at IS NULL)
-        OR (kind = 'EVENT' AND phase IS NULL AND name IS NOT NULL))
+    -- One chapter checklist per chapter; event checklists have no chapter, and nulls do not collide
+    CONSTRAINT UC_CHECKLIST_REVIVAL_CHAPTER UNIQUE (revival_id, chapter_key),
+    CONSTRAINT CK_CHECKLIST_KIND CHECK (kind IN ('CHAPTER', 'EVENT')),
+    CONSTRAINT CK_CHECKLIST_SHAPE CHECK ((kind = 'CHAPTER' AND chapter_key IS NOT NULL AND name IS NULL AND event_date IS NULL AND cancelled_at IS NULL)
+        OR (kind = 'EVENT' AND chapter_key IS NULL AND name IS NOT NULL))
 ) DEFAULT CHARSET = utf8mb4;
 
 CREATE TABLE IF NOT EXISTS checklist_audit
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS checklist_audit
     id                     BIGINT                NOT NULL,
     revival_id             BIGINT                NULL,
     kind                   VARCHAR(8)            NULL,
-    phase                  CHAR(1)               NULL,
+    chapter_key            CHAR(36)              NULL,
     name                   VARCHAR(255)          NULL,
     event_date             DATE                  NULL,
     template_id            BIGINT                NULL,

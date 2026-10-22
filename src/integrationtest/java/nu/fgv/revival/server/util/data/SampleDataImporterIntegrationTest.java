@@ -18,7 +18,7 @@ package nu.fgv.revival.server.util.data;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
 import nu.fgv.revival.server.checklist.RevivalGuideSync;
-import nu.fgv.revival.server.guide.Phase;
+import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import org.junit.jupiter.api.BeforeAll;
@@ -136,7 +136,7 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(jdbcClient.sql("SELECT label FROM guide_version WHERE status = 'PUBLISHED' ORDER BY published_at").query(String.class).list())
                 .containsExactly("v1", "v2");
-        assertThat(count("guide_chapter")).isEqualTo(2 * Phase.values().length);
+        assertThat(count("guide_chapter")).isEqualTo(2 * GuideTestChapters.KEYS.size());
         assertThat(count("guide_item WHERE type = 'QUESTION'")).isPositive();
         assertThat(count("revival WHERE guide_version_id IS NULL")).isZero();
         assertThat(count("revival_guide_version_change")).isEqualTo(count("revival"));
@@ -159,10 +159,10 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void createsPhaseAndEventTemplates() throws SQLException {
+    void createsChapterAndEventTemplates() throws SQLException {
         importSampleData();
 
-        assertThat(count("checklist_template WHERE kind = 'PHASE'")).isPositive();
+        assertThat(count("checklist_template WHERE kind = 'CHAPTER'")).isPositive();
         assertThat(jdbcClient.sql("SELECT name_sv FROM checklist_template WHERE kind = 'EVENT'").query(String.class).list())
                 .containsExactlyInAnyOrder(SampleChecklistTemplates.REHEARSAL_WEEKEND, SampleChecklistTemplates.SHOW_WEEKEND);
         assertThat(count("checklist_template_audit")).isEqualTo(count("checklist_template"));

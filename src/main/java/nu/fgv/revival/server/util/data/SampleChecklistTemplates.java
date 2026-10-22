@@ -17,7 +17,6 @@
 package nu.fgv.revival.server.util.data;
 
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.Capability;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -37,7 +36,7 @@ import static nu.fgv.revival.server.member.Capability.FINANCE;
 import static nu.fgv.revival.server.member.Capability.STAFFING;
 
 /**
- * Phase templates, whose items the guide sync copies into new phase checklists, and event templates for rehearsal
+ * Chapter templates, whose items the guide sync copies into new chapter checklists, and event templates for rehearsal
  * and show weekends.
  *
  * @author Anders Jacobsson
@@ -75,29 +74,29 @@ final class SampleChecklistTemplates {
     static void insert(final JdbcClient jdbcClient, final String createdBy) {
         final OffsetDateTime at = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
 
-        insertTemplate(jdbcClient, Phase.A, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_A), null, null, createdBy, at, List.of(
                 new Item("Boka ett första möte med JK", "Book a first meeting with JK", null, SampleGuide.key("a-contact")),
                 new Item("Fråga originalensemblen vilka som vill vara med", "Ask the original cast who wants to take part", STAFFING, null)
         ));
-        insertTemplate(jdbcClient, Phase.B, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_B), null, null, createdBy, at, List.of(
                 new Item("Begär offert från föreställningslokalen", "Ask the show venue for a quote", FINANCE, SampleGuide.key("b-venue-hall")),
                 new Item("Kolla vilka datum kalaslokalen har lediga", "Check which dates the party venue has free", CATERING, null)
         ));
-        insertTemplate(jdbcClient, Phase.C, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_C), null, null, createdBy, at, List.of(
                 new Item("Hämta budgetar från tidigare nyuppsättningar", "Get the budgets of earlier revivals", FINANCE, SampleGuide.key("c-buffer"))
         ));
-        insertTemplate(jdbcClient, Phase.D, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_D), null, null, createdBy, at, List.of(
                 new Item("Starta en gemensam Drive för direktionen", "Start a shared Drive for the direction", null, null),
                 new Item("Sammanställ en kontaktlista över alla som är med", "Put together a contact list of everyone taking part", STAFFING, null)
         ));
-        insertTemplate(jdbcClient, Phase.G, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_G), null, null, createdBy, at, List.of(
                 new Item("Beställ affischer", "Order posters", COMMS, null),
                 new Item("Skriv ett utskick till FGV:s nyhetsbrev", "Write a piece for FGV's newsletter", COMMS, SampleGuide.key("g-channels"))
         ));
-        insertTemplate(jdbcClient, Phase.H, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_H), null, null, createdBy, at, List.of(
                 new Item("Gör ett bemanningsschema för kalaset", "Make a staffing schedule for the party", CATERING, SampleGuide.key("h-staffing"))
         ));
-        insertTemplate(jdbcClient, Phase.J, null, null, createdBy, at, List.of(
+        insertTemplate(jdbcClient, SampleGuide.key(SampleGuide.CHAPTER_J), null, null, createdBy, at, List.of(
                 new Item("Skicka slutredovisningen till FGV", "Send the final accounts to FGV", FINANCE, SampleGuide.key("j-accounts"))
         ));
         insertTemplate(jdbcClient, null, REHEARSAL_WEEKEND, "Rehearsal weekend", createdBy, at, List.of(
@@ -114,7 +113,7 @@ final class SampleChecklistTemplates {
     }
 
     private static void insertTemplate(final JdbcClient jdbcClient,
-                                       final @Nullable Phase phase,
+                                       final @Nullable String chapterKey,
                                        final @Nullable String nameSv,
                                        final @Nullable String nameEn,
                                        final String createdBy,
@@ -125,12 +124,12 @@ final class SampleChecklistTemplates {
         jdbcClient
                 .sql("""
                         INSERT INTO checklist_template
-                            (kind, phase, name_sv, name_en, created_by, created_at, version)
+                            (kind, chapter_key, name_sv, name_en, created_by, created_at, version)
                         VALUES
-                            (:kind, :phase, :nameSv, :nameEn, :createdBy, :createdAt, 0)
+                            (:kind, :chapterKey, :nameSv, :nameEn, :createdBy, :createdAt, 0)
                         """)
-                .param("kind", phase == null ? "EVENT" : "PHASE")
-                .param("phase", phase == null ? null : phase.name())
+                .param("kind", chapterKey == null ? "EVENT" : "CHAPTER")
+                .param("chapterKey", chapterKey)
                 .param("nameSv", nameSv)
                 .param("nameEn", nameEn)
                 .param("createdBy", createdBy)

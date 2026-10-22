@@ -30,4 +30,6 @@ public interface RevivalRepository extends JpaRepository<Revival, Long>, JpaSpec
     boolean existsBySpexIdAndYearAndIdNot(Long spexId, Integer year, Long id);
 
     List<Revival> findByGuideVersionIdIsNull();
+
+    int countByGuideVersionId(Long guideVersionId);
 }

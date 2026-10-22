@@ -17,7 +17,6 @@
 package nu.fgv.revival.server.guide.suggestion;
 
 import nu.fgv.revival.server.guide.GuideItemType;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.person.PersonNames;
 import nu.fgv.revival.server.revival.RevivalTitles;
 import org.jspecify.annotations.Nullable;
@@ -50,7 +49,7 @@ public class GuideSuggestionGraphqlApi {
     }
 
     public record GuideSuggestionCreateInput(Long revivalId, Long versionId, GuideSuggestionKind kind, @Nullable String itemKey,
-                                             @Nullable Phase phase, @Nullable String sectionKey, @Nullable GuideItemType proposedType,
+                                             @Nullable String chapterKey, @Nullable String sectionKey, @Nullable GuideItemType proposedType,
                                              @Nullable String proposedTextSv, @Nullable String proposedTextEn, @Nullable String reason) {
     }
 
@@ -73,7 +72,7 @@ public class GuideSuggestionGraphqlApi {
 
     @MutationMapping
     public GuideSuggestionDto guideSuggestionCreate(@Argument final GuideSuggestionCreateInput input) {
-        return service.create(new GuideSuggestionService.Proposal(input.revivalId(), input.versionId(), input.kind(), input.itemKey(), input.phase(),
+        return service.create(new GuideSuggestionService.Proposal(input.revivalId(), input.versionId(), input.kind(), input.itemKey(), input.chapterKey(),
                 input.sectionKey(), input.proposedType(), input.proposedTextSv(), input.proposedTextEn(), input.reason()));
     }
 

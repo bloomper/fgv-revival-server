@@ -21,11 +21,11 @@ import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.guide.GuideAccess;
+import nu.fgv.revival.server.guide.GuideVersionPublished;
 import nu.fgv.revival.server.guide.GuideVersionRepository;
 import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
-import nu.fgv.revival.server.guide.Phase;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.person.Caller;
@@ -34,6 +34,7 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +50,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Checklist templates for phases and event kinds (FR-030, FR-031). Only super admins change them; whoever reads the
+ * Checklist templates for guide chapters and event kinds (FR-030, FR-031). Only super admins change them; whoever reads the
  * guide reads them. Templates and their items are retired, never deleted, so checklists keep their links (FR-032a).
  *
  * @author Anders Jacobsson
@@ -92,7 +93,7 @@ public class ChecklistTemplateService {
     public record Texts(String sv, @Nullable String en) {
     }
 
-    public record NewTemplate(ChecklistKind kind, @Nullable Phase phase, @Nullable Texts name) {
+    public record NewTemplate(ChecklistKind kind, @Nullable String chapterKey, @Nullable Texts name) {
     }
 
     public record NewItem(Long templateId, @Nullable Integer position, Texts text, @Nullable String guideItemKey,
@@ -113,15 +114,65 @@ public class ChecklistTemplateService {
     public List<ChecklistTemplateDto> list(final boolean includeRetired) {
         final Caller caller = readable();
         final List<ChecklistTemplate> templates = includeRetired && accessPolicy.canManageChecklistTemplates(caller)
-                ? templateRepository.findAllByOrderByKindAscPhaseAscNameSvAscIdAsc()
-                : templateRepository.findByRetiredAtIsNullOrderByKindAscPhaseAscNameSvAscIdAsc();
+                ? templateRepository.findAllByOrderByNameSvAscIdAsc()
+                : templateRepository.findByRetiredAtIsNullOrderByNameSvAscIdAsc();
         final Map<Long, List<ChecklistTemplateItem>> items = itemRepository.findByTemplateIdIn(templates.stream().map(ChecklistTemplate::getId).toList())
                 .stream()
                 .filter(item -> !item.isRetired())
                 .sorted(ITEM_ORDER)
                 .collect(Collectors.groupingBy(ChecklistTemplateItem::getTemplateId));
 
-        return templates.stream().map(template -> ChecklistTemplateDto.of(template, items.getOrDefault(template.getId(), List.of()))).toList();
+        return templates.stream()
+                .sorted(order())
+                .map(template -> ChecklistTemplateDto.of(template, items.getOrDefault(template.getId(), List.of())))
+                .toList();
+    }
+
+    /**
+     * Chapter templates first, in the order of the latest published version's chapters, then event templates by name
+     * (the repository's order). Templates for chapters the latest version lacks come last among the chapter templates.
+     */
+    private Comparator<ChecklistTemplate> order() {
+        final List<GuideVersionView.Chapter> chapters = latest().map(GuideVersionView::chapters).orElse(List.of());
+        final Map<String, Integer> positions = new HashMap<>();
+
+        for (int index = 0; index < chapters.size(); index++) {
+            positions.put(chapters.get(index).key(), index);
+        }
+        return Comparator
+                .comparing((ChecklistTemplate template) -> template.getKind() == ChecklistKind.CHAPTER ? 0 : 1)
+                .thenComparing(template -> template.getChapterKey() == null ? 0 : positions.getOrDefault(template.getChapterKey(), Integer.MAX_VALUE));
+    }
+
+    private Optional<GuideVersionView> latest() {
+        return versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)
+                .map(version -> guideVersionViews.find(version.getId()));
+    }
+
+    /**
+     * A chapter template's chapter title in the latest published version, or null when the version no longer has it.
+     */
+    @Transactional(readOnly = true)
+    public GuideVersionView.@Nullable Text chapterTitle(final @Nullable String chapterKey) {
+        return chapterKey == null ? null : latest().flatMap(view -> view.chapter(chapterKey)).map(GuideVersionView.Chapter::title).orElse(null);
+    }
+
+    /**
+     * Retires the chapter templates for chapters the newly published version does not have, as part of publishing it.
+     */
+    @EventListener
+    public void guideVersionPublished(final GuideVersionPublished event) {
+        final GuideVersionView version = guideVersionViews.find(event.versionId());
+
+        if (version == null) {
+            return;
+        }
+        templateRepository.findByKindAndRetiredAtIsNullOrderByNameSvAscIdAsc(ChecklistKind.CHAPTER).stream()
+                .filter(template -> template.getChapterKey() != null && version.chapter(template.getChapterKey()).isEmpty())
+                .forEach(template -> {
+                    template.setRetiredAt(clock.instant());
+                    templateRepository.saveAndFlush(template);
+                });
     }
 
     @Transactional(readOnly = true)
@@ -138,8 +189,7 @@ public class ChecklistTemplateService {
      */
     @Transactional(readOnly = true)
     public Map<ChecklistTemplateItemDto, GuideVersionView.Item> guideItems(final Collection<ChecklistTemplateItemDto> items) {
-        final Optional<GuideVersionView> latest = versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)
-                .map(version -> guideVersionViews.find(version.getId()));
+        final Optional<GuideVersionView> latest = latest();
         final Map<ChecklistTemplateItemDto, GuideVersionView.Item> found = new HashMap<>();
 
         for (final ChecklistTemplateItemDto item : items) {
@@ -159,14 +209,19 @@ public class ChecklistTemplateService {
         final ChecklistTemplate template = new ChecklistTemplate();
 
         template.setKind(newTemplate.kind());
-        if (newTemplate.kind() == ChecklistKind.PHASE) {
-            if (newTemplate.phase() == null) {
-                throw new BadRequestException("error.template.phase.required");
+        if (newTemplate.kind() == ChecklistKind.CHAPTER) {
+            final String chapterKey = newTemplate.chapterKey();
+
+            if (chapterKey == null) {
+                throw new BadRequestException("error.template.chapter.required");
             }
-            if (templateRepository.findByPhaseAndRetiredAtIsNull(newTemplate.phase()).isPresent()) {
-                throw new ConflictException("error.template.phase.exists", newTemplate.phase());
+            if (latest().flatMap(view -> view.chapter(chapterKey)).isEmpty()) {
+                throw new BadRequestException("error.template.chapter.unknown");
             }
-            template.setPhase(newTemplate.phase());
+            if (templateRepository.findByChapterKeyAndRetiredAtIsNull(chapterKey).isPresent()) {
+                throw new ConflictException("error.template.chapter.exists");
+            }
+            template.setChapterKey(chapterKey);
         } else {
             setName(template, newTemplate.name());
         }
@@ -379,8 +434,8 @@ public class ChecklistTemplateService {
     }
 
     private static @Nullable RelativeDeadline validDeadline(final ChecklistTemplate template, final @Nullable RelativeDeadline deadline) {
-        if (deadline != null && template.getKind() == ChecklistKind.PHASE) {
-            throw new BadRequestException("error.template.phaseDeadline");
+        if (deadline != null && template.getKind() == ChecklistKind.CHAPTER) {
+            throw new BadRequestException("error.template.chapterDeadline");
         }
         return deadline;
     }

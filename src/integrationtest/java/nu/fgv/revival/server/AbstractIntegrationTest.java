@@ -23,7 +23,6 @@ import com.icegreen.greenmail.util.ServerSetup;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import jakarta.ws.rs.core.Response;
-import nu.fgv.revival.server.guide.GuideDocxFixtures;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.keycloak.admin.client.Keycloak;
@@ -39,8 +38,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cache.CacheManager;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
 import org.springframework.http.HttpHeaders;
@@ -241,7 +238,7 @@ public abstract class AbstractIntegrationTest {
                 "log_entry", "log_import", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
                 "checklist_item", "checklist", "checklist_template_item", "checklist_template", "guide_suggestion", "revival_member_capability", "revival_member", "revival_status_change",
                 "revival_guide_version_change", "revival_show_date", "revival_venue", "revival",
-                "guide_import_report", "guide_item", "guide_section", "guide_chapter", "guide_version")) {
+                "guide_item", "guide_section", "guide_chapter", "guide_version")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
@@ -469,43 +466,165 @@ public abstract class AbstractIntegrationTest {
 
     // --- Guide ------------------------------------------------------------------------------------------------------
 
-    /**
-     * Uploads a Word document to {@code POST /api/guide/import} as the user.
-     */
-    protected RestTestClient.ResponseSpec importGuide(final String user, final byte[] document, final String fileName) {
-        return importGuide(user, document, fileName, "en");
+    private record SeedItem(String type, String text) {
     }
 
-    protected RestTestClient.ResponseSpec importGuide(final String user, final byte[] document, final String fileName, final String language) {
-        final MultipartBodyBuilder body = new MultipartBodyBuilder();
+    private record SeedSection(String title, List<SeedItem> items) {
+    }
 
-        body.part("file", new ByteArrayResource(document) {
-            @Override
-            public String getFilename() {
-                return fileName;
+    private record SeedChapter(String key, String title, List<SeedItem> items, List<SeedSection> sections) {
+    }
+
+    private static SeedItem tip(final String text) {
+        return new SeedItem("TIP", text);
+    }
+
+    private static SeedItem requirement(final String text) {
+        return new SeedItem("REQUIREMENT", text);
+    }
+
+    private static SeedItem text(final String text) {
+        return new SeedItem("TEXT", text);
+    }
+
+    /**
+     * Ten fictitious chapters with keys A–J in v5's layout: an introduction, items before the first section, and four
+     * sections (B ×2, D ×1, J ×1) with 6 TIP, 3 REQUIREMENT, 1 QUESTION and 11 TEXT items. Only Swedish text.
+     */
+    private static final List<SeedChapter> V5_LAYOUT = List.of(
+            new SeedChapter("A", "Först: godkännande och tajmning", List.of(
+                    text("Innan något annat görs behöver ni klartecken från JK och FGV."),
+                    tip("Kontakt sker via respektive förenings ordförande."),
+                    tip("Förankra idén **brett** och *tidigt*, se [fgv.nu](https://fgv.example.org)."),
+                    requirement("Nyuppsättningen ska godkännas av JK och FGV innan arbetet startar.")), List.of()),
+            new SeedChapter("B", "Boka lokaler och lägg fast er tidslinje", List.of(), List.of(
+                    new SeedSection("Kalaslokal", List.of(
+                            text("Om kalaset"),
+                            text("250 personer är ett stort kalas."),
+                            text("Ha en plan för vem som ska få gå."),
+                            tip("Kontrollera sprittillstånd i vald lokal.\n\n- Gäller även internkalas."))),
+                    new SeedSection("Tidslinjen", List.of(
+                            text("Exempel på tidplan för nyuppsättning"),
+                            new SeedItem("QUESTION", "Vilka datum har sittande spex?"))))),
+            new SeedChapter("C", "Sätt budgeten", List.of(
+                    tip("Sätt av en buffert för oväntade kostnader."),
+                    requirement("Budget ska upprättas innan ni drar kostnader.")), List.of()),
+            new SeedChapter("D", "Bygg organisationen", List.of(), List.of(
+                    new SeedSection("Andra direktionsmötet", List.of(
+                            text("Checklista för mötet"),
+                            text("Organisation: roller och ansvar."),
+                            tip("Starta en gemensam Drive."))))),
+            new SeedChapter("E", "Ordna tillgångar inför repetitionerna", List.of(tip("Undersök accesser i god tid.")), List.of()),
+            new SeedChapter("F", "Repetitioner", List.of(text("Dokumentera processen löpande, både för minnen och för lärdomar.")), List.of()),
+            new SeedChapter("G", "Marknadsföring och biljetter", List.of(text("Starta marknadsföringen tidigt och var kreativa.")), List.of()),
+            new SeedChapter("H", "Föreställnings- och kalashelgen", List.of(text("Kalaset är en lika stor apparat som föreställningen.")), List.of()),
+            new SeedChapter("I", "Eventuell turné (frivilligt)", List.of(text("Frågan om turné dyker ofta upp under kalaset.")), List.of()),
+            new SeedChapter("J", "Stänga nyuppsättningen", List.of(), List.of(
+                    new SeedSection("Ekonomi", List.of(requirement("Ett eventuellt lån ska återbetalas."))))));
+
+    /**
+     * Writes the fictitious v5-layout guide as the draft, straight to the database, and returns the draft's id. Chapter
+     * keys are A–J; section and item keys are new UUIDs.
+     */
+    protected long draftV5Layout() {
+        final java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        final long versionId = insert(jdbcClient.sql("""
+                        INSERT INTO guide_version (status, intro_sv, created_by, created_at, version)
+                        VALUES ('DRAFT', :intro, 'test', :now, 0)
+                        """)
+                .param("intro", "Kontinuitetsguide: Nyuppsättning av ett Chalmersspex\n\nNi funderar alltså över nyuppsättning av ert gamla spex? Grattis\\!")
+                .param("now", now));
+
+        for (int chapterPosition = 0; chapterPosition < V5_LAYOUT.size(); chapterPosition++) {
+            final SeedChapter chapter = V5_LAYOUT.get(chapterPosition);
+            final long chapterId = insert(jdbcClient.sql("""
+                            INSERT INTO guide_chapter (version_id, `key`, position, title_sv, created_by, created_at, version)
+                            VALUES (:versionId, :key, :position, :title, 'test', :now, 0)
+                            """)
+                    .param("versionId", versionId)
+                    .param("key", chapter.key())
+                    .param("position", chapterPosition)
+                    .param("title", chapter.title())
+                    .param("now", now));
+
+            insertSeedItems(versionId, chapterId, null, chapter.items(), now);
+            for (int sectionPosition = 0; sectionPosition < chapter.sections().size(); sectionPosition++) {
+                final SeedSection section = chapter.sections().get(sectionPosition);
+                final long sectionId = insert(jdbcClient.sql("""
+                                INSERT INTO guide_section (version_id, chapter_id, `key`, position, title_sv, created_by, created_at, version)
+                                VALUES (:versionId, :chapterId, :key, :position, :title, 'test', :now, 0)
+                                """)
+                        .param("versionId", versionId)
+                        .param("chapterId", chapterId)
+                        .param("key", java.util.UUID.randomUUID().toString())
+                        .param("position", sectionPosition)
+                        .param("title", section.title())
+                        .param("now", now));
+
+                insertSeedItems(versionId, chapterId, sectionId, section.items(), now);
             }
-        }).contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
-        return restTestClient()
-                .post()
-                .uri("/api/guide/import")
-                .header(HttpHeaders.AUTHORIZATION, token(user))
-                .header(HttpHeaders.ACCEPT_LANGUAGE, language)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(body.build())
-                .exchange();
+        }
+        audit(versionId);
+        return versionId;
     }
 
     /**
-     * Imports the fictitious v5-layout document as super admin and returns the draft's id.
+     * Audit rows for the seeded version, as if it had been created in one revision: Envers needs a row to end when the
+     * version is later published or edited.
      */
-    protected long importV5Layout() {
-        final JsonNode result = objectMapper.readTree(Objects.requireNonNull(importGuide(SUPER_ADMIN, GuideDocxFixtures.v5Layout().bytes(), "guide.docx")
-                .expectStatus().isCreated()
-                .expectBody(byte[].class)
-                .returnResult()
-                .getResponseBody()));
+    private void audit(final long versionId) {
+        final long rev = insert(jdbcClient.sql("""
+                        INSERT INTO revinfo (modified_at, modified_by, source, operation) VALUES (:at, 'test', 'SYSTEM', 'testSeed')
+                        """)
+                .param("at", System.currentTimeMillis()));
 
-        return result.get("draftId").asLong();
+        for (final String sql : List.of(
+                """
+                        INSERT INTO guide_version_audit (id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
+                        SELECT id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
+                        WHERE id = :versionId
+                        """,
+                """
+                        INSERT INTO guide_chapter_audit (id, version_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_chapter WHERE version_id = :versionId
+                        """,
+                """
+                        INSERT INTO guide_section_audit (id, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, chapter_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_section WHERE version_id = :versionId
+                        """,
+                """
+                        INSERT INTO guide_item_audit (id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, rev, revtype)
+                        SELECT id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
+                        WHERE version_id = :versionId
+                        """)) {
+            jdbcClient.sql(sql).param("rev", rev).param("versionId", versionId).update();
+        }
+    }
+
+    private void insertSeedItems(final long versionId, final long chapterId, final @Nullable Long sectionId, final List<SeedItem> items,
+                                 final java.time.LocalDateTime now) {
+        for (int position = 0; position < items.size(); position++) {
+            jdbcClient.sql("""
+                            INSERT INTO guide_item (version_id, chapter_id, section_id, `key`, position, type, text_sv, created_by, created_at, version)
+                            VALUES (:versionId, :chapterId, :sectionId, :key, :position, :type, :text, 'test', :now, 0)
+                            """)
+                    .param("versionId", versionId)
+                    .param("chapterId", chapterId)
+                    .param("sectionId", sectionId)
+                    .param("key", java.util.UUID.randomUUID().toString())
+                    .param("position", position)
+                    .param("type", items.get(position).type())
+                    .param("text", items.get(position).text())
+                    .param("now", now)
+                    .update();
+        }
+    }
+
+    private static long insert(final JdbcClient.StatementSpec statement) {
+        final org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+
+        statement.update(keyHolder);
+        return Objects.requireNonNull(keyHolder.getKey()).longValue();
     }
 
     protected long guideVersion(final long versionId) {
@@ -524,10 +643,10 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
-     * Imports and publishes the v5-layout document as "v1", and returns the version's id.
+     * Writes and publishes the v5-layout guide as "v1", and returns the version's id.
      */
     protected long publishedGuide() {
-        final long id = importV5Layout();
+        final long id = draftV5Layout();
 
         publishGuide(id, "v1");
         return id;

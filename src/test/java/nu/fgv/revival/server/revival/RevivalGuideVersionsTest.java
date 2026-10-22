@@ -22,12 +22,15 @@ import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.guide.GuideVersionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
+import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,11 +65,35 @@ class RevivalGuideVersionsTest {
         return revival;
     }
 
+    private void labelled(final long id, final String label) {
+        final GuideVersion version = new GuideVersion();
+
+        version.setId(id);
+        version.setLabel(label);
+        when(versionRepository.findById(id)).thenReturn(Optional.of(version));
+    }
+
     @Test
     void aChangePublishesFromAndTo() {
+        labelled(5L, "v5");
+        labelled(6L, "v6");
+
         guideVersions().change(revival(1L, 5L), 6L, TestCallers.directeur());
 
         verify(events).publishEvent(new RevivalGuideVersionPinned(1L, 5L, 6L));
+    }
+
+    @Test
+    void aChangeKeepsTheLabelsSoItStillReadsOnceAVersionIsDeleted() {
+        labelled(5L, "v5");
+        labelled(6L, "v6");
+        final ArgumentCaptor<RevivalGuideVersionChange> change = ArgumentCaptor.forClass(RevivalGuideVersionChange.class);
+
+        guideVersions().change(revival(1L, 5L), 6L, TestCallers.directeur());
+
+        verify(changeRepository).save(change.capture());
+        assertThat(change.getValue().getFromLabel()).isEqualTo("v5");
+        assertThat(change.getValue().getToLabel()).isEqualTo("v6");
     }
 
     @Test
@@ -74,6 +101,7 @@ class RevivalGuideVersionsTest {
         final GuideVersion version = new GuideVersion();
 
         version.setId(5L);
+        labelled(5L, "v1");
         when(revivalRepository.findByGuideVersionIdIsNull()).thenReturn(List.of(revival(1L, null), revival(2L, null)));
 
         guideVersions().pinUnpinned(version, TestCallers.superAdmin());

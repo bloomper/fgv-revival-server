@@ -19,7 +19,7 @@ package nu.fgv.revival.server.revival;
 
 /**
  * A revival was created. Published in the creating transaction, before it is pinned to a guide version, so listeners
- * can set up its log counter and phase checklists (M3 research R10).
+ * can set up its log counter and chapter checklists (M3 research R10).
  *
  * @author Anders Jacobsson
  * @since 0.3

@@ -51,13 +51,27 @@ public final class GuideChanges {
                          List<ItemChange> items) {
     }
 
-    public record ChapterChange(Phase phase, List<String> renamed, GuideVersionView.Text before, GuideVersionView.Text after) {
+    /**
+     * A chapter as it is in one of the versions.
+     */
+    public record ChapterRef(String key, GuideVersionView.Text title) {
+    }
+
+    /**
+     * {@code moved}: the chapter is in a different place among the chapters both versions have.
+     */
+    public record ChapterChange(String key,
+                                Kind kind,
+                                List<String> renamed,
+                                boolean moved,
+                                GuideVersionView.@Nullable Text before,
+                                GuideVersionView.@Nullable Text after) {
     }
 
     public record SectionChange(String key,
                                 Kind kind,
-                                @Nullable Phase phaseBefore,
-                                @Nullable Phase phaseAfter,
+                                @Nullable ChapterRef chapterBefore,
+                                @Nullable ChapterRef chapterAfter,
                                 List<String> renamed,
                                 boolean moved,
                                 boolean reordered,
@@ -74,7 +88,7 @@ public final class GuideChanges {
                              @Nullable ItemSnapshot after) {
     }
 
-    public record ItemSnapshot(Phase phase,
+    public record ItemSnapshot(ChapterRef chapter,
                                @Nullable String sectionKey,
                                GuideVersionView.@Nullable Text sectionTitle,
                                GuideItemType type,
@@ -104,18 +118,44 @@ public final class GuideChanges {
     }
 
     private static List<ChapterChange> chapters(final GuideVersionView from, final GuideVersionView to) {
+        final Map<String, GuideVersionView.Chapter> before = chaptersByKey(from);
+        final Map<String, GuideVersionView.Chapter> after = chaptersByKey(to);
+        final List<String> sharedBefore = before.keySet().stream().filter(after::containsKey).toList();
+        final List<String> sharedAfter = after.keySet().stream().filter(before::containsKey).toList();
         final List<ChapterChange> changes = new ArrayList<>();
 
-        for (final Phase phase : Phase.values()) {
-            final GuideVersionView.Text before = from.chapter(phase).title();
-            final GuideVersionView.Text after = to.chapter(phase).title();
-            final List<String> renamed = languagesChanged(before, after);
+        for (final GuideVersionView.Chapter chapter : after.values()) {
+            final GuideVersionView.Chapter old = before.get(chapter.key());
 
-            if (!renamed.isEmpty()) {
-                changes.add(new ChapterChange(phase, renamed, before, after));
+            if (old == null) {
+                changes.add(new ChapterChange(chapter.key(), Kind.ADDED, List.of(), false, null, chapter.title()));
+                continue;
+            }
+
+            final List<String> renamed = languagesChanged(old.title(), chapter.title());
+            final boolean moved = sharedBefore.indexOf(chapter.key()) != sharedAfter.indexOf(chapter.key());
+
+            if (!renamed.isEmpty() || moved) {
+                changes.add(new ChapterChange(chapter.key(), Kind.CHANGED, renamed, moved, old.title(), chapter.title()));
+            }
+        }
+        for (final GuideVersionView.Chapter old : before.values()) {
+            if (!after.containsKey(old.key())) {
+                changes.add(new ChapterChange(old.key(), Kind.REMOVED, List.of(), false, old.title(), null));
             }
         }
         return changes;
+    }
+
+    private static Map<String, GuideVersionView.Chapter> chaptersByKey(final GuideVersionView version) {
+        final Map<String, GuideVersionView.Chapter> chapters = new LinkedHashMap<>();
+
+        version.chapters().forEach(chapter -> chapters.put(chapter.key(), chapter));
+        return chapters;
+    }
+
+    private static ChapterRef ref(final GuideVersionView.Chapter chapter) {
+        return new ChapterRef(chapter.key(), chapter.title());
     }
 
     private static Map<String, GuideVersionView.Section> sectionsByKey(final GuideVersionView version) {
@@ -128,27 +168,32 @@ public final class GuideChanges {
     private static List<SectionChange> sections(final GuideVersionView from, final GuideVersionView to) {
         final Map<String, GuideVersionView.Section> before = sectionsByKey(from);
         final Map<String, GuideVersionView.Section> after = sectionsByKey(to);
+        final Map<String, GuideVersionView.Chapter> chaptersBefore = chaptersByKey(from);
+        final Map<String, GuideVersionView.Chapter> chaptersAfter = chaptersByKey(to);
         final List<SectionChange> changes = new ArrayList<>();
 
         for (final GuideVersionView.Section section : after.values()) {
             final GuideVersionView.Section old = before.get(section.key());
 
             if (old == null) {
-                changes.add(new SectionChange(section.key(), Kind.ADDED, null, section.phase(), List.of(), false, false, null, section.title()));
+                changes.add(new SectionChange(section.key(), Kind.ADDED, null, ref(chaptersAfter.get(section.chapterKey())), List.of(), false, false,
+                        null, section.title()));
                 continue;
             }
 
             final List<String> renamed = languagesChanged(old.title(), section.title());
-            final boolean moved = old.phase() != section.phase();
+            final boolean moved = !old.chapterKey().equals(section.chapterKey());
             final boolean reordered = reordered(old.items(), section.items());
 
             if (!renamed.isEmpty() || moved || reordered) {
-                changes.add(new SectionChange(section.key(), Kind.CHANGED, old.phase(), section.phase(), renamed, moved, reordered, old.title(), section.title()));
+                changes.add(new SectionChange(section.key(), Kind.CHANGED, ref(chaptersBefore.get(old.chapterKey())),
+                        ref(chaptersAfter.get(section.chapterKey())), renamed, moved, reordered, old.title(), section.title()));
             }
         }
         for (final GuideVersionView.Section old : before.values()) {
             if (!after.containsKey(old.key())) {
-                changes.add(new SectionChange(old.key(), Kind.REMOVED, old.phase(), null, List.of(), false, false, old.title(), null));
+                changes.add(new SectionChange(old.key(), Kind.REMOVED, ref(chaptersBefore.get(old.chapterKey())), null, List.of(), false, false,
+                        old.title(), null));
             }
         }
         return changes;
@@ -182,7 +227,7 @@ public final class GuideChanges {
 
             final List<String> reworded = languagesChanged(old.text(), current.text());
             final boolean retyped = old.type() != current.type();
-            final boolean moved = old.phase() != current.phase() || !Objects.equals(old.sectionKey(), current.sectionKey());
+            final boolean moved = !old.chapter().key().equals(current.chapter().key()) || !Objects.equals(old.sectionKey(), current.sectionKey());
 
             if (!reworded.isEmpty() || retyped || moved) {
                 changes.add(new ItemChange(entry.getKey(), Kind.CHANGED, reworded, retyped, moved, old, current));
@@ -200,9 +245,9 @@ public final class GuideChanges {
         final Map<String, ItemSnapshot> snapshots = new LinkedHashMap<>();
 
         for (final GuideVersionView.Chapter chapter : version.chapters()) {
-            chapter.items().forEach(item -> snapshots.put(item.key(), new ItemSnapshot(chapter.phase(), null, null, item.type(), item.text())));
+            chapter.items().forEach(item -> snapshots.put(item.key(), new ItemSnapshot(ref(chapter), null, null, item.type(), item.text())));
             chapter.sections().forEach(section -> section.items().forEach(item ->
-                    snapshots.put(item.key(), new ItemSnapshot(chapter.phase(), section.key(), section.title(), item.type(), item.text()))));
+                    snapshots.put(item.key(), new ItemSnapshot(ref(chapter), section.key(), section.title(), item.type(), item.text()))));
         }
         return snapshots;
     }
