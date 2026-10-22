@@ -3,38 +3,53 @@ name: fgv-revival-server
 services:
   revival-mysql:
     image: 'mysql:8.4'
+    command: --log-error=/var/log/mysql/error.log
     environment:
-      MYSQL_DATABASE: fgvrevival
-      MYSQL_USER: fgvrevival
-      MYSQL_PASSWORD: fgvrevival
-      MYSQL_ROOT_PASSWORD: fgvrevival
+      MYSQL_HOST: localhost
+      MYSQL_DATABASE: ${FGV_REVIVAL_MYSQL_DATABASE}
+      MYSQL_ROOT_USER: ${FGV_REVIVAL_MYSQL_ROOT_USER}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/FGV_REVIVAL_MYSQL_ROOT_PASSWORD
+      MYSQL_USER: ${FGV_REVIVAL_MYSQL_USER}
+      MYSQL_PASSWORD_FILE: /run/secrets/FGV_REVIVAL_MYSQL_USER_PASSWORD
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-    ports:
-      - "3307:3306"
+    labels:
+      org.springframework.boot.ignore: true
+    #ports:
+    #  - "3307:3306"
     volumes:
-      - mysql_db_data:/var/lib/mysql
+      - fgv_revival_mysql_data:/var/lib/mysql
+      - fgv_revival_mysql_log:/var/log/mysql
+    secrets:
+      - FGV_REVIVAL_MYSQL_ROOT_PASSWORD
+      - FGV_REVIVAL_MYSQL_USER_PASSWORD
 
   revival-api:
     image: 'bloomper/fgv-revival-server:develop'
-    profiles: [ api ]
+    #platform: linux/arm64
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://revival-mysql/fgvrevival
-      SPRING_DATASOURCE_USERNAME: fgvrevival
-      SPRING_DATASOURCE_PASSWORD: fgvrevival
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak-server:8080/auth/realms/fgv/protocol/openid-connect/certs
-      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_FGV_TOKEN_URI: http://keycloak-server:8080/auth/realms/fgv/protocol/openid-connect/token
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:mysql://revival-mysql/${FGV_REVIVAL_MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${FGV_REVIVAL_MYSQL_USER}
+      SERVER_PORT: 8080
+      MANAGEMENT_SERVER_PORT: 9000
       LOGGING_FILE_PATH: /data/log_data
-      FGV_REVIVAL_BASE_URL: http://localhost:8081
-      FGV_REVIVAL_SPEXREGISTER_GRAPHQL_URL: http://spexregister-api:8080/api/graphql
-      FGV_REVIVAL_KEYCLOAK_ADMIN_URL: http://keycloak-server:8080/auth
-      FGV_REVIVAL_IMPORT_SAMPLE_DATA: ${FGV_REVIVAL_IMPORT_SAMPLE_DATA:-false}
-      SPRING_MAIL_HOST: revival-mailpit
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+      API_BASE_URL: https://api.revival.fgv.local.nu:8443/api
+      API_KEYCLOAK_URL: http://keycloak-server:8080/auth
+      API_KEYCLOAK_REALM: ${API_KEYCLOAK_REALM}
+      API_KEYCLOAK_ADMIN_CLIENT_ID: ${API_KEYCLOAK_ADMIN_CLIENT_ID}
+      API_SPEXREGISTER_GRAPHQL_URL: http://spexregister-api:8080/api/graphql
+      API_IMPORT_SAMPLE_DATA: ${API_IMPORT_SAMPLE_DATA:-false}
+      SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: 1025
+      MAIL_FROM: noreply@fgv.local.nu
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak-server:8080/auth/realms/fgv/protocol/openid-connect/certs
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: https://auth.fgv.local.nu:8443/auth/realms/fgv
     restart: on-failure
     healthcheck:
       test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000;printf \"GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3;grep -q \"^HTTP/1.1 200\" <&3" ]
@@ -45,25 +60,36 @@ services:
     depends_on:
       revival-mysql:
         condition: service_healthy
-    ports:
-      - "8081:8080"
     volumes:
-      - ./.docker/revival-api/log_data:/data/log_data
+      - fgv_revival_api_log:/data/log_data
     networks:
       - default
       - fgv
     secrets:
-      - KEYCLOAK_SERVICE_CLIENT_SECRET
-      - KEYCLOAK_ADMIN_CLIENT_SECRET
-
-  revival-mailpit:
-    image: 'axllent/mailpit:v1.31.4'
-    ports:
-      - "1025:1025"
-      - "8025:8025"
+      - source: FGV_REVIVAL_MYSQL_USER_PASSWORD
+        target: MYSQL_API_USER_PASSWORD
+      - API_KEYCLOAK_ADMIN_CLIENT_SECRET
+      - API_KEYCLOAK_SERVICE_CLIENT_SECRET
 
 volumes:
-  mysql_db_data:
+  fgv_revival_mysql_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: .docker/fgv-revival-mysql/data
+      o: bind
+  fgv_revival_mysql_log:
+    driver: local
+    driver_opts:
+      type: none
+      device: .docker/fgv-revival-mysql/log
+      o: bind
+  fgv_revival_api_log:
+    driver: local
+    driver_opts:
+      type: none
+      device: .docker/fgv-revival-api/log_data
+      o: bind
 
 networks:
   fgv:
@@ -71,7 +97,11 @@ networks:
     external: true
 
 secrets:
-  KEYCLOAK_SERVICE_CLIENT_SECRET:
-    file: .docker/secrets/KEYCLOAK_SERVICE_CLIENT_SECRET
-  KEYCLOAK_ADMIN_CLIENT_SECRET:
-    file: .docker/secrets/KEYCLOAK_ADMIN_CLIENT_SECRET
+  FGV_REVIVAL_MYSQL_ROOT_PASSWORD:
+    file: .docker/secrets/FGV_REVIVAL_MYSQL_ROOT_PASSWORD
+  FGV_REVIVAL_MYSQL_USER_PASSWORD:
+    file: .docker/secrets/FGV_REVIVAL_MYSQL_USER_PASSWORD
+  API_KEYCLOAK_ADMIN_CLIENT_SECRET:
+    file: .docker/secrets/API_KEYCLOAK_ADMIN_CLIENT_SECRET
+  API_KEYCLOAK_SERVICE_CLIENT_SECRET:
+    file: .docker/secrets/API_KEYCLOAK_SERVICE_CLIENT_SECRET

@@ -2,7 +2,7 @@ spring:
   config:
     import: "optional:configtree:/run/secrets/"
   datasource:
-    password: ${MYSQL_USER_PASSWORD:}
+    password: ${MYSQL_API_USER_PASSWORD:}
   mail:
     password: ${SMTP_PASSWORD:}
   jpa:
@@ -35,7 +35,7 @@ spring:
           fgv-revival-service:
             provider: fgv
             client-id: fgv-revival-service
-            client-secret: ${KEYCLOAK_SERVICE_CLIENT_SECRET:}
+            client-secret: ${API_KEYCLOAK_SERVICE_CLIENT_SECRET:}
             authorization-grant-type: client_credentials
         provider:
           fgv:
@@ -90,7 +90,6 @@ server:
   port: 8080
   forward-headers-strategy: framework
   tomcat:
-    # Reads a guide upload over the 10 MB limit to the end, so the client gets a 413 instead of a reset
     max-swallow-size: 12MB
 
 logging:
@@ -98,26 +97,26 @@ logging:
     path: ./data/log_data
 
 fgv-revival:
-  base-url: ${FGV_REVIVAL_BASE_URL:http://localhost:8081}
-  web-url: ${FGV_REVIVAL_WEB_URL:http://localhost:3001}
+  base-url: ${API_BASE_URL:https://api.revival.fgv.local.nu:8443}
+  web-url: ${API_WEB_URL:http://localhost:3001}
   time-zone: Europe/Stockholm
   mail:
     from: ${MAIL_FROM:noreply@localhost}
   keycloak:
-    url: ${FGV_REVIVAL_KEYCLOAK_URL:https://auth.fgv.local.nu:8443/auth}
-    realm: ${FGV_REVIVAL_KEYCLOAK_REALM:fgv}
+    url: ${API_KEYCLOAK_URL:https://auth.fgv.local.nu:8443/auth}
+    realm: ${API_KEYCLOAK_REALM:fgv}
     admin:
-      url: ${FGV_REVIVAL_KEYCLOAK_ADMIN_URL:${fgv-revival.keycloak.url}}
-      client-id: fgv-admin
-      client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+      url: ${fgv-revival.keycloak.url}
+      client-id: ${API_KEYCLOAK_ADMIN_CLIENT_ID:fgv-admin}
+      client-secret: ${API_KEYCLOAK_ADMIN_CLIENT_SECRET:}
   security:
     authorized-parties: ${FGV_REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
   mcp:
-    authorized-parties: ${FGV_REVIVAL_MCP_AUTHORIZED_PARTIES:fgv-revival-mcp}
+    authorized-parties: ${API_KEYCLOAK_MCP_CLIENT_ID:fgv-revival-mcp}
   spexregister:
-    graphql-url: ${FGV_REVIVAL_SPEXREGISTER_GRAPHQL_URL:https://api.register.fgv.local.nu:8443/api/graphql}
+    graphql-url: ${API_SPEXREGISTER_GRAPHQL_URL:https://api.register.fgv.local.nu:8443/api/graphql}
   data:
-    import-sample-data: ${FGV_REVIVAL_IMPORT_SAMPLE_DATA:false}
+    import-sample-data: ${API_IMPORT_SAMPLE_DATA:false}
     sample-user-password: ${SAMPLE_USER_PASSWORD:s3cr3t-s3cr3t}
 
 ---
@@ -125,9 +124,6 @@ spring:
   config:
     activate:
       on-profile: local
-  mail:
-    host: localhost
-    port: 1025
   graphql:
     schema:
       introspection:

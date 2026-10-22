@@ -64,18 +64,29 @@ password is the `SMTP_PASSWORD` secret), from `fgv-revival.mail.from`, with link
    `https://*.fgv.local.nu:8443`). Spexregister's local stack is optional; without it spex show as unavailable.
 2. Make the JVM trust Caddy's local root certificate (`fgv-infra-deploy/local/.docker/caddy/root.crt`), e.g. by
    importing it into the JDK's trust store.
-3. Run the server with the `local` profile. `spring-boot-docker-compose` starts the MySQL in `docker-compose.yaml`:
+3. Put the values in the files under `.docker/secrets`, without a trailing newline, and tell git to leave them alone
+   with `git update-index --skip-worktree .docker/secrets/*`:
+
+   | File                                 | Value                                                          |
+   |--------------------------------------|----------------------------------------------------------------|
+   | `FGV_REVIVAL_MYSQL_ROOT_PASSWORD`    | Password of the database's root user                           |
+   | `FGV_REVIVAL_MYSQL_USER_PASSWORD`    | Password of the database user in `.env`                        |
+   | `API_KEYCLOAK_SERVICE_CLIENT_SECRET` | Secret of `fgv-revival-service` in the realm                   |
+   | `API_KEYCLOAK_ADMIN_CLIENT_SECRET`   | Secret of `fgv-admin`, only needed when importing sample data |
+
+4. Run the server with the `local` profile. `spring-boot-docker-compose` starts `revival-mysql` on port 3307:
 
    ```
-   KEYCLOAK_SERVICE_CLIENT_SECRET=<secret of fgv-revival-service> ./gradlew bootRun --args='--spring.profiles.active=local'
+   MYSQL_API_USER_PASSWORD=<FGV_REVIVAL_MYSQL_USER_PASSWORD> \
+   API_KEYCLOAK_SERVICE_CLIENT_SECRET=<secret of fgv-revival-service> \
+   ./gradlew bootRun --args='--spring.profiles.active=local'
    ```
 
    The API is then on `http://localhost:8081` (`/api/graphql`, `/api/mcp`) and actuator on port 9001.
-   Introspection is on in the `local` profile only. The compose file also starts Mailpit, which catches the minutes:
-   SMTP on port 1025, mail shown on `http://localhost:8025`.
+   Introspection is on in the `local` profile only. Mail for the minutes goes to the local stack's Mailpit, shown on
+   `https://mail.fgv.local.nu:8443`.
 
-To run the image instead of `bootRun`, on the same port 8081, put the secret of `fgv-revival-service` in
-`.docker/secrets/KEYCLOAK_SERVICE_CLIENT_SECRET` and run:
+To run the image instead of `bootRun`:
 
 ```
 ./gradlew jibDockerBuild                  # or use the published bloomper/fgv-revival-server:develop
@@ -83,14 +94,16 @@ docker compose --profile api up -d
 ```
 
 `revival-api` reaches Keycloak and Spexregister by their container names on the `fgv-local` network, so it needs no
-trusted certificate. The profile keeps `bootRun` from starting it. It also needs the file
-`.docker/secrets/KEYCLOAK_ADMIN_CLIENT_SECRET`, which may be empty unless sample data is imported.
+trusted certificate. The profile keeps `bootRun` from starting it. Either way, Caddy serves the API on
+`https://api.revival.fgv.local.nu:8443`, the container when it runs and otherwise port 8081 on the host. MCP tokens
+are issued for `https://api.revival.fgv.local.nu:8443/api/mcp`, `FGV_REVIVAL_MCP_URL` in fgv-infra-deploy's
+`local/.env`.
 
 ## Sample data
 
-With `FGV_REVIVAL_IMPORT_SAMPLE_DATA=true`, all data is replaced with sample revivals at every start. The import needs
-the secret of `fgv-admin` in `KEYCLOAK_ADMIN_CLIENT_SECRET` (for `bootRun`) or in
-`.docker/secrets/KEYCLOAK_ADMIN_CLIENT_SECRET` (for `revival-api`).
+With `API_IMPORT_SAMPLE_DATA=true`, all data is replaced with sample revivals at every start. The import needs
+the secret of `fgv-admin` in `API_KEYCLOAK_ADMIN_CLIENT_SECRET` (for `bootRun`) or in
+`.docker/secrets/API_KEYCLOAK_ADMIN_CLIENT_SECRET` (for `revival-api`).
 
 The sample data is built on Spexregister's, so Spexregister must run with `API_IMPORT_SAMPLE_DATA=true`:
 
