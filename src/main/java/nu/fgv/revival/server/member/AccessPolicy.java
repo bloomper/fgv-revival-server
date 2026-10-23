@@ -291,6 +291,13 @@ public class AccessPolicy {
         return caller.isSuperAdmin();
     }
 
+    /**
+     * The lists the super admin keeps: areas of responsibility and guide item types.
+     */
+    public boolean canManageCatalogs(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
     public RevivalPermissionsDto permissions(final Caller caller, final Revival revival) {
         return permissions(caller, revival, List.of());
     }
@@ -396,6 +403,10 @@ public class AccessPolicy {
 
     public void requireManageChecklistTemplates(final Caller caller) {
         require(canManageChecklistTemplates(caller));
+    }
+
+    public void requireManageCatalogs(final Caller caller) {
+        require(canManageCatalogs(caller));
     }
 
     private static void require(final boolean permitted) {

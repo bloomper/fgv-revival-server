@@ -91,7 +91,7 @@ public final class GuideChanges {
     public record ItemSnapshot(ChapterRef chapter,
                                @Nullable String sectionKey,
                                GuideVersionView.@Nullable Text sectionTitle,
-                               GuideItemType type,
+                               String type,
                                GuideVersionView.Text text) {
     }
 
@@ -226,7 +226,7 @@ public final class GuideChanges {
             }
 
             final List<String> reworded = languagesChanged(old.text(), current.text());
-            final boolean retyped = old.type() != current.type();
+            final boolean retyped = !old.type().equals(current.type());
             final boolean moved = !old.chapter().key().equals(current.chapter().key()) || !Objects.equals(old.sectionKey(), current.sectionKey());
 
             if (!reworded.isEmpty() || retyped || moved) {

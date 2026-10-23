@@ -32,7 +32,6 @@ import nu.fgv.revival.server.decisionlog.LogEntryOrigin;
 import nu.fgv.revival.server.decisionlog.LogEntryRepository;
 import nu.fgv.revival.server.decisionlog.LogEntryStatus;
 import nu.fgv.revival.server.decisionlog.LogEntryType;
-import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionKind;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionRepository;
@@ -44,7 +43,6 @@ import nu.fgv.revival.server.meeting.MeetingEntryChangeRepository;
 import nu.fgv.revival.server.meeting.MeetingRepository;
 import nu.fgv.revival.server.meeting.MeetingStatus;
 import nu.fgv.revival.server.meeting.Minutes;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import org.jspecify.annotations.Nullable;
@@ -63,6 +61,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +143,7 @@ public class SampleActivityImporter {
         }
     }
 
-    private record SteeringGroupMember(long personId, Set<Capability> capabilities) {
+    private record SteeringGroupMember(long personId, Set<String> capabilities) {
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -215,15 +214,15 @@ public class SampleActivityImporter {
         return new SampleRevival(id, revival.status(), revival.premiereDate(), revival.guideVersionId(), directeurs.getFirst(), steeringGroup);
     }
 
-    private Set<Capability> capabilities(final long memberId) {
-        final Set<Capability> capabilities = EnumSet.noneOf(Capability.class);
+    private Set<String> capabilities(final long memberId) {
+        final Set<String> capabilities = new HashSet<>();
 
         jdbcClient
                 .sql("SELECT capability FROM revival_member_capability WHERE member_id = ?")
                 .param(memberId)
                 .query(String.class)
                 .list()
-                .forEach(capability -> capabilities.add(Capability.valueOf(capability)));
+                .forEach(capabilities::add);
         return capabilities;
     }
 
@@ -332,7 +331,7 @@ public class SampleActivityImporter {
         }
     }
 
-    private static Owner defaultOwner(final @Nullable Capability capability, final List<SteeringGroupMember> steeringGroup) {
+    private static Owner defaultOwner(final @Nullable String capability, final List<SteeringGroupMember> steeringGroup) {
         if (capability == null) {
             return Owner.none();
         }
@@ -510,7 +509,7 @@ public class SampleActivityImporter {
         final SampleRevival first = revivals.getFirst();
         final SampleRevival last = revivals.getLast();
 
-        final GuideSuggestion accepted = suggestion(first, versions.getFirst(), GuideSuggestionKind.ADD, null, SampleGuide.CHAPTER_F, GuideItemType.TIP,
+        final GuideSuggestion accepted = suggestion(first, versions.getFirst(), GuideSuggestionKind.ADD, null, SampleGuide.CHAPTER_F, SampleGuide.TIP,
                 "Filma genrepet, det är ovärderligt för de som missade en rephelg.", "Flera i ensemblen missade sista rephelgen.");
 
         accepted.setStatus(GuideSuggestionStatus.ACCEPTED);
@@ -526,9 +525,9 @@ public class SampleActivityImporter {
         rejected.setDecidedAt(Instant.now().minus(Duration.ofDays(5)));
         rejected.setDecisionReason("Turnéer förekommer fortfarande, och kapitlet säger redan att de är frivilliga.");
 
-        final GuideSuggestion change = suggestion(first, versions.getLast(), GuideSuggestionKind.CHANGE, "c-buffer", SampleGuide.CHAPTER_C, GuideItemType.TIP,
+        final GuideSuggestion change = suggestion(first, versions.getLast(), GuideSuggestionKind.CHANGE, "c-buffer", SampleGuide.CHAPTER_C, SampleGuide.TIP,
                 "Sätt av minst tio procent av budgeten som buffert.", "Ett konkret belopp är lättare att följa.");
-        final GuideSuggestion add = suggestion(last, versions.getLast(), GuideSuggestionKind.ADD, null, SampleGuide.CHAPTER_G, GuideItemType.TIP,
+        final GuideSuggestion add = suggestion(last, versions.getLast(), GuideSuggestionKind.ADD, null, SampleGuide.CHAPTER_G, SampleGuide.TIP,
                 "Lägg upp evenemanget i sociala medier minst två månader före premiären.", null);
 
         suggestionRepository.saveAll(List.of(accepted, rejected, change, add));
@@ -539,7 +538,7 @@ public class SampleActivityImporter {
                                               final GuideSuggestionKind kind,
                                               final @Nullable String item,
                                               final String chapter,
-                                              final @Nullable GuideItemType type,
+                                              final @Nullable String type,
                                               final @Nullable String text,
                                               final @Nullable String reason) {
         final GuideSuggestion suggestion = new GuideSuggestion();

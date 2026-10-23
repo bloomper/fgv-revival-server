@@ -22,7 +22,7 @@ import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.audit.AuditSource;
 import nu.fgv.revival.server.decisionlog.LogEntryCounters;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
-import nu.fgv.revival.server.guide.GuideItemType;
+import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalCreated;
@@ -122,7 +122,7 @@ public class RevivalGuideSync implements ApplicationRunner {
     private static Map<String, String> questions(final GuideVersionView version) {
         final Map<String, String> questions = new LinkedHashMap<>();
 
-        version.items().filter(item -> item.type() == GuideItemType.QUESTION).forEach(item -> questions.put(item.key(), item.text().plainSv()));
+        version.items().filter(item -> item.kind() == GuideItemKind.QUESTION).forEach(item -> questions.put(item.key(), item.text().plainSv()));
         return questions;
     }
 }

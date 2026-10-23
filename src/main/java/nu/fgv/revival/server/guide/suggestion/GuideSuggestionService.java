@@ -24,7 +24,6 @@ import nu.fgv.revival.server.guide.GuideChapterRepository;
 import nu.fgv.revival.server.guide.GuideDraftService;
 import nu.fgv.revival.server.guide.GuideItem;
 import nu.fgv.revival.server.guide.GuideItemRepository;
-import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideRules;
 import nu.fgv.revival.server.guide.GuideSection;
 import nu.fgv.revival.server.guide.GuideSectionRepository;
@@ -48,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -110,7 +110,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                            @Nullable String itemKey,
                            @Nullable String chapterKey,
                            @Nullable String sectionKey,
-                           @Nullable GuideItemType proposedType,
+                           @Nullable String proposedType,
                            @Nullable String proposedTextSv,
                            @Nullable String proposedTextEn,
                            @Nullable String reason) {
@@ -119,7 +119,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
     /**
      * What the draft gets when its item differs from the suggestion's version (FR-033).
      */
-    public record Resolution(boolean keep, @Nullable GuideItemType type, @Nullable String sv, @Nullable String en) {
+    public record Resolution(boolean keep, @Nullable String type, @Nullable String sv, @Nullable String en) {
     }
 
     private Revival visibleRevival(final Caller caller, final Long revivalId) {
@@ -193,6 +193,9 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 suggestion.setItemKey(item.key());
                 suggestion.setChapterKey(item.chapterKey());
                 if (proposal.kind() == GuideSuggestionKind.CHANGE) {
+                    if (proposal.proposedType() != null) {
+                        draftService.requireItemType(proposal.proposedType(), List.of(item.type()));
+                    }
                     suggestion.setProposedType(proposal.proposedType());
                     suggestion.setProposedTextSv(sv);
                     suggestion.setProposedTextEn(en);
@@ -209,6 +212,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 if (proposal.proposedType() == null) {
                     throw new BadRequestException("error.suggestion.type.required");
                 }
+                draftService.requireItemType(proposal.proposedType(), List.of());
                 if (sv == null && en == null) {
                     throw new BadRequestException("error.guide.text.blank");
                 }
@@ -243,6 +247,9 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         final GuideSuggestion suggestion = suggestion(caller, id);
 
         requireOpen(suggestion, expectedVersion);
+        if (resolution != null && resolution.type() != null) {
+            draftService.requireItemType(resolution.type(), held(suggestion));
+        }
         AuditContext.operation("guideSuggestionAccept");
 
         final Long draftId = versionRepository.findFirstByStatus(GuideVersionStatus.DRAFT).map(GuideVersion::getId).orElseGet(draftService::start);
@@ -255,7 +262,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                         .filter(section -> section.getChapterId().equals(chapter.getId()))
                         .map(GuideSection::getId)
                         .orElse(null);
-                final GuideItemType type = resolution != null && resolution.type() != null ? resolution.type() : Objects.requireNonNull(suggestion.getProposedType());
+                final String type = resolution != null && resolution.type() != null ? resolution.type() : Objects.requireNonNull(suggestion.getProposedType());
                 final String sv = resolution != null && resolution.sv() != null ? resolution.sv()
                         : suggestion.getProposedTextSv() != null ? suggestion.getProposedTextSv() : suggestion.getProposedTextEn();
                 final String en = resolution != null && resolution.sv() != null ? resolution.en() : suggestion.getProposedTextEn();
@@ -272,12 +279,27 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         return toDto(caller, repository.saveAndFlush(suggestion), null);
     }
 
+    /**
+     * The item types a suggestion's resolution may keep although they are retired: the proposed one and the item's.
+     */
+    private List<String> held(final GuideSuggestion suggestion) {
+        final List<String> held = new ArrayList<>();
+
+        if (suggestion.getProposedType() != null) {
+            held.add(suggestion.getProposedType());
+        }
+        if (suggestion.getItemKey() != null) {
+            Objects.requireNonNull(views.find(suggestion.getVersionId())).item(suggestion.getItemKey()).ifPresent(item -> held.add(item.type()));
+        }
+        return held;
+    }
+
     private void applyToItem(final GuideSuggestion suggestion, final Long draftId, final @Nullable Resolution resolution) {
         final GuideVersionView madeOn = Objects.requireNonNull(views.find(suggestion.getVersionId()));
         final GuideVersionView.Item original = madeOn.item(Objects.requireNonNull(suggestion.getItemKey())).orElseThrow();
         final GuideItem current = itemRepository.findByVersionIdAndKey(draftId, suggestion.getItemKey()).orElse(null);
         final boolean changed = current == null
-                || current.getType() != original.type()
+                || !current.getType().equals(original.type())
                 || !Objects.equals(current.getTextSv(), original.text().sv())
                 || !Objects.equals(current.getTextEn(), original.text().en());
 
@@ -291,7 +313,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
             return;
         }
 
-        final GuideItemType type = resolution != null && resolution.type() != null ? resolution.type()
+        final String type = resolution != null && resolution.type() != null ? resolution.type()
                 : suggestion.getProposedType() != null ? suggestion.getProposedType() : original.type();
         final String sv = resolution != null && resolution.sv() != null ? resolution.sv()
                 : suggestion.getProposedTextSv() != null ? suggestion.getProposedTextSv() : current != null ? current.getTextSv() : original.text().sv();

@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -59,6 +60,7 @@ public class GuideDraftService {
     private final AccessPolicy accessPolicy;
     private final List<DraftDiscardListener> discardListeners;
     private final ApplicationEventPublisher events;
+    private final GuideItemTypeService typeService;
 
     public GuideDraftService(final GuideVersionRepository versionRepository,
                              final GuideChapterRepository chapterRepository,
@@ -69,7 +71,8 @@ public class GuideDraftService {
                              final CallerService callerService,
                              final AccessPolicy accessPolicy,
                              @Lazy final List<DraftDiscardListener> discardListeners,
-                             final ApplicationEventPublisher events) {
+                             final ApplicationEventPublisher events,
+                             final GuideItemTypeService typeService) {
         this.versionRepository = versionRepository;
         this.chapterRepository = chapterRepository;
         this.sectionRepository = sectionRepository;
@@ -80,6 +83,7 @@ public class GuideDraftService {
         this.accessPolicy = accessPolicy;
         this.discardListeners = discardListeners;
         this.events = events;
+        this.typeService = typeService;
     }
 
     /**
@@ -481,15 +485,23 @@ public class GuideDraftService {
         return section.getVersionId();
     }
 
+    /**
+     * Refuses an item type that does not exist, or is retired unless {@code held}: what the item or suggestion has now.
+     */
+    public void requireItemType(final String type, final Collection<String> held) {
+        typeService.requireAssignable(List.of(type), held);
+    }
+
     @Transactional
     public Long createItem(final Long chapterId, final @Nullable Long sectionId, final @Nullable Integer position,
-                           final GuideItemType type, final @Nullable String sv, final @Nullable String en) {
+                           final String type, final @Nullable String sv, final @Nullable String en) {
         manager();
 
         final GuideChapter chapter = chapter(chapterId);
 
         draftOf(chapter.getVersionId());
         requirePlace(chapter, sectionId);
+        typeService.requireAssignable(List.of(type), List.of());
         AuditContext.operation("guideItemCreate");
         return addItem(chapter, sectionId, position, type, GuideRules.itemTextSv(sv), GuideRules.itemTextEn(en)).getId();
     }
@@ -499,7 +511,7 @@ public class GuideDraftService {
      * have been checked.
      */
     public GuideItem addItem(final GuideChapter chapter, final @Nullable Long sectionId, final @Nullable Integer position,
-                      final GuideItemType type, final String sv, final @Nullable String en) {
+                      final String type, final String sv, final @Nullable String en) {
         final List<GuideItem> items = itemsIn(chapter.getId(), sectionId);
         final GuideItem item = new GuideItem();
 
@@ -519,13 +531,14 @@ public class GuideDraftService {
     }
 
     @Transactional
-    public Long updateItem(final Long id, final Long expectedVersion, final GuideItemType type, final @Nullable String sv, final @Nullable String en) {
+    public Long updateItem(final Long id, final Long expectedVersion, final String type, final @Nullable String sv, final @Nullable String en) {
         manager();
 
         final GuideItem item = item(id);
 
         draftOf(item.getVersionId());
         requireVersion(item, expectedVersion);
+        typeService.requireAssignable(List.of(type), List.of(item.getType()));
         AuditContext.operation("guideItemUpdate");
         item.setType(type);
         item.setTextSv(GuideRules.itemTextSv(sv));
@@ -590,7 +603,7 @@ public class GuideDraftService {
     /**
      * Changes an item of the draft. No caller check: for accepted suggestions, whose callers have been checked.
      */
-    public void changeItem(final GuideItem item, final GuideItemType type, final @Nullable String sv, final @Nullable String en) {
+    public void changeItem(final GuideItem item, final String type, final @Nullable String sv, final @Nullable String en) {
         requireDraft(version(item.getVersionId()));
         item.setType(type);
         item.setTextSv(GuideRules.itemTextSv(sv));

@@ -20,8 +20,6 @@ package nu.fgv.revival.server.checklist.template;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,7 +28,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.checklist.RelativeDeadline;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
@@ -73,9 +70,8 @@ public class ChecklistTemplateItem extends AbstractAuditable {
     @Column(name = "guide_item_key", length = 36, columnDefinition = "CHAR(36)")
     private @Nullable String guideItemKey;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "default_capability", length = 16)
-    private @Nullable Capability defaultCapability;
+    @Column(name = "default_capability", length = 36)
+    private @Nullable String defaultCapability;
 
     @Embedded
     private @Nullable RelativeDeadline deadline;

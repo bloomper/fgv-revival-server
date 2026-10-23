@@ -36,7 +36,7 @@ import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -84,9 +84,8 @@ public class RevivalMember extends AbstractAuditable {
 
     @ElementCollection
     @CollectionTable(name = "revival_member_capability", joinColumns = @JoinColumn(name = "member_id"))
-    @Enumerated(EnumType.STRING)
-    @Column(name = "capability", nullable = false, length = 16)
-    private Set<Capability> capabilities = EnumSet.noneOf(Capability.class);
+    @Column(name = "capability", nullable = false, length = 36)
+    private Set<String> capabilities = new HashSet<>();
 
     public MemberState getState() {
         return personId == null ? MemberState.WAITING : MemberState.ACTIVE;

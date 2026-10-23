@@ -43,6 +43,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * The guide as a PDF, in Swedish or English (FR-028–FR-030, research R7): a title page, a linked table of contents,
@@ -59,10 +62,12 @@ public class GuidePdfService {
 
     private final GuideMarkdown markdown;
     private final MessageSource messageSource;
+    private final GuideItemTypeRepository typeRepository;
 
-    public GuidePdfService(final GuideMarkdown markdown, final MessageSource messageSource) {
+    public GuidePdfService(final GuideMarkdown markdown, final MessageSource messageSource, final GuideItemTypeRepository typeRepository) {
         this.markdown = markdown;
         this.messageSource = messageSource;
+        this.typeRepository = typeRepository;
     }
 
     public byte[] render(final GuideVersionView version, final Locale locale, final @Nullable String revivalTitle) {
@@ -74,6 +79,8 @@ public class GuidePdfService {
         final Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13);
         final Font typeFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Font.NORMAL, new Color(90, 90, 90));
         final Font noteFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8.5f, Font.NORMAL, new Color(120, 120, 120));
+        final Map<String, GuideItemType> types = typeRepository.findAllByOrderByPositionAscIdAsc().stream()
+                .collect(Collectors.toMap(GuideItemType::getId, Function.identity()));
 
         try (final ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             final Document document = new Document(PageSize.A4, 56, 56, 56, 56);
@@ -145,7 +152,7 @@ public class GuidePdfService {
                 pdfChapter.setNumberDepth(0);
                 pdfChapter.setBookmarkTitle(heading.getContent());
                 for (final GuideVersionView.Item item : chapter.items()) {
-                    addItem(pdfChapter, item, english, body, typeFont, noteFont, locale);
+                    addItem(pdfChapter, item, types.get(item.type()), english, body, typeFont, noteFont, locale);
                 }
                 for (final GuideVersionView.Section section : chapter.sections()) {
                     final Chunk sectionHeading = new Chunk(GuideMarkdown.pdfSafe(text(section.title(), english)), sectionFont);
@@ -159,7 +166,7 @@ public class GuidePdfService {
                     pdfSection.setNumberDepth(0);
                     pdfSection.setBookmarkTitle(sectionHeading.getContent());
                     for (final GuideVersionView.Item item : section.items()) {
-                        addItem(pdfSection, item, english, body, typeFont, noteFont, locale);
+                        addItem(pdfSection, item, types.get(item.type()), english, body, typeFont, noteFont, locale);
                     }
                 }
                 document.add(pdfChapter);
@@ -172,10 +179,11 @@ public class GuidePdfService {
         }
     }
 
-    private void addItem(final Section target, final GuideVersionView.Item item, final boolean english, final PdfFonts body,
-                         final Font typeFont, final Font noteFont, final Locale locale) {
-        if (item.type() != GuideItemType.TEXT) {
-            final Paragraph type = new Paragraph(message("guide.type." + item.type(), locale), typeFont);
+    private void addItem(final Section target, final GuideVersionView.Item item, final @Nullable GuideItemType itemType, final boolean english,
+                         final PdfFonts body, final Font typeFont, final Font noteFont, final Locale locale) {
+        if (item.kind() != GuideItemKind.TEXT && itemType != null) {
+            final String name = english && itemType.getNameEn() != null ? itemType.getNameEn() : itemType.getNameSv();
+            final Paragraph type = new Paragraph(GuideMarkdown.pdfSafe(name), typeFont);
 
             type.setSpacingBefore(6);
             target.add(type);

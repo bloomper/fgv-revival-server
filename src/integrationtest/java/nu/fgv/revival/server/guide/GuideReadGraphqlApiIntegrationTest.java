@@ -30,9 +30,9 @@ import java.util.List;
 class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     static final String VERSIONS = "{ guideVersions { id label } }";
-    static final String LATEST = "{ guideLatestVersion { id status label chapters { key title { sv } items { type } sections { title { sv } } } } }";
+    static final String LATEST = "{ guideLatestVersion { id status label chapters { key title { sv } items { type { id kind } } sections { title { sv } } } } }";
     static final String VERSION = "query($id: ID!) { guideVersion(id: $id) { id status label introduction { sv en } } }";
-    static final String SEARCH = "query($query: String!) { guideSearch(query: $query) { kind chapterKey sectionTitle { sv } itemKey itemType snippet matchedLanguage } }";
+    static final String SEARCH = "query($query: String!) { guideSearch(query: $query) { kind chapterKey sectionTitle { sv } itemKey itemType { id } snippet matchedLanguage } }";
     static final String REVIVAL_GUIDE = "query($id: ID!) { revival(id: $id) { guideVersion { id label } } }";
 
     private long organisingRevivalWithMembers() {
@@ -64,7 +64,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             graphQl(user).document(SEARCH).variable("query", "sprit").execute()
                     .path("guideSearch[0].kind").entity(String.class).isEqualTo("ITEM")
                     .path("guideSearch[0].chapterKey").entity(String.class).isEqualTo("B")
-                    .path("guideSearch[0].itemType").entity(String.class).isEqualTo("TIP")
+                    .path("guideSearch[0].itemType.id").entity(String.class).isEqualTo("TIP")
                     .path("guideSearch[0].sectionTitle.sv").entity(String.class).isEqualTo("Kalaslokal");
         }
     }

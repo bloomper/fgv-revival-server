@@ -18,7 +18,6 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.OwnerDto;
 import nu.fgv.revival.server.member.PersonRefDto;
 import org.jspecify.annotations.Nullable;
@@ -48,6 +47,6 @@ public record ChecklistItemDto(Long id,
                                @Nullable String comment,
                                GuideVersionView.@Nullable Item guideItem,
                                @Nullable String guideItemKey,
-                               @Nullable Capability defaultCapability,
+                               @Nullable String defaultCapability,
                                Long version) {
 }

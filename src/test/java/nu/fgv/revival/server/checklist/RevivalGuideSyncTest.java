@@ -19,7 +19,7 @@ package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.TestClocks;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
-import nu.fgv.revival.server.guide.GuideItemType;
+import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
@@ -108,7 +108,7 @@ class RevivalGuideSyncTest {
     }
 
     private static GuideVersionView.Item requirement(final String key, final String chapter) {
-        return new GuideVersionView.Item(1L, key, chapter, null, GuideItemType.REQUIREMENT, GuideVersionView.Text.plain("Krav " + key, null), 0L);
+        return new GuideVersionView.Item(1L, key, chapter, null, "REQUIREMENT", GuideItemKind.REQUIREMENT, GuideVersionView.Text.plain("Krav " + key, null), 0L);
     }
 
     private static GuideVersionView version(final String label, final GuideVersionView.Item... chapterItems) {

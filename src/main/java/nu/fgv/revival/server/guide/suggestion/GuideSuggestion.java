@@ -27,7 +27,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
@@ -74,9 +73,8 @@ public class GuideSuggestion extends AbstractAuditable {
     @Column(name = "section_key", updatable = false, length = 36, columnDefinition = "CHAR(36)")
     private @Nullable String sectionKey;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "proposed_type", updatable = false, length = 16)
-    private @Nullable GuideItemType proposedType;
+    @Column(name = "proposed_type", updatable = false, length = 36)
+    private @Nullable String proposedType;
 
     @Column(name = "proposed_text_sv", updatable = false, columnDefinition = "TEXT")
     private @Nullable String proposedTextSv;

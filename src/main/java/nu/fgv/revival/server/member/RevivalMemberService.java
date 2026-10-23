@@ -31,7 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,17 +58,20 @@ public class RevivalMemberService {
     private final PersonRepository personRepository;
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
+    private final CapabilityService capabilityService;
 
     public RevivalMemberService(final RevivalMemberRepository repository,
                                 final RevivalRepository revivalRepository,
                                 final PersonRepository personRepository,
                                 final CallerService callerService,
-                                final AccessPolicy accessPolicy) {
+                                final AccessPolicy accessPolicy,
+                                final CapabilityService capabilityService) {
         this.repository = repository;
         this.revivalRepository = revivalRepository;
         this.personRepository = personRepository;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
+        this.capabilityService = capabilityService;
     }
 
     private Revival visibleRevival(final Caller caller, final Long revivalId) {
@@ -121,9 +124,7 @@ public class RevivalMemberService {
         accessPolicy.requireManageMembers(caller, revival, dto.role());
         AuditContext.operation("revivalMemberAdd");
 
-        final Set<Capability> capabilities = dto.capabilities() == null || dto.capabilities().isEmpty()
-                ? EnumSet.noneOf(Capability.class)
-                : EnumSet.copyOf(dto.capabilities());
+        final Set<String> capabilities = dto.capabilities() == null ? Set.of() : Set.copyOf(dto.capabilities());
 
         if (dto.role() == RevivalRole.DIRECTEUR && !capabilities.isEmpty()) {
             throw new BadRequestException("error.member.capabilitiesOnDirecteur");
@@ -140,7 +141,8 @@ public class RevivalMemberService {
 
         member.setRevivalId(revival.getId());
         member.setRole(dto.role());
-        member.setCapabilities(capabilities);
+        capabilityService.requireAssignable(capabilities, Set.of());
+        member.setCapabilities(new HashSet<>(capabilities));
 
         if (matches.size() == 1) {
             final Long personId = matches.getFirst().getId();
@@ -178,6 +180,7 @@ public class RevivalMemberService {
         if (!Objects.equals(dto.version(), member.getVersion())) {
             throw new ConflictException("error.conflict");
         }
+        capabilityService.requireAssignable(dto.capabilities(), member.getCapabilities());
         AuditContext.operation("revivalMemberCapabilitiesSet");
 
         member.getCapabilities().clear();

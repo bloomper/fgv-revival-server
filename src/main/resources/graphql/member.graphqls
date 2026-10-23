@@ -1,3 +1,8 @@
+extend type Query {
+    "Every signed-in caller. Retired areas only with includeRetired."
+    capabilities(includeRetired: Boolean = false): [Capability!]!
+}
+
 extend type Mutation {
     "SUPER_ADMIN adds DIRECTEUR or STEERING_GROUP. Directeur adds STEERING_GROUP (FR-019, FR-019a)."
     revivalMemberAdd(input: RevivalMemberAddInput!): RevivalMember!
@@ -10,6 +15,17 @@ extend type Mutation {
     SUPER_ADMIN: any member. Directeur: STEERING_GROUP members only.
     """
     revivalMemberRemove(id: ID!): Void
+
+    "SUPER_ADMIN, for every capability mutation. Appends a new area of responsibility."
+    capabilityCreate(input: CapabilityCreateInput!): Capability!
+    capabilityUpdate(input: CapabilityUpdateInput!): Capability!
+    "Returns every capability, retired ones too, in the new order."
+    capabilityMove(id: ID!, version: Int!, position: Int!): [Capability!]!
+    "A retired capability is not offered for new use; members and items that hold it keep it."
+    capabilityRetire(id: ID!, version: Int!): Capability!
+    capabilityRestore(id: ID!, version: Int!): Capability!
+    "Refused while anything holds it (inUse): retire it instead."
+    capabilityDelete(id: ID!, version: Int!): Void
 }
 
 enum RevivalRole {
@@ -19,11 +35,29 @@ enum RevivalRole {
     HELPER
 }
 
-enum Capability {
-    FINANCE
-    CATERING
-    STAFFING
-    COMMS
+"""
+An area of responsibility a steering group member can hold (FR-003), from the list SUPER_ADMIN keeps. The four the
+list started with have the ids FINANCE, CATERING, STAFFING and COMMS; new ones get a UUID.
+"""
+type Capability {
+    id: ID!
+    name: LocalizedText!
+    position: Int!
+    retired: Boolean!
+    "A member, checklist item or template item holds it, so it cannot be deleted."
+    inUse: Boolean!
+    version: Int!
+}
+
+input CapabilityCreateInput {
+    "1–100 characters, trimmed; the Swedish name is unique."
+    name: LocalizedTextInput!
+}
+
+input CapabilityUpdateInput {
+    id: ID!
+    version: Int!
+    name: LocalizedTextInput!
 }
 
 enum MemberState {
@@ -47,13 +81,15 @@ input RevivalMemberAddInput {
     revivalId: ID!
     email: Email!
     role: RevivalRole!
-    capabilities: [Capability!] = []
+    "Capability ids, none retired."
+    capabilities: [ID!] = []
 }
 
 input RevivalMemberCapabilitiesInput {
     id: ID!
     version: Int!
-    capabilities: [Capability!]!
+    "Capability ids. A retired one may stay if the member already holds it."
+    capabilities: [ID!]!
 }
 
 "A member of the revival or a free-text name (FR-009). Exactly one of person or name is set."

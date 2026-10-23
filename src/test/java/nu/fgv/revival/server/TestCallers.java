@@ -16,7 +16,6 @@
 
 package nu.fgv.revival.server;
 
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.member.RevivalRoleAssignment;
 import nu.fgv.revival.server.person.Caller;
@@ -67,7 +66,7 @@ public final class TestCallers {
     }
 
     public static Caller steeringGroup() {
-        return new Caller(person(), Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of(Capability.FINANCE))));
+        return new Caller(person(), Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of("FINANCE"))));
     }
 
     public static Caller nobody() {

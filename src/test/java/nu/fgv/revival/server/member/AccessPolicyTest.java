@@ -67,7 +67,7 @@ class AccessPolicyTest {
             case "SUPER_ADMIN" -> globalRoles.add(GlobalRole.SUPER_ADMIN);
             case "OBSERVER" -> globalRoles.add(GlobalRole.OBSERVER);
             case "DIRECTEUR" -> revivalRoles.put(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.DIRECTEUR, Set.of()));
-            case "STEERING_GROUP" -> revivalRoles.put(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of(Capability.FINANCE)));
+            case "STEERING_GROUP" -> revivalRoles.put(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of("FINANCE")));
             case "PARTICIPANT" -> revivalRoles.put(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.PARTICIPANT, Set.of()));
             case "HELPER" -> revivalRoles.put(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.HELPER, Set.of()));
             case "NONE" -> {
@@ -291,8 +291,10 @@ class AccessPolicyTest {
 
         @Test
         void aDirecteurHoldsEveryCapability() {
-            assertThat(new RevivalRoleAssignment(RevivalRole.DIRECTEUR, Set.of()).capabilities())
-                    .containsExactlyInAnyOrder(Capability.values());
+            final RevivalRoleAssignment assignment = new RevivalRoleAssignment(RevivalRole.DIRECTEUR, Set.of("FINANCE"));
+
+            assertThat(assignment.holdsAll()).isTrue();
+            assertThat(assignment.capabilities()).isEmpty();
         }
     }
 }

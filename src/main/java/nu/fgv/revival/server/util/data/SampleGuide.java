@@ -16,7 +16,6 @@
 
 package nu.fgv.revival.server.util.data;
 
-import nu.fgv.revival.server.guide.GuideItemType;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -32,10 +31,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static nu.fgv.revival.server.guide.GuideItemType.QUESTION;
-import static nu.fgv.revival.server.guide.GuideItemType.REQUIREMENT;
-import static nu.fgv.revival.server.guide.GuideItemType.TEXT;
-import static nu.fgv.revival.server.guide.GuideItemType.TIP;
 
 /**
  * A made-up guide in the shape of the real one, published as two versions where the second adds a tip and tightens
@@ -58,6 +53,14 @@ final class SampleGuide {
             Remember that the journey matters as much as the result: the rehearsal weekends and parties are what you \
             will remember.""";
 
+    /**
+     * The guide item types the database starts with (migration V3_8), by id.
+     */
+    static final String TIP = "TIP";
+    static final String REQUIREMENT = "REQUIREMENT";
+    static final String QUESTION = "QUESTION";
+    static final String TEXT = "TEXT";
+
     static final String CHAPTER_A = "chapter-a";
     static final String CHAPTER_B = "chapter-b";
     static final String CHAPTER_C = "chapter-c";
@@ -78,7 +81,7 @@ final class SampleGuide {
     record Version(long id, Instant publishedAt) {
     }
 
-    private record Item(String name, GuideItemType type, String text) {
+    private record Item(String name, String type, String text) {
     }
 
     private record Section(String name, String title, List<Item> items) {
@@ -285,7 +288,7 @@ final class SampleGuide {
                     .param("sectionId", sectionId)
                     .param("key", key(item.name()))
                     .param("position", position)
-                    .param("type", item.type().name())
+                    .param("type", item.type())
                     .param("textSv", item.text())
                     .param("createdBy", createdBy)
                     .param("createdAt", at)

@@ -24,5 +24,5 @@ import java.util.Set;
  * @author Anders Jacobsson
  * @since 0.1
  */
-public record RevivalMemberAddDto(Long revivalId, String email, RevivalRole role, @Nullable Set<Capability> capabilities) {
+public record RevivalMemberAddDto(Long revivalId, String email, RevivalRole role, @Nullable Set<String> capabilities) {
 }

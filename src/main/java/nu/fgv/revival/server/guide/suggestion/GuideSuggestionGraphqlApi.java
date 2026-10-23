@@ -16,7 +16,6 @@
 
 package nu.fgv.revival.server.guide.suggestion;
 
-import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.person.PersonNames;
 import nu.fgv.revival.server.revival.RevivalTitles;
 import org.jspecify.annotations.Nullable;
@@ -49,14 +48,14 @@ public class GuideSuggestionGraphqlApi {
     }
 
     public record GuideSuggestionCreateInput(Long revivalId, Long versionId, GuideSuggestionKind kind, @Nullable String itemKey,
-                                             @Nullable String chapterKey, @Nullable String sectionKey, @Nullable GuideItemType proposedType,
+                                             @Nullable String chapterKey, @Nullable String sectionKey, @Nullable String proposedType,
                                              @Nullable String proposedTextSv, @Nullable String proposedTextEn, @Nullable String reason) {
     }
 
     public record LocalizedTextInput(@Nullable String sv, @Nullable String en) {
     }
 
-    public record GuideSuggestionResolutionInput(@Nullable Boolean keep, @Nullable GuideItemType type, @Nullable LocalizedTextInput text) {
+    public record GuideSuggestionResolutionInput(@Nullable Boolean keep, @Nullable String type, @Nullable LocalizedTextInput text) {
     }
 
     public record GuideSuggestionAcceptInput(Long id, Long version, @Nullable String note, @Nullable GuideSuggestionResolutionInput resolution) {

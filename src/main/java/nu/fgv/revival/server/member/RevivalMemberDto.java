@@ -28,7 +28,7 @@ import java.util.Set;
  */
 public record RevivalMemberDto(Long id,
                                RevivalRole role,
-                               Set<Capability> capabilities,
+                               Set<String> capabilities,
                                MemberState state,
                                @Nullable String displayName,
                                @Nullable String email,

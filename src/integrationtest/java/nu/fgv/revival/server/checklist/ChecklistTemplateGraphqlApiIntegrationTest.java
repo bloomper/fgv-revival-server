@@ -35,12 +35,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private static final String TEMPLATE_FIELDS = "id kind chapterKey chapterTitle { sv } name { sv en } retired version "
-            + "items { id position text { sv en } guideItemKey guideItem { type } defaultCapability deadline { kind amount weekday } version }";
+            + "items { id position text { sv en } guideItemKey guideItem { type { id } } defaultCapability { id } deadline { kind amount weekday } version }";
     private static final String CREATE = "mutation($input: ChecklistTemplateCreateInput!) { checklistTemplateCreate(input: $input) { " + TEMPLATE_FIELDS + " } }";
     private static final String ITEM_CREATE = "mutation($input: ChecklistTemplateItemCreateInput!) { checklistTemplateItemCreate(input: $input) { id position version } }";
     private static final String LIST = "query($all: Boolean) { checklistTemplates(includeRetired: $all) { id kind chapterKey name { sv } retired } }";
     private static final String CHECKLIST_FIELDS = "id kind name date cancelled version template { id name { sv } } templatesAvailable { id } "
-            + "items { id text { sv } deadline deadlineManual defaultCapability owner { person { displayName } } version }";
+            + "items { id text { sv } deadline deadlineManual defaultCapability { id } owner { person { displayName } } version }";
     private static final String EVENT_CREATE = "mutation($input: EventChecklistCreateInput!) { eventChecklistCreate(input: $input) { " + CHECKLIST_FIELDS + " } }";
     private static final String EVENT_UPDATE = "mutation($input: EventChecklistUpdateInput!) { eventChecklistUpdate(input: $input) { " + CHECKLIST_FIELDS + " } }";
     private static final String ADD = "mutation($input: ChecklistAddFromTemplateInput!) { checklistAddFromTemplate(input: $input) { " + CHECKLIST_FIELDS + " } }";
@@ -95,7 +95,7 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
                 .path("checklistTemplate.name.en").entity(String.class).isEqualTo("Rehearsal weekend")
                 .path("checklistTemplate.items[*].position").entityList(Integer.class).containsExactly(0, 1, 2)
                 .path("checklistTemplate.items[1].deadline.weekday").entity(String.class).isEqualTo("MONDAY")
-                .path("checklistTemplate.items[0].defaultCapability").entity(String.class).isEqualTo("FINANCE");
+                .path("checklistTemplate.items[0].defaultCapability.id").entity(String.class).isEqualTo("FINANCE");
         expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("kind", "EVENT"))), "BAD_REQUEST");
         template(Map.of("kind", "CHAPTER", "chapterKey", "C"));
         expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("kind", "CHAPTER", "chapterKey", "C"))), "CONFLICT");
@@ -171,11 +171,11 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
         final long revival = revivalWithTreasurer();
         final long phaseA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival).query(Long.class).single();
 
-        execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { required text { sv } defaultCapability } templatesAvailable { id } } }",
+        execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { required text { sv } defaultCapability { id } } templatesAvailable { id } } }",
                 Map.of("id", phaseA))
                 .path("checklist.items[*].required").entityList(Boolean.class).containsExactly(true, false)
                 .path("checklist.items[1].text.sv").entity(String.class).isEqualTo("Skriv en tidsplan")
-                .path("checklist.items[1].defaultCapability").entity(String.class).isEqualTo("COMMS")
+                .path("checklist.items[1].defaultCapability.id").entity(String.class).isEqualTo("COMMS")
                 .path("checklist.templatesAvailable[*].id").entityList(String.class).containsExactly(String.valueOf(template));
         execute(STEERING_GROUP, ADD, Map.of("input", Map.of("checklistId", phaseA, "version", checklistVersion(phaseA))))
                 .path("checklistAddFromTemplate.items").entityList(Object.class).hasSize(2);

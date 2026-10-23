@@ -41,5 +41,7 @@ public interface ChecklistTemplateItemRepository extends Repository<ChecklistTem
 
     List<ChecklistTemplateItem> findByTemplateIdAndRetiredAtIsNullOrderByPositionAscIdAsc(Long templateId);
 
+    List<ChecklistTemplateItem> findByTemplateIdAndRetiredAtIsNotNullOrderByRetiredAtDescIdDesc(Long templateId);
+
     List<ChecklistTemplateItem> findByTemplateIdIn(Collection<Long> templateIds);
 }

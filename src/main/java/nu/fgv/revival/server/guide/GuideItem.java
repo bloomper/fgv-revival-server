@@ -18,8 +18,6 @@ package nu.fgv.revival.server.guide;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -65,9 +63,11 @@ public class GuideItem extends AbstractAuditable {
     @Column(name = "position", nullable = false)
     private Integer position;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 16)
-    private GuideItemType type;
+    /**
+     * A {@link GuideItemType}'s id.
+     */
+    @Column(name = "type", nullable = false, length = 36)
+    private String type;
 
     @Column(name = "text_sv", nullable = false, columnDefinition = "TEXT")
     private String textSv;

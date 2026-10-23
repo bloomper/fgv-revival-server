@@ -94,6 +94,10 @@ public abstract class AbstractIntegrationTest {
     protected static final String PLAIN_USER = "user" + DOMAIN;
     protected static final String SPEXREGISTER_ONLY = "spexare" + DOMAIN;
     protected static final String PASSWORD = "s3cr3t-s3cr3t";
+    /**
+     * Leaves out the catalogs' baseline revision, which {@link #resetState()} records before every test.
+     */
+    protected static final String NOT_BASELINE = "operation <> 'catalogBaseline'";
     protected static final String CLIENT_ID = "fgv-revival";
     protected static final String MCP_CLIENT_ID = "fgv-revival-mcp";
     protected static final String UNBOUND_MCP_CLIENT_ID = "fgv-revival-mcp-unbound";
@@ -241,14 +245,29 @@ public abstract class AbstractIntegrationTest {
                 "guide_item", "guide_section", "guide_chapter", "guide_version")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
+        // Back to the lists the migration seeds
+        jdbcClient.sql("DELETE FROM capability WHERE id NOT IN ('FINANCE', 'CATERING', 'STAFFING', 'COMMS')").update();
+        jdbcClient.sql("UPDATE capability SET retired_at = NULL, position = FIELD(id, 'FINANCE', 'CATERING', 'STAFFING', 'COMMS') - 1").update();
+        jdbcClient.sql("DELETE FROM guide_item_type WHERE id NOT IN ('TIP', 'REQUIREMENT', 'QUESTION', 'TEXT')").update();
+        jdbcClient.sql("""
+                UPDATE guide_item_type SET retired_at = NULL, position = FIELD(id, 'TIP', 'REQUIREMENT', 'QUESTION', 'TEXT') - 1,
+                    name_sv = ELT(FIELD(id, 'TIP', 'REQUIREMENT', 'QUESTION', 'TEXT'), 'Praktiska tips', 'Krav', 'Att ta reda på', 'Text')""").update();
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
                 "revival_guide_version_change_audit", "revival_show_date_audit", "revival_venue_audit", "revival_audit",
                 "log_entry_tag_audit", "log_entry_audit", "log_import_audit", "meeting_agenda_point_audit", "meeting_attendee_audit",
                 "meeting_audit", "checklist_item_audit", "checklist_audit", "checklist_template_item_audit", "checklist_template_audit",
                 "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",
-                "revchanges", "revinfo", "person")) {
+                "capability_audit", "guide_item_type_audit", "revchanges", "revinfo", "person")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
+        // The validity audit strategy needs a previous revision before the seeded entries can be changed
+        jdbcClient.sql("INSERT INTO revinfo (modified_at, modified_by, source, operation) VALUES (0, 'system', 'SYSTEM', 'catalogBaseline')").update();
+        jdbcClient.sql("""
+                INSERT INTO capability_audit (id, name_sv, name_en, position, retired_at, version, rev, revtype)
+                SELECT id, name_sv, name_en, position, retired_at, version, (SELECT MAX(id) FROM revinfo), 0 FROM capability""").update();
+        jdbcClient.sql("""
+                INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
+                SELECT id, kind, name_sv, name_en, position, retired_at, version, (SELECT MAX(id) FROM revinfo), 0 FROM guide_item_type""").update();
         cacheManager.getCacheNames().forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
         spexregisterUp();
         MAIL.reset();
@@ -632,12 +651,12 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
-     * Publishes the draft as super admin under the label.
+     * Publishes the draft as super admin. The server numbers versions itself (FR-014), so {@code label} is not sent.
      */
     protected void publishGuide(final long draftId, final String label) {
         graphQl(SUPER_ADMIN)
                 .document("mutation($input: GuideDraftPublishInput!) { guideDraftPublish(input: $input) { id status label } }")
-                .variable("input", Map.of("id", draftId, "version", guideVersion(draftId), "label", label))
+                .variable("input", Map.of("id", draftId, "version", guideVersion(draftId)))
                 .execute()
                 .path("guideDraftPublish.status").entity(String.class).isEqualTo("PUBLISHED");
     }

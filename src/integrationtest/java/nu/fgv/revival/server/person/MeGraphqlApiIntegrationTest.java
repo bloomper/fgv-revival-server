@@ -47,11 +47,11 @@ class MeGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         addMember(proposed, DIRECTEUR, "DIRECTEUR", List.of());
 
         graphQl(DIRECTEUR)
-                .document("{ me { revivalRoles { role capabilities revival { id title } } } }")
+                .document("{ me { revivalRoles { role capabilities { id } revival { id title } } } }")
                 .execute()
                 .path("me.revivalRoles").entityList(Object.class).hasSize(1)
                 .path("me.revivalRoles[0].role").entity(String.class).isEqualTo("DIRECTEUR")
-                .path("me.revivalRoles[0].capabilities").entityList(String.class).containsExactly("FINANCE", "CATERING", "STAFFING", "COMMS")
+                .path("me.revivalRoles[0].capabilities[*].id").entityList(String.class).containsExactly("FINANCE", "CATERING", "STAFFING", "COMMS")
                 .path("me.revivalRoles[0].revival.title").entity(String.class).isEqualTo("Ali Baba 2028");
     }
 }

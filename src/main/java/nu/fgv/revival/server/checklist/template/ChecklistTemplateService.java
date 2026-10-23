@@ -27,7 +27,7 @@ import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
 import nu.fgv.revival.server.member.AccessPolicy;
-import nu.fgv.revival.server.member.Capability;
+import nu.fgv.revival.server.member.CapabilityService;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.util.error.BadRequestException;
@@ -70,6 +70,7 @@ public class ChecklistTemplateService {
     private final GuideAccess guideAccess;
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
+    private final CapabilityService capabilityService;
     private final Clock clock;
 
     public ChecklistTemplateService(final ChecklistTemplateRepository templateRepository,
@@ -79,6 +80,7 @@ public class ChecklistTemplateService {
                                     final GuideAccess guideAccess,
                                     final CallerService callerService,
                                     final AccessPolicy accessPolicy,
+                                    final CapabilityService capabilityService,
                                     final Clock clock) {
         this.templateRepository = templateRepository;
         this.itemRepository = itemRepository;
@@ -87,6 +89,7 @@ public class ChecklistTemplateService {
         this.guideAccess = guideAccess;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
+        this.capabilityService = capabilityService;
         this.clock = clock;
     }
 
@@ -97,14 +100,14 @@ public class ChecklistTemplateService {
     }
 
     public record NewItem(Long templateId, @Nullable Integer position, Texts text, @Nullable String guideItemKey,
-                          @Nullable Capability defaultCapability, @Nullable RelativeDeadline deadline) {
+                          @Nullable String defaultCapability, @Nullable RelativeDeadline deadline) {
     }
 
     /**
      * Fields left null are unchanged; the {@code clear*} flags remove a value.
      */
     public record ItemChange(Long id, Long version, @Nullable Texts text, @Nullable String guideItemKey, boolean clearGuideItem,
-                             @Nullable Capability defaultCapability, boolean clearDefaultCapability, @Nullable RelativeDeadline deadline,
+                             @Nullable String defaultCapability, boolean clearDefaultCapability, @Nullable RelativeDeadline deadline,
                              boolean clearDeadline) {
     }
 
@@ -185,6 +188,20 @@ public class ChecklistTemplateService {
     }
 
     /**
+     * A template's retired items, the most recently retired first. Only super admins see them, as only they can restore
+     * them.
+     */
+    @Transactional(readOnly = true)
+    public List<ChecklistTemplateItemDto> retiredItems(final Long templateId) {
+        if (!accessPolicy.canManageChecklistTemplates(callerService.current())) {
+            return List.of();
+        }
+        return itemRepository.findByTemplateIdAndRetiredAtIsNotNullOrderByRetiredAtDescIdDesc(templateId).stream()
+                .map(ChecklistTemplateItemDto::of)
+                .toList();
+    }
+
+    /**
      * Template items' guide items in the latest published version, where the key is still there.
      */
     @Transactional(readOnly = true)
@@ -253,6 +270,35 @@ public class ChecklistTemplateService {
         return toDto(templateRepository.saveAndFlush(template));
     }
 
+    /**
+     * Makes a retired template active again. A chapter template only while the latest published version has its chapter
+     * and no other active template has it, as when creating one.
+     */
+    @Transactional
+    public ChecklistTemplateDto restore(final Long id, final Long version) {
+        manageable();
+
+        final ChecklistTemplate template = templateRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(ChecklistTemplate.class, id));
+        final String chapterKey = template.getChapterKey();
+
+        // No longer retired: someone else restored it meanwhile.
+        if (!template.isRetired() || !Objects.equals(version, template.getVersion())) {
+            throw new ConflictException("error.conflict");
+        }
+
+        if (chapterKey != null) {
+            if (latest().flatMap(view -> view.chapter(chapterKey)).isEmpty()) {
+                throw new BadRequestException("error.template.chapter.unknown");
+            }
+            if (templateRepository.findByChapterKeyAndRetiredAtIsNull(chapterKey).isPresent()) {
+                throw new ConflictException("error.template.chapter.exists");
+            }
+        }
+        AuditContext.operation("checklistTemplateRestore");
+        template.setRetiredAt(null);
+        return toDto(templateRepository.saveAndFlush(template));
+    }
+
     // --- Items ------------------------------------------------------------------------------------------------------
 
     @Transactional
@@ -267,6 +313,9 @@ public class ChecklistTemplateService {
         item.setTemplateId(template.getId());
         setText(item, newItem.text());
         item.setGuideItemKey(newItem.guideItemKey());
+        if (newItem.defaultCapability() != null) {
+            capabilityService.requireAssignable(List.of(newItem.defaultCapability()), List.of());
+        }
         item.setDefaultCapability(newItem.defaultCapability());
         item.setDeadline(validDeadline(template, newItem.deadline()));
         item.setPosition(items.size());
@@ -298,6 +347,8 @@ public class ChecklistTemplateService {
         if (change.clearDefaultCapability()) {
             item.setDefaultCapability(null);
         } else if (change.defaultCapability() != null) {
+            capabilityService.requireAssignable(List.of(change.defaultCapability()),
+                    item.getDefaultCapability() == null ? List.of() : List.of(item.getDefaultCapability()));
             item.setDefaultCapability(change.defaultCapability());
         }
         if (change.clearDeadline()) {
@@ -335,6 +386,28 @@ public class ChecklistTemplateService {
         item.setRetiredAt(clock.instant());
         itemRepository.saveAndFlush(item);
         renumber(activeItems(template.getId()));
+        return toDto(template);
+    }
+
+    /**
+     * Puts a retired item back, last in its template, which must be active.
+     */
+    @Transactional
+    public ChecklistTemplateDto restoreItem(final Long id, final Long version) {
+        manageable();
+
+        final ChecklistTemplateItem item = itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(ChecklistTemplateItem.class, id));
+
+        if (!item.isRetired() || !Objects.equals(version, item.getVersion())) {
+            throw new ConflictException("error.conflict");
+        }
+
+        final ChecklistTemplate template = active(item.getTemplateId());
+
+        AuditContext.operation("checklistTemplateItemRestore");
+        item.setPosition(activeItems(template.getId()).size());
+        item.setRetiredAt(null);
+        itemRepository.saveAndFlush(item);
         return toDto(template);
     }
 

@@ -55,7 +55,7 @@ public final class GuideSearch {
                       @Nullable String sectionKey,
                       GuideVersionView.@Nullable Text sectionTitle,
                       @Nullable String itemKey,
-                      @Nullable GuideItemType itemType,
+                      @Nullable String itemType,
                       String snippet,
                       String matchedLanguage) {
     }

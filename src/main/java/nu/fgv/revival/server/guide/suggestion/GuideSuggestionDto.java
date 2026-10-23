@@ -17,7 +17,6 @@
 package nu.fgv.revival.server.guide.suggestion;
 
 import nu.fgv.revival.server.guide.GuideChanges;
-import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
@@ -43,7 +42,7 @@ public record GuideSuggestionDto(Long id,
                                  @Nullable String sectionKey,
                                  @Nullable String itemKey,
                                  GuideChanges.@Nullable ItemSnapshot item,
-                                 @Nullable GuideItemType proposedType,
+                                 @Nullable String proposedType,
                                  @Nullable ProposedText proposedText,
                                  @Nullable String reason,
                                  @Nullable Long decidedById,

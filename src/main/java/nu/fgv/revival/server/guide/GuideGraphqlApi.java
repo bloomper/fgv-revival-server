@@ -122,10 +122,10 @@ public class GuideGraphqlApi {
     public record GuideSectionMoveInput(Long id, Long version, Long chapterId, int position) {
     }
 
-    public record GuideItemCreateInput(Long chapterId, @Nullable Long sectionId, @Nullable Integer position, GuideItemType type, LocalizedTextInput text) {
+    public record GuideItemCreateInput(Long chapterId, @Nullable Long sectionId, @Nullable Integer position, String type, LocalizedTextInput text) {
     }
 
-    public record GuideItemUpdateInput(Long id, Long version, GuideItemType type, LocalizedTextInput text) {
+    public record GuideItemUpdateInput(Long id, Long version, String type, LocalizedTextInput text) {
     }
 
     public record GuideItemMoveInput(Long id, Long version, Long chapterId, @Nullable Long sectionId, int position) {

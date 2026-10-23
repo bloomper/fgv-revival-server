@@ -30,6 +30,7 @@ import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.GuideVersionViews;
 import nu.fgv.revival.server.member.AccessPolicy;
+import nu.fgv.revival.server.member.CapabilityService;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.RevivalStatus;
@@ -59,6 +60,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,7 +92,7 @@ class ChecklistTemplateServiceTest {
     @BeforeEach
     void setUp() {
         service = new ChecklistTemplateService(templateRepository, itemRepository, versionRepository, guideVersionViews, guideAccess, callerService,
-                new AccessPolicy(), TestClocks.at(LocalDate.of(2026, 10, 21)));
+                new AccessPolicy(), mock(CapabilityService.class), TestClocks.at(LocalDate.of(2026, 10, 21)));
         as(TestCallers.superAdmin());
         lenient().when(guideAccess.callerRevivals(any())).thenReturn(List.of());
         lenient().when(templateRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -245,6 +247,39 @@ class ChecklistTemplateServiceTest {
         }
 
         @Test
+        void aRestoredEventTemplateIsActiveAgain() {
+            template(ChecklistKind.EVENT).setRetiredAt(Instant.now());
+
+            assertThat(service.restore(5L, 0L).retired()).isFalse();
+        }
+
+        @Test
+        void restoringATemplateThatIsNotRetiredOrStaleIsAConflict() {
+            template(ChecklistKind.EVENT).setRetiredAt(Instant.now());
+
+            assertThatThrownBy(() -> service.restore(5L, 1L)).isInstanceOf(ConflictException.class);
+
+            service.restore(5L, 0L);
+            assertThatThrownBy(() -> service.restore(5L, 0L)).isInstanceOf(ConflictException.class);
+        }
+
+        @Test
+        void aChapterTemplateIsRestoredOnlyWhileItsChapterIsInTheGuideAndFree() {
+            template(ChecklistKind.CHAPTER).setRetiredAt(Instant.now());
+            latestWithChapters("A");
+
+            assertThatThrownBy(() -> service.restore(5L, 0L))
+                    .isInstanceOfSatisfying(BadRequestException.class, e -> assertThat(e.getDetailMessageCode()).isEqualTo("error.template.chapter.unknown"));
+
+            latestWithChapters("A", "B");
+            when(templateRepository.findByChapterKeyAndRetiredAtIsNull("B")).thenReturn(Optional.of(new ChecklistTemplate()));
+            assertThatThrownBy(() -> service.restore(5L, 0L)).isInstanceOf(ConflictException.class);
+
+            when(templateRepository.findByChapterKeyAndRetiredAtIsNull("B")).thenReturn(Optional.empty());
+            assertThat(service.restore(5L, 0L).retired()).isFalse();
+        }
+
+        @Test
         void aRetiredTemplateIsStillReadableByIdForChecklistsMadeFromIt() {
             template(ChecklistKind.EVENT).setRetiredAt(Instant.now());
             as(TestCallers.observer());
@@ -324,6 +359,42 @@ class ChecklistTemplateServiceTest {
         }
 
         @Test
+        void aRestoredItemComesBackLast() {
+            template(ChecklistKind.EVENT);
+            final ChecklistTemplateItem first = item(1L, 0);
+            item(2L, 1);
+            item(3L, 2);
+
+            service.retireItem(1L, 0L);
+            service.restoreItem(1L, 0L);
+
+            assertThat(first.isRetired()).isFalse();
+            assertThat(items).extracting(ChecklistTemplateItem::getId, ChecklistTemplateItem::getPosition)
+                    .containsExactly(tuple(1L, 2), tuple(2L, 0), tuple(3L, 1));
+        }
+
+        @Test
+        void anItemOfARetiredTemplateIsNotRestored() {
+            template(ChecklistKind.EVENT).setRetiredAt(Instant.now());
+            item(1L, 0).setRetiredAt(Instant.now());
+
+            assertThatThrownBy(() -> service.restoreItem(1L, 0L)).isInstanceOf(BadRequestException.class);
+            assertThat(items.getFirst().isRetired()).isTrue();
+        }
+
+        @Test
+        void onlySuperAdminsSeeRetiredItems() {
+            final ChecklistTemplateItem retired = item(1L, 0);
+
+            when(itemRepository.findByTemplateIdAndRetiredAtIsNotNullOrderByRetiredAtDescIdDesc(5L)).thenReturn(List.of(retired));
+
+            assertThat(service.retiredItems(5L)).extracting(ChecklistTemplateItemDto::id).containsExactly(1L);
+
+            as(TestCallers.observer());
+            assertThat(service.retiredItems(5L)).isEmpty();
+        }
+
+        @Test
         void aStaleVersionIsAConflict() {
             template(ChecklistKind.EVENT);
             item(1L, 0).setVersion(3L);
@@ -352,6 +423,8 @@ class ChecklistTemplateServiceTest {
                 .isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service.moveItem(1L, 0L, 0)).isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service.retireItem(1L, 0L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.restore(5L, 0L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.restoreItem(1L, 0L)).isInstanceOf(AccessDeniedException.class);
         verify(templateRepository, never()).saveAndFlush(any());
     }
 

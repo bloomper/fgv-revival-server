@@ -40,8 +40,8 @@ class GuideSearchTest {
         return new GuideVersionView.Text(sv, en, MARKDOWN.plainText(sv), en == null ? null : MARKDOWN.plainText(en));
     }
 
-    static GuideVersionView.Item item(final String key, final String chapter, final String sectionKey, final GuideItemType type, final String sv, final String en) {
-        return new GuideVersionView.Item(1L, key, chapter, sectionKey, type, text(sv, en), 0L);
+    static GuideVersionView.Item item(final String key, final String chapter, final String sectionKey, final GuideItemKind type, final String sv, final String en) {
+        return new GuideVersionView.Item(1L, key, chapter, sectionKey, type.name(), type, text(sv, en), 0L);
     }
 
     /**
@@ -53,12 +53,12 @@ class GuideSearchTest {
         for (final String key : GuideTestChapters.KEYS) {
             switch (key) {
                 case "A" -> chapters.add(new GuideVersionView.Chapter(1L, key, GuideVersionView.Text.plain("Först: godkännande", "First: approval"),
-                        List.of(item("a1", key, null, GuideItemType.REQUIREMENT, "Kontakta **JK** via kåren.", "Contact JK through the student union.")),
+                        List.of(item("a1", key, null, GuideItemKind.REQUIREMENT, "Kontakta **JK** via kåren.", "Contact JK through the student union.")),
                         List.of(), 0L));
                 case "B" -> chapters.add(new GuideVersionView.Chapter(2L, key, GuideVersionView.Text.plain("Boka lokaler", null), List.of(),
                         List.of(new GuideVersionView.Section(3L, "kalas", key, GuideVersionView.Text.plain("Kalaslokal", "Party venue"), List.of(
-                                item("b1", key, "kalas", GuideItemType.TIP, "Kontrollera sprittillstånd i vald lokal.", null),
-                                item("b2", key, "kalas", GuideItemType.TIP, "Se [kårens sida](https://example.org/kar) om bokning.", null)), 0L)),
+                                item("b1", key, "kalas", GuideItemKind.TIP, "Kontrollera sprittillstånd i vald lokal.", null),
+                                item("b2", key, "kalas", GuideItemKind.TIP, "Se [kårens sida](https://example.org/kar) om bokning.", null)), 0L)),
                         0L));
                 default -> chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key) + 10, key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L));
             }
@@ -77,7 +77,7 @@ class GuideSearchTest {
             assertThat(hit.sectionKey()).isEqualTo("kalas");
             assertThat(hit.sectionTitle().sv()).isEqualTo("Kalaslokal");
             assertThat(hit.itemKey()).isEqualTo("b1");
-            assertThat(hit.itemType()).isEqualTo(GuideItemType.TIP);
+            assertThat(hit.itemType()).isEqualTo("TIP");
             assertThat(hit.matchedLanguage()).isEqualTo("sv");
         });
     }

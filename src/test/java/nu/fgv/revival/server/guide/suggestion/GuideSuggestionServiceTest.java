@@ -20,7 +20,7 @@ import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.guide.GuideChapterRepository;
 import nu.fgv.revival.server.guide.GuideDraftService;
 import nu.fgv.revival.server.guide.GuideItemRepository;
-import nu.fgv.revival.server.guide.GuideItemType;
+import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideSectionRepository;
 import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.guide.GuideVersion;
@@ -95,7 +95,7 @@ class GuideSuggestionServiceTest {
 
         for (final String key : GuideTestChapters.KEYS) {
             chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key), key, GuideVersionView.Text.plain("Kapitel " + key, null),
-                    key.equals("B") ? List.of(new GuideVersionView.Item(1L, "tip", key, null, GuideItemType.TIP, text, 0L)) : List.of(),
+                    key.equals("B") ? List.of(new GuideVersionView.Item(1L, "tip", key, null, "TIP", GuideItemKind.TIP, text, 0L)) : List.of(),
                     key.equals("B") ? List.of(new GuideVersionView.Section(2L, "kalas", key, GuideVersionView.Text.plain("Kalas", null), List.of(), 0L)) : List.of(),
                     0L));
         }
@@ -104,7 +104,7 @@ class GuideSuggestionServiceTest {
     }
 
     private static GuideSuggestionService.Proposal proposal(final GuideSuggestionKind kind, final String itemKey, final String chapterKey, final String sectionKey,
-                                                            final GuideItemType type, final String sv, final String reason) {
+                                                            final String type, final String sv, final String reason) {
         return new GuideSuggestionService.Proposal(REVIVAL_ID, VERSION_ID, kind, itemKey, chapterKey, sectionKey, type, sv, null, reason);
     }
 
@@ -154,18 +154,18 @@ class GuideSuggestionServiceTest {
 
     @Test
     void anAddNeedsAKnownChapterATypeAndTextAndAKnownSection() {
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, null, null, GuideItemType.TIP, "Nytt.", null)))
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, null, null, "TIP", "Nytt.", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.chapter.required"));
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "X", null, GuideItemType.TIP, "Nytt.", null)))
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "X", null, "TIP", "Nytt.", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.chapter.unknown"));
         assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "B", null, null, "Nytt.", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.type.required"));
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "B", null, GuideItemType.TIP, " ", null)))
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "B", null, "TIP", " ", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.guide.text.blank"));
-        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "C", "kalas", GuideItemType.TIP, "Nytt.", null)))
+        assertThatThrownBy(() -> service.create(proposal(GuideSuggestionKind.ADD, null, "C", "kalas", "TIP", "Nytt.", null)))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("error.suggestion.section.unknown"));
 
-        assertThat(service.create(proposal(GuideSuggestionKind.ADD, null, "B", "kalas", GuideItemType.REQUIREMENT, "Nytt krav.", null)).sectionKey())
+        assertThat(service.create(proposal(GuideSuggestionKind.ADD, null, "B", "kalas", "REQUIREMENT", "Nytt krav.", null)).sectionKey())
                 .isEqualTo("kalas");
     }
 

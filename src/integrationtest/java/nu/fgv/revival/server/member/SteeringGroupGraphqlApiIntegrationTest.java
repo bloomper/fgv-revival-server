@@ -53,7 +53,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final GraphQlTester.Response response = execute(user, MEMBER_ADD,
                 Map.of("input", Map.of("revivalId", id, "email", email, "role", "STEERING_GROUP", "capabilities", capabilities)));
 
-        response.path("revivalMemberAdd.capabilities").entityList(String.class)
+        response.path("revivalMemberAdd.capabilities[*].id").entityList(String.class)
                 .satisfies(actual -> assertThat(actual).containsExactlyInAnyOrderElementsOf(capabilities));
         return response.path("revivalMemberAdd.id").entity(String.class).get();
     }
@@ -67,7 +67,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final String memberId = addSteeringGroupMember(DIRECTEUR, "Ny.Styrgrupp" + DOMAIN, List.of("FINANCE"));
 
         execute(DIRECTEUR, MEMBER_CAPABILITIES, Map.of("input", Map.of("id", memberId, "version", memberVersion(memberId), "capabilities", List.of("CATERING", "COMMS"))))
-                .path("revivalMemberCapabilitiesSet.capabilities").entityList(String.class)
+                .path("revivalMemberCapabilitiesSet.capabilities[*].id").entityList(String.class)
                 .satisfies(actual -> assertThat(actual).containsExactlyInAnyOrder("CATERING", "COMMS"));
         execute(DIRECTEUR, MEMBER_REMOVE, Map.of("id", memberId)).errors().verify();
         expectError(execute(DIRECTEUR, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "x" + DOMAIN, "role", "DIRECTEUR"))), "FORBIDDEN");
@@ -97,7 +97,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                     .path("revival.members[*].email").entityList(Object.class)
                     .satisfies(emails -> assertThat(emails).hasSize(3).containsOnlyNulls())
                     .path("revival.members[2].state").entity(String.class).isEqualTo("WAITING")
-                    .path("revival.members[2].capabilities").entityList(String.class).containsExactly("COMMS");
+                    .path("revival.members[2].capabilities[*].id").entityList(String.class).containsExactly("COMMS");
         }
         for (final String user : List.of(DIRECTEUR, SUPER_ADMIN)) {
             execute(user, REVIVAL, Map.of("id", id))
@@ -138,7 +138,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final String memberId = addSteeringGroupMember(SUPER_ADMIN, "admin-lagd" + DOMAIN, List.of("STAFFING"));
 
         execute(SUPER_ADMIN, MEMBER_CAPABILITIES, Map.of("input", Map.of("id", memberId, "version", memberVersion(memberId), "capabilities", List.of())))
-                .path("revivalMemberCapabilitiesSet.capabilities").entityList(String.class).hasSize(0);
+                .path("revivalMemberCapabilitiesSet.capabilities").entityList(Object.class).hasSize(0);
         execute(SUPER_ADMIN, MEMBER_REMOVE, Map.of("id", memberId)).errors().verify();
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM revival_member WHERE removed_at IS NOT NULL").query(Integer.class).single()).isEqualTo(1);
     }

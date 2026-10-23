@@ -32,7 +32,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -42,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -89,7 +89,8 @@ class RevivalMemberServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RevivalMemberService(repository, revivalRepository, personRepository, callerService, new AccessPolicy());
+        service = new RevivalMemberService(repository, revivalRepository, personRepository, callerService, new AccessPolicy(),
+                mock(CapabilityService.class));
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.APPROVED)));
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -149,7 +150,7 @@ class RevivalMemberServiceTest {
 
         @Test
         void aDirecteurCannotHaveCapabilities() {
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, Set.of(Capability.FINANCE))))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, Set.of("FINANCE"))))
                     .isInstanceOf(BadRequestException.class);
         }
 
@@ -207,10 +208,10 @@ class RevivalMemberServiceTest {
             when(personRepository.findByEmailAndEmailVerifiedTrue("stina@example.org")).thenReturn(List.of());
             when(repository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
 
-            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "stina@example.org", RevivalRole.STEERING_GROUP, Set.of(Capability.FINANCE))).capabilities())
-                    .containsExactly(Capability.FINANCE);
-            assertThat(service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 1L, EnumSet.allOf(Capability.class))).capabilities())
-                    .containsExactlyInAnyOrder(Capability.values());
+            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "stina@example.org", RevivalRole.STEERING_GROUP, Set.of("FINANCE"))).capabilities())
+                    .containsExactly("FINANCE");
+            assertThat(service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 1L, Set.of("FINANCE", "COMMS"))).capabilities())
+                    .containsExactlyInAnyOrder("FINANCE", "COMMS");
 
             service.remove(MEMBER_ID);
 
@@ -222,7 +223,7 @@ class RevivalMemberServiceTest {
             when(repository.findById(MEMBER_ID)).thenReturn(Optional.of(member(RevivalRole.DIRECTEUR, 5L, null)));
             when(callerService.current()).thenReturn(TestCallers.superAdmin());
 
-            assertThatThrownBy(() -> service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 1L, Set.of(Capability.COMMS))))
+            assertThatThrownBy(() -> service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 1L, Set.of("COMMS"))))
                     .isInstanceOf(BadRequestException.class);
         }
 
@@ -230,7 +231,7 @@ class RevivalMemberServiceTest {
         void aStaleVersionOnCapabilitiesIsAConflict() {
             when(repository.findById(MEMBER_ID)).thenReturn(Optional.of(member(RevivalRole.STEERING_GROUP, 5L, null)));
 
-            assertThatThrownBy(() -> service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 0L, Set.of(Capability.COMMS))))
+            assertThatThrownBy(() -> service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 0L, Set.of("COMMS"))))
                     .isInstanceOf(ConflictException.class);
         }
 

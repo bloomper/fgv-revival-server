@@ -13,23 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package nu.fgv.revival.server.guide;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import nu.fgv.revival.server.util.catalog.CatalogEntry;
+import org.hibernate.envers.Audited;
+
 /**
- * What an item is (product spec 5.2). The Swedish labels are the ones the Word guide uses.
+ * What an item is, from the list the super admin keeps. Its kind is fixed when it is created, so published versions,
+ * which never change, keep behaving as they did.
  *
  * @author Anders Jacobsson
  * @since 0.2
  */
-public enum GuideItemType {
+@Entity
+@Table(name = "guide_item_type")
+@Audited
+@NoArgsConstructor
+@Getter
+@Setter
+public class GuideItemType extends CatalogEntry {
 
-    /** Praktiska tips. */
-    TIP,
-    /** Krav. */
-    REQUIREMENT,
-    /** Att ta reda på. */
-    QUESTION,
-    /** Löptext. */
-    TEXT
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", nullable = false, updatable = false, length = 16)
+    private GuideItemKind kind;
 }

@@ -24,5 +24,5 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.1
  */
-public record RevivalRoleAssignmentDto(Long revivalId, RevivalRole role, List<Capability> capabilities) {
+public record RevivalRoleAssignmentDto(Long revivalId, RevivalRole role, List<String> capabilities) {
 }

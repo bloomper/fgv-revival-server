@@ -16,18 +16,22 @@
 
 package nu.fgv.revival.server.member;
 
-import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * An active revival role held by the caller: the role and its effective capabilities.
+ * An active revival role held by the caller: the role and the capability ids held explicitly. A directeur holds every
+ * capability implicitly, which {@link #holdsAll()} tells.
  *
  * @author Anders Jacobsson
  * @since 0.1
  */
-public record RevivalRoleAssignment(RevivalRole role, Set<Capability> capabilities) {
+public record RevivalRoleAssignment(RevivalRole role, Set<String> capabilities) {
 
     public RevivalRoleAssignment {
-        capabilities = role == RevivalRole.DIRECTEUR ? EnumSet.allOf(Capability.class) : Set.copyOf(capabilities);
+        capabilities = role == RevivalRole.DIRECTEUR ? Set.of() : Set.copyOf(capabilities);
+    }
+
+    public boolean holdsAll() {
+        return role == RevivalRole.DIRECTEUR;
     }
 }

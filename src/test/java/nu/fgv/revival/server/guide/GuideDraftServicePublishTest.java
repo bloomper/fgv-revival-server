@@ -89,7 +89,7 @@ class GuideDraftServicePublishTest {
     @BeforeEach
     void setUp() {
         service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
-                views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener), events);
+                views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener), events, mock(GuideItemTypeService.class));
         draft = new GuideVersion();
         draft.setId(DRAFT_ID);
         draft.setVersion(2L);

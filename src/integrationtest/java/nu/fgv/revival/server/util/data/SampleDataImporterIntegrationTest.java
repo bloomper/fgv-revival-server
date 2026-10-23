@@ -19,7 +19,6 @@ package nu.fgv.revival.server.util.data;
 import nu.fgv.revival.server.AbstractIntegrationTest;
 import nu.fgv.revival.server.checklist.RevivalGuideSync;
 import nu.fgv.revival.server.guide.GuideTestChapters;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -92,7 +91,7 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
         assertThat(memberships(SampleDataImporter.DIRECTEUR, "DIRECTEUR")).isEqualTo(APPROVED_STATUSES);
         assertThat(memberships(SampleDataImporter.DIRECTEUR_2, "DIRECTEUR")).isEqualTo(APPROVED_STATUSES);
         assertThat(memberships(SampleDataImporter.STEERING_GROUP, "STEERING_GROUP")).isEqualTo(APPROVED_STATUSES);
-        for (final Capability capability : Capability.values()) {
+        for (final SeededCapability capability : SeededCapability.values()) {
             final String email = SampleDataImporter.steeringGroupWith(capability);
 
             assertThat(memberships(email, "STEERING_GROUP")).isEqualTo(APPROVED_STATUSES);
@@ -247,11 +246,11 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
                 .execute()
                 .path("me.globalRoles").entityList(String.class).hasSize(0)
                 .path("me.revivalRoles[*].role").entityList(String.class).contains("DIRECTEUR").doesNotContain("STEERING_GROUP");
-        graphQl(SampleDataImporter.steeringGroupWith(Capability.FINANCE))
-                .document("{ me { revivalRoles { role capabilities } } }")
+        graphQl(SampleDataImporter.steeringGroupWith(SeededCapability.FINANCE))
+                .document("{ me { revivalRoles { role capabilities { id } } } }")
                 .execute()
                 .path("me.revivalRoles[*].role").entityList(String.class).contains("STEERING_GROUP").doesNotContain("DIRECTEUR")
-                .path("me.revivalRoles[*].capabilities[*]").entityList(String.class).contains("FINANCE").doesNotContain("CATERING", "STAFFING", "COMMS");
+                .path("me.revivalRoles[*].capabilities[*].id").entityList(String.class).contains("FINANCE").doesNotContain("CATERING", "STAFFING", "COMMS");
         graphQl(SampleDataImporter.NO_ROLE)
                 .document("{ me { globalRoles revivalRoles { role } } }")
                 .execute()

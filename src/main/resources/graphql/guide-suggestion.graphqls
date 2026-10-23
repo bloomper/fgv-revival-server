@@ -79,7 +79,8 @@ input GuideSuggestionCreateInput {
     chapterKey: ID
     "ADD, optional."
     sectionKey: ID
-    proposedType: GuideItemType
+    "A guide item type id, not retired unless it is the item's own."
+    proposedType: ID
     proposedTextSv: String
     proposedTextEn: String
     "Required for CHANGE and REMOVE."
@@ -97,7 +98,8 @@ input GuideSuggestionAcceptInput {
 input GuideSuggestionResolutionInput {
     "For REMOVE: keep the item instead of removing it."
     keep: Boolean = false
-    type: GuideItemType
+    "A guide item type id, not retired unless it is the proposed one or the item's."
+    type: ID
     text: LocalizedTextInput
 }
 

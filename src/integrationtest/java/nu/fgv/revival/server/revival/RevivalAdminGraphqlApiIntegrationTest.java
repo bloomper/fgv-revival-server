@@ -146,12 +146,12 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             setStatus(id, "APPROVED");
             addMember(id, "ny-directeur" + DOMAIN, "DIRECTEUR", List.of());
 
-            final List<String> modifiedBy = jdbcClient.sql("SELECT DISTINCT modified_by FROM revinfo").query(String.class).list();
+            final List<String> modifiedBy = jdbcClient.sql("SELECT DISTINCT modified_by FROM revinfo WHERE " + NOT_BASELINE).query(String.class).list();
             final List<String> createdBy = jdbcClient.sql("SELECT DISTINCT created_by FROM revival").query(String.class).list();
 
             assertThat(modifiedBy).isNotEmpty().allSatisfy(value -> assertThat(value).hasSize(36).doesNotContain("@"));
             assertThat(createdBy).allSatisfy(value -> assertThat(value).doesNotContain("@"));
-            assertThat(jdbcClient.sql("SELECT DISTINCT source FROM revinfo").query(String.class).list()).containsExactly("WEB");
+            assertThat(jdbcClient.sql("SELECT DISTINCT source FROM revinfo WHERE " + NOT_BASELINE).query(String.class).list()).containsExactly("WEB");
         }
 
         @Test

@@ -16,7 +16,7 @@
 
 package nu.fgv.revival.server.mcp;
 
-import nu.fgv.revival.server.guide.GuideItemType;
+import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideSearch;
 import nu.fgv.revival.server.guide.GuideService;
 import nu.fgv.revival.server.guide.GuideVersionView;
@@ -117,7 +117,7 @@ public class GuideMcpTools {
             @McpToolParam(required = false, description = "CHANGE, REMOVE: the item's key from search_guide or get_guide_section") final @Nullable String itemKey,
             @McpToolParam(required = false, description = "ADD: the chapter's number, counting from 1, or its key") final @Nullable String chapter,
             @McpToolParam(required = false, description = "ADD: the section to add to") final @Nullable String sectionKey,
-            @McpToolParam(required = false, description = "TIP, REQUIREMENT, QUESTION or TEXT") final @Nullable GuideItemType type,
+            @McpToolParam(required = false, description = "An item type's id, as items show it, such as TIP, REQUIREMENT, QUESTION or TEXT") final @Nullable String type,
             @McpToolParam(required = false, description = "Swedish text, Markdown") final @Nullable String textSv,
             @McpToolParam(required = false, description = "English text, Markdown") final @Nullable String textEn,
             @McpToolParam(required = false, description = "Why; required for CHANGE and REMOVE") final @Nullable String reason) {
@@ -146,7 +146,7 @@ public class GuideMcpTools {
     }
 
     public record Hit(GuideSearch.HitKind kind, @Nullable String chapterKey, @Nullable Text chapterTitle, @Nullable String sectionKey,
-                      @Nullable Text sectionTitle, @Nullable String itemKey, @Nullable GuideItemType itemType, String snippet) {
+                      @Nullable Text sectionTitle, @Nullable String itemKey, @Nullable String itemType, String snippet) {
 
         static Hit of(final GuideSearch.Hit hit) {
             return new Hit(hit.kind(), hit.chapterKey(), hit.chapterTitle() == null ? null : Text.of(hit.chapterTitle()), hit.sectionKey(),
@@ -157,10 +157,14 @@ public class GuideMcpTools {
     public record SearchResult(Version version, List<Hit> items) {
     }
 
-    public record Item(String key, GuideItemType type, Text text) {
+    /**
+     * {@code type} is the item type's id; {@code kind} what it does: TIP, REQUIREMENT (a required checklist item),
+     * QUESTION (a question in the decision log) or TEXT.
+     */
+    public record Item(String key, String type, GuideItemKind kind, Text text) {
 
         static Item of(final GuideVersionView.Item item) {
-            return new Item(item.key(), item.type(), Text.of(item.text()));
+            return new Item(item.key(), item.type(), item.kind(), Text.of(item.text()));
         }
     }
 

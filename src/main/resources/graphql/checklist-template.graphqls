@@ -13,11 +13,15 @@ extend type Mutation {
     checklistTemplateUpdate(input: ChecklistTemplateUpdateInput!): ChecklistTemplate!
     "Retired templates are not offered for new checklists; checklists made from them are unchanged (FR-030)."
     checklistTemplateRetire(id: ID!, version: Int!): ChecklistTemplate!
+    "CHAPTER: refused if the latest published version lacks the chapter, or another active template has it."
+    checklistTemplateRestore(id: ID!, version: Int!): ChecklistTemplate!
     checklistTemplateItemCreate(input: ChecklistTemplateItemCreateInput!): ChecklistTemplateItem!
     checklistTemplateItemUpdate(input: ChecklistTemplateItemUpdateInput!): ChecklistTemplateItem!
     checklistTemplateItemMove(id: ID!, version: Int!, position: Int!): ChecklistTemplate!
     "Retires the item, so checklist items made from it keep their link."
     checklistTemplateItemRetire(id: ID!, version: Int!): ChecklistTemplate!
+    "Back last in the template, which must not be retired."
+    checklistTemplateItemRestore(id: ID!, version: Int!): ChecklistTemplate!
 }
 
 enum RelativeDeadlineKind {
@@ -72,7 +76,10 @@ type ChecklistTemplate {
     "EVENT."
     name: LocalizedText
     retired: Boolean!
+    "The items that are not retired, in order."
     items: [ChecklistTemplateItem!]!
+    "SUPER_ADMIN only, the most recently retired first; empty for everyone else."
+    retiredItems: [ChecklistTemplateItem!]!
     version: Int!
 }
 
@@ -86,6 +93,7 @@ type ChecklistTemplateItem {
     defaultCapability: Capability
     "EVENT templates only."
     deadline: RelativeDeadline
+    retired: Boolean!
     version: Int!
 }
 
@@ -109,7 +117,8 @@ input ChecklistTemplateItemCreateInput {
     position: Int
     text: LocalizedTextInput!
     guideItemKey: ID
-    defaultCapability: Capability
+    "A capability id, not retired."
+    defaultCapability: ID
     deadline: RelativeDeadlineInput
 }
 
@@ -119,7 +128,8 @@ input ChecklistTemplateItemUpdateInput {
     text: LocalizedTextInput
     guideItemKey: ID
     clearGuideItem: Boolean = false
-    defaultCapability: Capability
+    "A capability id, not retired unless the item already has it."
+    defaultCapability: ID
     clearDefaultCapability: Boolean = false
     deadline: RelativeDeadlineInput
     clearDeadline: Boolean = false

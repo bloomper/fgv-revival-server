@@ -37,9 +37,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     static final String ITEM_FIELDS = "id required text { sv en } state reason deadline deadlineManual overdue comment version "
-            + "owner { name person { displayName } } stateChangedBy { displayName } guideItem { key type } checklist { id chapterKey chapterTitle { sv } } logEntries { number }";
+            + "owner { name person { displayName } } stateChangedBy { displayName } guideItem { key type { id } } checklist { id chapterKey chapterTitle { sv } } logEntries { number }";
     private static final String LIST = "query($id: ID!) { checklists(revivalId: $id) { id kind chapterKey openCount overdueCount totalCount } }";
-    private static final String GET = "query($id: ID!) { checklist(id: $id) { id chapterKey chapterTitle { sv } tips { type text { sv } } items { " + ITEM_FIELDS + " } } }";
+    private static final String GET = "query($id: ID!) { checklist(id: $id) { id chapterKey chapterTitle { sv } tips { type { id } text { sv } } items { " + ITEM_FIELDS + " } } }";
     private static final String ITEMS = "query($id: ID!, $filter: ChecklistItemFilter) { checklistItems(revivalId: $id, filter: $filter) { id text { sv } } }";
     static final String SET_STATE = "mutation($input: ChecklistItemSetStateInput!) { checklistItemSetState(input: $input) { " + ITEM_FIELDS + " } }";
     private static final String CREATE = "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { " + ITEM_FIELDS + " } }";
@@ -75,10 +75,10 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("checklists[1].totalCount").entity(Integer.class).isEqualTo(0);
         execute(STEERING_GROUP, GET, Map.of("id", chapterChecklist("A")))
                 .path("checklist.chapterTitle.sv").entity(String.class).isEqualTo("Först: godkännande och tajmning")
-                .path("checklist.tips[*].type").entityList(String.class).containsExactly("TIP", "TIP")
+                .path("checklist.tips[*].type.id").entityList(String.class).containsExactly("TIP", "TIP")
                 .path("checklist.items[0].required").entity(Boolean.class).isEqualTo(true)
                 .path("checklist.items[0].text.sv").entity(String.class).isEqualTo("Nyuppsättningen ska godkännas av JK och FGV innan arbetet startar.")
-                .path("checklist.items[0].guideItem.type").entity(String.class).isEqualTo("REQUIREMENT");
+                .path("checklist.items[0].guideItem.type.id").entity(String.class).isEqualTo("REQUIREMENT");
         execute(STEERING_GROUP, GET, Map.of("id", chapterChecklist("J")))
                 .path("checklist.items[0].text.sv").entity(String.class).isEqualTo("Ett eventuellt lån ska återbetalas.");
         execute(STEERING_GROUP, "query($id: ID!) { logEntries(revivalId: $id) { number type status text origin owner { name } } }", Map.of("id", revival))

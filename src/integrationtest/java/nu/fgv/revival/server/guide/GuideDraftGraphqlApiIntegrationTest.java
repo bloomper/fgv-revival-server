@@ -43,8 +43,8 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String SECTION_UPDATE = "mutation($input: GuideSectionUpdateInput!) { guideSectionUpdate(input: $input) { id title { sv } } }";
     private static final String SECTION_MOVE = "mutation($input: GuideSectionMoveInput!) { guideSectionMove(input: $input) { id key sections { key } } }";
     private static final String SECTION_REMOVE = "mutation($id: ID!, $version: Int!) { guideSectionRemove(id: $id, version: $version) }";
-    private static final String ITEM_CREATE = "mutation($input: GuideItemCreateInput!) { guideItemCreate(input: $input) { id key type text { sv en } } }";
-    private static final String ITEM_UPDATE = "mutation($input: GuideItemUpdateInput!) { guideItemUpdate(input: $input) { id key type text { sv en } } }";
+    private static final String ITEM_CREATE = "mutation($input: GuideItemCreateInput!) { guideItemCreate(input: $input) { id key type { id } text { sv en } } }";
+    private static final String ITEM_UPDATE = "mutation($input: GuideItemUpdateInput!) { guideItemUpdate(input: $input) { id key type { id } text { sv en } } }";
     private static final String ITEM_MOVE = "mutation($input: GuideItemMoveInput!) { guideItemMove(input: $input) { id key items { key } sections { key items { key } } } }";
     private static final String ITEM_REMOVE = "mutation($id: ID!, $version: Int!) { guideItemRemove(id: $id, version: $version) }";
     private static final String PUBLISH = "mutation($input: GuideDraftPublishInput!) { guideDraftPublish(input: $input) { id } }";
@@ -129,7 +129,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         // Add a requirement to C, at the start of its leading items
         run(SUPER_ADMIN, ITEM_CREATE, Map.of("input", Map.of("chapterId", chapterC, "position", 0, "type", "REQUIREMENT",
                 "text", Map.of("sv", "Nytt krav.", "en", "New requirement."))))
-                .path("guideItemCreate.type").entity(String.class).isEqualTo("REQUIREMENT");
+                .path("guideItemCreate.type.id").entity(String.class).isEqualTo("REQUIREMENT");
         assertThat(jdbcClient.sql("SELECT text_sv FROM guide_item WHERE chapter_id = ? AND section_id IS NULL ORDER BY position").param(chapterC).query(String.class).list())
                 .first().isEqualTo("Nytt krav.");
 

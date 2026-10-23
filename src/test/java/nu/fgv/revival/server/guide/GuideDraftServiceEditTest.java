@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -113,7 +114,7 @@ class GuideDraftServiceEditTest {
         @BeforeEach
         void setUp() {
             service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
-                    views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(), event -> { });
+                    views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(), event -> { }, mock(GuideItemTypeService.class));
             lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
             lenient().when(versionRepository.saveAndFlush(any())).thenAnswer(invocation -> {
                 final GuideVersion version = invocation.getArgument(0);
@@ -166,7 +167,7 @@ class GuideDraftServiceEditTest {
             item.setSectionId(60L);
             item.setKey("item-key");
             item.setPosition(0);
-            item.setType(GuideItemType.TIP);
+            item.setType("TIP");
             item.setTextSv("Tips");
             when(versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)).thenReturn(Optional.of(latest));
             when(chapterRepository.findByVersionIdOrderByPosition(5L)).thenReturn(List.of(chapter));

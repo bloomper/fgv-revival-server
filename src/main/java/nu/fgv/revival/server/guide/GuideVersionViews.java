@@ -43,17 +43,20 @@ public class GuideVersionViews {
     private final GuideChapterRepository chapterRepository;
     private final GuideSectionRepository sectionRepository;
     private final GuideItemRepository itemRepository;
+    private final GuideItemTypeRepository typeRepository;
     private final GuideMarkdown markdown;
 
     public GuideVersionViews(final GuideVersionRepository versionRepository,
                              final GuideChapterRepository chapterRepository,
                              final GuideSectionRepository sectionRepository,
                              final GuideItemRepository itemRepository,
+                             final GuideItemTypeRepository typeRepository,
                              final GuideMarkdown markdown) {
         this.versionRepository = versionRepository;
         this.chapterRepository = chapterRepository;
         this.sectionRepository = sectionRepository;
         this.itemRepository = itemRepository;
+        this.typeRepository = typeRepository;
         this.markdown = markdown;
     }
 
@@ -77,6 +80,8 @@ public class GuideVersionViews {
         final List<GuideItem> items = itemRepository.findByVersionIdOrderByChapterIdAscPositionAsc(version.getId());
         final Map<Long, GuideChapter> chaptersById = chapters.stream().collect(Collectors.toMap(GuideChapter::getId, Function.identity()));
         final Map<Long, GuideSection> sectionsById = sections.stream().collect(Collectors.toMap(GuideSection::getId, Function.identity()));
+        final Map<String, GuideItemKind> kinds = typeRepository.findAllByOrderByPositionAscIdAsc().stream()
+                .collect(Collectors.toMap(GuideItemType::getId, GuideItemType::getKind));
 
         final List<GuideVersionView.Chapter> chapterViews = chapters.stream()
                 .sorted(Comparator.comparing(GuideChapter::getPosition))
@@ -87,7 +92,7 @@ public class GuideVersionViews {
                         items.stream()
                                 .filter(item -> item.getChapterId().equals(chapter.getId()) && item.getSectionId() == null)
                                 .sorted(Comparator.comparing(GuideItem::getPosition))
-                                .map(item -> toItem(item, chapter, null))
+                                .map(item -> toItem(item, kinds, chapter, null))
                                 .toList(),
                         sections.stream()
                                 .filter(section -> section.getChapterId().equals(chapter.getId()))
@@ -100,7 +105,7 @@ public class GuideVersionViews {
                                         items.stream()
                                                 .filter(item -> section.getId().equals(item.getSectionId()))
                                                 .sorted(Comparator.comparing(GuideItem::getPosition))
-                                                .map(item -> toItem(item, chaptersById.get(item.getChapterId()), sectionsById.get(item.getSectionId())))
+                                                .map(item -> toItem(item, kinds, chaptersById.get(item.getChapterId()), sectionsById.get(item.getSectionId())))
                                                 .toList(),
                                         versionOf(section.getVersion())))
                                 .toList(),
@@ -120,13 +125,15 @@ public class GuideVersionViews {
                 chapterViews);
     }
 
-    private GuideVersionView.Item toItem(final GuideItem item, final GuideChapter chapter, final @Nullable GuideSection section) {
+    private GuideVersionView.Item toItem(final GuideItem item, final Map<String, GuideItemKind> kinds, final GuideChapter chapter,
+                                         final @Nullable GuideSection section) {
         return new GuideVersionView.Item(
                 item.getId(),
                 item.getKey(),
                 chapter.getKey(),
                 section == null ? null : section.getKey(),
                 item.getType(),
+                kinds.get(item.getType()),
                 text(item.getTextSv(), item.getTextEn()),
                 versionOf(item.getVersion()));
     }

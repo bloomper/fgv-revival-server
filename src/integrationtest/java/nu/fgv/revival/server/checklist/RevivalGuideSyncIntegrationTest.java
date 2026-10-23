@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
-    private static final String DRAFT = "{ guideDraft { draft { id chapters { id key items { id key type version text { sv } } } } } }";
+    private static final String DRAFT = "{ guideDraft { draft { id chapters { id key items { id key type { id } version text { sv } } } } } }";
 
     @Autowired
     private RevivalGuideSync sync;
@@ -83,7 +83,7 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
         final Map<String, Object> chapterA = chapters.stream().filter(chapter -> "A".equals(chapter.get("key"))).findFirst().orElseThrow();
         final Map<String, Object> chapterC = chapters.stream().filter(chapter -> "C".equals(chapter.get("key"))).findFirst().orElseThrow();
         @SuppressWarnings("unchecked") final Map<String, Object> requirementA = ((List<Map<String, Object>>) chapterA.get("items")).stream()
-                .filter(item -> "REQUIREMENT".equals(item.get("type"))).findFirst().orElseThrow();
+                .filter(item -> "REQUIREMENT".equals(((Map<?, ?>) item.get("type")).get("id"))).findFirst().orElseThrow();
 
         execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { guideItemRemove(id: $id, version: $version) }",
                 Map.of("id", requirementA.get("id"), "version", requirementA.get("version")));

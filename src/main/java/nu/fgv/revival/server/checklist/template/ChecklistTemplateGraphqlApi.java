@@ -22,7 +22,6 @@ import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
 import nu.fgv.revival.server.guide.GuideGraphqlApi.LocalizedTextInput;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.member.Capability;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
@@ -66,12 +65,12 @@ public class ChecklistTemplateGraphqlApi {
     }
 
     public record ChecklistTemplateItemCreateInput(Long templateId, @Nullable Integer position, LocalizedTextInput text,
-                                                   @Nullable String guideItemKey, @Nullable Capability defaultCapability,
+                                                   @Nullable String guideItemKey, @Nullable String defaultCapability,
                                                    @Nullable RelativeDeadlineInput deadline) {
     }
 
     public record ChecklistTemplateItemUpdateInput(Long id, Long version, @Nullable LocalizedTextInput text, @Nullable String guideItemKey,
-                                                   @Nullable Boolean clearGuideItem, @Nullable Capability defaultCapability,
+                                                   @Nullable Boolean clearGuideItem, @Nullable String defaultCapability,
                                                    @Nullable Boolean clearDefaultCapability, @Nullable RelativeDeadlineInput deadline,
                                                    @Nullable Boolean clearDeadline) {
     }
@@ -106,6 +105,11 @@ public class ChecklistTemplateGraphqlApi {
     }
 
     @MutationMapping
+    public ChecklistTemplateDto checklistTemplateRestore(@Argument final Long id, @Argument final Long version) {
+        return service.restore(id, version);
+    }
+
+    @MutationMapping
     public ChecklistTemplateItemDto checklistTemplateItemCreate(@Argument final ChecklistTemplateItemCreateInput input) {
         return service.createItem(new ChecklistTemplateService.NewItem(input.templateId(), input.position(),
                 Objects.requireNonNull(texts(input.text())), input.guideItemKey(), input.defaultCapability(),
@@ -127,6 +131,16 @@ public class ChecklistTemplateGraphqlApi {
     @MutationMapping
     public ChecklistTemplateDto checklistTemplateItemRetire(@Argument final Long id, @Argument final Long version) {
         return service.retireItem(id, version);
+    }
+
+    @MutationMapping
+    public ChecklistTemplateDto checklistTemplateItemRestore(@Argument final Long id, @Argument final Long version) {
+        return service.restoreItem(id, version);
+    }
+
+    @SchemaMapping(typeName = "ChecklistTemplate")
+    public List<ChecklistTemplateItemDto> retiredItems(final ChecklistTemplateDto template) {
+        return service.retiredItems(template.id());
     }
 
     @SchemaMapping(typeName = "ChecklistTemplate")

@@ -26,7 +26,6 @@ import nu.fgv.revival.server.checklist.template.ChecklistTemplateRepository;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.member.AccessPolicy;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.member.OwnerInputDto;
 import nu.fgv.revival.server.member.OwnerResolver;
@@ -55,8 +54,8 @@ import org.springframework.security.access.AccessDeniedException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -412,7 +411,7 @@ class ChecklistServiceTest {
             template.setId(5L);
             template.setKind(ChecklistKind.EVENT);
             template.setNameSv("Rephelg");
-            venue = templateItem(51L, "Boka replokal", null, RelativeDeadline.of(RelativeDeadlineKind.DAYS, -14, null), Capability.FINANCE);
+            venue = templateItem(51L, "Boka replokal", null, RelativeDeadline.of(RelativeDeadlineKind.DAYS, -14, null), "FINANCE");
             keys = templateItem(52L, "Hämta nycklar", "Collect the keys", RelativeDeadline.of(RelativeDeadlineKind.WEEKDAY_WEEK_BEFORE, null,
                     DayOfWeek.MONDAY), null);
             lenient().when(templateRepository.findById(5L)).thenReturn(Optional.of(template));
@@ -421,7 +420,7 @@ class ChecklistServiceTest {
         }
 
         private static ChecklistTemplateItem templateItem(final long id, final String sv, final String en, final RelativeDeadline deadline,
-                                                          final Capability capability) {
+                                                          final String capability) {
             final ChecklistTemplateItem item = new ChecklistTemplateItem();
 
             item.setId(id);
@@ -434,13 +433,13 @@ class ChecklistServiceTest {
             return item;
         }
 
-        private void member(final long personId, final RevivalRole role, final Capability... capabilities) {
+        private void member(final long personId, final RevivalRole role, final String... capabilities) {
             final RevivalMember member = new RevivalMember();
 
             member.setRevivalId(REVIVAL_ID);
             member.setPersonId(personId);
             member.setRole(role);
-            member.setCapabilities(capabilities.length == 0 ? EnumSet.noneOf(Capability.class) : EnumSet.copyOf(List.of(capabilities)));
+            member.setCapabilities(new HashSet<>(List.of(capabilities)));
             members.add(member);
         }
 
@@ -455,7 +454,7 @@ class ChecklistServiceTest {
 
         @Test
         void fromATemplateWithADateItemsGetTextDeadlinesAndLinks() {
-            member(40L, RevivalRole.STEERING_GROUP, Capability.FINANCE);
+            member(40L, RevivalRole.STEERING_GROUP, "FINANCE");
 
             final Checklist created = create(SATURDAY, 5L, Locale.ENGLISH);
 
@@ -466,7 +465,7 @@ class ChecklistServiceTest {
                 assertThat(item.getDeadline()).isEqualTo(LocalDate.of(2027, 11, 6));
                 assertThat(item.isDeadlineManual()).isFalse();
                 assertThat(item.getGuideItemKey()).isEqualTo("tips-lokal");
-                assertThat(item.getDefaultCapability()).isEqualTo(Capability.FINANCE);
+                assertThat(item.getDefaultCapability()).isEqualTo("FINANCE");
                 assertThat(item.getOwner()).isEqualTo(Owner.member(40L));
             });
             assertThat(copyOf(keys)).satisfies(item -> {
@@ -499,14 +498,14 @@ class ChecklistServiceTest {
 
         @Test
         void aDefaultOwnerOnlyWhenExactlyOneSteeringGroupMemberHoldsTheCapability() {
-            member(40L, RevivalRole.DIRECTEUR, Capability.FINANCE);
-            member(41L, RevivalRole.STEERING_GROUP, Capability.FINANCE);
-            member(42L, RevivalRole.STEERING_GROUP, Capability.FINANCE, Capability.COMMS);
+            member(40L, RevivalRole.DIRECTEUR, "FINANCE");
+            member(41L, RevivalRole.STEERING_GROUP, "FINANCE");
+            member(42L, RevivalRole.STEERING_GROUP, "FINANCE", "COMMS");
 
             create(SATURDAY, 5L, Locale.ENGLISH);
 
             assertThat(copyOf(venue).getOwner().isSet()).isFalse();
-            assertThat(copyOf(venue).getDefaultCapability()).isEqualTo(Capability.FINANCE);
+            assertThat(copyOf(venue).getDefaultCapability()).isEqualTo("FINANCE");
         }
 
         @Test

@@ -24,10 +24,9 @@ import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemRepository;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateRepository;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateSummaryDto;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
-import nu.fgv.revival.server.guide.GuideItemType;
+import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.member.AccessPolicy;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.member.OwnerDto;
 import nu.fgv.revival.server.member.OwnerInputDto;
@@ -172,7 +171,7 @@ public class ChecklistService {
         final List<ChecklistItem> items = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(id);
         final Optional<GuideVersionView> version = texts.pinnedVersion(checklist.getRevivalId());
         final List<GuideVersionView.Item> tips = checklist.getChapterKey() == null ? List.of()
-                : version.map(view -> view.items().filter(item -> item.chapterKey().equals(checklist.getChapterKey()) && item.type() == GuideItemType.TIP).toList())
+                : version.map(view -> view.items().filter(item -> item.chapterKey().equals(checklist.getChapterKey()) && item.kind() == GuideItemKind.TIP).toList())
                 .orElse(List.of());
 
         return new ChecklistDto(checklist.getId(), checklist.getRevivalId(), checklist.getKind(), checklist.getChapterKey(),
@@ -562,7 +561,7 @@ public class ChecklistService {
         visible(callerService.current(), revivalId);
 
         final Set<String> chapters = target.chapters().stream().map(GuideVersionView.Chapter::key).collect(Collectors.toSet());
-        final Set<String> requirements = target.items().filter(item -> item.type() == GuideItemType.REQUIREMENT)
+        final Set<String> requirements = target.items().filter(item -> item.kind() == GuideItemKind.REQUIREMENT)
                 .map(GuideVersionView.Item::key).collect(Collectors.toSet());
         final Optional<GuideVersionView> current = texts.pinnedVersion(revivalId);
         final List<ChecklistRemovalDto> removals = new ArrayList<>();
@@ -611,7 +610,7 @@ public class ChecklistService {
     public void syncRequiredItems(final Long revivalId, final GuideVersionView version) {
         final Map<String, Checklist> chapters = checklistRepository.findByRevivalIdAndKind(revivalId, ChecklistKind.CHAPTER).stream()
                 .collect(Collectors.toMap(checklist -> Objects.requireNonNull(checklist.getChapterKey()), Function.identity()));
-        final List<GuideVersionView.Item> requirements = version.items().filter(item -> item.type() == GuideItemType.REQUIREMENT).toList();
+        final List<GuideVersionView.Item> requirements = version.items().filter(item -> item.kind() == GuideItemKind.REQUIREMENT).toList();
         final Map<String, Integer> guideOrder = new HashMap<>();
         final Map<String, ChecklistItem> required = itemRepository.findByRevivalIdAndRequiredTrue(revivalId).stream()
                 .collect(Collectors.toMap(item -> Objects.requireNonNull(item.getGuideItemKey()), Function.identity()));
@@ -681,7 +680,7 @@ public class ChecklistService {
      * Directeurs hold every capability implicitly, so only steering group members holding it explicitly count, and only
      * when there is exactly one.
      */
-    private static Owner defaultOwner(final @Nullable Capability capability, final List<RevivalMember> steeringGroup) {
+    private static Owner defaultOwner(final @Nullable String capability, final List<RevivalMember> steeringGroup) {
         if (capability == null) {
             return Owner.none();
         }

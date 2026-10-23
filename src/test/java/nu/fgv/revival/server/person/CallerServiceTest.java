@@ -16,7 +16,6 @@
 
 package nu.fgv.revival.server.person;
 
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalMemberRepository;
 import nu.fgv.revival.server.member.RevivalRole;
@@ -221,7 +220,7 @@ class CallerServiceTest {
         member.setRevivalId(7L);
         member.setPersonId(5L);
         member.setRole(RevivalRole.STEERING_GROUP);
-        member.setCapabilities(Set.of(Capability.FINANCE));
+        member.setCapabilities(Set.of("FINANCE"));
         authenticate("kim@example.org", false, "Kim", "USER");
         when(personRepository.findByExternalId(SUBJECT)).thenReturn(Optional.of(person(5L, "kim@example.org", false, "Kim")));
         when(memberRepository.findByPersonIdAndRemovedAtIsNull(5L)).thenReturn(List.of(member));
@@ -230,6 +229,6 @@ class CallerServiceTest {
 
         assertThat(caller.roleIn(7L)).isNotNull();
         assertThat(caller.roleIn(7L).role()).isEqualTo(RevivalRole.STEERING_GROUP);
-        assertThat(caller.roleIn(7L).capabilities()).containsExactly(Capability.FINANCE);
+        assertThat(caller.roleIn(7L).capabilities()).containsExactly("FINANCE");
     }
 }

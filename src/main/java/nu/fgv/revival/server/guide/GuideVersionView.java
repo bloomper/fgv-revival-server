@@ -101,6 +101,9 @@ public record GuideVersionView(Long id,
         }
     }
 
-    public record Item(Long id, String key, String chapterKey, @Nullable String sectionKey, GuideItemType type, Text text, Long version) {
+    /**
+     * {@code type} is a {@link GuideItemType}'s id, {@code kind} that type's kind, which never changes.
+     */
+    public record Item(Long id, String key, String chapterKey, @Nullable String sectionKey, String type, GuideItemKind kind, Text text, Long version) {
     }
 }

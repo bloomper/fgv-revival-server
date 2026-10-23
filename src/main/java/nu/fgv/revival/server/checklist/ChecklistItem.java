@@ -29,7 +29,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
@@ -120,9 +119,8 @@ public class ChecklistItem extends AbstractAuditable {
     @Column(name = "template_item_id", updatable = false)
     private @Nullable Long templateItemId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "default_capability", length = 16)
-    private @Nullable Capability defaultCapability;
+    @Column(name = "default_capability", length = 36)
+    private @Nullable String defaultCapability;
 
     @NotAudited
     @Column(name = "required_key", insertable = false, updatable = false, length = 36, columnDefinition = "CHAR(36)")

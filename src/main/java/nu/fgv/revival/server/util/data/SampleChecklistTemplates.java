@@ -17,7 +17,6 @@
 package nu.fgv.revival.server.util.data;
 
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
-import nu.fgv.revival.server.member.Capability;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -30,10 +29,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 
-import static nu.fgv.revival.server.member.Capability.CATERING;
-import static nu.fgv.revival.server.member.Capability.COMMS;
-import static nu.fgv.revival.server.member.Capability.FINANCE;
-import static nu.fgv.revival.server.member.Capability.STAFFING;
+import static nu.fgv.revival.server.util.data.SeededCapability.CATERING;
+import static nu.fgv.revival.server.util.data.SeededCapability.COMMS;
+import static nu.fgv.revival.server.util.data.SeededCapability.FINANCE;
+import static nu.fgv.revival.server.util.data.SeededCapability.STAFFING;
 
 /**
  * Chapter templates, whose items the guide sync copies into new chapter checklists, and event templates for rehearsal
@@ -50,23 +49,23 @@ final class SampleChecklistTemplates {
     private SampleChecklistTemplates() {
     }
 
-    private record Item(String textSv, String textEn, @Nullable Capability capability, @Nullable String guideItem,
+    private record Item(String textSv, String textEn, @Nullable SeededCapability capability, @Nullable String guideItem,
                         @Nullable RelativeDeadlineKind deadlineKind, @Nullable Integer deadlineAmount,
                         @Nullable DayOfWeek deadlineWeekday) {
 
-        Item(final String textSv, final String textEn, final @Nullable Capability capability, final @Nullable String guideItem) {
+        Item(final String textSv, final String textEn, final @Nullable SeededCapability capability, final @Nullable String guideItem) {
             this(textSv, textEn, capability, guideItem, null, null, null);
         }
 
-        static Item days(final String textSv, final String textEn, final @Nullable Capability capability, final int amount) {
+        static Item days(final String textSv, final String textEn, final @Nullable SeededCapability capability, final int amount) {
             return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.DAYS, amount, null);
         }
 
-        static Item workingDays(final String textSv, final String textEn, final @Nullable Capability capability, final int amount) {
+        static Item workingDays(final String textSv, final String textEn, final @Nullable SeededCapability capability, final int amount) {
             return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.WORKING_DAYS, amount, null);
         }
 
-        static Item weekBefore(final String textSv, final String textEn, final @Nullable Capability capability, final DayOfWeek weekday) {
+        static Item weekBefore(final String textSv, final String textEn, final @Nullable SeededCapability capability, final DayOfWeek weekday) {
             return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.WEEKDAY_WEEK_BEFORE, null, weekday);
         }
     }

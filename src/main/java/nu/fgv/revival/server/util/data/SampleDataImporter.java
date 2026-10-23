@@ -23,6 +23,7 @@ import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
 import nu.fgv.revival.server.guide.GuideChapter;
 import nu.fgv.revival.server.guide.GuideItem;
+import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideSection;
 import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.member.Capability;
@@ -145,7 +146,7 @@ public class SampleDataImporter {
         this.sampleUserPassword = sampleUserPassword;
     }
 
-    static String steeringGroupWith(final Capability capability) {
+    static String steeringGroupWith(final SeededCapability capability) {
         return "steering-group-" + capability.name().toLowerCase(Locale.ROOT) + SAMPLE_USER_DOMAIN;
     }
 
@@ -203,6 +204,8 @@ public class SampleDataImporter {
                 "checklist_audit",
                 "checklist_template_item_audit",
                 "checklist_template_audit",
+                "capability_audit",
+                "guide_item_type_audit",
                 "guide_suggestion_audit",
                 "revival_guide_version_change_audit",
                 "guide_item_audit",
@@ -306,7 +309,7 @@ public class SampleDataImporter {
         users.put(DIRECTEUR, sampleUser(realm, DIRECTEUR, "Directeur"));
         users.put(DIRECTEUR_2, sampleUser(realm, DIRECTEUR_2, "Directeur 2"));
         users.put(STEERING_GROUP, sampleUser(realm, STEERING_GROUP, "Steering group"));
-        Arrays.stream(Capability.values()).forEach(capability ->
+        Arrays.stream(SeededCapability.values()).forEach(capability ->
                 users.put(steeringGroupWith(capability), sampleUser(realm, steeringGroupWith(capability), "Steering group " + capability.name().toLowerCase(Locale.ROOT))));
         users.put(NO_ROLE, sampleUser(realm, NO_ROLE, "No role"));
 
@@ -449,7 +452,7 @@ public class SampleDataImporter {
 
                 if (first) {
                     insertMember(jdbcClient, revivalId, steeringGroup.id(), null, RevivalRole.STEERING_GROUP, Set.of(), approvedAt, directeur.externalId());
-                    for (final Capability capability : Capability.values()) {
+                    for (final SeededCapability capability : SeededCapability.values()) {
                         insertMember(jdbcClient, revivalId, people.get(steeringGroupWith(capability)).id(), null, RevivalRole.STEERING_GROUP, EnumSet.of(capability), approvedAt, directeur.externalId());
                     }
                 } else {
@@ -603,7 +606,7 @@ public class SampleDataImporter {
                                      final @Nullable Long personId,
                                      final @Nullable String pendingEmail,
                                      final RevivalRole role,
-                                     final Set<Capability> capabilities,
+                                     final Set<SeededCapability> capabilities,
                                      final Instant createdAt,
                                      final String createdBy) {
         final KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -709,11 +712,21 @@ public class SampleDataImporter {
                                                                    deadline_kind, deadline_amount, deadline_weekday, retired_at, version, rev, revtype)
                         SELECT id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
                                deadline_kind, deadline_amount, deadline_weekday, retired_at, version, :rev, 0 FROM checklist_template_item
+                        """,
+                // The catalogs survive the purge, but their history does not; updating one needs a previous revision
+                """
+                        INSERT INTO capability_audit (id, name_sv, name_en, position, retired_at, version, rev, revtype)
+                        SELECT id, name_sv, name_en, position, retired_at, version, :rev, 0 FROM capability
+                        """,
+                """
+                        INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
+                        SELECT id, kind, name_sv, name_en, position, retired_at, version, :rev, 0 FROM guide_item_type
                         """
         ).forEach(sql -> jdbcClient.sql(sql).param("rev", rev).update());
 
         Stream.of(Revival.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
-                        GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class).forEach(entity -> jdbcClient
+                        GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
+                        Capability.class, GuideItemType.class).forEach(entity -> jdbcClient
                 .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
                 .param("rev", rev)
                 .param("entityName", entity.getName())

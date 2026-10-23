@@ -44,8 +44,8 @@ class GuideChangesTest {
         return GuideSearchTest.text(sv, en);
     }
 
-    private static GuideVersionView.Item item(final String key, final String chapter, final String section, final GuideItemType type, final GuideVersionView.Text text) {
-        return new GuideVersionView.Item(1L, key, chapter, section, type, text, 0L);
+    private static GuideVersionView.Item item(final String key, final String chapter, final String section, final GuideItemKind type, final GuideVersionView.Text text) {
+        return new GuideVersionView.Item(1L, key, chapter, section, type.name(), type, text, 0L);
     }
 
     private static GuideVersionView version(final long id, final GuideVersionView.Text intro, final List<GuideVersionView.Chapter> chapters) {
@@ -72,14 +72,14 @@ class GuideChangesTest {
 
     private static GuideVersionView before() {
         final GuideVersionView.Chapter a = chapter("A", GuideVersionView.Text.plain("Först", "First"),
-                List.of(item("a1", "A", null, GuideItemType.TEXT, t("Löptext."))), List.of());
+                List.of(item("a1", "A", null, GuideItemKind.TEXT, t("Löptext."))), List.of());
         final GuideVersionView.Section kalas = section("s-kalas", "B", "Kalaslokal", List.of(
-                item("b1", "B", "s-kalas", GuideItemType.TIP, t("Tips ett.")),
-                item("b2", "B", "s-kalas", GuideItemType.TIP, t("Tips två.")),
-                item("b3", "B", "s-kalas", GuideItemType.TIP, t("Tips tre.", "Tip three.")),
-                item("b4", "B", "s-kalas", GuideItemType.TIP, t("Ska bort.")),
-                item("b5", "B", "s-kalas", GuideItemType.TIP, t("Ska flyttas.")),
-                item("b6", "B", "s-kalas", GuideItemType.TIP, t("Ska bli krav, få ny text och flyttas."))));
+                item("b1", "B", "s-kalas", GuideItemKind.TIP, t("Tips ett.")),
+                item("b2", "B", "s-kalas", GuideItemKind.TIP, t("Tips två.")),
+                item("b3", "B", "s-kalas", GuideItemKind.TIP, t("Tips tre.", "Tip three.")),
+                item("b4", "B", "s-kalas", GuideItemKind.TIP, t("Ska bort.")),
+                item("b5", "B", "s-kalas", GuideItemKind.TIP, t("Ska flyttas.")),
+                item("b6", "B", "s-kalas", GuideItemKind.TIP, t("Ska bli krav, få ny text och flyttas."))));
         final GuideVersionView.Chapter b = chapter("B", GuideVersionView.Text.plain("Lokaler", null), List.of(), List.of(
                 kalas,
                 section("s-tid", "B", "Tidslinjen", List.of()),
@@ -97,18 +97,18 @@ class GuideChangesTest {
      */
     private static GuideVersionView after() {
         final GuideVersionView.Chapter a = chapter("A", GuideVersionView.Text.plain("Först", "First of all"),
-                List.of(item("a1", "A", null, GuideItemType.TEXT, t("Löptext."))), List.of());
+                List.of(item("a1", "A", null, GuideItemKind.TEXT, t("Löptext."))), List.of());
         final GuideVersionView.Section kalas = section("s-kalas", "B", "Kalaslokal", List.of(
-                item("new", "B", "s-kalas", GuideItemType.TIP, t("Nytt tips först.")),
-                item("b2", "B", "s-kalas", GuideItemType.TIP, t("Tips två, omskrivet.")),
-                item("b1", "B", "s-kalas", GuideItemType.REQUIREMENT, t("Tips ett.")),
-                item("b3", "B", "s-kalas", GuideItemType.TIP, t("Tips tre.", "Tip three, reworded."))));
+                item("new", "B", "s-kalas", GuideItemKind.TIP, t("Nytt tips först.")),
+                item("b2", "B", "s-kalas", GuideItemKind.TIP, t("Tips två, omskrivet.")),
+                item("b1", "B", "s-kalas", GuideItemKind.REQUIREMENT, t("Tips ett.")),
+                item("b3", "B", "s-kalas", GuideItemKind.TIP, t("Tips tre.", "Tip three, reworded."))));
         final GuideVersionView.Chapter b = chapter("B", GuideVersionView.Text.plain("Lokaler", null), List.of(), List.of(
                 kalas,
-                section("s-tid", "B", "Tidslinje", List.of(item("b5", "B", "s-tid", GuideItemType.TIP, t("Ska flyttas.")))),
+                section("s-tid", "B", "Tidslinje", List.of(item("b5", "B", "s-tid", GuideItemKind.TIP, t("Ska flyttas.")))),
                 section("s-ny", "B", "Nytt avsnitt", List.of())));
         final GuideVersionView.Chapter c = chapter("C", GuideVersionView.Text.plain("Budget", null),
-                List.of(item("b6", "C", null, GuideItemType.REQUIREMENT, t("Nu ett krav i C."))),
+                List.of(item("b6", "C", null, GuideItemKind.REQUIREMENT, t("Nu ett krav i C."))),
                 List.of(section("s-flytt", "C", "Flyttas", List.of())));
 
         return version(2, t("Ny inledning."), chapters(a, b, c));

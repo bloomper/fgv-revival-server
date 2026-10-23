@@ -19,7 +19,6 @@ package nu.fgv.revival.server.checklist.template;
 
 import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.guide.GuideVersionView;
-import nu.fgv.revival.server.member.Capability;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -29,11 +28,11 @@ import org.jspecify.annotations.Nullable;
  * @since 0.3
  */
 public record ChecklistTemplateItemDto(Long id, Long templateId, int position, GuideVersionView.Text text, @Nullable String guideItemKey,
-                                       @Nullable Capability defaultCapability, @Nullable RelativeDeadline deadline, Long version) {
+                                       @Nullable String defaultCapability, @Nullable RelativeDeadline deadline, boolean retired, Long version) {
 
     public static ChecklistTemplateItemDto of(final ChecklistTemplateItem item) {
         return new ChecklistTemplateItemDto(item.getId(), item.getTemplateId(), item.getPosition(),
                 GuideVersionView.Text.plain(item.getTextSv(), item.getTextEn()), item.getGuideItemKey(), item.getDefaultCapability(),
-                item.getDeadline(), item.getVersion());
+                item.getDeadline(), item.isRetired(), item.getVersion());
     }
 }

@@ -16,6 +16,9 @@ extend type Query {
 
     "What changed between two versions the caller can read (FR-016)."
     guideChanges(fromId: ID!, toId: ID!): GuideChanges!
+
+    "Every signed-in caller. Retired types only with includeRetired."
+    guideItemTypes(includeRetired: Boolean = false): [GuideItemType!]!
 }
 
 extend type Mutation {
@@ -52,6 +55,18 @@ extend type Mutation {
     guideItemUpdate(input: GuideItemUpdateInput!): GuideItem!
     guideItemMove(input: GuideItemMoveInput!): GuideChapter!
     guideItemRemove(id: ID!, version: Int!): Void
+
+    "SUPER_ADMIN, for every item type mutation. Appends a new type; its kind never changes."
+    guideItemTypeCreate(input: GuideItemTypeCreateInput!): GuideItemType!
+    "Renaming changes the label in every version, published ones too."
+    guideItemTypeUpdate(input: GuideItemTypeUpdateInput!): GuideItemType!
+    "Returns every type, retired ones too, in the new order."
+    guideItemTypeMove(id: ID!, version: Int!, position: Int!): [GuideItemType!]!
+    "A retired type is not offered for new items or suggestions; items that have it keep it."
+    guideItemTypeRetire(id: ID!, version: Int!): GuideItemType!
+    guideItemTypeRestore(id: ID!, version: Int!): GuideItemType!
+    "Refused while any item, in any version, or suggestion has it (inUse): retire it instead."
+    guideItemTypeDelete(id: ID!, version: Int!): Void
 }
 
 enum GuideVersionStatus {
@@ -59,11 +74,46 @@ enum GuideVersionStatus {
     PUBLISHED
 }
 
-enum GuideItemType {
+"""
+What the application does with an item of a type (product spec 5.2). Each kind drives behaviour, so the kinds are
+fixed while the types are not.
+"""
+enum GuideItemKind {
+    "Shown beside the chapter's checklist."
     TIP
+    "Becomes a required item in the chapter's checklist."
     REQUIREMENT
+    "Becomes a question in the revival's decision log."
     QUESTION
+    "Body text, shown without a type label."
     TEXT
+}
+
+"""
+What an item is, from the list SUPER_ADMIN keeps. The four the list started with have the ids TIP, REQUIREMENT,
+QUESTION and TEXT, each of its own kind; new ones get a UUID.
+"""
+type GuideItemType {
+    id: ID!
+    kind: GuideItemKind!
+    name: LocalizedText!
+    position: Int!
+    retired: Boolean!
+    "An item in some version, or a suggestion, has it, so it cannot be deleted."
+    inUse: Boolean!
+    version: Int!
+}
+
+input GuideItemTypeCreateInput {
+    kind: GuideItemKind!
+    "1–100 characters, trimmed; the Swedish name is unique."
+    name: LocalizedTextInput!
+}
+
+input GuideItemTypeUpdateInput {
+    id: ID!
+    version: Int!
+    name: LocalizedTextInput!
 }
 
 "Swedish text, and English when there is one (FR-009a). The client picks by language."
@@ -295,14 +345,16 @@ input GuideItemCreateInput {
     sectionId: ID
     "Null appends."
     position: Int
-    type: GuideItemType!
+    "A guide item type id, not retired."
+    type: ID!
     text: LocalizedTextInput!
 }
 
 input GuideItemUpdateInput {
     id: ID!
     version: Int!
-    type: GuideItemType!
+    "A guide item type id, not retired unless the item already has it."
+    type: ID!
     text: LocalizedTextInput!
 }
 
