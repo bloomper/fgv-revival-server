@@ -82,7 +82,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(STEERING_GROUP, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "x" + DOMAIN, "role", "STEERING_GROUP"))), "FORBIDDEN");
         expectError(execute(STEERING_GROUP, MEMBER_REMOVE, Map.of("id", self)), "FORBIDDEN");
         expectError(execute(STEERING_GROUP, MEMBER_CAPABILITIES, Map.of("input", Map.of("id", self, "version", memberVersion(self), "capabilities", List.of("COMMS")))), "FORBIDDEN");
-        expectError(execute(STEERING_GROUP, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "venues", List.of("X")))), "FORBIDDEN");
+        expectError(execute(STEERING_GROUP, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "shows", List.of(Map.of("date", "2028-03-01", "venue", "X"))))), "FORBIDDEN");
         expectError(execute(STEERING_GROUP, STATUS, Map.of("input", Map.of("id", id, "from", "ORGANISING", "to", "OPEN"))), "FORBIDDEN");
     }
 

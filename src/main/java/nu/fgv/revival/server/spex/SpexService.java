@@ -79,6 +79,10 @@ public class SpexService {
         return Objects.requireNonNull(cacheManager.getCache(CacheConfig.ORIGINAL_SPEX));
     }
 
+    private Cache posters() {
+        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.SPEX_POSTERS));
+    }
+
     /**
      * The original spex, from the cache or from Spexregister.
      *
@@ -139,6 +143,20 @@ public class SpexService {
                 id -> known.getOrDefault(id, new SpexDto(id, null, null, true)),
                 (a, _) -> a,
                 LinkedHashMap::new));
+    }
+
+    /**
+     * A spex's poster, from the cache or from Spexregister. A spex without one is cached as empty too. Callers check
+     * that the caller may see a revival of the spex first.
+     *
+     * @throws SpexregisterUnavailableException when Spexregister cannot be reached
+     */
+    public Optional<SpexregisterClient.Poster> poster(final Long id) {
+        try {
+            return Objects.requireNonNull(posters().get(id, () -> client.poster(id)));
+        } catch (final Cache.ValueRetrievalException e) {
+            throw new SpexregisterUnavailableException(e.getCause() != null ? e.getCause() : e);
+        }
     }
 
     /**

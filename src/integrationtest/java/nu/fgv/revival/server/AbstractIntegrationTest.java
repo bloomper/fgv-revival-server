@@ -30,6 +30,7 @@ import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.testcontainers.Testcontainers;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.mysql.MySQLContainer;
 import tools.jackson.databind.JsonNode;
@@ -121,12 +123,14 @@ public abstract class AbstractIntegrationTest {
             .withCommand("mysqld", "--innodb-flush-log-at-trx-commit=0", "--innodb-doublewrite=0", "--skip-log-bin", "--performance-schema=OFF");
     private static final KeycloakContainer KEYCLOAK = new KeycloakContainer("quay.io/keycloak/keycloak:26.8").withRealmImportFile("/realm/fgv.json");
     protected static final WireMockServer SPEXREGISTER = new WireMockServer(options().dynamicPort());
-    // An SMTP server in the test JVM for the minutes email (M3 research R1)
+    // An SMTP server in the test JVM for the minutes email (M3 research R1), also the realm's SMTP server for invitations
     // A fixed free port, so a test can stop and restart it and the application still finds it
-    protected static final GreenMail MAIL = new GreenMail(new ServerSetup(freePort(), null, ServerSetup.PROTOCOL_SMTP))
+    private static final int SMTP_PORT = freePort();
+    protected static final GreenMail MAIL = new GreenMail(new ServerSetup(SMTP_PORT, null, ServerSetup.PROTOCOL_SMTP))
             .withConfiguration(GreenMailConfiguration.aConfig().withDisabledAuthentication());
 
     static {
+        Testcontainers.exposeHostPorts(SMTP_PORT);
         Startables.deepStart(MYSQL, KEYCLOAK).join();
         SPEXREGISTER.start();
         MAIL.start();
@@ -164,6 +168,13 @@ public abstract class AbstractIntegrationTest {
     private static void prepareKeycloak() {
         try (final Keycloak admin = KEYCLOAK.getKeycloakAdminClient()) {
             final RealmResource realm = admin.realm(REALM);
+            final RealmRepresentation representation = realm.toRepresentation();
+
+            // Keycloak in its container reaches the test JVM's GreenMail through Testcontainers' host gateway
+            representation.setSmtpServer(Map.of("host", "host.testcontainers.internal", "port", String.valueOf(SMTP_PORT),
+                    "from", "keycloak@revival.test", "auth", "false", "starttls", "false", "ssl", "false"));
+            realm.update(representation);
+
             final ClientRepresentation web = realm.clients().findByClientId(CLIENT_ID).getFirst();
             final ClientRepresentation mcp = realm.clients().findByClientId(MCP_CLIENT_ID).getFirst();
             final ClientRepresentation spexregisterMcp = realm.clients().findByClientId(SPEXREGISTER_MCP_CLIENT_ID).getFirst();
@@ -241,7 +252,7 @@ public abstract class AbstractIntegrationTest {
         for (final String table : List.of("minutes_email_recipient", "minutes_email", "meeting_entry_change", "log_entry_tag",
                 "log_entry", "log_import", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
                 "checklist_item", "checklist", "checklist_template_item", "checklist_template", "guide_suggestion", "revival_member_capability", "revival_member", "revival_status_change",
-                "revival_guide_version_change", "revival_show_date", "revival_venue", "revival",
+                "revival_guide_version_change", "revival_show", "revival",
                 "guide_item", "guide_section", "guide_chapter", "guide_version")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
@@ -253,7 +264,7 @@ public abstract class AbstractIntegrationTest {
                 UPDATE guide_item_type SET retired_at = NULL, position = FIELD(id, 'TIP', 'REQUIREMENT', 'QUESTION', 'TEXT') - 1,
                     name_sv = ELT(FIELD(id, 'TIP', 'REQUIREMENT', 'QUESTION', 'TEXT'), 'Praktiska tips', 'Krav', 'Att ta reda på', 'Text')""").update();
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
-                "revival_guide_version_change_audit", "revival_show_date_audit", "revival_venue_audit", "revival_audit",
+                "revival_guide_version_change_audit", "revival_show_audit", "revival_audit",
                 "log_entry_tag_audit", "log_entry_audit", "log_import_audit", "meeting_agenda_point_audit", "meeting_attendee_audit",
                 "meeting_audit", "checklist_item_audit", "checklist_audit", "checklist_template_item_audit", "checklist_template_audit",
                 "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",

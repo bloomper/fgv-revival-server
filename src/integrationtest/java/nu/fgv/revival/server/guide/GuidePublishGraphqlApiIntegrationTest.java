@@ -46,15 +46,15 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("revival.guideVersion").valueIsNull();
 
         graphQl(SUPER_ADMIN).document(PUBLISH)
-                .variable("input", Map.of("id", draft, "version", guideVersion(draft), "label", "v5", "note", "Från Word"))
+                .variable("input", Map.of("id", draft, "version", guideVersion(draft), "note", "Från Word"))
                 .execute()
                 .path("guideDraftPublish.status").entity(String.class).isEqualTo("PUBLISHED")
-                .path("guideDraftPublish.label").entity(String.class).isEqualTo("v5")
+                .path("guideDraftPublish.label").entity(String.class).isEqualTo("v1")
                 .path("guideDraftPublish.publishedBy").entity(String.class).isEqualTo("Sara Admin");
 
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
                 .path("revival.guideVersion.id").entity(String.class).isEqualTo(String.valueOf(draft))
-                .path("revival.guideVersion.label").entity(String.class).isEqualTo("v5");
+                .path("revival.guideVersion.label").entity(String.class).isEqualTo("v1");
         assertThat(jdbcClient.sql("SELECT from_version_id IS NULL FROM revival_guide_version_change WHERE revival_id = ?")
                 .param(revival).query(Boolean.class).single()).isTrue();
         graphQl(SUPER_ADMIN).document("{ guideDraft { draft { id } } }").execute().path("guideDraft").valueIsNull();
@@ -86,7 +86,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final long draft = draftV5Layout();
 
         expectError(graphQl(SUPER_ADMIN).document(PUBLISH)
-                .variable("input", Map.of("id", draft, "version", guideVersion(draft) + 1, "label", "v5"))
+                .variable("input", Map.of("id", draft, "version", guideVersion(draft) + 1))
                 .execute(), "CONFLICT");
     }
 
@@ -96,7 +96,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         for (final String user : List.of(OBSERVER, DIRECTEUR, STEERING_GROUP, PLAIN_USER)) {
             expectError(graphQl(user).document(PUBLISH)
-                    .variable("input", Map.of("id", draft, "version", guideVersion(draft), "label", "v5"))
+                    .variable("input", Map.of("id", draft, "version", guideVersion(draft)))
                     .execute(), "FORBIDDEN");
             expectError(graphQl(user).document(DISCARD).variable("id", draft).variable("version", guideVersion(draft)).execute(), "FORBIDDEN");
             expectError(graphQl(user).document("{ guideDraft { draft { id } } }").execute(), "FORBIDDEN");

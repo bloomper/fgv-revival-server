@@ -68,6 +68,9 @@ public class RevivalMember extends AbstractAuditable {
     @Column(name = "pending_email")
     private @Nullable String pendingEmail;
 
+    @Column(name = "invited_at")
+    private @Nullable Instant invitedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 16)
     private RevivalRole role;

@@ -72,7 +72,7 @@ class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final long steeringGroupMember = addMember(id, STEERING_GROUP, "STEERING_GROUP", List.of());
 
         expectError(execute(OBSERVER, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028))), "FORBIDDEN");
-        expectError(execute(OBSERVER, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "venues", List.of("X")))), "FORBIDDEN");
+        expectError(execute(OBSERVER, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "shows", List.of(Map.of("date", "2028-03-01", "venue", "X"))))), "FORBIDDEN");
         expectError(execute(OBSERVER, STATUS, Map.of("input", Map.of("id", id, "from", "ORGANISING", "to", "OPEN"))), "FORBIDDEN");
         expectError(execute(OBSERVER, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "x" + DOMAIN, "role", "STEERING_GROUP"))), "FORBIDDEN");
         expectError(execute(OBSERVER, MEMBER_CAPABILITIES, Map.of("input", Map.of("id", steeringGroupMember, "version", 0, "capabilities", List.of("FINANCE")))), "FORBIDDEN");

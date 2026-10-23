@@ -18,7 +18,10 @@ package nu.fgv.revival.server.member;
 
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
+
+import java.util.List;
 
 /**
  * No authorization here: the service decides (constitution II).
@@ -33,6 +36,11 @@ public class RevivalMemberGraphqlApi {
 
     public RevivalMemberGraphqlApi(final RevivalMemberService service) {
         this.service = service;
+    }
+
+    @QueryMapping
+    public List<MemberCandidateDto> revivalMemberCandidates(@Argument final Long revivalId, @Argument final String query) {
+        return service.candidates(revivalId, query);
     }
 
     @MutationMapping

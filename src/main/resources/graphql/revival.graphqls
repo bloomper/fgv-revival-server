@@ -10,7 +10,7 @@ extend type Mutation {
     "SUPER_ADMIN. Creates a revival in PROPOSED (FR-006)."
     revivalCreate(input: RevivalCreateInput!): Revival!
 
-    "SUPER_ADMIN: every field. Directeur: premiereDate, showDates, venues (FR-009). Refused while ARCHIVED."
+    "SUPER_ADMIN: every field. Directeur: premiereDate and shows (FR-009). Refused while ARCHIVED."
     revivalUpdate(input: RevivalUpdateInput!): Revival!
 
     "Changes status. SUPER_ADMIN: any. Directeur: next step only (FR-013, FR-014)."
@@ -38,8 +38,8 @@ type Revival {
     "The spex's title and the year, e.g. \"Ali Baba 2028\", or a generic name while Spexregister is unavailable."
     title: String!
     premiereDate: Date
-    showDates: [Date!]!
-    venues: [String!]!
+    "Ordered by date, then time, then venue, undecided last."
+    shows: [RevivalShow!]!
     status: RevivalStatus!
     "The pinned guide version. Null only before the first version is published (FR-017)."
     guideVersion: GuideVersionSummary
@@ -60,6 +60,15 @@ type Revival {
     "Display name, as createdBy."
     lastModifiedBy: String
     lastModifiedAt: Instant
+}
+
+"One show: a date, at a time and a venue."
+type RevivalShow {
+    date: Date!
+    "Start time, HH:mm in Swedish time (Europe/Stockholm), or null when not decided yet."
+    time: String
+    "Null when not decided yet."
+    venue: String
 }
 
 type RevivalPermissions {
@@ -105,8 +114,19 @@ input RevivalUpdateInput {
     year: Year
     premiereDate: Date
     clearPremiereDate: Boolean = false
-    showDates: [Date!]
-    venues: [String!]
+    """
+    Replaces the whole list. Directeur or SUPER_ADMIN, as premiereDate. At most 50 shows, none before the premiere and
+    none without one; the same date, time and venue only once.
+    """
+    shows: [RevivalShowInput!]
+}
+
+input RevivalShowInput {
+    date: Date!
+    "HH:mm, 00:00–23:59. Blank or null when not decided yet."
+    time: String
+    "Trimmed, at most 255 characters. Blank or null when not decided yet."
+    venue: String
 }
 
 input RevivalStatusChangeInput {

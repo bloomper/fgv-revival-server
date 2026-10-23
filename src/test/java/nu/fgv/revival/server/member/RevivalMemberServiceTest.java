@@ -20,16 +20,19 @@ import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonRepository;
+import nu.fgv.revival.server.person.UserDirectory;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
+import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
@@ -40,10 +43,12 @@ import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -63,6 +68,10 @@ class RevivalMemberServiceTest {
     private PersonRepository personRepository;
     @Mock
     private CallerService callerService;
+    @Mock
+    private UserDirectory directory;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private RevivalMemberService service;
 
@@ -90,10 +99,12 @@ class RevivalMemberServiceTest {
     @BeforeEach
     void setUp() {
         service = new RevivalMemberService(repository, revivalRepository, personRepository, callerService, new AccessPolicy(),
-                mock(CapabilityService.class));
+                mock(CapabilityService.class), directory, events);
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.APPROVED)));
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(directory.invite(any(), any(), any())).thenAnswer(invocation ->
+                new UserDirectory.Invitation(new UserDirectory.DirectoryUser("kc-0", invocation.getArgument(0), null, false, null), true));
     }
 
     @Nested
@@ -103,7 +114,7 @@ class RevivalMemberServiceTest {
         void aKnownVerifiedEmailIsActive() {
             when(personRepository.findByEmailAndEmailVerifiedTrue("kim@example.org")).thenReturn(List.of(person(5L)));
 
-            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, "Kim@Example.org", RevivalRole.DIRECTEUR, Set.of()));
+            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, "Kim@Example.org", RevivalRole.DIRECTEUR, Set.of(), null, null));
 
             assertThat(added.state()).isEqualTo(MemberState.ACTIVE);
             assertThat(added.email()).isEqualTo("kim@example.org");
@@ -113,7 +124,7 @@ class RevivalMemberServiceTest {
         void anUnknownEmailWaitsLowerCased() {
             when(personRepository.findByEmailAndEmailVerifiedTrue("ny@example.org")).thenReturn(List.of());
 
-            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, " NY@example.org ", RevivalRole.DIRECTEUR, null));
+            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, " NY@example.org ", RevivalRole.DIRECTEUR, null, null, null));
 
             assertThat(added.state()).isEqualTo(MemberState.WAITING);
             assertThat(added.email()).isEqualTo("ny@example.org");
@@ -123,7 +134,7 @@ class RevivalMemberServiceTest {
         void twoPeopleWithTheSameEmailMakeItWait() {
             when(personRepository.findByEmailAndEmailVerifiedTrue("kim@example.org")).thenReturn(List.of(person(5L), person(6L)));
 
-            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null)).state())
+            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null, null, null)).state())
                     .isEqualTo(MemberState.WAITING);
         }
 
@@ -134,23 +145,23 @@ class RevivalMemberServiceTest {
             when(personRepository.findByEmailAndEmailVerifiedTrue("ny@example.org")).thenReturn(List.of());
             when(repository.existsByRevivalIdAndPendingEmailAndRemovedAtIsNull(REVIVAL_ID, "ny@example.org")).thenReturn(true);
 
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.STEERING_GROUP, null)))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.STEERING_GROUP, null, null, null)))
                     .isInstanceOf(BadRequestException.class);
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "ny@example.org", RevivalRole.DIRECTEUR, null)))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "ny@example.org", RevivalRole.DIRECTEUR, null, null, null)))
                     .isInstanceOf(BadRequestException.class);
         }
 
         @Test
         void participantsAndHelpersCannotBeAdded() {
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.PARTICIPANT, null)))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.PARTICIPANT, null, null, null)))
                     .isInstanceOf(BadRequestException.class);
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.HELPER, null)))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.HELPER, null, null, null)))
                     .isInstanceOf(BadRequestException.class);
         }
 
         @Test
         void aDirecteurCannotHaveCapabilities() {
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, Set.of("FINANCE"))))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, Set.of("FINANCE"), null, null)))
                     .isInstanceOf(BadRequestException.class);
         }
 
@@ -178,7 +189,7 @@ class RevivalMemberServiceTest {
             when(repository.existsByRevivalIdAndPersonIdAndRemovedAtIsNull(REVIVAL_ID, 5L)).thenReturn(false);
 
             assertThatThrownBy(() -> service.remove(MEMBER_ID)).isInstanceOf(nu.fgv.revival.server.util.error.ResourceNotFoundException.class);
-            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null)).state())
+            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null, null, null)).state())
                     .isEqualTo(MemberState.ACTIVE);
         }
 
@@ -187,9 +198,156 @@ class RevivalMemberServiceTest {
             when(callerService.current()).thenReturn(TestCallers.directeur());
             when(repository.findById(MEMBER_ID)).thenReturn(Optional.of(member(RevivalRole.DIRECTEUR, 5L, null)));
 
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null)))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null, null, null)))
                     .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.remove(MEMBER_ID)).isInstanceOf(AccessDeniedException.class);
+        }
+    }
+
+    @Nested
+    class KeycloakAccounts {
+
+        private static final String EMAIL = "ny@example.org";
+
+        @BeforeEach
+        void nobodyHasLoggedIn() {
+            lenient().when(personRepository.findByEmailAndEmailVerifiedTrue(EMAIL)).thenReturn(List.of());
+        }
+
+        private static UserDirectory.DirectoryUser user(final boolean hasAccess) {
+            return new UserDirectory.DirectoryUser("kc-1", EMAIL, "Nora Ny", hasAccess, null);
+        }
+
+        @Test
+        void anAddressWithoutAnAccountGetsOneAndAnInvitationAndTheSuperAdminsHear() {
+            when(directory.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            when(directory.invite(EMAIL, "Nora", "Ny")).thenReturn(new UserDirectory.Invitation(user(false), true));
+
+            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, "Ny@Example.org", RevivalRole.STEERING_GROUP, null, " Nora ", "Ny"));
+
+            assertThat(added.state()).isEqualTo(MemberState.WAITING);
+            assertThat(added.invitedAt()).isNotNull();
+            verify(events).publishEvent(new MemberAwaitingAccess(REVIVAL_ID, EMAIL, "Nora Ny", "kc-1", RevivalRole.STEERING_GROUP, true, "Kim"));
+        }
+
+        @Test
+        void blankNamesAreLeftOutAndAFailedInvitationLeavesInvitedAtEmpty() {
+            when(directory.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            when(directory.invite(EMAIL, null, null)).thenReturn(new UserDirectory.Invitation(user(false), false));
+
+            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, " ", null));
+
+            assertThat(added.invitedAt()).isNull();
+            verify(events).publishEvent(new MemberAwaitingAccess(REVIVAL_ID, EMAIL, "Nora Ny", "kc-1", RevivalRole.DIRECTEUR, false, "Kim"));
+        }
+
+        @Test
+        void tooLongANameIsRefused() {
+            when(directory.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, "x".repeat(101), null)))
+                    .hasMessageContaining("error.member.name.tooLong");
+            verify(repository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        void anExistingAccountWithoutAccessIsNotCreatedAgainButTheSuperAdminsHear() {
+            when(directory.findByEmail(EMAIL)).thenReturn(Optional.of(user(false)));
+
+            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, "Nora", "Ny"));
+
+            assertThat(added.state()).isEqualTo(MemberState.WAITING);
+            assertThat(added.invitedAt()).isNull();
+            verify(directory, never()).invite(any(), any(), any());
+            verify(events).publishEvent(new MemberAwaitingAccess(REVIVAL_ID, EMAIL, "Nora Ny", "kc-1", RevivalRole.DIRECTEUR, false, "Kim"));
+        }
+
+        @Test
+        void anExistingAccountWithAccessJustWaitsForTheFirstLogin() {
+            when(directory.findByEmail(EMAIL)).thenReturn(Optional.of(user(true)));
+
+            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, null, null)).state())
+                    .isEqualTo(MemberState.WAITING);
+            verify(directory, never()).invite(any(), any(), any());
+            verify(events, never()).publishEvent(any());
+        }
+
+        @Test
+        void whileKeycloakIsDownTheMemberIsAddedAllTheSame() {
+            when(directory.findByEmail(EMAIL)).thenThrow(new DirectoryUnavailableException(new jakarta.ws.rs.ProcessingException("down")));
+
+            final RevivalMemberDto added = service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, "Nora", "Ny"));
+
+            assertThat(added.state()).isEqualTo(MemberState.WAITING);
+            assertThat(added.email()).isEqualTo(EMAIL);
+            assertThat(added.invitedAt()).isNull();
+            verify(repository).saveAndFlush(any());
+            verify(events, never()).publishEvent(any());
+        }
+
+        @Test
+        void creatingTheAccountFailingStillAddsTheMember() {
+            when(directory.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            when(directory.invite(EMAIL, null, null)).thenThrow(new DirectoryUnavailableException(new jakarta.ws.rs.ForbiddenException()));
+
+            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, null, null)).invitedAt()).isNull();
+            verify(events, never()).publishEvent(any());
+        }
+
+        @Test
+        void someoneWhoHasLoggedInIsNeverLookedUp() {
+            when(personRepository.findByEmailAndEmailVerifiedTrue("kim@example.org")).thenReturn(List.of(person(5L)));
+
+            service.add(new RevivalMemberAddDto(REVIVAL_ID, "kim@example.org", RevivalRole.DIRECTEUR, null, null, null));
+
+            verifyNoInteractions(directory, events);
+        }
+
+        @Test
+        void aDuplicateIsRefusedBeforeKeycloakIsAsked() {
+            when(repository.existsByRevivalIdAndPendingEmailAndRemovedAtIsNull(REVIVAL_ID, EMAIL)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, EMAIL, RevivalRole.DIRECTEUR, null, null, null)))
+                    .hasMessageContaining("error.member.duplicate");
+            verifyNoInteractions(directory);
+        }
+
+        @Test
+        void candidatesAreSearchedWithTheTrimmedQuery() {
+            when(directory.search("nor", RevivalMemberService.MAX_CANDIDATES)).thenReturn(List.of(user(true)));
+
+            assertThat(service.candidates(REVIVAL_ID, "  nor ")).containsExactly(new MemberCandidateDto(EMAIL, "Nora Ny", true));
+        }
+
+        @Test
+        void candidatesNeedThreeCharacters() {
+            assertThatThrownBy(() -> service.candidates(REVIVAL_ID, " no  ")).hasMessageContaining("error.member.candidates.tooShort");
+            verifyNoInteractions(directory);
+        }
+
+        @Test
+        void aDirecteurSearchesButNotTheSteeringGroupNorObservers() {
+            when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
+            when(callerService.current()).thenReturn(TestCallers.directeur(), TestCallers.steeringGroup(), TestCallers.observer());
+
+            assertThat(service.candidates(REVIVAL_ID, "nora")).isEmpty();
+            assertThatThrownBy(() -> service.candidates(REVIVAL_ID, "nora")).isInstanceOf(AccessDeniedException.class);
+            assertThatThrownBy(() -> service.candidates(REVIVAL_ID, "nora")).isInstanceOf(AccessDeniedException.class);
+            verify(directory).search("nora", RevivalMemberService.MAX_CANDIDATES);
+        }
+
+        @Test
+        void noSearchWhileArchived() {
+            when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.ARCHIVED)));
+
+            assertThatThrownBy(() -> service.candidates(REVIVAL_ID, "nora")).isInstanceOf(AccessDeniedException.class);
+        }
+
+        @Test
+        void keycloakBeingDownIsReportedWhenSearching() {
+            when(directory.search(any(), anyInt())).thenThrow(new DirectoryUnavailableException(new jakarta.ws.rs.ProcessingException("down")));
+
+            assertThatThrownBy(() -> service.candidates(REVIVAL_ID, "nora")).isInstanceOf(DirectoryUnavailableException.class);
         }
     }
 
@@ -208,7 +366,7 @@ class RevivalMemberServiceTest {
             when(personRepository.findByEmailAndEmailVerifiedTrue("stina@example.org")).thenReturn(List.of());
             when(repository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
 
-            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "stina@example.org", RevivalRole.STEERING_GROUP, Set.of("FINANCE"))).capabilities())
+            assertThat(service.add(new RevivalMemberAddDto(REVIVAL_ID, "stina@example.org", RevivalRole.STEERING_GROUP, Set.of("FINANCE"), null, null)).capabilities())
                     .containsExactly("FINANCE");
             assertThat(service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 1L, Set.of("FINANCE", "COMMS"))).capabilities())
                     .containsExactlyInAnyOrder("FINANCE", "COMMS");
@@ -241,7 +399,7 @@ class RevivalMemberServiceTest {
             when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.ARCHIVED)));
             when(repository.findById(MEMBER_ID)).thenReturn(Optional.of(member(RevivalRole.STEERING_GROUP, 5L, null)));
 
-            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "stina@example.org", RevivalRole.STEERING_GROUP, null)))
+            assertThatThrownBy(() -> service.add(new RevivalMemberAddDto(REVIVAL_ID, "stina@example.org", RevivalRole.STEERING_GROUP, null, null, null)))
                     .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.setCapabilities(new RevivalMemberCapabilitiesDto(MEMBER_ID, 1L, Set.of())))
                     .isInstanceOf(AccessDeniedException.class);

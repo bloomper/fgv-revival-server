@@ -34,6 +34,7 @@ public interface RevivalMemberMapper {
     @Mapping(target = "role", source = "member.role")
     @Mapping(target = "capabilities", source = "member.capabilities")
     @Mapping(target = "state", source = "member.state")
+    @Mapping(target = "invitedAt", source = "member.invitedAt")
     @Mapping(target = "version", source = "member.version")
     @Mapping(target = "displayName", source = "displayName")
     @Mapping(target = "email", source = "email")

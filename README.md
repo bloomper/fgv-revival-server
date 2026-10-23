@@ -26,6 +26,16 @@ rules of their own.
 The server calls Spexregister as `fgv-revival-service`, which holds only Spexregister's `REVIVAL` role. While
 Spexregister is down, revivals still work and only picking a spex is refused.
 
+Directeurs and steering group members are picked among the FGV realm's users (`revivalMemberCandidates`) or added by
+email address. The server reads the realm through Keycloak's admin API as `fgv-admin` (`person.UserDirectory`), which
+needs the `realm-management` roles `query-users`, `view-users`, `view-clients` and `manage-users`. Someone who has not
+logged in yet waits, and is matched on their first login with that verified address. An address without an account
+gets one, enabled and without any role, and Keycloak emails a link to verify it and choose a password, valid for 7
+days. Access is never granted by the application: when the member's account lacks `fgv-revival: USER`, the super
+admins (users holding `SUPER_ADMIN` directly) are emailed a link to the user in Keycloak's admin console, at
+`API_KEYCLOAK_CONSOLE_URL` (default `API_KEYCLOAK_URL`). While Keycloak cannot be reached the member is added all the
+same, without an account or email.
+
 ## The guide
 
 JK/FGV's continuity guide lives in package `guide`: published versions that never change, one draft that super admins
@@ -70,13 +80,14 @@ password is the `SMTP_PASSWORD` secret), from `fgv-revival.mail.from`, with link
    | `FGV_REVIVAL_MYSQL_ROOT_PASSWORD`    | Password of the database's root user                           |
    | `FGV_REVIVAL_MYSQL_USER_PASSWORD`    | Password of the database user in `.env`                        |
    | `API_KEYCLOAK_SERVICE_CLIENT_SECRET` | Secret of `fgv-revival-service` in the realm                   |
-   | `API_KEYCLOAK_ADMIN_CLIENT_SECRET`   | Secret of `fgv-admin`, only needed when importing sample data |
+   | `API_KEYCLOAK_ADMIN_CLIENT_SECRET`   | Secret of `fgv-admin`, for members and the sample data        |
 
 4. Run the server with the `local` profile. `spring-boot-docker-compose` starts `revival-mysql` on port 3307:
 
    ```
    MYSQL_API_USER_PASSWORD=<FGV_REVIVAL_MYSQL_USER_PASSWORD> \
    API_KEYCLOAK_SERVICE_CLIENT_SECRET=<secret of fgv-revival-service> \
+   API_KEYCLOAK_ADMIN_CLIENT_SECRET=<secret of fgv-admin> \
    ./gradlew bootRun --args='--spring.profiles.active=local'
    ```
 
@@ -127,7 +138,7 @@ The other users have one purpose each. The import creates them in Keycloak when 
 | `no-role@fgv.nu`                 | `USER` only                                                                                                     |
 | `invited@fgv.nu`                 | No Keycloak user: waiting in `directeur2@fgv.nu`'s revivals                                                     |
 
-There are two revivals in every status, with show dates, venues, status history and one baseline revision. The
+There are two revivals in every status, with shows (dates at venues), status history and one baseline revision. The
 import also creates:
 
 - A made-up guide, published as `v1` and `v2`. Each revival is pinned to the version that was latest when it was

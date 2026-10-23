@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import nu.fgv.revival.server.spex.SpexregisterClient;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -24,10 +25,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.Optional;
 
 /**
- * Two caches: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (M1 research R5),
- * and published guide versions, which are immutable and so never expire (M2 research R4).
+ * Three caches: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (M1 research R5),
+ * published guide versions, which are immutable and so never expire (M2 research R4), and spex posters, kept for 5
+ * minutes like the spex (constitution V) and bounded by their size, so a list of revivals does not ask Spexregister
+ * for every poster on every view.
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -38,6 +42,9 @@ public class CacheConfig {
 
     public static final String ORIGINAL_SPEX = "originalSpex";
     public static final String GUIDE_VERSIONS = "guideVersions";
+    public static final String SPEX_POSTERS = "spexPosters";
+
+    private static final long POSTER_CACHE_BYTES = 64L * 1024 * 1024;
 
     @Bean
     public CacheManager cacheManager() {
@@ -46,6 +53,13 @@ public class CacheConfig {
         cacheManager.registerCustomCache(ORIGINAL_SPEX,
                 Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(10).build());
         cacheManager.registerCustomCache(GUIDE_VERSIONS, Caffeine.newBuilder().maximumSize(20).build());
+        cacheManager.registerCustomCache(SPEX_POSTERS, Caffeine.newBuilder()
+                .expireAfterWrite(Duration.ofMinutes(5))
+                .maximumWeight(POSTER_CACHE_BYTES)
+                .weigher((_, value) -> value instanceof Optional<?> poster && poster.orElse(null) instanceof SpexregisterClient.Poster image
+                        ? image.content().length + 64
+                        : 64)
+                .build());
         return cacheManager;
     }
 

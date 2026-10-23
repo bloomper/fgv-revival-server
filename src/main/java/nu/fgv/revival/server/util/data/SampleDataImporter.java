@@ -32,15 +32,14 @@ import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalGuideVersionChange;
+import nu.fgv.revival.server.revival.RevivalShow;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalStatusChange;
 import nu.fgv.revival.server.spex.SpexDto;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.security.SecurityUtil;
 import org.jspecify.annotations.Nullable;
-import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
@@ -125,24 +124,18 @@ public class SampleDataImporter {
     private static final Set<RevivalStatus> SUPER_ADMIN_STEPS = EnumSet.of(RevivalStatus.APPROVED, RevivalStatus.REJECTED, RevivalStatus.ARCHIVED);
 
     private final SpexregisterClient spexregisterClient;
-    private final String keycloakUrl;
+    private final Keycloak keycloak;
     private final String keycloakRealm;
-    private final String keycloakAdminClientId;
-    private final String keycloakAdminClientSecret;
     private final String sampleUserPassword;
     private final Random rnd = new SecureRandom();
 
     public SampleDataImporter(final SpexregisterClient spexregisterClient,
-                              @Value("${fgv-revival.keycloak.admin.url}") final String keycloakUrl,
+                              final Keycloak keycloak,
                               @Value("${fgv-revival.keycloak.realm}") final String keycloakRealm,
-                              @Value("${fgv-revival.keycloak.admin.client-id}") final String keycloakAdminClientId,
-                              @Value("${fgv-revival.keycloak.admin.client-secret}") final String keycloakAdminClientSecret,
                               @Value("${fgv-revival.data.sample-user-password}") final String sampleUserPassword) {
         this.spexregisterClient = spexregisterClient;
-        this.keycloakUrl = keycloakUrl;
+        this.keycloak = keycloak;
         this.keycloakRealm = keycloakRealm;
-        this.keycloakAdminClientId = keycloakAdminClientId;
-        this.keycloakAdminClientSecret = keycloakAdminClientSecret;
         this.sampleUserPassword = sampleUserPassword;
     }
 
@@ -158,13 +151,8 @@ public class SampleDataImporter {
         timed("Emptied the tables", () -> purgeAllRelevantTables(jdbcClient));
 
         final List<SpexDto> spex = timedResult("Read the spex from Spexregister", this::originalSpex);
-        final Map<String, SamplePerson> people;
-
-        try (final Keycloak keycloak = keycloakAdminClient()) {
-            final RealmResource realm = keycloak.realm(keycloakRealm);
-
-            people = timedResult("Created the sample users", () -> NotificationSuspender.whileSuspended(realm, () -> createSampleUsers(jdbcClient, realm)));
-        }
+        final RealmResource realm = keycloak.realm(keycloakRealm);
+        final Map<String, SamplePerson> people = timedResult("Created the sample users", () -> NotificationSuspender.whileSuspended(realm, () -> createSampleUsers(jdbcClient, realm)));
 
         final List<SampleGuide.Version> guide = timedResult("Created the guide", () -> SampleGuide.insert(jdbcClient, people.get(ADMIN).id(), people.get(ADMIN).externalId()));
 
@@ -215,8 +203,7 @@ public class SampleDataImporter {
                 "revival_member_capability_audit",
                 "revival_member_audit",
                 "revival_status_change_audit",
-                "revival_show_date_audit",
-                "revival_venue_audit",
+                "revival_show_audit",
                 "revival_audit",
                 "revchanges",
                 "revinfo",
@@ -236,8 +223,7 @@ public class SampleDataImporter {
                 "revival_member_capability",
                 "revival_member",
                 "revival_status_change",
-                "revival_show_date",
-                "revival_venue",
+                "revival_show",
                 "revival",
                 "guide_item",
                 "guide_section",
@@ -284,16 +270,6 @@ public class SampleDataImporter {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while waiting for Spexregister", e);
         }
-    }
-
-    private Keycloak keycloakAdminClient() {
-        return KeycloakBuilder.builder()
-                .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
-                .serverUrl(keycloakUrl)
-                .realm(keycloakRealm)
-                .clientId(keycloakAdminClientId)
-                .clientSecret(keycloakAdminClientSecret)
-                .build();
     }
 
     private Map<String, SamplePerson> createSampleUsers(final JdbcClient jdbcClient, final RealmResource realm) {
@@ -438,7 +414,7 @@ public class SampleDataImporter {
             pinGuideVersion(jdbcClient, revivalId, guide, timeline.getFirst(), admin);
 
             if (premiereDate != null && path.contains(RevivalStatus.ORGANISING)) {
-                createShowDatesAndVenues(jdbcClient, revivalId, premiereDate);
+                createShows(jdbcClient, revivalId, premiereDate);
             }
 
             SamplePerson directeur = null;
@@ -581,23 +557,24 @@ public class SampleDataImporter {
         return Objects.requireNonNull(keyHolder.getKey()).longValue();
     }
 
-    private void createShowDatesAndVenues(final JdbcClient jdbcClient, final long revivalId, final LocalDate premiereDate) {
+    /**
+     * One to four shows from the premiere at 19:00, a weekend one at 14:00, at one or two venues, the last one's time
+     * and venue sometimes not decided yet.
+     */
+    private void createShows(final JdbcClient jdbcClient, final long revivalId, final LocalDate premiereDate) {
         final List<String> venues = new ArrayList<>(VENUES);
-
-        Stream.of(0, 1, 2, 7)
-                .limit(rnd.nextInt(1, 5))
-                .forEach(days -> jdbcClient
-                        .sql("INSERT INTO revival_show_date (revival_id, show_date) VALUES (:revivalId, :showDate)")
-                        .param("revivalId", revivalId)
-                        .param("showDate", premiereDate.plusDays(days))
-                        .update());
+        final List<Integer> days = List.of(0, 1, 2, 7).subList(0, rnd.nextInt(1, 5));
+        final int venueCount = rnd.nextInt(1, 3);
+        final boolean lastUndecided = days.size() > 1 && rnd.nextBoolean();
 
         Collections.shuffle(venues, rnd);
-        IntStream.range(0, rnd.nextInt(1, 3)).forEach(position -> jdbcClient
-                .sql("INSERT INTO revival_venue (revival_id, position, name) VALUES (:revivalId, :position, :name)")
+        IntStream.range(0, days.size()).forEach(index -> jdbcClient
+                .sql("INSERT INTO revival_show (revival_id, show_date, start_time, venue) VALUES (:revivalId, :showDate, :startTime, :venue)")
                 .param("revivalId", revivalId)
-                .param("position", position)
-                .param("name", venues.get(position))
+                .param("showDate", premiereDate.plusDays(days.get(index)))
+                .param("startTime", lastUndecided && index == days.size() - 1 ? null
+                        : premiereDate.plusDays(days.get(index)).getDayOfWeek().getValue() >= 6 ? java.time.LocalTime.of(14, 0) : java.time.LocalTime.of(19, 0))
+                .param("venue", lastUndecided && index == days.size() - 1 ? null : venues.get(index % venueCount))
                 .update());
     }
 
@@ -664,12 +641,8 @@ public class SampleDataImporter {
                         SELECT id, spex_id, year, premiere_date, status, guide_version_id, version, :rev, 0 FROM revival
                         """,
                 """
-                        INSERT INTO revival_show_date_audit (revival_id, show_date, rev, revtype)
-                        SELECT revival_id, show_date, :rev, 0 FROM revival_show_date
-                        """,
-                """
-                        INSERT INTO revival_venue_audit (revival_id, position, name, rev, revtype)
-                        SELECT revival_id, position, name, :rev, 0 FROM revival_venue
+                        INSERT INTO revival_show_audit (id, revival_id, show_date, start_time, venue, rev, revtype)
+                        SELECT id, revival_id, show_date, start_time, venue, :rev, 0 FROM revival_show
                         """,
                 """
                         INSERT INTO revival_status_change_audit (id, revival_id, from_status, to_status, changed_by, changed_at, rev, revtype)
@@ -724,7 +697,7 @@ public class SampleDataImporter {
                         """
         ).forEach(sql -> jdbcClient.sql(sql).param("rev", rev).update());
 
-        Stream.of(Revival.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
+        Stream.of(Revival.class, RevivalShow.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
                         GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
                         Capability.class, GuideItemType.class).forEach(entity -> jdbcClient
                 .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")

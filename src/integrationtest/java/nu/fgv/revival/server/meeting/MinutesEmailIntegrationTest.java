@@ -62,6 +62,8 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "DECISION", "text", "Vi spelar i RunAn", "meetingId", meeting)));
         execute(STEERING_GROUP, MeetingGraphqlApiIntegrationTest.CLOSE, Map.of("id", meeting, "version", version()));
+        // Adding the waiting member emails Keycloak's invitation and tells the super admins
+        MAIL.reset();
     }
 
     private long version() {

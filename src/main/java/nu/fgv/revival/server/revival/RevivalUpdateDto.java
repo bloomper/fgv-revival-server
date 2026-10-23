@@ -33,14 +33,13 @@ public record RevivalUpdateDto(Long id,
                                @Nullable Integer year,
                                @Nullable LocalDate premiereDate,
                                @Nullable Boolean clearPremiereDate,
-                               @Nullable List<LocalDate> showDates,
-                               @Nullable List<String> venues) {
+                               @Nullable List<RevivalShowDto> shows) {
 
     boolean changesCore() {
         return spexId != null || year != null;
     }
 
     boolean changesDetails() {
-        return premiereDate != null || Boolean.TRUE.equals(clearPremiereDate) || showDates != null || venues != null;
+        return premiereDate != null || Boolean.TRUE.equals(clearPremiereDate) || shows != null;
     }
 }

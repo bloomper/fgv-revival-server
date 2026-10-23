@@ -43,7 +43,7 @@ class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2029))), "SPEXREGISTER_UNAVAILABLE");
         expectError(execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL))), "SPEXREGISTER_UNAVAILABLE");
         expectError(execute(SUPER_ADMIN, SPEX_SEARCH, Map.of("query", "ali")), "SPEXREGISTER_UNAVAILABLE");
-        execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "venues", java.util.List.of("Kårhuset"))))
+        execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "premiereDate", "2028-02-10", "shows", java.util.List.of(Map.of("date", "2028-02-10", "venue", "Kårhuset")))))
                 .path("revivalUpdate.title").entity(String.class).isEqualTo("Revival 2028");
     }
 

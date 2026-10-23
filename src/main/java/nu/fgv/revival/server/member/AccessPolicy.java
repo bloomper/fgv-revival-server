@@ -158,6 +158,13 @@ public class AccessPolicy {
         };
     }
 
+    /**
+     * Searching the FGV realm's users to pick a member: whoever may manage the steering group.
+     */
+    public boolean canSearchMemberCandidates(final Caller caller, final Revival revival) {
+        return canManageSteeringGroup(caller, revival);
+    }
+
     public boolean canSeeMemberEmails(final Caller caller, final Revival revival) {
         return caller.isSuperAdmin() || isVisibleDirecteur(caller, revival);
     }
@@ -350,6 +357,10 @@ public class AccessPolicy {
 
     public void requireManageMembers(final Caller caller, final Revival revival, final RevivalRole role) {
         require(canManageMembers(caller, revival, role));
+    }
+
+    public void requireSearchMemberCandidates(final Caller caller, final Revival revival) {
+        require(canSearchMemberCandidates(caller, revival));
     }
 
     public void requireSpexSearch(final Caller caller) {

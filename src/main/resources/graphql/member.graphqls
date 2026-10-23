@@ -1,10 +1,22 @@
 extend type Query {
     "Every signed-in caller. Retired areas only with includeRetired."
     capabilities(includeRetired: Boolean = false): [Capability!]!
+
+    """
+    Users in the FGV realm matching the query (name, username or email), for picking a member. SUPER_ADMIN, or a
+    directeur of the revival (canManageSteeringGroup). At least 3 characters after trimming, at most 10 results,
+    enabled users only. Errors with DIRECTORY_UNAVAILABLE when Keycloak cannot be reached.
+    """
+    revivalMemberCandidates(revivalId: ID!, query: String!): [MemberCandidate!]!
 }
 
 extend type Mutation {
-    "SUPER_ADMIN adds DIRECTEUR or STEERING_GROUP. Directeur adds STEERING_GROUP (FR-019, FR-019a)."
+    """
+    SUPER_ADMIN adds DIRECTEUR or STEERING_GROUP. Directeur adds STEERING_GROUP (FR-019, FR-019a). Someone who has not
+    logged in with that verified email waits. An email that is not a user in the FGV realm gets one, without any role,
+    and Keycloak emails them an invitation (invitedAt); the super admins are emailed when the user lacks the fgv-revival
+    USER role. Never fails because Keycloak cannot be reached: the member then waits without an invitation.
+    """
     revivalMemberAdd(input: RevivalMemberAddInput!): RevivalMember!
 
     "Sets the capabilities of a STEERING_GROUP member. SUPER_ADMIN or directeur."
@@ -74,7 +86,18 @@ type RevivalMember {
     displayName: String
     "Shown only to SUPER_ADMIN and the revival's directeurs; null for everyone else."
     email: Email
+    "When this application created a Keycloak user for the member and emailed them; null otherwise."
+    invitedAt: Instant
     version: Int!
+}
+
+"A user in the FGV realm who can be added as a member."
+type MemberCandidate {
+    email: Email!
+    "First and last name from Keycloak, or null."
+    displayName: String
+    "Holds the fgv-revival USER role, so they can log in now."
+    hasAccess: Boolean!
 }
 
 input RevivalMemberAddInput {
@@ -83,6 +106,9 @@ input RevivalMemberAddInput {
     role: RevivalRole!
     "Capability ids, none retired."
     capabilities: [ID!] = []
+    "Used only when the email is not a Keycloak user and one is created. Trimmed, at most 100 characters."
+    firstName: String
+    lastName: String
 }
 
 input RevivalMemberCapabilitiesInput {

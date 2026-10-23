@@ -22,6 +22,8 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
+import java.util.List;
+
 /**
  * @author Anders Jacobsson
  * @since 0.1
@@ -34,8 +36,7 @@ public interface RevivalMapper {
     @Mapping(target = "id", source = "revival.id")
     @Mapping(target = "year", source = "revival.year")
     @Mapping(target = "premiereDate", source = "revival.premiereDate")
-    @Mapping(target = "showDates", source = "revival.showDates")
-    @Mapping(target = "venues", source = "revival.venues")
+    @Mapping(target = "shows", source = "revival.shows")
     @Mapping(target = "status", source = "revival.status")
     @Mapping(target = "guideVersionId", source = "revival.guideVersionId")
     @Mapping(target = "version", source = "revival.version")
@@ -46,6 +47,13 @@ public interface RevivalMapper {
     @Mapping(target = "spex", source = "spex")
     @Mapping(target = "permissions", source = "permissions")
     RevivalDto toDto(Revival revival, SpexDto spex, RevivalPermissionsDto permissions);
+
+    /**
+     * Ordered by date, then venue, whatever order they were loaded in.
+     */
+    default List<RevivalShowDto> toShowDtos(final List<RevivalShow> shows) {
+        return shows.stream().map(RevivalShow::toDto).sorted(RevivalShowDto.ORDER).toList();
+    }
 
     @Mapping(target = "from", source = "fromStatus")
     @Mapping(target = "to", source = "toStatus")

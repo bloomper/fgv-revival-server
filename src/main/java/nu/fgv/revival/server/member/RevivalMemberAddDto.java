@@ -21,8 +21,15 @@ import org.jspecify.annotations.Nullable;
 import java.util.Set;
 
 /**
+ * {@code firstName} and {@code lastName} are used only when a Keycloak user is created for the address.
+ *
  * @author Anders Jacobsson
  * @since 0.1
  */
-public record RevivalMemberAddDto(Long revivalId, String email, RevivalRole role, @Nullable Set<String> capabilities) {
+public record RevivalMemberAddDto(Long revivalId,
+                                  String email,
+                                  RevivalRole role,
+                                  @Nullable Set<String> capabilities,
+                                  @Nullable String firstName,
+                                  @Nullable String lastName) {
 }

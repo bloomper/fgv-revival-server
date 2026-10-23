@@ -23,6 +23,7 @@ import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.spex.SpexDto;
 import nu.fgv.revival.server.spex.SpexService;
+import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import org.jspecify.annotations.Nullable;
@@ -36,11 +37,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import static nu.fgv.revival.server.revival.RevivalMapper.REVIVAL_MAPPER;
 import static org.springframework.util.StringUtils.hasText;
@@ -57,7 +62,8 @@ public class RevivalService {
 
     static final int MIN_YEAR = 1948;
     static final int MAX_YEAR = 2100;
-    static final int MAX_VENUES = 20;
+    static final int MAX_SHOWS = 50;
+    private static final Pattern SHOW_TIME = Pattern.compile("([01]\\d|2[0-3]):[0-5]\\d");
 
     private static final Sort NEWEST_FIRST = Sort.by(
             Sort.Order.desc("premiereDate").nullsLast(),
@@ -174,6 +180,14 @@ public class RevivalService {
         return toDto(caller, visible(caller, id));
     }
 
+    /**
+     * The poster of a revival's spex, or empty when it has none. Not visible and missing give the same error.
+     */
+    @Transactional(readOnly = true)
+    public Optional<SpexregisterClient.Poster> poster(final Long id) {
+        return spexService.poster(visible(callerService.current(), id).getSpexId());
+    }
+
     @Transactional(readOnly = true)
     public List<RevivalStatusChangeHistoryDto> statusHistory(final Long id) {
         final Caller caller = callerService.current();
@@ -245,13 +259,8 @@ public class RevivalService {
         } else if (dto.premiereDate() != null) {
             revival.setPremiereDate(dto.premiereDate());
         }
-        if (dto.showDates() != null) {
-            revival.getShowDates().clear();
-            revival.getShowDates().addAll(new TreeSet<>(dto.showDates()));
-        }
-        if (dto.venues() != null) {
-            revival.getVenues().clear();
-            revival.getVenues().addAll(validVenues(dto.venues()));
+        if (dto.shows() != null) {
+            replaceShows(revival, validShows(dto.shows()));
         }
         validateDates(revival);
 
@@ -324,14 +333,60 @@ public class RevivalService {
     }
 
 
-    private static List<String> validVenues(final List<String> venues) {
-        if (venues.size() > MAX_VENUES) {
-            throw new BadRequestException("error.revival.venues.tooMany", MAX_VENUES);
+    /**
+     * At most {@value #MAX_SHOWS}, times as {@code HH:mm} and venues trimmed with blank as not decided, and no date, time
+     * and venue twice.
+     */
+    private static List<RevivalShowDto> validShows(final List<RevivalShowDto> shows) {
+        if (shows.size() > MAX_SHOWS) {
+            throw new BadRequestException("error.revival.shows.tooMany", MAX_SHOWS);
         }
-        if (venues.stream().anyMatch(venue -> !hasText(venue) || venue.trim().length() > 255)) {
-            throw new BadRequestException("error.revival.venues.blank");
+
+        final List<RevivalShowDto> valid = shows.stream()
+                .map(show -> new RevivalShowDto(show.date(), validTime(show.time()), hasText(show.venue()) ? show.venue().trim() : null))
+                .toList();
+
+        if (valid.stream().anyMatch(show -> show.venue() != null && show.venue().length() > RevivalShow.VENUE_MAX_LENGTH)) {
+            throw new BadRequestException("error.revival.shows.venueTooLong", RevivalShow.VENUE_MAX_LENGTH);
         }
-        return venues.stream().map(String::trim).toList();
+        if (new HashSet<>(valid).size() != valid.size()) {
+            throw new BadRequestException("error.revival.shows.duplicate");
+        }
+        return valid;
+    }
+
+    /**
+     * {@code HH:mm} from 00:00 to 23:59, trimmed, or null when blank.
+     */
+    private static @Nullable String validTime(final @Nullable String time) {
+        if (!hasText(time)) {
+            return null;
+        }
+
+        final String trimmed = time.trim();
+
+        if (!SHOW_TIME.matcher(trimmed).matches()) {
+            throw new BadRequestException("error.revival.shows.timeInvalid");
+        }
+        return trimmed;
+    }
+
+    /**
+     * Keeps the shows that stay, so that only real changes reach the history. The shows are the inverse side of their
+     * relation, which Hibernate does not count as a change of the revival, so a change touches the revival itself: its
+     * version then moves on and a stale one is a conflict, as for its other fields.
+     */
+    private void replaceShows(final Revival revival, final List<RevivalShowDto> shows) {
+        final Set<RevivalShowDto> wanted = new HashSet<>(shows);
+        final boolean removed = revival.getShows().removeIf(show -> !wanted.remove(show.toDto()));
+
+        shows.stream()
+                .filter(wanted::contains)
+                .forEach(show -> revival.getShows().add(new RevivalShow(revival, show.date(),
+                        show.time() == null ? null : LocalTime.parse(show.time(), RevivalShow.TIME_FORMAT), show.venue())));
+        if (removed || !wanted.isEmpty()) {
+            revival.setLastModifiedAt(Instant.now(clock));
+        }
     }
 
     private static void validateDates(final Revival revival) {
@@ -340,11 +395,11 @@ public class RevivalService {
         if (premiere != null && premiere.getYear() != revival.getYear()) {
             throw new BadRequestException("error.revival.premiereDate.year", revival.getYear());
         }
-        if (!revival.getShowDates().isEmpty() && premiere == null) {
-            throw new BadRequestException("error.revival.showDates.withoutPremiere");
+        if (!revival.getShows().isEmpty() && premiere == null) {
+            throw new BadRequestException("error.revival.shows.withoutPremiere");
         }
-        if (premiere != null && revival.getShowDates().stream().anyMatch(date -> date.isBefore(premiere))) {
-            throw new BadRequestException("error.revival.showDates.beforePremiere");
+        if (premiere != null && revival.getShows().stream().anyMatch(show -> show.getDate().isBefore(premiere))) {
+            throw new BadRequestException("error.revival.shows.beforePremiere");
         }
     }
 }

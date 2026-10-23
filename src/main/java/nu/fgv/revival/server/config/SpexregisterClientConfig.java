@@ -30,6 +30,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.client.OAuth2ClientHttpRequestInterceptor;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.time.Duration;
 
 import static org.springframework.security.oauth2.client.web.client.RequestAttributeClientRegistrationIdResolver.clientRegistrationId;
@@ -58,18 +59,27 @@ public class SpexregisterClientConfig {
         return manager;
     }
 
+    /**
+     * Spexregister's REST API, rooted at the GraphQL URL's origin, for the one thing GraphQL cannot carry: poster
+     * images (constitution VI).
+     */
     @Bean
-    public HttpSyncGraphQlClient spexregisterGraphQlClient(@Value("${fgv-revival.spexregister.graphql-url}") final String url,
-                                                           final OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager) {
-        final RestClient restClient = RestClient.builder()
+    public RestClient spexregisterRestClient(@Value("${fgv-revival.spexregister.graphql-url}") final String url,
+                                             final OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager) {
+        return RestClient.builder()
+                .baseUrl(URI.create(url).resolve("/").toString())
                 .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults()
                         .withConnectTimeout(TIMEOUT)
                         .withReadTimeout(TIMEOUT)))
                 .requestInterceptor(new OAuth2ClientHttpRequestInterceptor(spexregisterAuthorizedClientManager))
                 .defaultRequest(request -> request.attributes(clientRegistrationId(REGISTRATION_ID)))
                 .build();
+    }
 
-        return HttpSyncGraphQlClient.builder(restClient).url(url).build();
+    @Bean
+    public HttpSyncGraphQlClient spexregisterGraphQlClient(@Value("${fgv-revival.spexregister.graphql-url}") final String url,
+                                                           final RestClient spexregisterRestClient) {
+        return HttpSyncGraphQlClient.builder(spexregisterRestClient).url(url).build();
     }
 
 }

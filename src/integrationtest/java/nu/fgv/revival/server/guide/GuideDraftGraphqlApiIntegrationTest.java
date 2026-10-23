@@ -98,7 +98,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(run(SUPER_ADMIN, ITEM_UPDATE, Map.of("input", Map.of("id", item, "version", rowVersion("guide_item", item), "type", "TEXT", "text", text))), "BAD_REQUEST");
         expectError(run(SUPER_ADMIN, ITEM_MOVE, Map.of("input", Map.of("id", item, "version", rowVersion("guide_item", item), "chapterId", chapter, "position", 0))), "BAD_REQUEST");
         expectError(run(SUPER_ADMIN, ITEM_REMOVE, Map.of("id", item, "version", rowVersion("guide_item", item))), "BAD_REQUEST");
-        expectError(run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", published, "version", guideVersion(published), "label", "v9"))), "BAD_REQUEST");
+        expectError(run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", published, "version", guideVersion(published)))), "BAD_REQUEST");
         expectError(run(SUPER_ADMIN, DISCARD, Map.of("id", published, "version", guideVersion(published))), "BAD_REQUEST");
 
         assertThat(snapshot(published)).isEqualTo(before);
@@ -227,9 +227,9 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         final long draft = id("guide_version", "status = 'DRAFT'");
 
-        expectError(run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", draft, "version", guideVersion(draft), "label", "v1"))), "BAD_REQUEST");
+        expectError(run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", draft, "version", guideVersion(draft)))), "BAD_REQUEST");
         run(SUPER_ADMIN, CHAPTER_CREATE, Map.of("input", Map.of("versionId", draft, "title", Map.of("sv", "Först")))).errors().verify();
-        run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", draft, "version", guideVersion(draft), "label", "v1"))).errors().verify();
+        run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", draft, "version", guideVersion(draft)))).errors().verify();
     }
 
     @Test

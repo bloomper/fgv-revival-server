@@ -17,9 +17,11 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,7 +55,21 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
     }
 
     private Map<String, Object> details(final long id, final String premiere, final List<String> showDates) {
-        return Map.of("input", Map.of("id", id, "version", version(id), "premiereDate", premiere, "showDates", showDates, "venues", List.of("Chalmers kårhus")));
+        return Map.of("input", Map.of("id", id, "version", version(id), "premiereDate", premiere,
+                "shows", showDates.stream().map(date -> Map.of("date", date, "venue", "Chalmers kårhus")).toList()));
+    }
+
+    private static Map<String, Object> show(final String date, final @Nullable String venue) {
+        return show(date, null, venue);
+    }
+
+    private static Map<String, Object> show(final String date, final @Nullable String time, final @Nullable String venue) {
+        final Map<String, Object> show = new HashMap<>();
+
+        show.put("date", date);
+        show.put("time", time);
+        show.put("venue", venue);
+        return show;
     }
 
     @Test
@@ -68,9 +84,39 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
     void detailsCanBeEditedButNotCoreFields() {
         execute(DIRECTEUR, UPDATE, details(own, "2028-02-10", List.of("2028-02-10", "2028-02-12")))
                 .path("revivalUpdate.premiereDate").entity(String.class).isEqualTo("2028-02-10")
-                .path("revivalUpdate.showDates").entityList(String.class).containsExactly("2028-02-10", "2028-02-12")
-                .path("revivalUpdate.venues").entityList(String.class).containsExactly("Chalmers kårhus");
+                .path("revivalUpdate.shows[*].date").entityList(String.class).containsExactly("2028-02-10", "2028-02-12")
+                .path("revivalUpdate.shows[*].venue").entityList(String.class).containsExactly("Chalmers kårhus", "Chalmers kårhus");
         expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "year", 2029))), "FORBIDDEN");
+    }
+
+    @Test
+    void showsAreDatesAtVenuesThatMayBeUndecided() {
+        execute(DIRECTEUR, UPDATE, details(own, "2028-02-10", List.of()));
+        execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows",
+                        List.of(show("2028-02-12", " RunAn "), show("2028-02-10", null), show("2028-02-10", "Gasquen"), show("2028-02-12", "")))))
+                .path("revivalUpdate.shows[*].date").entityList(String.class).containsExactly("2028-02-10", "2028-02-10", "2028-02-12", "2028-02-12")
+                .path("revivalUpdate.shows[0].venue").entity(String.class).isEqualTo("Gasquen")
+                .path("revivalUpdate.shows[1].venue").valueIsNull()
+                .path("revivalUpdate.shows[2].venue").entity(String.class).isEqualTo("RunAn")
+                .path("revivalUpdate.shows[3].venue").valueIsNull();
+        expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows",
+                List.of(show("2028-02-12", "RunAn"), show("2028-02-12", "RunAn "))))), "BAD_REQUEST");
+
+        execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows",
+                        List.of(show("2028-02-12", "19:00", "RunAn"), show("2028-02-12", " 14:00 ", "RunAn"), show("2028-02-12", null, "RunAn")))))
+                .path("revivalUpdate.shows[*].time").entityList(String.class).containsExactly("14:00", "19:00", null)
+                .path("revivalUpdate.shows[*].venue").entityList(String.class).containsExactly("RunAn", "RunAn", "RunAn");
+        assertThat(jdbcClient.sql("SELECT start_time FROM revival_show WHERE revival_id = ? AND start_time IS NOT NULL ORDER BY start_time")
+                .param(own).query(String.class).list()).containsExactly("14:00:00", "19:00:00");
+        expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows",
+                List.of(show("2028-02-12", "25:00", "RunAn"))))), "BAD_REQUEST");
+
+        final long version = version(own);
+
+        execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version, "shows", List.of(show("2028-02-12", "RunAn")))))
+                .path("revivalUpdate.shows[*].venue").entityList(String.class).containsExactly("RunAn");
+        assertThat(version(own)).isGreaterThan(version);
+        assertThat(jdbcClient.sql("SELECT COUNT(*) FROM revival_show WHERE revival_id = ?").param(own).query(Integer.class).single()).isEqualTo(1);
     }
 
     @Test
@@ -114,7 +160,7 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
         final long stale = version(own);
 
         execute(DIRECTEUR, UPDATE, details(own, "2028-02-10", List.of()));
-        expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", stale, "venues", List.of("Annan scen")))), "CONFLICT");
+        expectError(execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", stale, "shows", List.of(show("2028-02-11", "Annan scen"))))), "CONFLICT");
     }
 
     @Test
@@ -122,8 +168,8 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
         addMember(own, DIRECTEUR_2, "DIRECTEUR", List.of());
 
         execute(DIRECTEUR, UPDATE, details(own, "2028-02-10", List.of()));
-        execute(DIRECTEUR_2, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "venues", List.of("Lindholmen"))))
-                .path("revivalUpdate.venues").entityList(String.class).containsExactly("Lindholmen");
+        execute(DIRECTEUR_2, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows", List.of(show("2028-02-11", "Lindholmen")))))
+                .path("revivalUpdate.shows[*].venue").entityList(String.class).containsExactly("Lindholmen");
     }
 
     @Test

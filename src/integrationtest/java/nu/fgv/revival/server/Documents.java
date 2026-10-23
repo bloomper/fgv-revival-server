@@ -28,7 +28,7 @@ public final class Documents {
     public static final String REVIVAL = """
             query($id: ID!) {
                 revival(id: $id) {
-                    id year title premiereDate showDates venues status version createdBy createdAt lastModifiedBy
+                    id year title premiereDate shows { date time venue } status version createdBy createdAt lastModifiedBy
                     spex { id title year available }
                     members { id role capabilities { id } state displayName email version }
                     statusHistory { from to changedBy changedAt }
@@ -36,9 +36,10 @@ public final class Documents {
                 }
             }""";
     public static final String CREATE = "mutation($input: RevivalCreateInput!) { revivalCreate(input: $input) { id status title spex { title } } }";
-    public static final String UPDATE = "mutation($input: RevivalUpdateInput!) { revivalUpdate(input: $input) { id version title year premiereDate showDates venues spex { id } } }";
+    public static final String UPDATE = "mutation($input: RevivalUpdateInput!) { revivalUpdate(input: $input) { id version title year premiereDate shows { date time venue } spex { id } } }";
     public static final String STATUS = "mutation($input: RevivalStatusChangeInput!) { revivalStatusChange(input: $input) { id status } }";
-    public static final String MEMBER_ADD = "mutation($input: RevivalMemberAddInput!) { revivalMemberAdd(input: $input) { id role state capabilities { id } email version } }";
+    public static final String MEMBER_ADD = "mutation($input: RevivalMemberAddInput!) { revivalMemberAdd(input: $input) { id role state capabilities { id } email invitedAt version } }";
+    public static final String MEMBER_CANDIDATES = "query($revivalId: ID!, $query: String!) { revivalMemberCandidates(revivalId: $revivalId, query: $query) { email displayName hasAccess } }";
     public static final String MEMBER_CAPABILITIES = "mutation($input: RevivalMemberCapabilitiesInput!) { revivalMemberCapabilitiesSet(input: $input) { id capabilities { id } version } }";
     public static final String MEMBER_REMOVE = "mutation($id: ID!) { revivalMemberRemove(id: $id) }";
     public static final String SPEX_SEARCH = "query($query: String!) { spexSearch(query: $query) { id title year available } }";

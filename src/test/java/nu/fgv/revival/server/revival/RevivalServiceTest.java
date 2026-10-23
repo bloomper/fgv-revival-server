@@ -39,7 +39,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,7 +80,20 @@ class RevivalServiceTest {
     private RevivalService service;
 
     private static RevivalUpdateDto details(final LocalDate premiere, final List<LocalDate> showDates) {
-        return new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, premiere, null, showDates, null);
+        return new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, premiere, null,
+                showDates == null ? null : showDates.stream().map(date -> new RevivalShowDto(date, null, null)).toList());
+    }
+
+    private static RevivalUpdateDto shows(final RevivalShowDto... shows) {
+        return new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, null, List.of(shows));
+    }
+
+    private static RevivalShowDto show(final int day, final String venue) {
+        return show(day, null, venue);
+    }
+
+    private static RevivalShowDto show(final int day, final String time, final String venue) {
+        return new RevivalShowDto(LocalDate.of(2028, 2, day), time, venue);
     }
 
     @BeforeEach
@@ -155,12 +167,12 @@ class RevivalServiceTest {
         final Revival revival = TestCallers.revival(RevivalStatus.OPEN);
 
         revival.setPremiereDate(null);
-        revival.getShowDates().clear();
+        revival.getShows().clear();
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 1955, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 1955, null, null, null)))
                 .hasMessageContaining("error.revival.year.beforeOriginal");
-        assertThat(service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2020, null, null, null, null)).year()).isEqualTo(2020);
+        assertThat(service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2020, null, null, null)).year()).isEqualTo(2020);
     }
 
     @Test
@@ -185,7 +197,7 @@ class RevivalServiceTest {
     }
 
     @Test
-    void showDatesMustBeOnOrAfterThePremiere() {
+    void showsMustBeOnOrAfterThePremiere() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
         assertThatThrownBy(() -> service.update(details(LocalDate.of(2028, 2, 10), List.of(LocalDate.of(2028, 2, 9)))))
@@ -193,36 +205,94 @@ class RevivalServiceTest {
 
         final RevivalDto updated = service.update(details(LocalDate.of(2028, 2, 10), List.of(LocalDate.of(2028, 2, 10), LocalDate.of(2028, 2, 12))));
 
-        assertThat(updated.showDates()).hasSize(2);
+        assertThat(updated.shows()).hasSize(2);
     }
 
     @Test
-    void showDatesAreRefusedWithoutAPremiere() {
+    void showsAreRefusedWithoutAPremiere() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, true, List.of(LocalDate.of(2028, 3, 1)), null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, true, List.of(new RevivalShowDto(LocalDate.of(2028, 3, 1), null, "Kårhuset")))))
                 .isInstanceOf(BadRequestException.class);
     }
 
     @Test
-    void venuesAreTrimmedNotBlankAndAtMost20() {
+    void venuesAreTrimmedWithBlankAsUndecidedAndShowsAreOrderedByDateThenVenue() {
         final Revival revival = TestCallers.revival(RevivalStatus.OPEN);
 
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
 
-        assertThat(service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, null, null, List.of(" Chalmers kårhus "))).venues())
-                .containsExactly("Chalmers kårhus");
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, null, null, List.of(" "))))
-                .isInstanceOf(BadRequestException.class);
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, null, null, Collections.nCopies(21, "Scen"))))
-                .isInstanceOf(BadRequestException.class);
+        assertThat(service.update(shows(show(12, " RunAn "), show(11, " "), show(11, "Gasquen"), show(12, "Draken"))).shows())
+                .containsExactly(show(11, "Gasquen"), show(11, null), show(12, "Draken"), show(12, "RunAn"))
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
+    void timesAreHhMmOrderedBeforeTheVenueWithAnUndecidedTimeLast() {
+        when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
+
+        assertThat(service.update(shows(show(11, null, "RunAn"), show(11, " 19:00 ", "RunAn"), show(11, "14:00", "RunAn"), show(11, "", "Draken"),
+                show(11, "14:00", "Gasquen"))).shows())
+                .containsExactly(show(11, "14:00", "Gasquen"), show(11, "14:00", "RunAn"), show(11, "19:00", "RunAn"), show(11, null, "Draken"),
+                        show(11, null, "RunAn"));
+        for (final String invalid : List.of("24:00", "9:30", "19.00", "19:60", "19:00:00", "kväll")) {
+            assertThatThrownBy(() -> service.update(shows(show(11, invalid, "RunAn")))).as(invalid).hasMessageContaining("error.revival.shows.timeInvalid");
+        }
+        assertThat(service.update(shows(show(11, "00:00", null), show(11, "23:59", null))).shows()).hasSize(2);
+    }
+
+    @Test
+    void aMatineeAndAnEveningShowAtTheSameVenueAreBothAllowed() {
+        when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
+
+        assertThat(service.update(shows(show(11, "14:00", "RunAn"), show(11, "19:00", "RunAn"))).shows()).hasSize(2);
+        assertThatThrownBy(() -> service.update(shows(show(11, "19:00", "RunAn"), show(11, " 19:00", "RunAn "))))
+                .hasMessageContaining("error.revival.shows.duplicate");
+    }
+
+    @Test
+    void theSameDateAndVenueIsRefusedTwice() {
+        when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
+
+        assertThatThrownBy(() -> service.update(shows(show(11, "RunAn"), show(11, " RunAn"))))
+                .hasMessageContaining("error.revival.shows.duplicate");
+        assertThatThrownBy(() -> service.update(shows(show(11, null), show(11, ""))))
+                .hasMessageContaining("error.revival.shows.duplicate");
+        assertThat(service.update(shows(show(11, "RunAn"), show(12, "RunAn"), show(11, "Gasquen"))).shows()).hasSize(3);
+    }
+
+    @Test
+    void atMost50ShowsWithVenuesOfAtMost255Characters() {
+        when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
+
+        final RevivalShowDto[] many = java.util.stream.IntStream.range(0, 51).mapToObj(n -> show(10 + n / 10, "Scen " + n)).toArray(RevivalShowDto[]::new);
+
+        assertThatThrownBy(() -> service.update(shows(many))).hasMessageContaining("error.revival.shows.tooMany");
+        assertThat(service.update(shows(java.util.Arrays.copyOf(many, 50))).shows()).hasSize(50);
+        assertThatThrownBy(() -> service.update(shows(show(11, "x".repeat(256))))).hasMessageContaining("error.revival.shows.venueTooLong");
+    }
+
+    @Test
+    void replacingTheShowsKeepsTheOnesThatStay() {
+        final Revival revival = TestCallers.revival(RevivalStatus.OPEN);
+
+        when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
+        service.update(shows(show(11, "RunAn"), show(12, null)));
+
+        final RevivalShow kept = revival.getShows().getFirst();
+
+        service.update(shows(show(11, "RunAn"), show(13, "Draken")));
+
+        assertThat(revival.getShows()).hasSize(2).first().isSameAs(kept);
+        assertThat(revival.getShows()).extracting(RevivalShow::toDto).containsExactlyInAnyOrder(show(11, "RunAn"), show(13, "Draken"));
+        assertThat(revival.getShows()).allSatisfy(show -> assertThat(show.getRevival()).isSameAs(revival));
     }
 
     @Test
     void changingTheSpexChecksItIsAnOriginal() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
-        service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, 2L, null, null, null, null, null));
+        service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, 2L, null, null, null, null));
 
         verify(spexService).requireOriginal(2L);
     }
@@ -231,7 +301,7 @@ class RevivalServiceTest {
     void aStaleVersionIsAConflict() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 2L, null, 2029, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 2L, null, 2029, null, null, null)))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -242,7 +312,7 @@ class RevivalServiceTest {
 
         service.update(details(LocalDate.of(2028, 2, 11), null));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2029, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2029, null, null, null)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -273,7 +343,7 @@ class RevivalServiceTest {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.ARCHIVED)));
 
         assertThatThrownBy(() -> service.update(details(LocalDate.of(2028, 2, 11), null))).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2029, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2029, null, null, null)))
                 .isInstanceOf(AccessDeniedException.class);
         assertThat(service.changeStatus(new RevivalStatusChangeDto(REVIVAL_ID, RevivalStatus.ARCHIVED, RevivalStatus.SETTLING)).status())
                 .isEqualTo(RevivalStatus.SETTLING);

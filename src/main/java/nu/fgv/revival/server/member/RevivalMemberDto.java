@@ -18,6 +18,7 @@ package nu.fgv.revival.server.member;
 
 import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.Set;
 
 /**
@@ -32,5 +33,6 @@ public record RevivalMemberDto(Long id,
                                MemberState state,
                                @Nullable String displayName,
                                @Nullable String email,
+                               @Nullable Instant invitedAt,
                                Long version) {
 }

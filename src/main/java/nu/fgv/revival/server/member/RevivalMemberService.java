@@ -16,16 +16,21 @@
 
 package nu.fgv.revival.server.member;
 
+import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonRepository;
+import nu.fgv.revival.server.person.UserDirectory;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
+import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -51,7 +57,12 @@ import static org.springframework.util.StringUtils.hasText;
  * @since 0.1
  */
 @Service
+@Slf4j
 public class RevivalMemberService {
+
+    static final int CANDIDATE_QUERY_MIN_LENGTH = 3;
+    static final int MAX_CANDIDATES = 10;
+    static final int NAME_MAX_LENGTH = 100;
 
     private final RevivalMemberRepository repository;
     private final RevivalRepository revivalRepository;
@@ -59,19 +70,25 @@ public class RevivalMemberService {
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
     private final CapabilityService capabilityService;
+    private final UserDirectory directory;
+    private final ApplicationEventPublisher events;
 
     public RevivalMemberService(final RevivalMemberRepository repository,
                                 final RevivalRepository revivalRepository,
                                 final PersonRepository personRepository,
                                 final CallerService callerService,
                                 final AccessPolicy accessPolicy,
-                                final CapabilityService capabilityService) {
+                                final CapabilityService capabilityService,
+                                final UserDirectory directory,
+                                final ApplicationEventPublisher events) {
         this.repository = repository;
         this.revivalRepository = revivalRepository;
         this.personRepository = personRepository;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
         this.capabilityService = capabilityService;
+        this.directory = directory;
+        this.events = events;
     }
 
     private Revival visibleRevival(final Caller caller, final Long revivalId) {
@@ -115,6 +132,34 @@ public class RevivalMemberService {
         return REVIVAL_MEMBER_MAPPER.toDto(member, person != null ? person.getDisplayName() : null, email);
     }
 
+    /**
+     * Users of the FGV realm matching the query, to pick a member from: at least {@value #CANDIDATE_QUERY_MIN_LENGTH}
+     * characters after trimming, at most {@value #MAX_CANDIDATES} enabled users. Whoever may manage the steering group.
+     */
+    @Transactional(readOnly = true)
+    public List<MemberCandidateDto> candidates(final Long revivalId, final String query) {
+        final Caller caller = callerService.current();
+        final Revival revival = visibleRevival(caller, revivalId);
+
+        accessPolicy.requireSearchMemberCandidates(caller, revival);
+
+        final String trimmed = query.trim();
+
+        if (trimmed.length() < CANDIDATE_QUERY_MIN_LENGTH) {
+            throw new BadRequestException("error.member.candidates.tooShort", CANDIDATE_QUERY_MIN_LENGTH);
+        }
+        return directory.search(trimmed, MAX_CANDIDATES).stream()
+                .map(user -> new MemberCandidateDto(user.email(), user.displayName(), user.hasAccess()))
+                .toList();
+    }
+
+    /**
+     * Adds a directeur or steering group member by email address. A person who has logged in with that verified address
+     * becomes the member at once; anyone else waits until they do (FR-019b). For a waiting member the FGV realm is
+     * asked as well: an address without an account gets one, without any role, and Keycloak emails them an
+     * invitation ({@code invitedAt}); an account without {@code fgv-revival}'s {@code USER} makes the super admins
+     * hear about it. While Keycloak cannot be reached the member is added all the same.
+     */
     @Transactional
     public RevivalMemberDto add(final RevivalMemberAddDto dto) {
         final Caller caller = callerService.current();
@@ -158,13 +203,62 @@ public class RevivalMemberService {
             member.setPendingEmail(email);
         }
 
-        try {
-            final RevivalMember saved = repository.saveAndFlush(member);
+        final UserDirectory.@Nullable Invitation account = matches.size() == 1 ? null : account(email, dto);
 
-            return toDto(saved, matches.size() == 1 ? matches.getFirst() : null, accessPolicy.canSeeMemberEmails(caller, revival));
+        if (account != null && account.emailed()) {
+            member.setInvitedAt(Instant.now());
+        }
+
+        final RevivalMember saved;
+
+        try {
+            saved = repository.saveAndFlush(member);
         } catch (final DataIntegrityViolationException _) {
             throw new BadRequestException("error.member.duplicate");
         }
+        if (account != null && !account.user().hasAccess()) {
+            events.publishEvent(new MemberAwaitingAccess(revival.getId(), email, account.user().displayName(), account.user().id(), dto.role(),
+                    account.emailed(), caller.person().getDisplayName()));
+        }
+        return toDto(saved, matches.size() == 1 ? matches.getFirst() : null, accessPolicy.canSeeMemberEmails(caller, revival));
+    }
+
+    /**
+     * The waiting member's Keycloak user, created and invited when there is none ({@code emailed} then says whether the
+     * invitation went out), or null while Keycloak cannot be reached.
+     */
+    private UserDirectory.@Nullable Invitation account(final String email, final RevivalMemberAddDto dto) {
+        try {
+            final Optional<UserDirectory.DirectoryUser> existing = directory.findByEmail(email);
+
+            if (existing.isPresent()) {
+                return new UserDirectory.Invitation(existing.get(), false);
+            }
+
+            final UserDirectory.Invitation invitation = directory.invite(email, name(dto.firstName()), name(dto.lastName()));
+
+            if (!invitation.emailed()) {
+                log.warn("Created a Keycloak user for a waiting member, but Keycloak could not email the invitation");
+            }
+            return invitation;
+        } catch (final DirectoryUnavailableException e) {
+            log.warn("Keycloak could not be reached or refused the admin client, so a waiting member was added without an account or invitation: {}",
+                    e.getCause() == null ? e.getClass().getSimpleName() : e.getCause().getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private static @Nullable String name(final @Nullable String name) {
+        if (!hasText(name)) {
+            return null;
+        }
+
+        final String trimmed = name.trim();
+
+        if (trimmed.length() > NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.member.name.tooLong", NAME_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
     @Transactional

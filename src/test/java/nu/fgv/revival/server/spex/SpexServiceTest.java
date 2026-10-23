@@ -143,4 +143,30 @@ class SpexServiceTest {
 
         assertThatThrownBy(() -> service.requireOriginal(1L)).isInstanceOf(SpexregisterUnavailableException.class);
     }
+
+    @Test
+    void postersAreCachedIncludingTheMissingOnes() {
+        final SpexregisterClient.Poster poster = new SpexregisterClient.Poster(new byte[]{1, 2}, "image/png");
+
+        when(client.poster(1L)).thenReturn(Optional.of(poster));
+        when(client.poster(2L)).thenReturn(Optional.empty());
+
+        assertThat(service.poster(1L)).contains(poster);
+        assertThat(service.poster(1L)).contains(poster);
+        assertThat(service.poster(2L)).isEmpty();
+        assertThat(service.poster(2L)).isEmpty();
+
+        verify(client, times(1)).poster(1L);
+        verify(client, times(1)).poster(2L);
+    }
+
+    @Test
+    void posterFailsWhenSpexregisterIsUnavailableAndIsNotCached() {
+        when(client.poster(1L))
+                .thenThrow(new SpexregisterClient.SpexregisterCallException("down"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.poster(1L)).isInstanceOf(SpexregisterUnavailableException.class);
+        assertThat(service.poster(1L)).isEmpty();
+    }
 }

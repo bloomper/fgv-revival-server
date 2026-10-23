@@ -22,7 +22,11 @@ import org.springframework.graphql.client.ClientGraphQlResponse;
 import org.springframework.graphql.client.ClientResponseField;
 import org.springframework.graphql.client.HttpSyncGraphQlClient;
 import org.springframework.graphql.execution.ErrorType;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,8 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
- * Reads spex from Spexregister's GraphQL API with the two queries in contracts/spexregister.md. Nothing else is
- * called and nothing is written. Failures are logged at most once a minute, without the token or the response body.
+ * Reads spex from Spexregister's GraphQL API with the two queries in contracts/spexregister.md, and a spex's poster
+ * from its REST API, which GraphQL cannot carry. Nothing else is called and nothing is written. Failures are logged at
+ * most once a minute, without the token or the response body.
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -53,13 +58,16 @@ public class SpexregisterClient {
             query SpexById($id: ID!) {
                 spex(id: $id) { id year title revival }
             }""";
+    private static final String POSTER = "/api/spex/{id}/poster";
     private static final long LOG_INTERVAL_MILLIS = 60_000;
 
     private final HttpSyncGraphQlClient graphQlClient;
+    private final RestClient restClient;
     private final AtomicLong lastErrorLogged = new AtomicLong();
 
-    public SpexregisterClient(final HttpSyncGraphQlClient spexregisterGraphQlClient) {
+    public SpexregisterClient(final HttpSyncGraphQlClient spexregisterGraphQlClient, final RestClient spexregisterRestClient) {
         this.graphQlClient = spexregisterGraphQlClient;
+        this.restClient = spexregisterRestClient;
     }
 
     static @Nullable Integer year(final @Nullable String year) {
@@ -121,6 +129,27 @@ public class SpexregisterClient {
         });
     }
 
+    /**
+     * A spex's poster, or empty when it has none or Spexregister does not know the spex.
+     */
+    public Optional<Poster> poster(final Long id) {
+        return call(() -> {
+            final ResponseEntity<byte[]> response = restClient.get()
+                    .uri(POSTER, id)
+                    .header("X-API-Version", "1.0")
+                    .retrieve()
+                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(), (_, _) -> {
+                    })
+                    .toEntity(byte[].class);
+            final MediaType contentType = response.getHeaders().getContentType();
+
+            if (response.getStatusCode().value() == HttpStatus.NOT_FOUND.value() || response.getBody() == null || contentType == null) {
+                return Optional.empty();
+            }
+            return Optional.of(new Poster(response.getBody(), contentType.toString()));
+        });
+    }
+
     private static void requireValid(final ClientGraphQlResponse response) {
         if (!response.isValid() || !response.getErrors().isEmpty()) {
             throw new SpexregisterCallException("Response has errors");
@@ -151,6 +180,12 @@ public class SpexregisterClient {
      * A spex as Spexregister returns it.
      */
     public record SpexNode(String id, @Nullable String year, @Nullable String title, @Nullable Boolean revival) {
+    }
+
+    /**
+     * A poster image as Spexregister stores it.
+     */
+    public record Poster(byte[] content, String contentType) {
     }
 
     /**

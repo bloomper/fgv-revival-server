@@ -109,6 +109,8 @@ fgv-revival:
       url: ${fgv-revival.keycloak.url}
       client-id: ${API_KEYCLOAK_ADMIN_CLIENT_ID:fgv-admin}
       client-secret: ${API_KEYCLOAK_ADMIN_CLIENT_SECRET:}
+      # Keycloak as super admins' browsers reach it, for the links in the email about members waiting for access
+      console-url: ${API_KEYCLOAK_CONSOLE_URL:${fgv-revival.keycloak.url}}
   security:
     authorized-parties: ${FGV_REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
   mcp:

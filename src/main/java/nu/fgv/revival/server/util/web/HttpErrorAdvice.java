@@ -20,7 +20,9 @@ import jakarta.persistence.OptimisticLockException;
 import nu.fgv.revival.server.util.Locales;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
+import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -82,6 +84,16 @@ public class HttpErrorAdvice {
     @ExceptionHandler({OptimisticLockingFailureException.class, OptimisticLockException.class})
     public ResponseEntity<Error> staleVersion(final Exception e, final Locale locale) {
         return error(HttpStatus.CONFLICT, "CONFLICT", "error.conflict", null, locale);
+    }
+
+    @ExceptionHandler(SpexregisterUnavailableException.class)
+    public ResponseEntity<Error> spexregisterUnavailable(final SpexregisterUnavailableException e, final Locale locale) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "SPEXREGISTER_UNAVAILABLE", SpexregisterUnavailableException.MESSAGE_CODE, null, locale);
+    }
+
+    @ExceptionHandler(DirectoryUnavailableException.class)
+    public ResponseEntity<Error> directoryUnavailable(final DirectoryUnavailableException e, final Locale locale) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "DIRECTORY_UNAVAILABLE", DirectoryUnavailableException.MESSAGE_CODE, null, locale);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

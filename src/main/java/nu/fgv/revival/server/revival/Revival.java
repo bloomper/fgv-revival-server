@@ -16,31 +16,27 @@
 
 package nu.fgv.revival.server.revival;
 
-import jakarta.persistence.CollectionTable;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OrderColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
-import org.hibernate.annotations.SortNatural;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  * A new production of an old spex. The spex itself lives in Spexregister; only its id is stored (FR-008).
@@ -76,16 +72,8 @@ public class Revival extends AbstractAuditable {
     @Column(name = "guide_version_id")
     private @Nullable Long guideVersionId;
 
-    @ElementCollection
-    @CollectionTable(name = "revival_show_date", joinColumns = @JoinColumn(name = "revival_id"))
-    @Column(name = "show_date", nullable = false)
-    @SortNatural
-    private SortedSet<LocalDate> showDates = new TreeSet<>();
-
-    @ElementCollection
-    @CollectionTable(name = "revival_venue", joinColumns = @JoinColumn(name = "revival_id"))
-    @OrderColumn(name = "position")
-    @Column(name = "name", nullable = false)
-    private List<String> venues = new ArrayList<>();
+    @OneToMany(mappedBy = "revival", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
+    private List<RevivalShow> shows = new ArrayList<>();
 
 }
