@@ -55,7 +55,8 @@ Nothing in them is ever deleted: rows are cancelled, items marked not applicable
 (`RevivalGuideSync`) keeps a revival's chapter checklists, one per chapter, their required items and the guide's
 question rows in line with the version a revival is pinned to. When a revival moves to a version without a chapter,
 its checklist for that chapter is deleted with its items, after required items have followed their requirements to
-other chapters; log rows linked to the deleted items stay, without the link. Besides GraphQL and the MCP tools, the log has two plain HTTP endpoints for importing an
+other chapters; log rows linked to the deleted items stay, without the link. Besides GraphQL and the MCP tools, the log
+has two plain HTTP endpoints for importing an
 Excel log (Ali Baba's or Nobel's layout) into an empty log:
 
 - `POST /api/revivals/{id}/log/import/preview` reads the workbook (multipart part `file`, at most 10 MB) and returns
@@ -76,7 +77,7 @@ password is the `SMTP_PASSWORD` secret), from `fgv-revival.mail.from`, with link
    with `git update-index --skip-worktree .docker/secrets/*`:
 
    | File                                 | Value                                                          |
-   |--------------------------------------|----------------------------------------------------------------|
+      |--------------------------------------|----------------------------------------------------------------|
    | `FGV_REVIVAL_MYSQL_ROOT_PASSWORD`    | Password of the database's root user                           |
    | `FGV_REVIVAL_MYSQL_USER_PASSWORD`    | Password of the database user in `.env`                        |
    | `API_KEYCLOAK_SERVICE_CLIENT_SECRET` | Secret of `fgv-revival-service` in the realm                   |
