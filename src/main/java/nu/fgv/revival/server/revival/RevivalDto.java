@@ -43,5 +43,6 @@ public record RevivalDto(Long id,
                          Instant createdAt,
                          @Nullable String lastModifiedBy,
                          @Nullable Instant lastModifiedAt,
+                         @Nullable Instant anonymizedAt,
                          RevivalPermissionsDto permissions) {
 }

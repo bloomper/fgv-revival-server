@@ -32,8 +32,10 @@ import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,8 +74,38 @@ public class Revival extends AbstractAuditable {
     @Column(name = "guide_version_id")
     private @Nullable Long guideVersionId;
 
+    /**
+     * The year the revival pays FGV membership for its participants (M7-FR-1).
+     */
+    @Column(name = "membership_year")
+    private @Nullable Integer membershipYear;
+
+    /**
+     * Spexregister's id for this revival, once the sync has found or created it (M7). Written by the sync without
+     * touching the revival's version, so it is not audited.
+     */
+    @NotAudited
+    @Column(name = "spexregister_revival_id", updatable = false, insertable = false)
+    private @Nullable Long spexregisterRevivalId;
+
+    /**
+     * When the people were removed from the revival (product spec section 7); nothing personal is added after.
+     */
+    @Column(name = "anonymized_at")
+    private @Nullable Instant anonymizedAt;
+
+    /**
+     * Who anonymized it; null when it was anonymized automatically.
+     */
+    @Column(name = "anonymized_by")
+    private @Nullable Long anonymizedBy;
+
     @OneToMany(mappedBy = "revival", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 50)
     private List<RevivalShow> shows = new ArrayList<>();
+
+    public boolean isAnonymized() {
+        return anonymizedAt != null;
+    }
 
 }

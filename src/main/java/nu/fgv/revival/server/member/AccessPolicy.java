@@ -18,6 +18,7 @@ package nu.fgv.revival.server.member;
 
 import jakarta.persistence.criteria.Predicate;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
+import nu.fgv.revival.server.material.MaterialVisibility;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalStatus;
@@ -41,6 +42,8 @@ import static nu.fgv.revival.server.revival.RevivalStatus.ARCHIVED;
 import static nu.fgv.revival.server.revival.RevivalStatus.CLOSING;
 import static nu.fgv.revival.server.revival.RevivalStatus.OPEN;
 import static nu.fgv.revival.server.revival.RevivalStatus.ORGANISING;
+import static nu.fgv.revival.server.revival.RevivalStatus.PROPOSED;
+import static nu.fgv.revival.server.revival.RevivalStatus.REJECTED;
 import static nu.fgv.revival.server.revival.RevivalStatus.SETTLING;
 
 /**
@@ -54,15 +57,40 @@ import static nu.fgv.revival.server.revival.RevivalStatus.SETTLING;
 @Component
 public class AccessPolicy {
 
+    /**
+     * The area of responsibility that lets a steering group member change the budget (product spec 5.10).
+     */
+    public static final String FINANCE = "FINANCE";
+
+    private static final Set<RevivalStatus> DIRECTEUR_CLOSING = EnumSet.of(CLOSING, SETTLING);
+    private static final Set<RevivalStatus> BEFORE_WORK = EnumSet.of(PROPOSED, APPROVED, REJECTED);
+    private static final Set<RevivalStatus> SUPER_ADMIN_ANONYMIZE = EnumSet.of(SETTLING, ARCHIVED, REJECTED);
+
     private static final Map<RevivalRole, Set<RevivalStatus>> VISIBLE_STATUSES = Map.of(
             RevivalRole.DIRECTEUR, EnumSet.of(APPROVED, ORGANISING, OPEN, CLOSING, SETTLING),
             RevivalRole.STEERING_GROUP, EnumSet.of(ORGANISING, OPEN, CLOSING),
-            RevivalRole.PARTICIPANT, EnumSet.noneOf(RevivalStatus.class),
-            RevivalRole.HELPER, EnumSet.noneOf(RevivalStatus.class)
+            RevivalRole.PARTICIPANT, EnumSet.of(OPEN),
+            RevivalRole.HELPER, EnumSet.of(OPEN)
     );
 
     /**
-     * The statuses in which a revival role sees its revival (FR-015). Participants and helpers see nothing in M1.
+     * The area of responsibility that lets a steering group member read participants' dietary needs (product spec 3).
+     */
+    public static final String CATERING = "CATERING";
+
+    /**
+     * The area of responsibility that lets a steering group member plan shifts and assign people (product spec 5.7).
+     */
+    public static final String STAFFING = "STAFFING";
+
+    /**
+     * The area of responsibility that lets a steering group member send mailings (product spec 5.8).
+     */
+    public static final String COMMS = "COMMS";
+
+    /**
+     * The statuses in which a revival role sees its revival (FR-015). Participants and helpers see theirs while it is
+     * {@code OPEN} (M6-FR-1); seeing it gives them their own page, nothing of the steering group's.
      */
     public static Set<RevivalStatus> visibleStatuses(final RevivalRole role) {
         return VISIBLE_STATUSES.get(role);
@@ -199,10 +227,11 @@ public class AccessPolicy {
     }
 
     /**
-     * Everyone who can see a revival may read its guide.
+     * Super admins and observers, and its directeurs and steering group while they can see it, read the guide a revival
+     * follows. Participants and helpers do not (M6-FR-1).
      */
     public boolean canReadRevivalGuide(final Caller caller, final Revival revival) {
-        return canSee(caller, revival);
+        return canReadRevivalWork(caller, revival);
     }
 
     /**
@@ -261,10 +290,36 @@ public class AccessPolicy {
     }
 
     /**
-     * Reading a revival's decision log, meetings and checklists: everyone who can see it (M3 research R13).
+     * Reading a revival's decision log, meetings, checklists, members and history: super admins and observers, and its
+     * directeurs and steering group while they can see it (M3 research R13). Participants and helpers, who see an
+     * {@code OPEN} revival only for their own page, never (M6-FR-1, constitution III).
      */
     public boolean canReadRevivalWork(final Caller caller, final Revival revival) {
-        return canSee(caller, revival);
+        return seesEverything(caller) || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Whether the caller is a participant or helper of the revival, whatever its status.
+     */
+    public boolean isParticipant(final Caller caller, final Revival revival) {
+        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
+
+        return assignment != null && (assignment.role() == RevivalRole.PARTICIPANT || assignment.role() == RevivalRole.HELPER);
+    }
+
+    private static boolean isVisibleParticipant(final Caller caller, final Revival revival, final RevivalRole role) {
+        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
+
+        return assignment != null && assignment.role() == role && visibleStatuses(role).contains(revival.getStatus());
+    }
+
+    /**
+     * Reading a revival's events: whoever reads its work, and its participants while they can see it (product spec 3,
+     * "Events and timeline: R"). Helpers get only the events they hold shifts in, on their own page (M6B-FR-7), never
+     * the revival's list.
+     */
+    public boolean canReadEvents(final Caller caller, final Revival revival) {
+        return canReadRevivalWork(caller, revival) || isVisibleParticipant(caller, revival, RevivalRole.PARTICIPANT);
     }
 
     /**
@@ -305,6 +360,271 @@ public class AccessPolicy {
         return caller.isSuperAdmin();
     }
 
+    /**
+     * The event types the super admin keeps (M4-FR-1). Everyone signed in reads them.
+     */
+    public boolean canManageEventTypes(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
+     * A secret calendar link for a revival: anyone holding a revival role in it while they can see it (M4-FR-5). Super
+     * admins and observers without a role have none.
+     */
+    public boolean canSubscribeCalendar(final Caller caller, final Revival revival) {
+        return revival.getId() != null && caller.roleIn(revival.getId()) != null && canSee(caller, revival);
+    }
+
+    /**
+     * Steering group meetings in a calendar feed: its directeurs and steering group members, while they can see it
+     * (M4-FR-6). Participants and helpers get the revival's events and shows only.
+     */
+    public boolean canSeeMeetingsInCalendar(final Caller caller, final Revival revival) {
+        return holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Reading a revival's budget: super admins and observers, and its directeurs and steering group members while they
+     * can see it (product spec 5.10, M5-FR-6). Participants and helpers never, whatever their status.
+     */
+    public boolean canReadBudget(final Caller caller, final Revival revival) {
+        return seesEverything(caller) || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Changing a revival's budget: a directeur, or a steering group member with the {@value #FINANCE} area, while they
+     * can see it and it is not archived. Super admins and observers only read (M5-FR-6).
+     */
+    public boolean canWriteBudget(final Caller caller, final Revival revival) {
+        if (isArchived(revival) || !holdsRevivalRole(caller, revival)) {
+            return false;
+        }
+
+        final RevivalRoleAssignment assignment = caller.roleIn(revival.getId());
+
+        return assignment != null && (assignment.holdsAll() || assignment.capabilities().contains(FINANCE));
+    }
+
+    /**
+     * Budget categories and reference figures from earlier revivals: read by whoever reads the guide (M5-FR-2).
+     */
+    public boolean canReadReferenceFigures(final Caller caller, final Collection<Revival> callerRevivals) {
+        return canReadGuide(caller, callerRevivals);
+    }
+
+    /**
+     * The reference figures and the lines event types propose for budgets: the super admin keeps them (M5-FR-2,
+     * M5-FR-3).
+     */
+    public boolean canManageReferenceFigures(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
+     * The current Chalmersspex's show dates, for the cross-revival timeline: super admins and observers read them.
+     */
+    public boolean canReadSpexCalendar(final Caller caller) {
+        return seesEverything(caller);
+    }
+
+    public boolean canManageSpexCalendar(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
+     * Reading a revival's participants, their responses and contact details: super admins, and its directeurs and
+     * steering group while they can see it (product spec 3, M6-FR-1). Observers do not.
+     */
+    public boolean canReadParticipants(final Caller caller, final Revival revival) {
+        return caller.isSuperAdmin() || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Adding, changing, inviting and removing participants: its directeurs and steering group, while they can see it and
+     * it is not archived.
+     */
+    public boolean canWriteParticipants(final Caller caller, final Revival revival) {
+        return holdsRevivalRole(caller, revival) && !isArchived(revival);
+    }
+
+    /**
+     * Participants' dietary needs and allergies: a directeur, or a steering group member with {@value #CATERING}, while
+     * they can see it (product spec 5.6). Nobody else, super admins included.
+     */
+    public boolean canReadDietary(final Caller caller, final Revival revival) {
+        if (!holdsRevivalRole(caller, revival)) {
+            return false;
+        }
+
+        final RevivalRoleAssignment assignment = caller.roleIn(revival.getId());
+
+        return assignment != null && (assignment.holdsAll() || assignment.capabilities().contains(CATERING));
+    }
+
+    /**
+     * The caller's own participation: a participant or helper of a revival they can see, which is then {@code OPEN}.
+     */
+    public boolean canParticipate(final Caller caller, final Revival revival) {
+        return isVisibleParticipant(caller, revival, RevivalRole.PARTICIPANT) || isVisibleParticipant(caller, revival, RevivalRole.HELPER);
+    }
+
+    private static boolean holdsCapability(final Caller caller, final Revival revival, final String capability) {
+        if (!holdsRevivalRole(caller, revival)) {
+            return false;
+        }
+
+        final RevivalRoleAssignment assignment = caller.roleIn(revival.getId());
+
+        return assignment != null && (assignment.holdsAll() || assignment.capabilities().contains(capability));
+    }
+
+    /**
+     * Reading a revival's shift slots and who holds them: super admins, and its directeurs and steering group while they
+     * can see it (product spec 3, "Staffing"). Observers do not; participants see open slots and helpers their own
+     * shifts on their own page.
+     */
+    public boolean canReadStaffing(final Caller caller, final Revival revival) {
+        return caller.isSuperAdmin() || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Planning shifts and assigning people: a directeur, or a steering group member with {@value #STAFFING}, while they
+     * can see it and it is not archived.
+     */
+    public boolean canWriteStaffing(final Caller caller, final Revival revival) {
+        return !isArchived(revival) && holdsCapability(caller, revival, STAFFING);
+    }
+
+    /**
+     * Reading a revival's mailings and its mailing plan: super admins, and its directeurs and steering group while they
+     * can see it (product spec 3, "Mailings"). Observers do not.
+     */
+    public boolean canReadMailings(final Caller caller, final Revival revival) {
+        return caller.isSuperAdmin() || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Drafting mailings: its directeurs and steering group, while they can see it and it is not archived.
+     */
+    public boolean canDraftMailings(final Caller caller, final Revival revival) {
+        return holdsRevivalRole(caller, revival) && !isArchived(revival);
+    }
+
+    /**
+     * Sending a mailing, and sending it again to those it failed for: a directeur, or a steering group member with
+     * {@value #COMMS}, while they can see it and it is not archived (product spec 5.8).
+     */
+    public boolean canSendMailings(final Caller caller, final Revival revival) {
+        return !isArchived(revival) && holdsCapability(caller, revival, COMMS);
+    }
+
+    /**
+     * The mailing plan's templates: read by whoever reads the guide, as checklist templates.
+     */
+    public boolean canReadMailingTemplates(final Caller caller, final Collection<Revival> callerRevivals) {
+        return canReadGuide(caller, callerRevivals);
+    }
+
+    public boolean canManageMailingTemplates(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
+     * Reading every material of a revival, and its inventory: super admins, and its directeurs and steering group while
+     * they can see it (product spec 3, "Materials, inventory"). Observers and helpers do not.
+     */
+    public boolean canReadAllMaterials(final Caller caller, final Revival revival) {
+        return caller.isSuperAdmin() || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Reading a revival's materials at all: whoever reads them all, and its participants while they can see it, who read
+     * those meant for them ({@link #canSeeMaterial}).
+     */
+    public boolean canReadMaterials(final Caller caller, final Revival revival) {
+        return canReadAllMaterials(caller, revival) || isVisibleParticipant(caller, revival, RevivalRole.PARTICIPANT);
+    }
+
+    /**
+     * One material: all for those who read them all; for a participant, one for every participant, or for the positions
+     * that include {@code participantPosition}, their position's Spexregister task id (M8-FR-5). Removed ones are left
+     * out by the caller.
+     */
+    public boolean canSeeMaterial(final Caller caller, final Revival revival, final MaterialVisibility visibility, final Collection<String> positions,
+                                  final @Nullable String participantPosition) {
+        if (canReadAllMaterials(caller, revival)) {
+            return true;
+        }
+        if (!isVisibleParticipant(caller, revival, RevivalRole.PARTICIPANT)) {
+            return false;
+        }
+        return switch (visibility) {
+            case STEERING_GROUP -> false;
+            case PARTICIPANTS -> true;
+            case POSITIONS -> participantPosition != null && positions.contains(participantPosition);
+        };
+    }
+
+    /**
+     * Changing a revival's materials and inventory: its directeurs and steering group, while they can see it and it is not
+     * archived. Super admins only read.
+     */
+    public boolean canWriteMaterials(final Caller caller, final Revival revival) {
+        return holdsRevivalRole(caller, revival) && !isArchived(revival);
+    }
+
+    public boolean canReadInventory(final Caller caller, final Revival revival) {
+        return canReadAllMaterials(caller, revival);
+    }
+
+    public boolean canWriteInventory(final Caller caller, final Revival revival) {
+        return canWriteMaterials(caller, revival);
+    }
+
+    /**
+     * Writing the revival's participation to Spexregister (product spec 5.11, M7-FR-2): a directeur who can see it while
+     * it is {@code CLOSING} or {@code SETTLING}, or a super admin in any status from {@code ORGANISING} on, archived
+     * included; never once it is anonymized, as nobody is left to write.
+     */
+    public boolean canSync(final Caller caller, final Revival revival) {
+        if (revival.isAnonymized()) {
+            return false;
+        }
+        if (caller.isSuperAdmin()) {
+            return !BEFORE_WORK.contains(revival.getStatus());
+        }
+        return isVisibleDirecteur(caller, revival) && DIRECTEUR_CLOSING.contains(revival.getStatus());
+    }
+
+    /**
+     * Reading the sync's preview and runs: whoever may start it, and the steering group while they can see the revival
+     * (product spec 5.11).
+     */
+    public boolean canReadSync(final Caller caller, final Revival revival) {
+        return canSync(caller, revival) || holdsRevivalRole(caller, revival);
+    }
+
+    /**
+     * Marking whose FGV membership the revival pays (M7-FR-1): as {@link #canSync}.
+     */
+    public boolean canSetMembership(final Caller caller, final Revival revival) {
+        return canSync(caller, revival);
+    }
+
+    /**
+     * Removing the people from the revival for good (section 7, M7-FR-10): a directeur who can see it while it is
+     * {@code SETTLING}, or a super admin while it is {@code SETTLING}, {@code ARCHIVED} or {@code REJECTED}; only once.
+     */
+    public boolean canAnonymize(final Caller caller, final Revival revival) {
+        if (revival.isAnonymized()) {
+            return false;
+        }
+        if (caller.isSuperAdmin()) {
+            return SUPER_ADMIN_ANONYMIZE.contains(revival.getStatus());
+        }
+        return isVisibleDirecteur(caller, revival) && revival.getStatus() == SETTLING;
+    }
+
     public RevivalPermissionsDto permissions(final Caller caller, final Revival revival) {
         return permissions(caller, revival, List.of());
     }
@@ -321,7 +641,25 @@ public class AccessPolicy {
                 guideVersionsAllowed(caller, revival, published),
                 canWriteRevivalWork(caller, revival),
                 canWaiveRequirement(caller, revival),
-                canDeleteRevival(caller)
+                canDeleteRevival(caller),
+                canSubscribeCalendar(caller, revival),
+                canReadBudget(caller, revival),
+                canWriteBudget(caller, revival),
+                canReadParticipants(caller, revival),
+                canWriteParticipants(caller, revival),
+                canReadDietary(caller, revival),
+                isParticipant(caller, revival),
+                canReadRevivalWork(caller, revival),
+                canReadStaffing(caller, revival),
+                canWriteStaffing(caller, revival),
+                canReadMailings(caller, revival),
+                canDraftMailings(caller, revival),
+                canSendMailings(caller, revival),
+                canWriteMaterials(caller, revival),
+                canSync(caller, revival),
+                canAnonymize(caller, revival),
+                canSetMembership(caller, revival),
+                canReadAllMaterials(caller, revival)
         );
     }
 
@@ -396,6 +734,18 @@ public class AccessPolicy {
         require(canReadRevivalWork(caller, revival));
     }
 
+    public void requireReadEvents(final Caller caller, final Revival revival) {
+        require(canReadEvents(caller, revival));
+    }
+
+    public void requireReadParticipants(final Caller caller, final Revival revival) {
+        require(canReadParticipants(caller, revival));
+    }
+
+    public void requireWriteParticipants(final Caller caller, final Revival revival) {
+        require(canWriteParticipants(caller, revival));
+    }
+
     public void requireWriteRevivalWork(final Caller caller, final Revival revival) {
         require(canWriteRevivalWork(caller, revival));
     }
@@ -418,6 +768,98 @@ public class AccessPolicy {
 
     public void requireManageCatalogs(final Caller caller) {
         require(canManageCatalogs(caller));
+    }
+
+    public void requireManageEventTypes(final Caller caller) {
+        require(canManageEventTypes(caller));
+    }
+
+    public void requireSubscribeCalendar(final Caller caller, final Revival revival) {
+        require(canSubscribeCalendar(caller, revival));
+    }
+
+    public void requireReadBudget(final Caller caller, final Revival revival) {
+        require(canReadBudget(caller, revival));
+    }
+
+    public void requireWriteBudget(final Caller caller, final Revival revival) {
+        require(canWriteBudget(caller, revival));
+    }
+
+    public void requireReadReferenceFigures(final Caller caller, final Collection<Revival> callerRevivals) {
+        require(canReadReferenceFigures(caller, callerRevivals));
+    }
+
+    public void requireManageReferenceFigures(final Caller caller) {
+        require(canManageReferenceFigures(caller));
+    }
+
+    public void requireReadSpexCalendar(final Caller caller) {
+        require(canReadSpexCalendar(caller));
+    }
+
+    public void requireManageSpexCalendar(final Caller caller) {
+        require(canManageSpexCalendar(caller));
+    }
+
+    public void requireReadStaffing(final Caller caller, final Revival revival) {
+        require(canReadStaffing(caller, revival));
+    }
+
+    public void requireWriteStaffing(final Caller caller, final Revival revival) {
+        require(canWriteStaffing(caller, revival));
+    }
+
+    public void requireReadMailings(final Caller caller, final Revival revival) {
+        require(canReadMailings(caller, revival));
+    }
+
+    public void requireDraftMailings(final Caller caller, final Revival revival) {
+        require(canDraftMailings(caller, revival));
+    }
+
+    public void requireSendMailings(final Caller caller, final Revival revival) {
+        require(canSendMailings(caller, revival));
+    }
+
+    public void requireReadMailingTemplates(final Caller caller, final Collection<Revival> callerRevivals) {
+        require(canReadMailingTemplates(caller, callerRevivals));
+    }
+
+    public void requireManageMailingTemplates(final Caller caller) {
+        require(canManageMailingTemplates(caller));
+    }
+
+    public void requireReadMaterials(final Caller caller, final Revival revival) {
+        require(canReadMaterials(caller, revival));
+    }
+
+    public void requireWriteMaterials(final Caller caller, final Revival revival) {
+        require(canWriteMaterials(caller, revival));
+    }
+
+    public void requireReadInventory(final Caller caller, final Revival revival) {
+        require(canReadInventory(caller, revival));
+    }
+
+    public void requireWriteInventory(final Caller caller, final Revival revival) {
+        require(canWriteInventory(caller, revival));
+    }
+
+    public void requireSync(final Caller caller, final Revival revival) {
+        require(canSync(caller, revival));
+    }
+
+    public void requireReadSync(final Caller caller, final Revival revival) {
+        require(canReadSync(caller, revival));
+    }
+
+    public void requireSetMembership(final Caller caller, final Revival revival) {
+        require(canSetMembership(caller, revival));
+    }
+
+    public void requireAnonymize(final Caller caller, final Revival revival) {
+        require(canAnonymize(caller, revival));
     }
 
     private static void require(final boolean permitted) {

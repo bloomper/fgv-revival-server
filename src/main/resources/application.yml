@@ -76,7 +76,17 @@ spring:
           sends email. The guide is JK/FGV's continuity guide for revivals, in chapters. Guide tools read the
           version a revival is pinned to when you give its id. The decision log holds a revival's decisions, to-dos
           and questions, numbered per revival. Checklists hold what must be done per guide chapter and per event.
-          Owners are given by display name, or "me".
+          Events are a revival's timeline, from its kickoff and rehearsal weekends to the show weekend; an event
+          may have its own checklist, and cancelled events are kept.
+          A revival's budget has lines per category, planned in Swedish kronor, and transactions of money that
+          came in or went out; only its directeurs and the steering group members with the finance area record
+          transactions, and transactions are cancelled in the web, not changed here. Budget summaries never name
+          who paid.
+          Participants and helpers are listed with their positions, responses and whether their fees are
+          paid, never with contact details or dietary needs.
+          Staffing lists a revival's shift slots per event with who holds them, by name only. Mailings can only
+          be drafted here: a person reviews and sends them in the web.
+          Owners and payers are given by display name, or "me".
 
 management:
   server:
@@ -117,6 +127,9 @@ fgv-revival:
     authorized-parties: ${API_KEYCLOAK_MCP_CLIENT_ID:fgv-revival-mcp}
   spexregister:
     graphql-url: ${API_SPEXREGISTER_GRAPHQL_URL:https://api.register.fgv.local.nu:8443/api/graphql}
+  swish:
+    # Swish's pre-filled QR code API, which needs no agreement
+    qr-url: ${API_SWISH_QR_URL:https://mpc.getswish.net/qrg-swish/api/v1/prefilled}
   data:
     import-sample-data: ${API_IMPORT_SAMPLE_DATA:false}
     sample-user-password: ${SAMPLE_USER_PASSWORD:s3cr3t-s3cr3t}

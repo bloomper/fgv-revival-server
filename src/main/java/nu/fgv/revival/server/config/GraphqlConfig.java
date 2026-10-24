@@ -50,6 +50,7 @@ public class GraphqlConfig {
                                 .build()
                 )
                 .scalar(CustomScalars.INSTANT)
+                .scalar(CustomScalars.AMOUNT)
                 .scalar(CustomScalars.VOID);
     }
 

@@ -1,0 +1,190 @@
+# M8: materials and inventory (product spec 5.9). Materials are links to where files are kept: FGV's applications
+# (Spexflix, Manusarkiv, Spexipedia, Spexify, Låtarkiv) or services such as Google Drive. Nothing is stored here.
+# Materials and inventory items are removed, never deleted (constitution IV).
+
+enum MaterialCategory {
+    SCRIPT
+    SHEET_MUSIC
+    RECORDING
+    VIDEO
+    PROGRAMME
+    POSTER
+    PHOTO
+    OTHER
+}
+
+enum MaterialVisibility {
+    "Directeurs and steering group."
+    STEERING_GROUP
+    "Every participant, and the steering group."
+    PARTICIPANTS
+    "Participants with one of the positions, and the steering group."
+    POSITIONS
+}
+
+enum InventoryKind {
+    SCRIPT
+    SHEET_MUSIC
+    PROPS
+    COSTUME
+    WIG
+    BACKDROP
+    TECHNICAL
+    OTHER
+}
+
+enum InventoryStatus {
+    HAVE
+    MISSING
+    BORROW
+    BUY
+    BUILD
+}
+
+enum InventoryLocation {
+    KEMIFORRADET
+    V_FORRADET
+    RUNAN
+    PRIVATE
+    OTHER
+}
+
+extend type Query {
+    "Every signed-in caller. Retired only with includeRetired."
+    linkServices(includeRetired: Boolean = false): [LinkService!]!
+
+    """
+    The revival's materials the caller may see: all for SUPER_ADMIN, directeurs and steering group; for a participant,
+    those for all participants and those for their position. Without removed ones unless includeRemoved (writers only).
+    """
+    materials(revivalId: ID!, includeRemoved: Boolean = false): [Material!]!
+
+    "SUPER_ADMIN, directeurs and steering group."
+    inventory(revivalId: ID!, includeRemoved: Boolean = false): [InventoryItem!]!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, as capabilities."
+    linkServiceCreate(input: LinkServiceInput!): LinkService!
+    linkServiceUpdate(id: ID!, version: Int!, input: LinkServiceInput!): LinkService!
+    linkServiceMove(id: ID!, version: Int!, position: Int!): [LinkService!]!
+    linkServiceRetire(id: ID!, version: Int!): LinkService!
+    linkServiceRestore(id: ID!, version: Int!): LinkService!
+    "Refused while a material holds it."
+    linkServiceDelete(id: ID!, version: Int!): Void
+
+    "Directeur or steering group, revival visible and not ARCHIVED, for every material and inventory mutation."
+    materialCreate(input: MaterialInput!): Material!
+    materialUpdate(id: ID!, version: Int!, input: MaterialInput!): Material!
+    materialRemove(id: ID!, version: Int!): Material!
+    materialRestore(id: ID!, version: Int!): Material!
+
+    inventoryItemCreate(input: InventoryItemInput!): InventoryItem!
+    inventoryItemUpdate(id: ID!, version: Int!, input: InventoryItemInput!): InventoryItem!
+    inventoryItemRemove(id: ID!, version: Int!): InventoryItem!
+    inventoryItemRestore(id: ID!, version: Int!): InventoryItem!
+}
+
+"A place materials are kept, recognised by the link's host."
+type LinkService {
+    id: ID!
+    name: LocalizedText!
+    "Hosts, e.g. drive.google.com; a link whose host is one of these, or a subdomain of one, belongs to the service."
+    hosts: [String!]!
+    "The service's start page, if any."
+    homeUrl: String
+    position: Int!
+    retired: Boolean!
+    inUse: Boolean!
+    version: Int!
+}
+
+input LinkServiceInput {
+    "1–100 characters; the Swedish name is unique."
+    name: LocalizedTextInput!
+    "At most 10, each a lower-case host name."
+    hosts: [String!]!
+    "https only."
+    homeUrl: String
+}
+
+type Material {
+    id: ID!
+    title: String!
+    "https only."
+    url: String!
+    "Chosen, or recognised from the link's host when not chosen."
+    service: LinkService
+    "True when the service was picked explicitly (serviceId given), false when recognised from the host."
+    serviceChosen: Boolean!
+    category: MaterialCategory!
+    visibility: MaterialVisibility!
+    "POSITIONS only."
+    positions: [Position!]!
+    comment: String
+    removed: Boolean!
+    version: Int!
+}
+
+input MaterialInput {
+    "Only on create."
+    revivalId: ID
+    "1–200 characters."
+    title: String!
+    "https://…, at most 2000 characters."
+    url: String!
+    "Null: recognised from the host."
+    serviceId: ID
+    category: MaterialCategory!
+    visibility: MaterialVisibility!
+    "POSITIONS: at least one position id."
+    positionIds: [ID!]
+    "At most 1000 characters."
+    comment: String
+}
+
+type InventoryItem {
+    id: ID!
+    "1–200 characters."
+    name: String!
+    kind: InventoryKind!
+    "At least 1."
+    quantity: Int!
+    status: InventoryStatus!
+    location: InventoryLocation
+    "Where exactly, or the place when OTHER; at most 255 characters."
+    locationNote: String
+    "A member or a free-text name, as log rows."
+    owner: Owner
+    comment: String
+    "A material describing it, e.g. the script."
+    material: Material
+    removed: Boolean!
+    version: Int!
+}
+
+input InventoryItemInput {
+    "Only on create."
+    revivalId: ID
+    name: String!
+    kind: InventoryKind!
+    quantity: Int = 1
+    status: InventoryStatus!
+    location: InventoryLocation
+    locationNote: String
+    owner: OwnerInput
+    comment: String
+    materialId: ID
+}
+
+extend type Participation {
+    "The materials the participant may see."
+    materials: [Material!]!
+}
+
+extend type RevivalPermissions {
+    "Directeur or steering group, not ARCHIVED."
+    canWriteMaterials: Boolean!
+    "SUPER_ADMIN, and directeur or steering group while they see the revival: every material and the inventory. Participants read theirs through Participation.materials."
+    canReadMaterials: Boolean!
+}

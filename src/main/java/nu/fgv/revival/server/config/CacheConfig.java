@@ -28,10 +28,12 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * Three caches: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (M1 research R5),
- * published guide versions, which are immutable and so never expire (M2 research R4), and spex posters, kept for 5
+ * Five caches: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (M1 research R5),
+ * published guide versions, which are immutable and so never expire (M2 research R4), spex posters, kept for 5
  * minutes like the spex (constitution V) and bounded by their size, so a list of revivals does not ask Spexregister
- * for every poster on every view.
+ * for every poster on every view, spexare by id with their names and contact details, kept in memory only and for at
+ * most 5 minutes (product spec section 7, M6), and Spexregister's task list, vocal parts and spex families, kept for an
+ * hour.
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -43,6 +45,8 @@ public class CacheConfig {
     public static final String ORIGINAL_SPEX = "originalSpex";
     public static final String GUIDE_VERSIONS = "guideVersions";
     public static final String SPEX_POSTERS = "spexPosters";
+    public static final String SPEXARE = "spexare";
+    public static final String SPEXREGISTER_REFERENCE = "spexregisterReference";
 
     private static final long POSTER_CACHE_BYTES = 64L * 1024 * 1024;
 
@@ -60,6 +64,8 @@ public class CacheConfig {
                         ? image.content().length + 64
                         : 64)
                 .build());
+        cacheManager.registerCustomCache(SPEXARE, Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(5_000).build());
+        cacheManager.registerCustomCache(SPEXREGISTER_REFERENCE, Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(1)).maximumSize(200).build());
         return cacheManager;
     }
 

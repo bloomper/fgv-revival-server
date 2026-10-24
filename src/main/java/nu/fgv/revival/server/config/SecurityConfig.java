@@ -50,8 +50,8 @@ import java.util.List;
 
 /**
  * Two stateless JWT resource-server chains: one for MCP, bound to {@code fgv-revival-mcp} tokens with the MCP URL as
- * audience, and one for GraphQL, bound to {@code fgv-revival} tokens. GraphQL is open at HTTP level because the
- * services decide access (research R3).
+ * audience, and one for GraphQL, bound to {@code fgv-revival} tokens. GraphQL and calendar feeds are open at HTTP level
+ * because the services decide access (research R3, M4-FR-6).
  *
  * @author Anders Jacobsson
  * @since 0.1
@@ -114,6 +114,8 @@ public class SecurityConfig {
                                 .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
                                 .requestMatchers(HttpMethod.POST, graphqlPath).permitAll()
                                 .requestMatchers(HttpMethod.GET, graphqlPath).permitAll()
+                                // A secret calendar link is its own credential; the service decides (M4-FR-6)
+                                .requestMatchers(HttpMethod.GET, "/api/calendar/*").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));

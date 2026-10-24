@@ -45,7 +45,7 @@ public class Person {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "external_id", nullable = false, unique = true, length = 36)
+    @Column(name = "external_id", nullable = false, unique = true, length = 64)
     private String externalId;
 
     @Column(name = "email", nullable = false)

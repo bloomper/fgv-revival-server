@@ -81,4 +81,27 @@ class GuideMarkdownTest {
         assertThat(markdown.plainText("Huvudpunkt\n\n- underpunkt ett\n- underpunkt två"))
                 .isEqualTo("Huvudpunkt\nunderpunkt ett\nunderpunkt två");
     }
+
+    // --- HTML for mailings (M6B-FR-9) ---------------------------------------------------------------------------------
+
+    @Test
+    void toHtmlRendersTheGuidesElements() {
+        assertThat(markdown.toHtml("Hej **alla** och *välkomna*!\n\n- ett\n- två\n\n1. först\n\nSe [sidan](https://example.org/a?b=1&c=2)."))
+                .isEqualTo("<p>Hej <strong>alla</strong> och <em>välkomna</em>!</p><ul><li>ett</li><li>två</li></ul><ol><li>först</li></ol>"
+                        + "<p>Se <a href=\"https://example.org/a?b=1&amp;c=2\">sidan</a>.</p>");
+    }
+
+    @Test
+    void toHtmlEscapesRawHtmlAndDropsImages() {
+        final String html = markdown.toHtml("Se <b>här</b> ![spårare](https://example.org/pixel.png)\n\n<script>alert(1)</script>");
+
+        assertThat(html).doesNotContain("<b>").doesNotContain("<script").doesNotContain("<img").doesNotContain("pixel.png")
+                .contains("&lt;b&gt;här&lt;/b&gt;").contains("&lt;script&gt;");
+    }
+
+    @Test
+    void toHtmlKeepsOnlyWebAndMailLinksAndUnwrapsHeadings() {
+        assertThat(markdown.toHtml("# Rubrik\n\n[klicka](javascript:alert(1)) [mejla](mailto:styrgrupp@example.org)"))
+                .isEqualTo("<p>Rubrik</p><p>klicka <a href=\"mailto:styrgrupp@example.org\">mejla</a></p>");
+    }
 }

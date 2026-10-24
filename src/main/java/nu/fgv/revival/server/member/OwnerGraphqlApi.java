@@ -39,8 +39,14 @@ public class OwnerGraphqlApi {
         this.ownerResolver = ownerResolver;
     }
 
+    /**
+     * Empty for callers who do not read the revival's work, as its permissions say (M6-FR-1).
+     */
     @SchemaMapping(typeName = "Revival", field = "ownerCandidates")
     public List<PersonRefDto> ownerCandidates(final RevivalDto revival) {
+        if (!revival.permissions().canReadWork()) {
+            return List.of();
+        }
         return ownerResolver.activeMembers(revival.id()).entrySet().stream()
                 .map(entry -> new PersonRefDto(entry.getKey(), entry.getValue()))
                 .toList();

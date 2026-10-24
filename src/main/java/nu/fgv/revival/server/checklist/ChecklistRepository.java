@@ -19,6 +19,7 @@ package nu.fgv.revival.server.checklist;
 
 import org.springframework.data.repository.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +44,10 @@ public interface ChecklistRepository extends Repository<Checklist, Long> {
     List<Checklist> findByRevivalIdAndKind(Long revivalId, ChecklistKind kind);
 
     List<Checklist> findByKindAndChapterKey(ChecklistKind kind, String chapterKey);
+
+    Optional<Checklist> findByEventId(Long eventId);
+
+    List<Checklist> findByEventIdIn(Collection<Long> eventIds);
 
     void delete(Checklist checklist);
 }

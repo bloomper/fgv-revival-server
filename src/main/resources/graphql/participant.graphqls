@@ -1,0 +1,383 @@
+# M6: participants and helpers, invitations, responses, fees, referrals (product spec 5.6). Participants and helpers
+# log in with their FGV account; there are no personal links. People's names and contact details live in Spexregister;
+# a participant refers to a spexare by id, or holds a pending person (name, email, phone) until they become one.
+
+enum ParticipantKind {
+    "Takes part in the revival."
+    PARTICIPANT
+    "An external helper (springare), paid per shift. Never written to Spexregister."
+    HELPER
+}
+
+enum ParticipantResponse {
+    PENDING
+    YES
+    NO
+    MAYBE
+}
+
+"How far an invitation has come."
+enum InvitationState {
+    "Not invited yet."
+    NOT_INVITED
+    "Invited; has not logged in with the invited email yet, or lacks access to Nyuppsättning."
+    INVITED
+    "Has logged in and holds the participant role."
+    ACTIVE
+}
+
+extend type Query {
+    """
+    The revival's participants and helpers, without removed ones unless includeRemoved. SUPER_ADMIN, and directeurs and
+    steering group (5.6 permission matrix). Names and contact details come from Spexregister: fails with
+    SPEXREGISTER_UNAVAILABLE when it cannot be reached and any participant is a spexare.
+    """
+    participants(revivalId: ID!, includeRemoved: Boolean = false): [Participant!]!
+    participant(id: ID!): Participant
+
+    """
+    Spexare who took part in the revival's original spex or its earlier revivals, not deceased and not already a
+    participant (5.6). Writers of participants. SPEXREGISTER_UNAVAILABLE when Spexregister cannot be reached.
+    """
+    participantCandidates(revivalId: ID!): [SpexareCandidate!]!
+    "Spexare whose name matches, at least 3 characters, at most 20. Writers of participants. Excludes deceased."
+    spexareSearch(revivalId: ID!, query: String!): [SpexareCandidate!]!
+
+    "Positions from Spexregister's task list, for picking a planned position. Every signed-in caller."
+    positions: [Position!]!
+    "Vocal parts from Spexregister, for ensemble roles."
+    vocalParts: [VocalPart!]!
+
+    "The caller's own participation in the revival: a participant or helper of a revival they can see. NOT_FOUND otherwise."
+    myParticipation(revivalId: ID!): Participation
+}
+
+extend type Mutation {
+    "Writers of participants: directeur or steering group, revival visible and not ARCHIVED, for every mutation below unless noted."
+    participantAdd(input: ParticipantAddInput!): Participant!
+    "Adds every listed spexare as a PARTICIPANT, skipping those already added."
+    participantsAddSpexare(revivalId: ID!, spexareIds: [ID!]!): [Participant!]!
+    participantUpdate(input: ParticipantUpdateInput!): Participant!
+    """
+    Removes a participant: a spexare's row is closed and kept; a pending person's name and contact details are deleted.
+    Also removes their participant role.
+    """
+    participantRemove(id: ID!, version: Int!): Void
+
+    """
+    Invites the participants: each gets the participant (or helper) role in the revival, waiting on the email address,
+    an FGV account if the address has none (Keycloak emails them), and an invitation email from Nyuppsättning with the
+    link to their page. The super admins are told once about everyone waiting for access. Spexare need an email
+    address in Spexregister, or one given here. Sending again to someone already invited sends a reminder. Revival
+    must be OPEN.
+    """
+    participantsInvite(input: ParticipantsInviteInput!): ParticipantsInviteResult!
+
+    "Writers of the budget (FINANCE). Marks a participant's fee paid or not."
+    participantFeeSetPaid(id: ID!, version: Int!, paid: Boolean!): Participant!
+
+    "Writers of participants. Swish number, WhatsApp link and extra terms."
+    participationSettingsUpdate(input: ParticipationSettingsInput!): ParticipationSettings!
+
+    "Writers of participants. Marks a referral handled: ADDED (creates a pending person from it) or DISMISSED. Its text is then deleted."
+    referralHandle(id: ID!, outcome: ReferralOutcome!): Participant
+
+    # --- The participant's own ---------------------------------------------------------------------------------------
+
+    """
+    The caller's response, as a participant or helper of a revival that is OPEN. YES requires termsAccepted. Answering
+    YES or MAYBE asks for registerConsent (5.6): a spexare's contact changes then reach Spexregister, a pending person
+    becomes a spexare. NO from a pending person deletes their name and contact details.
+    """
+    participationRespond(input: ParticipationRespondInput!): Participation!
+    "The caller's contact details. Spexare: written to Spexregister only with consent. SPEXREGISTER_UNAVAILABLE refuses the change."
+    participationContactUpdate(input: ContactInput!): Participation!
+    "The caller's dietary needs and allergies; blank clears them. Deleted automatically the day after the last show."
+    participationDietarySet(revivalId: ID!, text: String): Participation!
+    "Suggests someone the steering group may be missing."
+    referralCreate(input: ReferralInput!): Void
+}
+
+type Participant {
+    id: ID!
+    revivalId: ID!
+    kind: ParticipantKind!
+    "Set when the participant is a spexare."
+    spexareId: ID
+    "From Spexregister or the pending person."
+    firstName: String!
+    lastName: String!
+    nickName: String
+    "Contact details: for the revival's directeurs and steering group only (section 7)."
+    email: String
+    phone: String
+    "A pending person, not in Spexregister."
+    pending: Boolean!
+    position: Position
+    "Ensemble roles: the role's name and vocal part."
+    roleName: String
+    vocalPart: VocalPart
+    preferredPosition: Position
+    response: ParticipantResponse!
+    respondedAt: Instant
+    comment: String
+    termsAcceptedAt: Instant
+    "Null until asked."
+    registerConsent: Boolean
+    invitation: InvitationState!
+    invitedAt: Instant
+    "Readers with CATERING (the directeur has every capability). Null for everyone else, or when there is none."
+    dietary: String
+    "Whether the caller may read dietary needs at all."
+    dietaryReadable: Boolean!
+    "The fee due: the revival's participation fee, or this participant's own amount. Null for helpers."
+    fee: Amount
+    "This participant's own amount, overriding the revival's fee; null when they follow the revival's fee."
+    feeOverride: Amount
+    feePaid: Boolean!
+    feePaidAt: Instant
+    "HELPER: compensation per shift, a cost in the budget."
+    compensationPerShift: Amount
+    "M7: the revival paid this participant's FGV membership for the year."
+    membershipPaid: Boolean!
+    removed: Boolean!
+    version: Int!
+}
+
+type SpexareCandidate {
+    spexareId: ID!
+    firstName: String!
+    lastName: String!
+    nickName: String
+    graduation: String
+    "Spex and years they took part in, e.g. \"Ali Baba 1998\", newest first."
+    history: [String!]!
+    "Already a participant of this revival."
+    added: Boolean!
+}
+
+"A task from Spexregister, e.g. an ensemble role, an instrument or a detail."
+type Position {
+    id: ID!
+    name: String!
+    category: String
+    "Ensemble positions take a role name and a vocal part."
+    hasRole: Boolean!
+}
+
+type VocalPart {
+    id: ID!
+    name: String!
+}
+
+input ParticipantAddInput {
+    revivalId: ID!
+    kind: ParticipantKind!
+    "A spexare, or else a pending person below."
+    spexareId: ID
+    "Pending person: 1–100 characters each."
+    firstName: String
+    lastName: String
+    "Pending person: email or phone; a PARTICIPANT needs an email to be invited."
+    email: Email
+    phone: String
+    positionId: ID
+    roleName: String
+    vocalPartId: ID
+    "HELPER only. 0–100000."
+    compensationPerShift: Amount
+}
+
+input ParticipantUpdateInput {
+    id: ID!
+    version: Int!
+    positionId: ID
+    clearPosition: Boolean = false
+    roleName: String
+    clearRoleName: Boolean = false
+    vocalPartId: ID
+    clearVocalPart: Boolean = false
+    "Overrides the revival's fee for this participant; clearFee goes back to it."
+    fee: Amount
+    clearFee: Boolean = false
+    compensationPerShift: Amount
+    "Pending people only. A PARTICIPANT keeps an email address, a HELPER an email address or a phone number."
+    firstName: String
+    lastName: String
+    email: Email
+    clearEmail: Boolean = false
+    phone: String
+    clearPhone: Boolean = false
+}
+
+input ParticipantsInviteInput {
+    revivalId: ID!
+    participantIds: [ID!]!
+    "For a single spexare without an email address in Spexregister: the address to invite. It is not stored beyond the waiting role."
+    email: Email
+    "sv or en: the invitation's language."
+    language: String!
+}
+
+type ParticipantsInviteResult {
+    invited: [Participant!]!
+    "Those not invited, e.g. without an email address."
+    skipped: [ParticipantSkip!]!
+}
+
+type ParticipantSkip {
+    participant: Participant!
+    """
+    NO_EMAIL: no address in Spexregister or as pending person, and none given. REMOVED: the participant is removed.
+    DECLINED: they answered NO. ALREADY_MEMBER: the address already holds another role in this revival (e.g. steering
+    group), and a person holds one role per revival.
+    """
+    reason: String!
+}
+
+type ParticipationSettings {
+    "Shown to participants with a QR code for the fee. 10 digits, or a 123-number."
+    swishNumber: String
+    "WhatsApp group invite link, https://chat.whatsapp.com/…; shown to participants who said yes."
+    whatsappLink: String
+    "Extra terms shown when accepting, besides the fee and the shared liability for the loan."
+    terms: String
+    version: Int!
+}
+
+input ParticipationSettingsInput {
+    revivalId: ID!
+    version: Int!
+    swishNumber: String
+    whatsappLink: String
+    "At most 4000 characters."
+    terms: String
+}
+
+"Counts for the participants dashboard (5.6)."
+type ParticipantCounts {
+    total: Int!
+    byResponse: [ResponseCount!]!
+    byPosition: [PositionCount!]!
+    notInvited: Int!
+    waitingForAccess: Int!
+    feesPaid: Int!
+    feesUnpaid: Int!
+    helpers: Int!
+}
+
+type ResponseCount {
+    response: ParticipantResponse!
+    count: Int!
+}
+
+type PositionCount {
+    "Null: no position yet."
+    position: Position
+    yes: Int!
+    maybe: Int!
+    pending: Int!
+}
+
+enum ReferralOutcome {
+    ADDED
+    DISMISSED
+}
+
+type Referral {
+    id: ID!
+    "Name as the referrer wrote it."
+    name: String!
+    contact: String
+    comment: String
+    "Display name of the participant who suggested them."
+    referredBy: String
+    createdAt: Instant!
+}
+
+input ReferralInput {
+    revivalId: ID!
+    "1–100 characters."
+    name: String!
+    "Email or phone, at most 200 characters."
+    contact: String
+    "At most 1000 characters."
+    comment: String
+}
+
+"The caller's own participation (5.6): what the participant page shows."
+type Participation {
+    participant: Participant!
+    revival: Revival!
+    settings: ParticipationSettings!
+    "The texts to accept: the fee, the shared liability for the loan, the revival's extra terms."
+    terms: [String!]!
+    "Their contact details, from Spexregister or the pending person. Null while Spexregister is unavailable."
+    contact: Contact
+    "Their dietary needs, which only they and CATERING see."
+    dietary: String
+    "Payment details for the fee by Swish; null without a Swish number or fee, or once paid."
+    swish: SwishPayment
+    "Only once they answered YES."
+    whatsappLink: String
+    "The revival's directeurs and steering group, by display name."
+    steeringGroup: [PersonRef!]!
+}
+
+type Contact {
+    email: String
+    phone: String
+    streetAddress: String
+    postalCode: String
+    city: String
+}
+
+input ContactInput {
+    revivalId: ID!
+    email: Email
+    phone: String
+    streetAddress: String
+    postalCode: String
+    city: String
+}
+
+type SwishPayment {
+    number: String!
+    amount: Amount!
+    "Identifies the participant to whoever checks the account, at most 50 characters."
+    message: String!
+    "GET /api/revivals/{id}/swish-qr returns the pre-filled QR code as SVG."
+    qrAvailable: Boolean!
+}
+
+input ParticipationRespondInput {
+    revivalId: ID!
+    response: ParticipantResponse!
+    preferredPositionId: ID
+    "At most 1000 characters."
+    comment: String
+    termsAccepted: Boolean
+    registerConsent: Boolean
+}
+
+extend type Revival {
+    "Readers of participants; null for others."
+    participantCounts: ParticipantCounts
+    "Writers and readers of participants."
+    participationSettings: ParticipationSettings
+    "Open referrals. Readers of participants."
+    referrals: [Referral!]!
+    "The caller's role in the revival, if any."
+    myRole: RevivalRole
+}
+
+extend type RevivalPermissions {
+    canReadParticipants: Boolean!
+    canWriteParticipants: Boolean!
+    "CATERING, or directeur."
+    canReadDietary: Boolean!
+    "The caller is a participant or helper of the revival."
+    isParticipant: Boolean!
+    "Directeur or steering group, or SUPER_ADMIN/OBSERVER: the steering group's pages (log, meetings, checklists, guide)."
+    canReadWork: Boolean!
+}

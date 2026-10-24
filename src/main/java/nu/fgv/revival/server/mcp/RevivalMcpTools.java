@@ -16,9 +16,15 @@
 
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.budget.BudgetDtos;
+import nu.fgv.revival.server.budget.BudgetService;
+import nu.fgv.revival.server.closing.ClosingDtos;
+import nu.fgv.revival.server.closing.ClosingService;
+import nu.fgv.revival.server.closing.SyncRunStatus;
 import nu.fgv.revival.server.decisionlog.LogEntryType;
 import nu.fgv.revival.server.member.RevivalRole;
 import nu.fgv.revival.server.member.RevivalRoleAssignment;
+import nu.fgv.revival.server.participant.ParticipantDtos;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.RevivalDto;
@@ -26,6 +32,7 @@ import nu.fgv.revival.server.revival.RevivalService;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalStatusDto;
 import nu.fgv.revival.server.revival.RevivalStatusService;
+import nu.fgv.revival.server.util.Amounts;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -49,13 +56,20 @@ public class RevivalMcpTools {
     private final RevivalService revivalService;
     private final RevivalStatusService statusService;
     private final CallerService callerService;
+    private final BudgetService budgetService;
+    private final ParticipantMcpTools participantTools;
+    private final ClosingService closingService;
     private final McpToolSupport support;
 
     public RevivalMcpTools(final RevivalService revivalService, final RevivalStatusService statusService, final CallerService callerService,
+                           final BudgetService budgetService, final ParticipantMcpTools participantTools, final ClosingService closingService,
                            final McpToolSupport support) {
         this.revivalService = revivalService;
         this.statusService = statusService;
         this.callerService = callerService;
+        this.budgetService = budgetService;
+        this.participantTools = participantTools;
+        this.closingService = closingService;
         this.support = support;
     }
 
@@ -74,7 +88,7 @@ public class RevivalMcpTools {
     }
 
     @McpTool(name = "get_revival_status",
-            description = "Get a revival's status: its lifecycle status, overdue decision log rows and checklist items, and open guide requirements per chapter.",
+            description = "Get a revival's status: its lifecycle status, overdue decision log rows and checklist items, open guide requirements per chapter, its budgeted and actual result when you can read its budget, its participants' responses when you can read them, and while it is closing or settling, whether its participation has been written to Spexregister.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpRevivalStatus getRevivalStatus(@McpToolParam(description = "A revival you can see") final Long revivalId) {
         return support.call("get_revival_status", () -> {
@@ -85,8 +99,52 @@ public class RevivalMcpTools {
                             row.deadline())).toList(),
                     status.overdueChecklistItems().stream().map(ChecklistMcpTools::toMcp).map(item -> new OverdueChecklistItem(item.id(), item.checklist(),
                             item.text(), item.owner(), item.deadline())).toList(),
-                    status.openRequirements().stream().map(OpenRequirements::of).toList());
+                    status.openRequirements().stream().map(OpenRequirements::of).toList(),
+                    budgetPosition(revivalId),
+                    participantTools.responseCounts(revivalId),
+                    closing(status.revival().status(), revivalId));
         });
+    }
+
+    /**
+     * The budget's result, for callers who read the budget.
+     */
+    private @Nullable BudgetPosition budgetPosition(final Long revivalId) {
+        if (!budgetService.canRead(revivalId)) {
+            return null;
+        }
+
+        final BudgetDtos.Totals totals = budgetService.totals(revivalId);
+
+        return new BudgetPosition(Amounts.format(totals.budgetedResult()), Amounts.format(totals.actualResult()));
+    }
+
+    /**
+     * The sync and anonymization, while the revival is closing or settling, for callers who read its work.
+     */
+    private @Nullable ClosingPosition closing(final RevivalStatus status, final Long revivalId) {
+        if (status != RevivalStatus.CLOSING && status != RevivalStatus.SETTLING) {
+            return null;
+        }
+
+        final ClosingDtos.ClosingStatusDto closing = closingService.closing(revivalId);
+
+        if (closing == null) {
+            return null;
+        }
+
+        final ClosingDtos.SyncRunDto last = closing.lastSync();
+
+        return new ClosingPosition(last == null ? null : last.status(), last != null && last.status() == SyncRunStatus.DONE,
+                closing.membershipsPaid(), closing.surplusDecision() != null, closing.anonymizedAt() != null);
+    }
+
+    /**
+     * Where the revival stands on closing: the latest sync run's status, whether the participation is in Spexregister,
+     * memberships paid, whether the surplus is decided, and whether the people have been removed.
+     */
+    public record ClosingPosition(@Nullable SyncRunStatus lastSync, boolean synced, int membershipsPaid, boolean surplusDecided,
+                                  boolean anonymized) {
     }
 
     private static McpRevival toMcpRevival(final RevivalDto revival, final Caller caller) {
@@ -120,7 +178,16 @@ public class RevivalMcpTools {
     public record McpRevivalStatus(RevivalStatusDto.Summary revival,
                                    List<OverdueLogEntry> overdueLogEntries,
                                    List<OverdueChecklistItem> overdueChecklistItems,
-                                   List<OpenRequirements> openRequirements) {
+                                   List<OpenRequirements> openRequirements,
+                                   @Nullable BudgetPosition budget,
+                                   @Nullable List<ParticipantDtos.ResponseCount> participantResponses,
+                                   @Nullable ClosingPosition closing) {
+    }
+
+    /**
+     * The budgeted and actual result in kronor (income minus cost).
+     */
+    public record BudgetPosition(String budgetedResult, String actualResult) {
     }
 
     public record OpenRequirements(String chapterKey, ChecklistMcpTools.@Nullable Text chapterTitle, int open, int total) {

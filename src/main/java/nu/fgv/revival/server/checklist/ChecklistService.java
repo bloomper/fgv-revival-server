@@ -54,6 +54,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -176,7 +177,7 @@ public class ChecklistService {
 
         return new ChecklistDto(checklist.getId(), checklist.getRevivalId(), checklist.getKind(), checklist.getChapterKey(),
                 chapterTitle(version, checklist),
-                checklist.getName(), checklist.getDate(), checklist.getTemplateId(), checklist.isCancelled(), toDtos(items, locale), tips,
+                checklist.getName(), checklist.getDate(), checklist.getTemplateId(), checklist.getEventId(), checklist.isCancelled(), toDtos(items, locale), tips,
                 checklist.getVersion());
     }
 
@@ -664,6 +665,85 @@ public class ChecklistService {
         }
     }
 
+    // --- Internal, for events (M4-FR-4); the event service has checked access ----------------------------------------
+
+    /**
+     * Creates the event's EVENT checklist from its type's template, named and dated as the event. Nothing when the
+     * template is retired or not an event template. Returns the checklist's id.
+     */
+    @Transactional
+    public Optional<Long> createForEvent(final Long revivalId, final Long eventId, final String name, final LocalDate date, final Long templateId,
+                                         final Locale locale) {
+        final Optional<ChecklistTemplate> template = templateRepository.findById(templateId)
+                .filter(candidate -> !candidate.isRetired() && candidate.getKind() == ChecklistKind.EVENT);
+
+        if (template.isEmpty()) {
+            return Optional.empty();
+        }
+
+        final Checklist checklist = new Checklist();
+
+        checklist.setRevivalId(revivalId);
+        checklist.setKind(ChecklistKind.EVENT);
+        checklist.setName(validName(name));
+        checklist.setDate(date);
+        checklist.setTemplateId(template.get().getId());
+        checklist.setEventId(eventId);
+
+        final Checklist saved = checklistRepository.saveAndFlush(checklist);
+
+        addTemplateItems(saved, template.get(), locale);
+        return Optional.of(saved.getId());
+    }
+
+    /**
+     * Names and dates the event's checklist as the event, recomputing the deadlines not set by hand when the date moves
+     * (as {@link #updateEventChecklist}). A cancelled checklist is left as it is.
+     */
+    @Transactional
+    public void followEvent(final Long eventId, final String name, final LocalDate date) {
+        checklistRepository.findByEventId(eventId).filter(checklist -> !checklist.isCancelled()).ifPresent(checklist -> {
+            final String valid = validName(name);
+            boolean changed = false;
+
+            if (!valid.equals(checklist.getName())) {
+                checklist.setName(valid);
+                changed = true;
+            }
+            if (!date.equals(checklist.getDate())) {
+                checklist.setDate(date);
+                recomputeDeadlines(checklist);
+                changed = true;
+            }
+            if (changed) {
+                checklistRepository.saveAndFlush(checklist);
+            }
+        });
+    }
+
+    /**
+     * Cancels the event's checklist with the event, or restores it with the event.
+     */
+    @Transactional
+    public void setCancelledWithEvent(final Long eventId, final boolean cancelled) {
+        checklistRepository.findByEventId(eventId).filter(checklist -> checklist.isCancelled() != cancelled).ifPresent(checklist -> {
+            checklist.setCancelledAt(cancelled ? clock.instant() : null);
+            checklistRepository.saveAndFlush(checklist);
+        });
+    }
+
+    /**
+     * The checklists of the events, by event id. No caller check: callers have checked the events.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, ChecklistSummaryDto> summariesByEvent(final Collection<Long> eventIds) {
+        if (eventIds.isEmpty()) {
+            return Map.of();
+        }
+        return summaries(checklistRepository.findByEventIdIn(Set.copyOf(eventIds))).values().stream()
+                .collect(Collectors.toMap(summary -> Objects.requireNonNull(summary.eventId()), Function.identity()));
+    }
+
     // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void recomputeDeadlines(final Checklist checklist) {
@@ -851,7 +931,7 @@ public class ChecklistService {
                     chapterTitle(versions.computeIfAbsent(checklist.getRevivalId(), texts::pinnedVersion), checklist),
                     checklist.getName(), checklist.getDate(), checklist.isCancelled(),
                     (int) own.stream().filter(item -> item.getState() == ChecklistItemState.OPEN).count(),
-                    (int) own.stream().filter(item -> item.isOverdue(today)).count(), own.size()));
+                    (int) own.stream().filter(item -> item.isOverdue(today)).count(), own.size(), checklist.getEventId()));
         }
         return summaries;
     }

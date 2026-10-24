@@ -1,0 +1,169 @@
+# M6: mailings, the mailing plan and its reminders (product spec 5.8). Nothing is sent without a person confirming.
+# Recipients are references; email addresses are looked up at send time and never stored with the mailing.
+
+enum MailingAudienceKind {
+    "Participants who answered YES or MAYBE."
+    PARTICIPANTS
+    "Participants who answered YES."
+    CONFIRMED
+    "Directeurs and steering group."
+    STEERING_GROUP
+    "Participants (YES or MAYBE) with a position: positionId."
+    POSITION
+    "Participants available (YES or MAYBE) on any day of an event, or holding a shift in it: eventId."
+    EVENT_ATTENDEES
+    HELPERS
+    "Invited participants who have not answered."
+    NON_RESPONDERS
+}
+
+enum MailingStatus {
+    DRAFT
+    SENT
+    CANCELLED
+}
+
+enum MailingRecipientStatus {
+    SENT
+    FAILED
+    "No email address could be found."
+    NO_ADDRESS
+}
+
+extend type Query {
+    "Newest first. SUPER_ADMIN, directeurs and steering group (5.8 matrix)."
+    mailings(revivalId: ID!): [Mailing!]!
+    mailing(id: ID!): Mailing
+    "Who an audience reaches now, by name: the recipients the send would use. Readers of mailings."
+    mailingAudiencePreview(revivalId: ID!, audience: MailingAudienceInput!): [MailingRecipientPreview!]!
+
+    "SUPER_ADMIN; readers of the guide see them too. Retired only with includeRetired."
+    mailingTemplates(includeRetired: Boolean = false): [MailingTemplate!]!
+}
+
+extend type Mutation {
+    "Directeur or steering group, revival visible and not ARCHIVED: drafts."
+    mailingCreate(input: MailingInput!): Mailing!
+    mailingUpdate(id: ID!, version: Int!, input: MailingInput!): Mailing!
+    "Drafts only. Cancelled drafts stay readable."
+    mailingCancel(id: ID!, version: Int!): Mailing!
+    """
+    Directeur, or steering group with COMMS. Sends the draft to its audience as it is now, one message per recipient,
+    and records each. MAIL_UNAVAILABLE without a mail server; SPEXREGISTER_UNAVAILABLE when addresses cannot be read.
+    """
+    mailingSend(id: ID!, version: Int!): Mailing!
+    "Sends again to the FAILED recipients only. COMMS."
+    mailingRetry(id: ID!): Mailing!
+
+    "SUPER_ADMIN, for every template mutation."
+    mailingTemplateCreate(input: MailingTemplateInput!): MailingTemplate!
+    mailingTemplateUpdate(id: ID!, version: Int!, input: MailingTemplateInput!): MailingTemplate!
+    mailingTemplateMove(id: ID!, version: Int!, position: Int!): [MailingTemplate!]!
+    mailingTemplateRetire(id: ID!, version: Int!): MailingTemplate!
+    mailingTemplateRestore(id: ID!, version: Int!): MailingTemplate!
+}
+
+type MailingAudience {
+    kind: MailingAudienceKind!
+    position: Position
+    event: Event
+}
+
+input MailingAudienceInput {
+    kind: MailingAudienceKind!
+    positionId: ID
+    eventId: ID
+}
+
+type Mailing {
+    id: ID!
+    revivalId: ID!
+    audience: MailingAudience!
+    subject: String!
+    "Markdown, rendered with the guide's safe subset (no raw HTML, no images)."
+    body: String!
+    status: MailingStatus!
+    "The plan entry it was drafted from."
+    plannedFor: MailingPlanEntry
+    createdBy: PersonRef
+    createdAt: Instant!
+    sentBy: PersonRef
+    sentAt: Instant
+    "Names only; never addresses."
+    recipients: [MailingRecipient!]!
+    "Directeur, or COMMS, and a DRAFT."
+    canSend: Boolean!
+    version: Int!
+}
+
+type MailingRecipient {
+    displayName: String!
+    status: MailingRecipientStatus!
+}
+
+type MailingRecipientPreview {
+    displayName: String!
+    hasAddress: Boolean!
+}
+
+input MailingInput {
+    "Only on create."
+    revivalId: ID
+    audience: MailingAudienceInput!
+    "1–200 characters."
+    subject: String!
+    "1–20000 characters."
+    body: String!
+    "From a plan entry: its template and event."
+    templateId: ID
+    eventId: ID
+}
+
+"A planned mailing from the super admin's mailing plan template (5.8)."
+type MailingTemplate {
+    id: ID!
+    name: LocalizedText!
+    subject: LocalizedText!
+    body: LocalizedText!
+    audience: MailingAudienceKind!
+    "The mailing is due relative to each event of this type; null: relative to the premiere."
+    eventType: EventType
+    "Relative to the event's start date or the premiere."
+    due: RelativeDeadline!
+    position: Int!
+    retired: Boolean!
+    version: Int!
+}
+
+input MailingTemplateInput {
+    name: LocalizedTextInput!
+    subject: LocalizedTextInput!
+    body: LocalizedTextInput!
+    audience: MailingAudienceKind!
+    eventTypeId: ID
+    due: RelativeDeadlineInput!
+}
+
+"One planned mailing in a revival: a template for one of its events, or for the premiere."
+type MailingPlanEntry {
+    template: MailingTemplate!
+    event: Event
+    dueDate: Date!
+    "The draft or sent mailing made from it, the most recent."
+    mailing: Mailing
+    "Due within a week, or past due, and nothing sent."
+    due: Boolean!
+}
+
+extend type Revival {
+    "Readers of mailings: active templates × the revival's events that are not cancelled, by due date."
+    mailingPlan: [MailingPlanEntry!]!
+}
+
+extend type RevivalPermissions {
+    canReadMailings: Boolean!
+    "Directeur or steering group: drafts."
+    canDraftMailings: Boolean!
+    "Directeur, or steering group with COMMS."
+    canSendMailings: Boolean!
+}

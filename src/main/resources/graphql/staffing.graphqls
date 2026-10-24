@@ -1,0 +1,122 @@
+# M6: availability per event day and staffing with shift slots (product spec 5.7).
+
+enum AvailabilityAnswer {
+    YES
+    NO
+    MAYBE
+}
+
+extend type Query {
+    """
+    Availability of the revival's participants for its events that are not cancelled: one row per participant who
+    answered, with their answers. Readers of participants.
+    """
+    availability(revivalId: ID!, eventId: ID): [ParticipantAvailability!]!
+
+    "Shift slots of the revival's events that are not cancelled, by date and time. Readers of staffing (5.7 matrix)."
+    shiftSlots(revivalId: ID!, eventId: ID): [ShiftSlot!]!
+}
+
+extend type Mutation {
+    "Writers of staffing: directeur, or steering group with STAFFING; revival visible and not ARCHIVED."
+    shiftSlotCreate(input: ShiftSlotInput!): ShiftSlot!
+    shiftSlotUpdate(id: ID!, version: Int!, input: ShiftSlotInput!): ShiftSlot!
+    "Only while nobody is assigned."
+    shiftSlotRemove(id: ID!, version: Int!): Void
+    "Writers of staffing. Assigns a participant or helper; refused when they already hold an overlapping slot."
+    shiftAssign(slotId: ID!, participantId: ID!): ShiftSlot!
+    shiftUnassign(slotId: ID!, participantId: ID!): ShiftSlot!
+
+    "The caller as a participant who said YES or MAYBE, revival OPEN: signs up for a slot that is not full."
+    shiftSignUp(slotId: ID!): ShiftSlot!
+    "The caller withdraws from a slot they signed up for themselves; slots assigned to them stay."
+    shiftWithdraw(slotId: ID!): ShiftSlot!
+
+    "The caller's availability for an event day. Revival OPEN. Days outside the event are refused."
+    availabilitySet(input: AvailabilityInput!): Participation!
+}
+
+type ParticipantAvailability {
+    participant: ParticipantRef!
+    days: [AvailabilityDay!]!
+}
+
+"A participant by name and position only, for lists outside the participants page."
+type ParticipantRef {
+    id: ID!
+    displayName: String!
+    kind: ParticipantKind!
+    position: Position
+}
+
+type AvailabilityDay {
+    eventId: ID!
+    date: Date!
+    answer: AvailabilityAnswer!
+    "At most 255 characters, e.g. \"bad back, OK to do other things\"."
+    comment: String
+}
+
+input AvailabilityInput {
+    revivalId: ID!
+    eventId: ID!
+    date: Date!
+    "Null clears the answer for that day."
+    answer: AvailabilityAnswer
+    comment: String
+}
+
+type ShiftSlot {
+    id: ID!
+    event: Event!
+    date: Date!
+    "HH:mm."
+    startTime: String!
+    endTime: String!
+    "E.g. ticket check, selling drink tickets, punch guard. 1–100 characters."
+    task: String!
+    "1–100."
+    needed: Int!
+    comment: String
+    assigned: [ShiftAssignment!]!
+    "needed − assigned, never below 0."
+    open: Int!
+    version: Int!
+}
+
+type ShiftAssignment {
+    participant: ParticipantRef!
+    "The participant signed up themselves, rather than being assigned."
+    selfSignedUp: Boolean!
+}
+
+input ShiftSlotInput {
+    "Only on create; an event of the revival that is not cancelled."
+    eventId: ID
+    "A day of the event."
+    date: Date!
+    startTime: String!
+    "After startTime."
+    endTime: String!
+    task: String!
+    needed: Int!
+    "At most 1000 characters."
+    comment: String
+}
+
+extend type Participation {
+    "The revival's events that are not cancelled, for availability and the schedule."
+    events: [Event!]!
+    availability: [AvailabilityDay!]!
+    "Slots the caller holds."
+    shifts: [ShiftSlot!]!
+    "Slots with room the caller may sign up for (YES or MAYBE)."
+    openShifts: [ShiftSlot!]!
+}
+
+extend type RevivalPermissions {
+    "SUPER_ADMIN, directeurs and steering group."
+    canReadStaffing: Boolean!
+    "Directeur, or steering group with STAFFING."
+    canWriteStaffing: Boolean!
+}

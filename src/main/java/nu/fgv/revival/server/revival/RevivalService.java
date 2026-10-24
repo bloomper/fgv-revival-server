@@ -78,6 +78,7 @@ public class RevivalService {
     private final RevivalGuideVersions guideVersions;
     private final ApplicationEventPublisher events;
     private final RevivalDeletion deletion;
+    private final RevivalAnonymization anonymization;
     private final Clock clock;
 
     public RevivalService(final RevivalRepository repository,
@@ -88,6 +89,7 @@ public class RevivalService {
                           final RevivalGuideVersions guideVersions,
                           final ApplicationEventPublisher events,
                           final RevivalDeletion deletion,
+                          final RevivalAnonymization anonymization,
                           final Clock clock) {
         this.repository = repository;
         this.statusChangeRepository = statusChangeRepository;
@@ -97,6 +99,7 @@ public class RevivalService {
         this.guideVersions = guideVersions;
         this.events = events;
         this.deletion = deletion;
+        this.anonymization = anonymization;
         this.clock = clock;
     }
 
@@ -166,8 +169,10 @@ public class RevivalService {
      */
     @Transactional(readOnly = true)
     public List<RevivalGuideVersionChange> guideVersionHistory(final Long id) {
-        visible(callerService.current(), id);
-        return guideVersions.history(id);
+        final Caller caller = callerService.current();
+
+        // Participants see the revival for their own page only (M6-FR-1)
+        return accessPolicy.canReadRevivalWork(caller, visible(caller, id)) ? guideVersions.history(id) : List.of();
     }
 
     /**
@@ -188,11 +193,16 @@ public class RevivalService {
         return spexService.poster(visible(callerService.current(), id).getSpexId());
     }
 
+    /**
+     * Newest first; empty for participants and helpers, who see the revival for their own page only (M6-FR-1).
+     */
     @Transactional(readOnly = true)
     public List<RevivalStatusChangeHistoryDto> statusHistory(final Long id) {
         final Caller caller = callerService.current();
 
-        visible(caller, id);
+        if (!accessPolicy.canReadRevivalWork(caller, visible(caller, id))) {
+            return List.of();
+        }
         return statusChangeRepository.findByRevivalIdOrderByChangedAtDescIdDesc(id).stream()
                 .map(REVIVAL_MAPPER::toHistoryDto)
                 .toList();
@@ -284,6 +294,36 @@ public class RevivalService {
     }
 
     /**
+     * Removes the people from the revival for good (section 7, M7-FR-10): a directeur while it is settling, or a super
+     * admin while it is settling, archived or rejected; once. The confirmation is the revival's title as the web shows
+     * it, e.g. "Ali Baba 2028" (trimmed, any case), or its id while Spexregister is unavailable.
+     */
+    @Transactional
+    public RevivalDto anonymize(final Long id, final Long version, final String confirmation) {
+        final Caller caller = callerService.current();
+        final Revival revival = visible(caller, id);
+
+        if (revival.isAnonymized()) {
+            throw new BadRequestException("error.revival.anonymized");
+        }
+        accessPolicy.requireAnonymize(caller, revival);
+        if (!Objects.equals(version, revival.getVersion())) {
+            throw new ConflictException("error.conflict");
+        }
+
+        final SpexDto spex = spexService.findTitles(List.of(revival.getSpexId())).get(revival.getSpexId());
+        final String expected = spex == null || spex.title() == null ? String.valueOf(revival.getId())
+                : "%s %d".formatted(spex.title(), revival.getYear());
+
+        if (confirmation == null || !confirmation.strip().equalsIgnoreCase(expected)) {
+            throw new BadRequestException("error.revival.anonymize.confirmation");
+        }
+        AuditContext.operation("revivalAnonymize");
+        anonymization.anonymize(revival, caller.person().getId());
+        return toDto(caller, repository.findById(id).orElseThrow());
+    }
+
+    /**
      * Changes the status. The {@code from} the caller saw must still be the stored status (research R12); then a super
      * admin may set any status and a directeur only the next step (FR-013, FR-014). The change is recorded (FR-018).
      */
@@ -310,6 +350,7 @@ public class RevivalService {
         final Revival saved = repository.saveAndFlush(revival);
 
         statusChangeRepository.saveAndFlush(change);
+        events.publishEvent(new RevivalStatusChanged(saved.getId(), change.getFromStatus(), change.getToStatus()));
         return toDto(caller, saved);
     }
 

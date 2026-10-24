@@ -38,10 +38,30 @@ public record RevivalPermissionsDto(@Nullable Long revivalId,
                                     List<GuideVersionSummaryDto> guideVersionsAllowed,
                                     boolean canWriteLog,
                                     boolean canWaiveRequirement,
-                                    boolean canDelete) {
+                                    boolean canDelete,
+                                    boolean canSubscribeCalendar,
+                                    boolean canReadBudget,
+                                    boolean canWriteBudget,
+                                    boolean canReadParticipants,
+                                    boolean canWriteParticipants,
+                                    boolean canReadDietary,
+                                    boolean isParticipant,
+                                    boolean canReadWork,
+                                    boolean canReadStaffing,
+                                    boolean canWriteStaffing,
+                                    boolean canReadMailings,
+                                    boolean canDraftMailings,
+                                    boolean canSendMailings,
+                                    boolean canWriteMaterials,
+                                    boolean canSync,
+                                    boolean canAnonymize,
+                                    boolean canSetMembership,
+                                    boolean canReadMaterials) {
 
     public RevivalPermissionsDto withGuideVersionsAllowed(final List<GuideVersionSummaryDto> versions) {
         return new RevivalPermissionsDto(revivalId, canEditCore, canEditDetails, allowedStatuses, canManageDirecteurs, canManageSteeringGroup,
-                canSuggestGuideChange, List.copyOf(versions), canWriteLog, canWaiveRequirement, canDelete);
+                canSuggestGuideChange, List.copyOf(versions), canWriteLog, canWaiveRequirement, canDelete, canSubscribeCalendar, canReadBudget,
+                canWriteBudget, canReadParticipants, canWriteParticipants, canReadDietary, isParticipant, canReadWork, canReadStaffing,
+                canWriteStaffing, canReadMailings, canDraftMailings, canSendMailings, canWriteMaterials, canSync, canAnonymize, canSetMembership, canReadMaterials);
     }
 }

@@ -44,6 +44,7 @@ public interface RevivalMapper {
     @Mapping(target = "createdAt", source = "revival.createdAt")
     @Mapping(target = "lastModifiedBy", source = "revival.lastModifiedBy")
     @Mapping(target = "lastModifiedAt", source = "revival.lastModifiedAt")
+    @Mapping(target = "anonymizedAt", source = "revival.anonymizedAt")
     @Mapping(target = "spex", source = "spex")
     @Mapping(target = "permissions", source = "permissions")
     RevivalDto toDto(Revival revival, SpexDto spex, RevivalPermissionsDto permissions);

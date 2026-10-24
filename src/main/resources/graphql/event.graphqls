@@ -1,0 +1,192 @@
+# M4: event types (SUPER_ADMIN), a revival's events and timeline, and calendar feeds (product spec 5.3). Events are
+# cancelled, never deleted (constitution IV). Event types are retired, never deleted.
+
+extend type Query {
+    "Every signed-in caller. Retired types only with includeRetired. In the super admin's order."
+    eventTypes(includeRetired: Boolean = false): [EventType!]!
+    eventType(id: ID!): EventType
+
+    "A revival's events by start date, then start time, then id. Readers of the revival's work (as checklists)."
+    events(revivalId: ID!, includeCancelled: Boolean = false): [Event!]!
+    "NOT_FOUND unless the caller can read the event's revival."
+    event(id: ID!): Event
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, for every event type mutation. Appends a new type."
+    eventTypeCreate(input: EventTypeInput!): EventType!
+    eventTypeUpdate(id: ID!, version: Int!, input: EventTypeInput!): EventType!
+    "Returns every type, retired ones too, in the new order."
+    eventTypeMove(id: ID!, version: Int!, position: Int!): [EventType!]!
+    "A retired type is not offered for new events or proposals; events of that type keep it."
+    eventTypeRetire(id: ID!, version: Int!): EventType!
+    eventTypeRestore(id: ID!, version: Int!): EventType!
+
+    """
+    Directeur or steering group, revival visible and not ARCHIVED, for every event mutation. With a type that has a
+    checklist template, the event gets an EVENT checklist from it, named and dated as the event.
+    """
+    eventCreate(input: EventCreateInput!): Event!
+    "Omitted fields are unchanged. A new title renames its checklist; a new start date re-dates it (recomputing deadlines not set by hand)."
+    eventUpdate(input: EventUpdateInput!): Event!
+    "Cancels the event and its checklist. Both stay readable."
+    eventCancel(id: ID!, version: Int!): Event!
+    "Undoes a cancellation, and the checklist's."
+    eventRestore(id: ID!, version: Int!): Event!
+
+    """
+    A new secret calendar link for the caller in this revival; the previous one stops working. Anyone holding a revival
+    role in a revival they can see (FR-M4-ICS). The token is shown only here.
+    """
+    calendarFeedCreate(revivalId: ID!): CalendarFeedLink!
+    "Turns the caller's calendar link for this revival off."
+    calendarFeedRevoke(revivalId: ID!): Void
+}
+
+"A kind of event from the guide's example timeline (product spec 5.3)."
+type EventType {
+    id: ID!
+    name: LocalizedText!
+    "Default content: what the event is."
+    description: LocalizedText
+    "Rooms the event needs."
+    rooms: LocalizedText
+    catering: LocalizedText
+    """
+    Days relative to the premiere, negative before it, as a range the start date is proposed within. Both null when the
+    type has no fixed offset (e.g. AW); then it is never proposed.
+    """
+    offsetMinDays: Int
+    offsetMaxDays: Int
+    "How many days the event lasts, 1–14."
+    days: Int!
+    "Whether the revival pays for food and drink at this event."
+    revivalPays: Boolean!
+    "An EVENT checklist template, not necessarily active."
+    checklistTemplate: ChecklistTemplateSummary
+    position: Int!
+    retired: Boolean!
+    version: Int!
+}
+
+input EventTypeInput {
+    "1–100 characters, trimmed; the Swedish name is unique among types."
+    name: LocalizedTextInput!
+    "At most 4000 characters each. Null or blank Swedish text clears it."
+    description: LocalizedTextInput
+    rooms: LocalizedTextInput
+    catering: LocalizedTextInput
+    "-730 to 730, both or neither, min ≤ max."
+    offsetMinDays: Int
+    offsetMaxDays: Int
+    "1–14."
+    days: Int!
+    revivalPays: Boolean!
+    "An EVENT template that is not retired, unless the type already has it."
+    checklistTemplateId: ID
+}
+
+type Event {
+    id: ID!
+    revivalId: ID!
+    "Null for an event added freely (a meeting, a storage visit)."
+    type: EventType
+    title: String!
+    startDate: Date!
+    "Equal to startDate for a one-day event."
+    endDate: Date!
+    "HH:mm in Swedish time, or null."
+    startTime: String
+    endTime: String
+    location: String
+    description: String
+    revivalPays: Boolean!
+    "Days from the revival's premiere to startDate, negative before it; null without a premiere."
+    daysFromPremiere: Int
+    "The event's checklist, if it has one."
+    checklist: ChecklistSummary
+    cancelled: Boolean!
+    version: Int!
+}
+
+"An event with a type that the revival has no event of yet, proposed from the premiere date (product spec 5.3)."
+type EventProposal {
+    type: EventType!
+    startDate: Date!
+    endDate: Date!
+    "The range the type's offsets allow."
+    earliest: Date!
+    latest: Date!
+}
+
+input EventCreateInput {
+    revivalId: ID!
+    "An active type. Its name is the default title, its revivalPays the default."
+    typeId: ID
+    "1–255 characters, trimmed. Required without a type."
+    title: String
+    startDate: Date!
+    "Not before startDate, at most 31 days after it. Defaults to startDate + type days - 1, or startDate."
+    endDate: Date
+    "HH:mm, 00:00–23:59, or blank."
+    startTime: String
+    endTime: String
+    "At most 255 characters."
+    location: String
+    "At most 4000 characters."
+    description: String
+    revivalPays: Boolean
+}
+
+input EventUpdateInput {
+    id: ID!
+    version: Int!
+    title: String
+    startDate: Date
+    endDate: Date
+    startTime: String
+    clearStartTime: Boolean = false
+    endTime: String
+    clearEndTime: Boolean = false
+    location: String
+    clearLocation: Boolean = false
+    description: String
+    clearDescription: Boolean = false
+    revivalPays: Boolean
+}
+
+type CalendarFeedLink {
+    "The address to subscribe to, with the secret token. Shown once."
+    url: String!
+    createdAt: Instant!
+}
+
+type CalendarFeed {
+    createdAt: Instant!
+}
+
+extend type Revival {
+    "Without cancelled events, in date order. Empty without a premiere date. Readers of the revival's work."
+    eventProposals: [EventProposal!]!
+    "The caller's active calendar link for this revival, without its token; null when they have none."
+    calendarFeed: CalendarFeed
+}
+
+extend type RevivalWorkSummary {
+    "The next three events that are not cancelled and have not ended, soonest first."
+    upcomingEvents: [Event!]!
+}
+
+extend type RevivalPermissions {
+    "Holds a revival role in the revival and can see it, so may have a calendar link."
+    canSubscribeCalendar: Boolean!
+}
+
+extend type Checklist {
+    "The event the checklist belongs to, if any."
+    event: Event
+}
+
+extend type ChecklistSummary {
+    eventId: ID
+}

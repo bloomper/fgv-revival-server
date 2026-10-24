@@ -37,7 +37,7 @@ import java.time.LocalDate;
 
 /**
  * A revival's checklist: one per chapter of its pinned guide version, or an event checklist with a name and an optional date (FR-022, FR-023).
- * Never deleted; an event checklist can be cancelled.
+ * An event checklist may belong to an event, which then names and dates it (M4-FR-4). Never deleted; an event checklist can be cancelled.
  *
  * @author Anders Jacobsson
  * @since 0.3
@@ -74,6 +74,9 @@ public class Checklist extends AbstractAuditable {
 
     @Column(name = "template_id")
     private @Nullable Long templateId;
+
+    @Column(name = "event_id", updatable = false)
+    private @Nullable Long eventId;
 
     @Column(name = "cancelled_at")
     private @Nullable Instant cancelledAt;

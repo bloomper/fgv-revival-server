@@ -40,14 +40,27 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Nothing in the decision log, meetings or checklists can be deleted, by any route (M3 SC-005, constitution IV).
+ * Nothing in the decision log, meetings, checklists, events, budgets, materials or inventory can be deleted, by any route
+ * (M3 SC-005, M4-FR-3, M5, M8, constitution IV).
  *
  * @author Anders Jacobsson
  */
 class NoDeleteIntegrationTest extends AbstractIntegrationTest {
 
-    private static final List<String> M3_PREFIXES = List.of("logEntry", "logImport", "meeting", "minutes", "eventChecklist", "checklist");
-    private static final List<String> M3_PACKAGES = List.of("decisionlog", "meeting", "checklist");
+    private static final List<String> M3_PREFIXES = List.of("logEntry", "logImport", "meeting", "minutes", "eventChecklist", "checklist", "event",
+            "calendarFeed");
+    private static final List<String> M3_PACKAGES = List.of("decisionlog", "meeting", "checklist", "event", "calendar");
+    /**
+     * The lines event types propose are the super admin's, not revival data: removing one deletes it (M5-FR-3).
+     */
+    private static final String EVENT_TYPE_BUDGET_LINES = "eventTypeBudgetLine";
+    private static final List<String> BUDGET_PREFIXES = List.of("budgetSettings", "budgetLine", "transaction", "budgetScenario");
+    /**
+     * A revival's budget rows; a receipt's file goes when the receipt is replaced or removed, and the catalogs and
+     * reference figures are not revival data.
+     */
+    private static final List<String> BUDGET_REPOSITORIES = List.of("BudgetSettingsRepository", "BudgetLineRepository",
+            "BudgetTransactionRepository", "BudgetScenarioRepository");
     /**
      * The one exception: the guide sync deletes a revival's checklist for a chapter, with its items, when the revival
      * moves to a guide version without that chapter.
@@ -63,10 +76,103 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
     void noM3MutationDeletesOrRemoves() {
         final List<String> mutations = graphQlSource.schema().getMutationType().getFieldDefinitions().stream()
                 .map(GraphQLFieldDefinition::getName)
-                .filter(name -> M3_PREFIXES.stream().anyMatch(name::startsWith))
+                .filter(name -> M3_PREFIXES.stream().anyMatch(name::startsWith) && !name.startsWith(EVENT_TYPE_BUDGET_LINES))
                 .toList();
 
         assertThat(mutations).isNotEmpty().noneMatch(name -> name.contains("Delete") || name.contains("Remove"));
+    }
+
+    /**
+     * Budget lines and scenarios are removed by marking them, which the GraphQL tests show; nothing deletes them.
+     */
+    @Test
+    void noBudgetMutationDeletes() {
+        final List<String> mutations = graphQlSource.schema().getMutationType().getFieldDefinitions().stream()
+                .map(GraphQLFieldDefinition::getName)
+                .filter(name -> BUDGET_PREFIXES.stream().anyMatch(name::startsWith))
+                .toList();
+
+        assertThat(mutations).contains("budgetLineRemove", "transactionCancel", "budgetScenarioRemove").noneMatch(name -> name.contains("Delete"));
+    }
+
+    @Test
+    void noBudgetRepositoryCanDelete() throws ClassNotFoundException {
+        for (final String name : BUDGET_REPOSITORIES) {
+            final Class<?> repository = Class.forName("nu.fgv.revival.server.budget." + name);
+
+            assertThat(CrudRepository.class.isAssignableFrom(repository)).as(name).isFalse();
+            assertThat(JpaSpecificationExecutor.class.isAssignableFrom(repository)).as(name).isFalse();
+            assertThat(Arrays.stream(repository.getMethods()).map(Method::getName)).as(name)
+                    .noneMatch(method -> method.startsWith("delete") || method.startsWith("remove"));
+        }
+    }
+
+    /**
+     * M6: participants and their settings are removed by closing them; only data whose home is this application and
+     * that must leave no trace (pending people, dietary needs, handled referrals) is deleted (product spec 7).
+     */
+    @Test
+    void participantsAndTheirSettingsCannotBeDeleted() throws ClassNotFoundException {
+        for (final String name : List.of("ParticipantRepository", "ParticipationSettingsRepository")) {
+            final Class<?> repository = Class.forName("nu.fgv.revival.server.participant." + name);
+
+            assertThat(CrudRepository.class.isAssignableFrom(repository)).as(name).isFalse();
+            assertThat(Arrays.stream(repository.getMethods()).map(Method::getName)).as(name)
+                    .noneMatch(method -> method.startsWith("delete") || method.startsWith("remove"));
+        }
+
+        final List<String> mutations = graphQlSource.schema().getMutationType().getFieldDefinitions().stream()
+                .map(GraphQLFieldDefinition::getName)
+                .filter(name -> name.startsWith("participant") || name.startsWith("participation"))
+                .toList();
+
+        assertThat(mutations).contains("participantRemove").noneMatch(name -> name.contains("Delete"));
+    }
+
+    /**
+     * M6b: mailings are cancelled and their recipients kept, never deleted; the mailing plan's templates are retired. A
+     * shift slot is removed only while nobody holds it, as an empty planning row, which the staffing tests show.
+     */
+    @Test
+    void mailingsAndTheirTemplatesCannotBeDeleted() throws ClassNotFoundException {
+        for (final String name : List.of("MailingRepository", "MailingRecipientRepository", "MailingTemplateRepository")) {
+            final Class<?> repository = Class.forName("nu.fgv.revival.server.mailing." + name);
+
+            assertThat(CrudRepository.class.isAssignableFrom(repository)).as(name).isFalse();
+            assertThat(Arrays.stream(repository.getMethods()).map(Method::getName)).as(name)
+                    .noneMatch(method -> method.startsWith("delete") || method.startsWith("remove"));
+        }
+
+        final List<String> mutations = graphQlSource.schema().getMutationType().getFieldDefinitions().stream()
+                .map(GraphQLFieldDefinition::getName)
+                .filter(name -> name.startsWith("mailing") || name.startsWith("shift"))
+                .toList();
+
+        assertThat(mutations).contains("mailingCancel", "mailingTemplateRetire", "shiftSlotRemove").noneMatch(name -> name.contains("Delete"))
+                .filteredOn(name -> name.contains("Remove")).containsExactly("shiftSlotRemove");
+    }
+
+    /**
+     * M8: materials and inventory items are removed by marking them; the link services are the super admin's list, and
+     * only one nothing holds is deleted.
+     */
+    @Test
+    void materialsAndInventoryCannotBeDeleted() throws ClassNotFoundException {
+        for (final String name : List.of("MaterialRepository", "InventoryItemRepository")) {
+            final Class<?> repository = Class.forName("nu.fgv.revival.server.material." + name);
+
+            assertThat(CrudRepository.class.isAssignableFrom(repository)).as(name).isFalse();
+            assertThat(JpaSpecificationExecutor.class.isAssignableFrom(repository)).as(name).isFalse();
+            assertThat(Arrays.stream(repository.getMethods()).map(Method::getName)).as(name)
+                    .noneMatch(method -> method.startsWith("delete") || method.startsWith("remove"));
+        }
+
+        final List<String> mutations = graphQlSource.schema().getMutationType().getFieldDefinitions().stream()
+                .map(GraphQLFieldDefinition::getName)
+                .filter(name -> name.startsWith("material") || name.startsWith("inventory"))
+                .toList();
+
+        assertThat(mutations).contains("materialRemove", "inventoryItemRemove").noneMatch(name -> name.contains("Delete"));
     }
 
     @Test
@@ -99,7 +205,8 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
         }
 
         assertThat(repositories).extracting(Class::getSimpleName)
-                .contains("LogEntryRepository", "MeetingRepository", "ChecklistItemRepository", "ChecklistTemplateRepository");
+                .contains("LogEntryRepository", "MeetingRepository", "ChecklistItemRepository", "ChecklistTemplateRepository", "EventRepository",
+                        "EventTypeRepository", "CalendarFeedRepository");
         for (final Class<?> repository : repositories) {
             assertThat(CrudRepository.class.isAssignableFrom(repository)).as(repository.getSimpleName()).isFalse();
             assertThat(JpaSpecificationExecutor.class.isAssignableFrom(repository)).as(repository.getSimpleName()).isFalse();

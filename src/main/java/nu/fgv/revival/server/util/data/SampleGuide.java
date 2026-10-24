@@ -94,7 +94,7 @@ final class SampleGuide {
      * Both versions, oldest first. The first is published long before any sample revival is created.
      */
     static List<Version> insert(final JdbcClient jdbcClient, final long publishedBy, final String createdBy) {
-        final Instant first = Instant.now().minus(Duration.ofDays(2 * 365));
+        final Instant first = Instant.now().minus(Duration.ofDays(6 * 365));
         final Instant second = Instant.now().minus(Duration.ofDays(20));
         final long v1 = insertVersion(jdbcClient, "v1", "Första versionen", null, first, publishedBy, createdBy, chapters(false));
         final long v2 = insertVersion(jdbcClient, "v2", "Tips om genrepet och skärpt krav på budgeten", v1, second, publishedBy, createdBy, chapters(true));

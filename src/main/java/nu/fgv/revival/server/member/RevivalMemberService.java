@@ -108,15 +108,24 @@ public class RevivalMemberService {
     }
 
     /**
-     * The members of a revival the caller can see, without removed members. Everyone who can see the revival sees names,
-     * roles and capabilities; only super admins and its directeurs see email addresses (FR-019c).
+     * The directeurs and steering group of a revival the caller can see, without removed members. Whoever reads the
+     * revival's work sees names, roles and capabilities; only super admins and its directeurs see email addresses
+     * (FR-019c). Participants and helpers, who see the revival only for their own page, get an empty list (M6-FR-1), and
+     * participant roles are never listed here.
      */
     @Transactional(readOnly = true)
     public List<RevivalMemberDto> findByRevival(final Long revivalId) {
         final Caller caller = callerService.current();
         final Revival revival = visibleRevival(caller, revivalId);
+
+        if (!accessPolicy.canReadRevivalWork(caller, revival)) {
+            return List.of();
+        }
+
         final boolean showEmails = accessPolicy.canSeeMemberEmails(caller, revival);
-        final List<RevivalMember> members = repository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId);
+        final List<RevivalMember> members = repository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId).stream()
+                .filter(member -> member.getRole() == RevivalRole.DIRECTEUR || member.getRole() == RevivalRole.STEERING_GROUP)
+                .toList();
         final Map<Long, Person> people = personRepository.findAllById(members.stream().map(RevivalMember::getPersonId).filter(Objects::nonNull).toList())
                 .stream()
                 .collect(Collectors.toMap(Person::getId, Function.identity()));
@@ -181,12 +190,52 @@ public class RevivalMemberService {
             throw new BadRequestException("error.member.email");
         }
 
+        capabilityService.requireAssignable(capabilities, Set.of());
+
+        final Assignment assignment = assign(revival, dto.role(), email, capabilities, dto.firstName(), dto.lastName());
+
+        if (assignment.awaitingAccess() != null) {
+            events.publishEvent(assignment.awaitingAccess().event(revival.getId(), caller.person().getDisplayName()));
+        }
+        return toDto(assignment.member(), assignment.person(), accessPolicy.canSeeMemberEmails(caller, revival));
+    }
+
+    /**
+     * A role given by email address: the member, the person who holds it when one has logged in with that verified
+     * address, and who has to be granted access when the address's Keycloak user lacks it.
+     */
+    public record Assignment(RevivalMember member, @Nullable Person person, MembersAwaitingAccess.@Nullable Waiting awaitingAccess) {
+    }
+
+    /**
+     * Whether the address already holds a role in the revival, as its person or waiting on it: a person holds one role per
+     * revival.
+     */
+    @Transactional(readOnly = true)
+    public boolean holdsRole(final Long revivalId, final String email) {
+        final List<Person> matches = personRepository.findByEmailAndEmailVerifiedTrue(email);
+
+        return (matches.size() == 1 && repository.existsByRevivalIdAndPersonIdAndRemovedAtIsNull(revivalId, matches.getFirst().getId()))
+                || repository.existsByRevivalIdAndPendingEmailAndRemovedAtIsNull(revivalId, email);
+    }
+
+    /**
+     * Gives the role to the address, without checking the caller: {@link #add} for the steering group, and participant
+     * invitations (M6), which tell the super admins themselves. A person who has logged in with that verified address
+     * becomes the member at once; anyone else waits until they do (FR-019b). For a waiting member the FGV realm is asked
+     * as well: an address without an account gets one, without any role, and Keycloak emails them an invitation
+     * ({@code invitedAt}). While Keycloak cannot be reached the member is added all the same.
+     *
+     * @param email normalized, lower case
+     */
+    @Transactional
+    public Assignment assign(final Revival revival, final RevivalRole role, final String email, final Set<String> capabilities,
+                             final @Nullable String firstName, final @Nullable String lastName) {
         final List<Person> matches = personRepository.findByEmailAndEmailVerifiedTrue(email);
         final RevivalMember member = new RevivalMember();
 
         member.setRevivalId(revival.getId());
-        member.setRole(dto.role());
-        capabilityService.requireAssignable(capabilities, Set.of());
+        member.setRole(role);
         member.setCapabilities(new HashSet<>(capabilities));
 
         if (matches.size() == 1) {
@@ -203,7 +252,7 @@ public class RevivalMemberService {
             member.setPendingEmail(email);
         }
 
-        final UserDirectory.@Nullable Invitation account = matches.size() == 1 ? null : account(email, dto);
+        final UserDirectory.@Nullable Invitation account = matches.size() == 1 ? null : account(email, firstName, lastName);
 
         if (account != null && account.emailed()) {
             member.setInvitedAt(Instant.now());
@@ -216,18 +265,28 @@ public class RevivalMemberService {
         } catch (final DataIntegrityViolationException _) {
             throw new BadRequestException("error.member.duplicate");
         }
-        if (account != null && !account.user().hasAccess()) {
-            events.publishEvent(new MemberAwaitingAccess(revival.getId(), email, account.user().displayName(), account.user().id(), dto.role(),
-                    account.emailed(), caller.person().getDisplayName()));
-        }
-        return toDto(saved, matches.size() == 1 ? matches.getFirst() : null, accessPolicy.canSeeMemberEmails(caller, revival));
+        return new Assignment(saved, matches.size() == 1 ? matches.getFirst() : null,
+                account != null && !account.user().hasAccess()
+                        ? new MembersAwaitingAccess.Waiting(email, account.user().displayName(), account.user().id(), role, account.emailed())
+                        : null);
+    }
+
+    /**
+     * Closes a member without checking the caller, as {@link #remove} does: for removing a participant (M6).
+     */
+    @Transactional
+    public void close(final RevivalMember member, final Long removedBy) {
+        member.setRemovedAt(Instant.now());
+        member.setRemovedBy(removedBy);
+        member.setPendingEmail(null);
+        repository.saveAndFlush(member);
     }
 
     /**
      * The waiting member's Keycloak user, created and invited when there is none ({@code emailed} then says whether the
      * invitation went out), or null while Keycloak cannot be reached.
      */
-    private UserDirectory.@Nullable Invitation account(final String email, final RevivalMemberAddDto dto) {
+    private UserDirectory.@Nullable Invitation account(final String email, final @Nullable String firstName, final @Nullable String lastName) {
         try {
             final Optional<UserDirectory.DirectoryUser> existing = directory.findByEmail(email);
 
@@ -235,7 +294,7 @@ public class RevivalMemberService {
                 return new UserDirectory.Invitation(existing.get(), false);
             }
 
-            final UserDirectory.Invitation invitation = directory.invite(email, name(dto.firstName()), name(dto.lastName()));
+            final UserDirectory.Invitation invitation = directory.invite(email, name(firstName), name(lastName));
 
             if (!invitation.emailed()) {
                 log.warn("Created a Keycloak user for a waiting member, but Keycloak could not email the invitation");

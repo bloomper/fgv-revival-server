@@ -21,11 +21,12 @@ import nu.fgv.revival.server.meeting.MeetingSummaryDto;
 import org.jspecify.annotations.Nullable;
 
 /**
- * GraphQL's {@code RevivalWorkSummary}: the counts shown on the revival page next to the log and checklists.
+ * GraphQL's {@code RevivalWorkSummary}: the counts shown on the revival page next to the log and checklists. The revival's id
+ * resolves its upcoming events.
  *
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record RevivalWorkSummaryDto(int openEntries, int overdueEntries, int overdueChecklistItems, int openRequiredItems,
+public record RevivalWorkSummaryDto(Long revivalId, int openEntries, int overdueEntries, int overdueChecklistItems, int openRequiredItems,
                                     @Nullable MeetingSummaryDto meetingInProgress) {
 }

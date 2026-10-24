@@ -98,6 +98,69 @@ public class AccessRequestMailer {
         }
     }
 
+    /**
+     * One message per super admin about everyone in the batch, e.g. a round of participant invitations (M6-FR-5).
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void membersAwaitingAccess(final MembersAwaitingAccess event) {
+        if (event.members().isEmpty()) {
+            return;
+        }
+
+        final JavaMailSender sender = mailSender.getIfAvailable();
+
+        if (sender == null) {
+            log.info("No mail server is configured, so the super admins are not told that {} people of revival {} are waiting for access",
+                    event.members().size(), event.revivalId());
+            return;
+        }
+        try {
+            final List<UserDirectory.DirectoryUser> superAdmins = directory.superAdmins();
+
+            if (superAdmins.isEmpty()) {
+                log.warn("No super admin to tell that people of revival {} are waiting for access", event.revivalId());
+            }
+            superAdmins.forEach(admin -> send(sender, message(event, admin.email(), Locales.supported(admin.locale()))));
+        } catch (final DirectoryUnavailableException e) {
+            log.warn("Could not read the super admins from Keycloak, so they are not told that people of revival {} are waiting for access: {}",
+                    event.revivalId(), e.getCause() == null ? e.getClass().getSimpleName() : e.getCause().getClass().getSimpleName());
+        } catch (final RuntimeException e) {
+            log.warn("Could not tell the super admins that people of revival {} are waiting for access: {}", event.revivalId(),
+                    e.getClass().getSimpleName());
+        }
+    }
+
+    SimpleMailMessage message(final MembersAwaitingAccess event, final String to, final Locale locale) {
+        final SimpleMailMessage message = new SimpleMailMessage();
+        final String revival = revivalRepository.findById(event.revivalId())
+                .map(found -> titles.ofCached(found, locale))
+                .orElseGet(() -> "#" + event.revivalId());
+        final List<String> lines = new ArrayList<>();
+
+        lines.add(text("member.awaitingAccess.batch.mail.added", locale, event.members().size(), revival,
+                event.addedBy() == null ? text("person.unknown", locale) : event.addedBy()));
+        lines.add("");
+        lines.add(text("member.awaitingAccess.mail.grant", locale));
+        for (final MembersAwaitingAccess.Waiting member : event.members()) {
+            final String who = member.displayName() == null ? member.email() : "%s (%s)".formatted(member.displayName(), member.email());
+
+            lines.add("");
+            lines.add("%s, %s%s".formatted(who, text("member.role." + member.role().name(), locale),
+                    member.invited() ? " " + text("member.awaitingAccess.batch.mail.invited", locale) : ""));
+            lines.add(directory.roleMappingUrl(member.keycloakUserId()));
+        }
+        lines.add("");
+        lines.add(text("member.awaitingAccess.mail.revival", locale, "%s/revivals/%d".formatted(webUrl, event.revivalId())));
+        lines.add("");
+        lines.add(text("member.awaitingAccess.mail.footer", locale));
+
+        message.setFrom(from);
+        message.setTo(to);
+        message.setSubject(text("member.awaitingAccess.batch.mail.subject", locale, event.members().size(), revival));
+        message.setText(String.join("\n", lines));
+        return message;
+    }
+
     SimpleMailMessage message(final MemberAwaitingAccess event, final String to, final Locale locale) {
         final SimpleMailMessage message = new SimpleMailMessage();
         final String who = event.displayName() == null ? event.email() : "%s (%s)".formatted(event.displayName(), event.email());

@@ -23,6 +23,7 @@ import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
+import nu.fgv.revival.server.util.error.SwishUnavailableException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -94,6 +95,11 @@ public class HttpErrorAdvice {
     @ExceptionHandler(DirectoryUnavailableException.class)
     public ResponseEntity<Error> directoryUnavailable(final DirectoryUnavailableException e, final Locale locale) {
         return error(HttpStatus.SERVICE_UNAVAILABLE, "DIRECTORY_UNAVAILABLE", DirectoryUnavailableException.MESSAGE_CODE, null, locale);
+    }
+
+    @ExceptionHandler(SwishUnavailableException.class)
+    public ResponseEntity<Error> swishUnavailable(final SwishUnavailableException e, final Locale locale) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "SWISH_UNAVAILABLE", SwishUnavailableException.MESSAGE_CODE, null, locale);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

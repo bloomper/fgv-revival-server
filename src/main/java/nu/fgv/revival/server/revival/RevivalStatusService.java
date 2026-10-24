@@ -68,7 +68,7 @@ public class RevivalStatusService {
         final List<LogEntryDto> open = logEntryService.list(revivalId, new LogEntryFilterDto(null, true, null, null, null, null, null), locale);
         final List<ChecklistItemDto> openItems = checklistService.items(revivalId, new ChecklistItemFilterDto(null, true, null, null, null), locale);
 
-        return new RevivalWorkSummaryDto(open.size(), (int) open.stream().filter(LogEntryDto::overdue).count(),
+        return new RevivalWorkSummaryDto(revivalId, open.size(), (int) open.stream().filter(LogEntryDto::overdue).count(),
                 (int) openItems.stream().filter(ChecklistItemDto::overdue).count(), (int) openItems.stream().filter(ChecklistItemDto::required).count(),
                 meetingService.list(revivalId).stream().filter(meeting -> meeting.status() == MeetingStatus.IN_PROGRESS).findFirst().orElse(null));
     }

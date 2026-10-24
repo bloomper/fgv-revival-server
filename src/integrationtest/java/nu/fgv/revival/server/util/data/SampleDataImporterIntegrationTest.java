@@ -183,6 +183,100 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
                 .containsExactlyInAnyOrder("ACCEPTED", "REJECTED", "OPEN", "OPEN");
         assertThat(count("log_entry WHERE id NOT IN (SELECT id FROM log_entry_audit)")).isZero();
         assertThat(count("checklist_item_audit WHERE state = 'DONE'")).isPositive();
+        assertThat(count("event WHERE type_id IS NOT NULL")).isPositive();
+        assertThat(count("event WHERE type_id IS NULL")).isPositive();
+        assertThat(count("checklist WHERE event_id IS NOT NULL")).isPositive();
+        assertThat(count("event_type WHERE checklist_template_id IS NOT NULL")).isEqualTo(4);
+        assertThat(count("event WHERE id NOT IN (SELECT id FROM event_audit)")).isZero();
+        // M6b: the mailing plan, and for open revivals participants, shifts and a draft mailing
+        assertThat(count("mailing_template WHERE event_type_id IS NOT NULL")).isEqualTo(2);
+        assertThat(count("participant WHERE kind = 'HELPER'")).isPositive();
+        assertThat(count("shift_slot")).isPositive();
+        assertThat(count("shift_assignment WHERE self_signed_up = 1")).isPositive();
+        assertThat(count("mailing WHERE status = 'DRAFT'")).isPositive();
+        assertThat(count("shift_slot WHERE id NOT IN (SELECT id FROM shift_slot_audit)")).isZero();
+        // M8: materials in FGV's applications and other services, and inventory items with owners
+        assertThat(count("material WHERE service_id = 'SPEXFLIX'")).isPositive();
+        assertThat(count("material WHERE service_id = 'GOOGLE_DRIVE'")).isPositive();
+        assertThat(count("inventory_item WHERE owner_person_id IS NOT NULL")).isPositive();
+        assertThat(count("inventory_item WHERE material_id IS NOT NULL")).isPositive();
+        assertThat(count("material WHERE id NOT IN (SELECT id FROM material_audit)")).isZero();
+        assertThat(count("link_service WHERE id NOT IN (SELECT id FROM link_service_audit)")).isZero();
+    }
+
+    @Test
+    void fillsEveryKindOfData() throws SQLException {
+        importSampleDataAndActivity();
+
+        // Every table but the audit tables, and the positions of materials, which come from Spexregister
+        final List<String> empty = jdbcClient.sql("""
+                        SELECT table_name FROM information_schema.tables
+                        WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
+                        AND table_name NOT LIKE '%\\_audit' AND table_name NOT LIKE 'flyway%'
+                        AND table_name <> 'material_position'
+                        """)
+                .query(String.class)
+                .list()
+                .stream()
+                .filter(table -> count(table) == 0)
+                .toList();
+
+        assertThat(empty).isEmpty();
+    }
+
+    @Test
+    void coversTheStatesOfEachKind() throws SQLException {
+        importSampleDataAndActivity();
+
+        assertThat(jdbcClient.sql("SELECT DISTINCT response FROM participant").query(String.class).list())
+                .containsExactlyInAnyOrder("PENDING", "YES", "NO", "MAYBE");
+        assertThat(count("participant WHERE removed_at IS NOT NULL")).isPositive();
+        assertThat(count("participant WHERE fee IS NOT NULL")).isPositive();
+        assertThat(count("participant WHERE fee_paid_at IS NOT NULL")).isPositive();
+        assertThat(count("participant WHERE membership_paid = 1")).isPositive();
+        assertThat(jdbcClient.sql("SELECT DISTINCT status FROM mailing").query(String.class).list())
+                .containsExactlyInAnyOrder("DRAFT", "SENT", "CANCELLED");
+        assertThat(count("mailing WHERE template_id IS NOT NULL")).isPositive();
+        assertThat(jdbcClient.sql("SELECT DISTINCT status FROM mailing_recipient").query(String.class).list()).contains("SENT", "FAILED");
+        assertThat(jdbcClient.sql("SELECT DISTINCT answer FROM availability").query(String.class).list())
+                .containsExactlyInAnyOrder("YES", "NO", "MAYBE");
+        assertThat(count("event WHERE cancelled_at IS NOT NULL")).isPositive();
+        assertThat(count("budget_transaction WHERE cancelled_at IS NOT NULL")).isPositive();
+        assertThat(count("budget_transaction WHERE receipt_content_type = 'application/pdf'")).isEqualTo(count("receipt_content"));
+        assertThat(count("budget_line WHERE removed_at IS NOT NULL")).isPositive();
+        assertThat(count("budget_settings WHERE loan_repaid_on IS NOT NULL")).isPositive();
+        assertThat(count("material WHERE removed_at IS NOT NULL")).isPositive();
+        assertThat(count("inventory_item WHERE removed_at IS NOT NULL")).isPositive();
+        assertThat(count("log_entry WHERE origin = 'IMPORT'")).isPositive();
+        assertThat(count("log_entry e JOIN log_entry_tag t ON t.entry_id = e.id WHERE e.type = 'DECISION' AND t.tag = 'överskott'")).isPositive();
+        assertThat(count("calendar_feed WHERE revoked_at IS NOT NULL")).isPositive();
+        assertThat(jdbcClient.sql("SELECT DISTINCT status FROM sync_run").query(String.class).list()).containsExactlyInAnyOrder("DONE", "FAILED");
+        assertThat(count("revival WHERE membership_year IS NOT NULL")).isPositive();
+        assertThat(count("checklist_item WHERE state = 'OPEN' AND revival_id IN (SELECT id FROM revival WHERE status = 'ARCHIVED')")).isZero();
+    }
+
+    @Test
+    void anonymizesTheRevivalArchivedLongAgo() throws SQLException {
+        importSampleDataAndActivity();
+
+        assertThat(jdbcClient.sql("SELECT status FROM revival WHERE anonymized_at IS NOT NULL").query(String.class).list()).containsExactly("ARCHIVED");
+        assertThat(count("participant p JOIN revival r ON r.id = p.revival_id WHERE r.anonymized_at IS NOT NULL")).isZero();
+        assertThat(count("participant p JOIN revival r ON r.id = p.revival_id WHERE r.status = 'ARCHIVED'")).isPositive();
+    }
+
+    @Test
+    void theSampleParticipantSeesTheirOwnPage() throws SQLException {
+        importSampleDataAndActivity();
+        forgetTokens();
+
+        final Long revivalId = jdbcClient.sql("SELECT id FROM revival WHERE status = 'OPEN' ORDER BY id LIMIT 1").query(Long.class).single();
+
+        graphQl(SampleDataImporter.PARTICIPANT)
+                .document("query($id: ID!) { myParticipation(revivalId: $id) { participant { response } dietary } }")
+                .variable("id", revivalId)
+                .execute()
+                .path("myParticipation.participant.response").entity(String.class).isEqualTo("YES")
+                .path("myParticipation.dietary").hasValue();
     }
 
     @Test

@@ -22,6 +22,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -29,6 +30,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Supplier;
@@ -66,6 +69,20 @@ public class McpToolSupport {
     }
 
     /**
+     * A date from a tool argument, {@code yyyy-MM-dd}, or null when blank.
+     */
+    static @Nullable LocalDate date(final @Nullable String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.strip());
+        } catch (final DateTimeParseException e) {
+            throw new BadRequestException("error.date.invalid");
+        }
+    }
+
+    /**
      * Runs a tool with its audit stamp. A refusal becomes a tool error with the code from contracts/README.md and the
      * same English message the web shows, e.g. "BAD_REQUEST: Several members match ...".
      */
@@ -83,6 +100,8 @@ public class McpToolSupport {
             throw refusal("CONFLICT", e);
         } catch (final OptimisticLockingFailureException e) {
             throw refusal("CONFLICT", "error.conflict", null, e);
+        } catch (final SpexregisterUnavailableException e) {
+            throw refusal("SPEXREGISTER_UNAVAILABLE", e);
         }
     }
 

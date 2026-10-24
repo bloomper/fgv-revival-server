@@ -164,12 +164,23 @@ public class CallerService {
             claimWaitingRoles(person);
         }
 
+        return new Caller(person, globalRoles, revivalRoles(person));
+    }
+
+    /**
+     * The person as a caller without a token, from their revival roles alone and without global roles: for a secret
+     * calendar link, which must stop working once they lose their role (M4-FR-6). Runs in the caller's transaction.
+     */
+    public Caller forPerson(final Person person) {
+        return new Caller(person, Set.of(), revivalRoles(person));
+    }
+
+    private Map<Long, RevivalRoleAssignment> revivalRoles(final Person person) {
         final Map<Long, RevivalRoleAssignment> revivalRoles = new HashMap<>();
 
         memberRepository.findByPersonIdAndRemovedAtIsNull(person.getId())
                 .forEach(member -> revivalRoles.put(member.getRevivalId(), new RevivalRoleAssignment(member.getRole(), member.getCapabilities())));
-
-        return new Caller(person, globalRoles, revivalRoles);
+        return revivalRoles;
     }
 
     private Person upsertPerson(final Jwt jwt) {

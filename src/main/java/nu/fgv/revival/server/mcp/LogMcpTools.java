@@ -33,7 +33,6 @@ import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 
@@ -99,7 +98,7 @@ public class LogMcpTools {
         return support.call("create_log_entry", () -> {
             final ResolvedOwner resolved = resolve(revivalId, owner);
             final LogEntryDto created = logEntryService.create(new LogEntryService.Draft(revivalId, null, null, type, text, null, resolved.input(),
-                    date(deadline), comment, tags, null, null), Locale.ENGLISH);
+                    McpToolSupport.date(deadline), comment, tags, null, null), Locale.ENGLISH);
 
             return LogEntryWritten.of(created, resolved.resolution());
         });
@@ -122,7 +121,7 @@ public class LogMcpTools {
             final boolean clearOwner = owner != null && owner.isBlank();
             final ResolvedOwner resolved = clearOwner ? new ResolvedOwner(null, Resolution.NONE) : resolve(revivalId, owner);
             final LogEntryDto updated = logEntryService.update(new LogEntryService.Change(row.id(), row.version(), null, null, null, text, status,
-                    resolved.input(), clearOwner, deadline == null || deadline.isBlank() ? null : date(deadline), deadline != null && deadline.isBlank(),
+                    resolved.input(), clearOwner, deadline == null || deadline.isBlank() ? null : McpToolSupport.date(deadline), deadline != null && deadline.isBlank(),
                     comment == null || comment.isBlank() ? null : comment, comment != null && comment.isBlank(), tags, null, null, false), Locale.ENGLISH);
 
             return LogEntryWritten.of(updated, owner == null ? (updated.owner() == null ? Resolution.NONE
@@ -140,17 +139,6 @@ public class LogMcpTools {
             case OwnerResolver.Resolution.Ambiguous ambiguous ->
                     throw new BadRequestException("error.owner.ambiguous", owner.strip(), String.join(", ", ambiguous.candidates()));
         };
-    }
-
-    private static @Nullable LocalDate date(final @Nullable String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(value.strip());
-        } catch (final DateTimeParseException e) {
-            throw new BadRequestException("error.date.invalid");
-        }
     }
 
     private static LogEntry toMcp(final LogEntryDto row) {

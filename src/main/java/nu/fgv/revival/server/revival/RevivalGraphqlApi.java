@@ -69,13 +69,20 @@ public class RevivalGraphqlApi {
         return statusService.workSummary(revival.id(), locale);
     }
 
+    /**
+     * Null for callers who do not read the revival's guide, as its permissions say (M6-FR-1).
+     */
     @SchemaMapping(typeName = "Revival", field = "guideVersion")
     public @Nullable GuideVersionSummaryDto guideVersion(final RevivalDto revival) {
-        return guideService.summary(revival.guideVersionId());
+        return revival.permissions().canReadWork() ? guideService.summary(revival.guideVersionId()) : null;
     }
 
     @SchemaMapping(typeName = "Revival", field = "newerGuideVersion")
     public @Nullable GuideVersionSummaryDto newerGuideVersion(final RevivalDto revival) {
+        if (!revival.permissions().canReadWork()) {
+            return null;
+        }
+
         final GuideVersionSummaryDto pinned = guideService.summary(revival.guideVersionId());
 
         return guideService.latestSummary()
@@ -141,6 +148,11 @@ public class RevivalGraphqlApi {
     public Long revivalDelete(@Argument final Long id, @Argument final Long version) {
         service.delete(id, version);
         return id;
+    }
+
+    @MutationMapping
+    public RevivalDto revivalAnonymize(@Argument final Long id, @Argument final Long version, @Argument final String confirmation) {
+        return service.anonymize(id, version, confirmation);
     }
 
     @SchemaMapping(typeName = "Revival", field = "members")

@@ -76,6 +76,8 @@ class RevivalServiceTest {
     private ApplicationEventPublisher events;
     @Mock
     private RevivalDeletion deletion;
+    @Mock
+    private RevivalAnonymization anonymization;
 
     private RevivalService service;
 
@@ -98,7 +100,7 @@ class RevivalServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService, guideVersions, events, deletion,
+        service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService, guideVersions, events, deletion, anonymization,
                 Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC));
         lenient().when(spexService.requireOriginal(anyLong())).thenAnswer(invocation -> new SpexDto(invocation.getArgument(0), "Ali Baba", 1956, true));
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());

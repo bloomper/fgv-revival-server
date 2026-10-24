@@ -599,6 +599,59 @@ class ChecklistServiceTest {
         }
 
         @Test
+        void anEventsChecklistIsMadeFromItsTypesTemplateAndFollowsTheEvent() {
+            final long event = 77L;
+            final Long id = service.createForEvent(REVIVAL_ID, event, " Rephelg 2 ", SATURDAY, 5L, Locale.ENGLISH).orElseThrow();
+            final Checklist created = checklists.get(id);
+
+            assertThat(created.getEventId()).isEqualTo(event);
+            assertThat(created.getKind()).isEqualTo(ChecklistKind.EVENT);
+            assertThat(created.getName()).isEqualTo("Rephelg 2");
+            assertThat(created.getDate()).isEqualTo(SATURDAY);
+            assertThat(created.getTemplateId()).isEqualTo(5L);
+            assertThat(saved).hasSize(2);
+            when(checklistRepository.findByEventId(event)).thenReturn(Optional.of(created));
+
+            copyOf(keys).setDeadline(LocalDate.of(2027, 11, 1));
+            copyOf(keys).setDeadlineManual(true);
+            service.followEvent(event, "Rephelg i Kemi", SATURDAY.plusWeeks(1));
+
+            assertThat(created.getName()).isEqualTo("Rephelg i Kemi");
+            assertThat(created.getDate()).isEqualTo(SATURDAY.plusWeeks(1));
+            assertThat(copyOf(venue).getDeadline()).isEqualTo(LocalDate.of(2027, 11, 13));
+            assertThat(copyOf(keys).getDeadline()).isEqualTo(LocalDate.of(2027, 11, 1));
+
+            service.setCancelledWithEvent(event, true);
+            assertThat(created.isCancelled()).isTrue();
+            service.followEvent(event, "Något annat", SATURDAY);
+            assertThat(created.getName()).isEqualTo("Rephelg i Kemi");
+
+            service.setCancelledWithEvent(event, false);
+            assertThat(created.isCancelled()).isFalse();
+        }
+
+        @Test
+        void aRetiredOrChapterTemplateMakesNoChecklistForAnEvent() {
+            template.setRetiredAt(java.time.Instant.now());
+            assertThat(service.createForEvent(REVIVAL_ID, 77L, "Rephelg 2", SATURDAY, 5L, Locale.ENGLISH)).isEmpty();
+
+            template.setRetiredAt(null);
+            template.setKind(ChecklistKind.CHAPTER);
+            assertThat(service.createForEvent(REVIVAL_ID, 77L, "Rephelg 2", SATURDAY, 5L, Locale.ENGLISH)).isEmpty();
+            assertThat(checklists).doesNotContainKey(EVENT_ID);
+        }
+
+        @Test
+        void aChecklistWithoutAnEventIsLeftAlone() {
+            when(checklistRepository.findByEventId(77L)).thenReturn(Optional.empty());
+
+            service.followEvent(77L, "Rephelg", SATURDAY);
+            service.setCancelledWithEvent(77L, true);
+
+            assertThat(checklists).doesNotContainKey(EVENT_ID);
+        }
+
+        @Test
         void onlyWritersCreateEventChecklists() {
             when(callerService.current()).thenReturn(TestCallers.observer());
 

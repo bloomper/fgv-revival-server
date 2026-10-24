@@ -122,6 +122,35 @@ class AccessRequestMailerTest {
         });
     }
 
+    /**
+     * M6-FR-5: one round of participant invitations makes one message per super admin, listing everyone waiting.
+     */
+    @Test
+    void aRoundOfInvitationsIsOneMessageListingEveryone() {
+        final MembersAwaitingAccess round = new MembersAwaitingAccess(REVIVAL_ID, List.of(
+                new MembersAwaitingAccess.Waiting("pia@example.org", "Pia Persson", "kc-1", RevivalRole.PARTICIPANT, true),
+                new MembersAwaitingAccess.Waiting("hugo@example.org", null, "kc-2", RevivalRole.HELPER, false)), "Kim");
+
+        when(directory.superAdmins()).thenReturn(List.of(admin("sara@example.org", Locale.ENGLISH)));
+        when(directory.roleMappingUrl("kc-2")).thenReturn("https://auth.example.org/admin/master/console/#/fgv/users/kc-2/role-mapping");
+
+        mailer.membersAwaitingAccess(round);
+
+        final ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
+
+        verify(mailSender, times(1)).send(sent.capture());
+        assertThat(sent.getValue().getSubject()).isEqualTo("Waiting for access to Nyuppsättning: 2 in Ali Baba 2028");
+        assertThat(sent.getValue().getText())
+                .contains("2 people invited to Ali Baba 2028 by Kim cannot log in to Nyuppsättning yet.")
+                .contains("Pia Persson (pia@example.org), participant (Nyuppsättning created the FGV account")
+                .contains("hugo@example.org, helper\n")
+                .contains("users/kc-1/role-mapping")
+                .contains("users/kc-2/role-mapping");
+
+        mailer.membersAwaitingAccess(new MembersAwaitingAccess(REVIVAL_ID, List.of(), "Kim"));
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
     @Test
     void anExistingAccountIsNotSaidToBeInvited() {
         final MemberAwaitingAccess existing = new MemberAwaitingAccess(REVIVAL_ID, "ny@example.org", null, "kc-1", RevivalRole.DIRECTEUR, false, "Kim");

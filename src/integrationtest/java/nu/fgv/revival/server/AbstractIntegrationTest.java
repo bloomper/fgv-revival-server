@@ -95,6 +95,8 @@ public abstract class AbstractIntegrationTest {
     protected static final String STEERING_GROUP = "styrgrupp" + DOMAIN;
     protected static final String PLAIN_USER = "user" + DOMAIN;
     protected static final String SPEXREGISTER_ONLY = "spexare" + DOMAIN;
+    protected static final String PARTICIPANT = "deltagare" + DOMAIN;
+    protected static final String HELPER = "springare" + DOMAIN;
     protected static final String PASSWORD = "s3cr3t-s3cr3t";
     /**
      * Leaves out the catalogs' baseline revision, which {@link #resetState()} records before every test.
@@ -109,6 +111,15 @@ public abstract class AbstractIntegrationTest {
     protected static final long SNORRE = 3L;
     protected static final long SPEX_REVIVAL = 99L;
     protected static final String MCP_PATH = "/api/mcp";
+    private static final String SEEDED_BUDGET_CATEGORIES = "'SHOW_TICKETS', 'PARTY_TICKETS', 'FEES', 'SPONSORSHIP', 'OTHER_INCOME', 'VENUE', 'FOOD', "
+            + "'PARTY', 'TECHNICAL', 'COSTUMES', 'SCENERY', 'MARKETING', 'PRINTING', 'HELPERS', 'ADMIN', 'OTHER_COST'";
+    private static final String SEEDED_BUDGET_CATEGORY_NAMES = "'Biljetter föreställning', 'Biljetter kalas', 'Spexpengar', 'Sponsring', "
+            + "'Övriga intäkter', 'Lokaler', 'Mat och dryck', 'Kalas', 'Teknik', 'Kostym och smink', 'Rekvisita och kulisser', 'Marknadsföring', "
+            + "'Tryck', 'Springare', 'Administration', 'Övriga kostnader'";
+    private static final String SEEDED_LINK_SERVICES = "'SPEXFLIX', 'MANUSARKIV', 'SPEXIPEDIA', 'SPEXIFY', 'LATARKIV', 'GOOGLE_DRIVE', 'DROPBOX', "
+            + "'YOUTUBE', 'ONEDRIVE'";
+    private static final String SEEDED_LINK_SERVICE_NAMES = "'Spexflix', 'Manusarkiv', 'Spexipedia', 'Spexify', 'Låtarkiv', 'Google Drive', "
+            + "'Dropbox', 'YouTube', 'OneDrive'";
 
     private static final String REALM = "fgv";
     // The secret of fgv-revival in the committed realm copy, not a real secret
@@ -202,6 +213,8 @@ public abstract class AbstractIntegrationTest {
             createUser(realm, STEERING_GROUP, "Stina", "Styrgrupp", CLIENT_ID, List.of("USER"));
             createUser(realm, PLAIN_USER, "Ulla", "Användare", CLIENT_ID, List.of("USER"));
             createUser(realm, SPEXREGISTER_ONLY, "Sven", "Spexare", "spexregister", List.of("USER"));
+            createUser(realm, PARTICIPANT, "Pia", "Deltagare", CLIENT_ID, List.of("USER"));
+            createUser(realm, HELPER, "Hugo", "Springare", CLIENT_ID, List.of("USER"));
         }
     }
 
@@ -249,9 +262,14 @@ public abstract class AbstractIntegrationTest {
     void resetState() {
         jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
         jdbcClient.sql("UPDATE minutes_email SET retry_of = NULL").update();
-        for (final String table : List.of("minutes_email_recipient", "minutes_email", "meeting_entry_change", "log_entry_tag",
+        jdbcClient.sql("UPDATE event_type SET checklist_template_id = NULL").update();
+        for (final String table : List.of("sync_step", "sync_run", "inventory_item", "material_position", "material", "mailing_reminder", "mailing_recipient", "mailing", "mailing_template", "shift_assignment", "shift_slot",
+                "availability", "receipt_content", "budget_transaction", "budget_line", "budget_scenario", "budget_settings",
+                "reference_figure", "reference_revival", "event_type_budget_line", "spex_calendar_date", "calendar_feed", "minutes_email_recipient",
+                "minutes_email", "meeting_entry_change", "log_entry_tag",
                 "log_entry", "log_import", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
-                "checklist_item", "checklist", "checklist_template_item", "checklist_template", "guide_suggestion", "revival_member_capability", "revival_member", "revival_status_change",
+                "checklist_item", "checklist", "event", "checklist_template_item", "checklist_template", "guide_suggestion", "referral", "dietary_need",
+                "pending_person", "participant", "participation_settings", "revival_member_capability", "revival_member", "revival_status_change",
                 "revival_guide_version_change", "revival_show", "revival",
                 "guide_item", "guide_section", "guide_chapter", "guide_version")) {
             jdbcClient.sql("DELETE FROM " + table).update();
@@ -263,12 +281,36 @@ public abstract class AbstractIntegrationTest {
         jdbcClient.sql("""
                 UPDATE guide_item_type SET retired_at = NULL, position = FIELD(id, 'TIP', 'REQUIREMENT', 'QUESTION', 'TEXT') - 1,
                     name_sv = ELT(FIELD(id, 'TIP', 'REQUIREMENT', 'QUESTION', 'TEXT'), 'Praktiska tips', 'Krav', 'Att ta reda på', 'Text')""").update();
+        jdbcClient.sql("DELETE FROM link_service_host").update();
+        jdbcClient.sql("DELETE FROM link_service WHERE created_by <> 'system'").update();
+        jdbcClient.sql("UPDATE link_service SET version = 0, retired_at = NULL, position = FIELD(id, " + SEEDED_LINK_SERVICES + ") - 1, "
+                + "name_sv = ELT(FIELD(id, " + SEEDED_LINK_SERVICES + "), " + SEEDED_LINK_SERVICE_NAMES + "), "
+                + "name_en = IF(id = 'LATARKIV', 'Song archive', NULL), "
+                + "home_url = ELT(FIELD(id, " + SEEDED_LINK_SERVICES + "), NULL, NULL, NULL, NULL, NULL, 'https://drive.google.com/', "
+                + "'https://www.dropbox.com/', 'https://www.youtube.com/', 'https://onedrive.live.com/')").update();
+        jdbcClient.sql("""
+                INSERT INTO link_service_host (link_service_id, host)
+                VALUES ('GOOGLE_DRIVE', 'drive.google.com'), ('GOOGLE_DRIVE', 'docs.google.com'), ('DROPBOX', 'dropbox.com'),
+                       ('YOUTUBE', 'youtube.com'), ('YOUTUBE', 'youtu.be'), ('ONEDRIVE', 'onedrive.live.com'), ('ONEDRIVE', '1drv.ms'),
+                       ('ONEDRIVE', 'sharepoint.com')""").update();
+        jdbcClient.sql("DELETE FROM event_type WHERE created_by <> 'system'").update();
+        jdbcClient.sql("DELETE FROM budget_category WHERE created_by <> 'system'").update();
+        jdbcClient.sql("UPDATE budget_category SET retired_at = NULL, position = FIELD(id, " + SEEDED_BUDGET_CATEGORIES + ") - 1, "
+                + "name_sv = ELT(FIELD(id, " + SEEDED_BUDGET_CATEGORIES + "), " + SEEDED_BUDGET_CATEGORY_NAMES + "), "
+                + "role = IF(id IN ('SHOW_TICKETS', 'PARTY_TICKETS', 'FEES', 'VENUE', 'PARTY', 'HELPERS'), id, NULL)").update();
+        jdbcClient.sql("""
+                UPDATE event_type SET retired_at = NULL,
+                    position = FIELD(name_sv, 'AW', 'Kickoff', 'Rephelg 1', 'Rephelg 2', 'Rephelg 3', 'Föreställningshelg', 'Kortafton') - 1""").update();
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
                 "revival_guide_version_change_audit", "revival_show_audit", "revival_audit",
                 "log_entry_tag_audit", "log_entry_audit", "log_import_audit", "meeting_agenda_point_audit", "meeting_attendee_audit",
-                "meeting_audit", "checklist_item_audit", "checklist_audit", "checklist_template_item_audit", "checklist_template_audit",
+                "meeting_audit", "checklist_item_audit", "checklist_audit", "event_audit", "event_type_audit", "checklist_template_item_audit", "checklist_template_audit",
                 "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",
-                "capability_audit", "guide_item_type_audit", "revchanges", "revinfo", "person")) {
+                "capability_audit", "guide_item_type_audit", "budget_transaction_audit", "budget_line_audit", "budget_scenario_audit",
+                "budget_settings_audit", "reference_figure_audit", "reference_revival_audit", "event_type_budget_line_audit", "budget_category_audit",
+                "spex_calendar_date_audit", "participant_audit", "participation_settings_audit", "availability_audit", "shift_slot_audit",
+                "shift_assignment_audit", "mailing_audit", "mailing_recipient_audit", "mailing_template_audit", "inventory_item_audit",
+                "material_position_audit", "material_audit", "sync_step_audit", "sync_run_audit", "link_service_host_audit", "link_service_audit", "revchanges", "revinfo", "person")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         // The validity audit strategy needs a previous revision before the seeded entries can be changed
@@ -279,6 +321,21 @@ public abstract class AbstractIntegrationTest {
         jdbcClient.sql("""
                 INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
                 SELECT id, kind, name_sv, name_en, position, retired_at, version, (SELECT MAX(id) FROM revinfo), 0 FROM guide_item_type""").update();
+        jdbcClient.sql("""
+                INSERT INTO event_type_audit (id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                    offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at, version, rev, revtype)
+                SELECT id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                    offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at, version,
+                    (SELECT MAX(id) FROM revinfo), 0 FROM event_type""").update();
+        jdbcClient.sql("""
+                INSERT INTO budget_category_audit (id, kind, role, name_sv, name_en, position, retired_at, version, rev, revtype)
+                SELECT id, kind, role, name_sv, name_en, position, retired_at, version, (SELECT MAX(id) FROM revinfo), 0 FROM budget_category""").update();
+        jdbcClient.sql("""
+                INSERT INTO link_service_audit (id, name_sv, name_en, home_url, position, retired_at, version, rev, revtype)
+                SELECT id, name_sv, name_en, home_url, position, retired_at, version, (SELECT MAX(id) FROM revinfo), 0 FROM link_service""").update();
+        jdbcClient.sql("""
+                INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
+                SELECT link_service_id, host, (SELECT MAX(id) FROM revinfo), 0 FROM link_service_host""").update();
         cacheManager.getCacheNames().forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
         spexregisterUp();
         MAIL.reset();

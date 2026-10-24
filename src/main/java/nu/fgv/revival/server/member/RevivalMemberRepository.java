@@ -20,6 +20,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Queries leave removed members out unless their name says otherwise.
@@ -38,6 +39,8 @@ public interface RevivalMemberRepository extends JpaRepository<RevivalMember, Lo
     List<RevivalMember> findByPendingEmailAndRemovedAtIsNull(String pendingEmail);
 
     boolean existsByRevivalIdAndPersonIdAndRemovedAtIsNull(Long revivalId, Long personId);
+
+    Optional<RevivalMember> findByRevivalIdAndPersonIdAndRemovedAtIsNull(Long revivalId, Long personId);
 
     boolean existsByRevivalIdAndPendingEmailAndRemovedAtIsNull(Long revivalId, String pendingEmail);
 }

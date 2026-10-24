@@ -135,21 +135,37 @@ The other users have one purpose each. The import creates them in Keycloak when 
 | `steering-group-catering@fgv.nu` | The same, with `CATERING`                                                                                       |
 | `steering-group-staffing@fgv.nu` | The same, with `STAFFING`                                                                                       |
 | `steering-group-comms@fgv.nu`    | The same, with `COMMS`                                                                                          |
+| `participant@fgv.nu`             | Participant who said yes in both `OPEN` revivals, with shifts, availability and dietary needs                   |
+| `helper@fgv.nu`                  | Helper in both `OPEN` revivals who has not answered yet                                                         |
 | `no-role@fgv.nu`                 | `USER` only                                                                                                     |
 | `invited@fgv.nu`                 | No Keycloak user: waiting in `directeur2@fgv.nu`'s revivals                                                     |
 
 There are two revivals in every status, with shows (dates at venues), status history and one baseline revision. The
-import also creates:
+premieres follow the status: ahead while a revival is being organised or is open, behind once it has been played. The
+second archived revival was played four years ago. The import also creates:
 
 - A made-up guide, published as `v1` and `v2`. Each revival is pinned to the version that was latest when it was
   created.
 - Checklist templates for some chapters, and the event templates `Rephelg` and `Föreställningshelg`.
 
 Once the application has started and the guide sync has given the revivals their checklists and guide questions, the
-revivals from `APPROVED` to `SETTLING` get activity in line with their status. That means progress in the chapter
-checklists, decision log entries and a planned meeting. From `ORGANISING` on they also have event checklists, a
-closed meeting with minutes and answered guide questions. There are guide suggestions as well: one accepted into
-`v2`, one rejected and two open.
+revivals from `APPROVED` to `ARCHIVED` get activity in line with their status:
+
+- From `APPROVED`: progress in the chapter checklists, decision log entries and a planned meeting.
+- From `ORGANISING`: events with their checklists (one event cancelled), a closed meeting with minutes sent by email,
+  answered guide questions, rows imported from a workbook, a budget (lines, transactions with receipts, a cancelled
+  one, a scenario), materials and inventory (one of each removed) and calendar links.
+- From `OPEN`: participation settings, participants and a helper in every response, availability, shifts and mailings
+  (sent, drafted from the mailing plan, cancelled). While a revival is open, `participant@fgv.nu` and `helper@fgv.nu`
+  take part, and there are dietary needs and a referral.
+- From `SETTLING`: the surplus decision, a repaid loan, FGV membership and a sync to Spexregister, failed while settling
+  (start it again to resume) and done once archived.
+
+The mailing plan, reference figures and Chalmersspexet's dates (one clashing with an open revival's premiere) are
+added when they are empty, and there are guide suggestions: one accepted into `v2`, one rejected and two open. Last,
+the revival archived four years ago is anonymized, as the nightly job would. The sample participants are pending
+people, not spexare, so their names never come from Spexregister. Positions (and the materials and mailing for one)
+are taken from Spexregister when it answers.
 
 The import turns off the Keycloak event listener `fgv-admin-notification` while it creates users, so they aren't
 emailed. That needs the `realm-management` role `manage-events` on `fgv-admin`; without it the import logs a warning

@@ -1,0 +1,419 @@
+# M5: budget and finance (product spec 5.10). Budget categories and reference figures are lists SUPER_ADMIN keeps.
+# A revival's budget lines, transactions and scenarios are removed or cancelled, never deleted (constitution IV).
+
+"Swedish kronor with at most two decimals, as a string, e.g. \"1200\" or \"-35.50\"."
+scalar Amount
+
+enum BudgetCategoryKind {
+    INCOME
+    COST
+}
+
+"What a category stands for in scenarios (5.10). At most one active category per role."
+enum BudgetCategoryRole {
+    SHOW_TICKETS
+    PARTY_TICKETS
+    FEES
+    VENUE
+    PARTY
+    HELPERS
+}
+
+extend type Query {
+    "Every signed-in caller. Retired only with includeRetired. Seeded categories keep fixed ids (e.g. VENUE); new ones get a UUID."
+    budgetCategories(includeRetired: Boolean = false): [BudgetCategory!]!
+
+    "Readers of the reference library: SUPER_ADMIN, OBSERVER, and directeurs and steering group of a revival they can see."
+    referenceRevivals: [ReferenceRevival!]!
+    referenceRevival(id: ID!): ReferenceRevival
+
+    """
+    What-if over the revival's budget (5.10): any parameter left null keeps the budgeted value. Readers of the budget.
+    """
+    budgetScenarioCalculate(revivalId: ID!, input: BudgetScenarioInput!): BudgetScenarioResult!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, for every category mutation, as capabilities."
+    budgetCategoryCreate(input: BudgetCategoryCreateInput!): BudgetCategory!
+    "Kind is fixed once created."
+    budgetCategoryUpdate(input: BudgetCategoryUpdateInput!): BudgetCategory!
+    budgetCategoryMove(id: ID!, version: Int!, position: Int!): [BudgetCategory!]!
+    budgetCategoryRetire(id: ID!, version: Int!): BudgetCategory!
+    "Refused when another active category has the same role."
+    budgetCategoryRestore(id: ID!, version: Int!): BudgetCategory!
+    "Refused while anything holds it (inUse): retire it instead."
+    budgetCategoryDelete(id: ID!, version: Int!): Void
+
+    "SUPER_ADMIN, for every reference mutation."
+    referenceRevivalCreate(input: ReferenceRevivalInput!): ReferenceRevival!
+    referenceRevivalUpdate(id: ID!, version: Int!, input: ReferenceRevivalInput!): ReferenceRevival!
+    "Reference figures are not revival data; they can be deleted."
+    referenceRevivalDelete(id: ID!, version: Int!): Void
+
+    "SUPER_ADMIN. Lines an event type proposes for the budget when an event of it exists (5.10)."
+    eventTypeBudgetLineCreate(input: EventTypeBudgetLineInput!): EventType!
+    eventTypeBudgetLineUpdate(id: ID!, version: Int!, input: EventTypeBudgetLineInput!): EventType!
+    eventTypeBudgetLineRemove(id: ID!, version: Int!): EventType!
+
+    "Writers of the budget: directeur, or steering group with FINANCE, revival visible and not ARCHIVED (5.10)."
+    budgetSettingsUpdate(input: BudgetSettingsInput!): Budget!
+    budgetLineCreate(input: BudgetLineCreateInput!): BudgetLine!
+    budgetLineUpdate(input: BudgetLineUpdateInput!): BudgetLine!
+    "Removed lines stay in the history and in exports' audit, not in totals."
+    budgetLineRemove(id: ID!, version: Int!): BudgetLine!
+    budgetLineRestore(id: ID!, version: Int!): BudgetLine!
+
+    transactionCreate(input: TransactionCreateInput!): Transaction!
+    transactionUpdate(input: TransactionUpdateInput!): Transaction!
+    "Cancelled transactions stay readable, never count in totals, and cannot be changed."
+    transactionCancel(id: ID!, version: Int!): Transaction!
+    "Marks a cost paid by someone as reimbursed, or not."
+    transactionSetReimbursed(id: ID!, version: Int!, reimbursed: Boolean!): Transaction!
+
+    budgetScenarioSave(input: BudgetScenarioSaveInput!): BudgetScenario!
+    budgetScenarioUpdate(id: ID!, version: Int!, input: BudgetScenarioSaveInput!): BudgetScenario!
+    budgetScenarioRemove(id: ID!, version: Int!): Void
+}
+
+type BudgetCategory {
+    id: ID!
+    kind: BudgetCategoryKind!
+    role: BudgetCategoryRole
+    name: LocalizedText!
+    position: Int!
+    retired: Boolean!
+    "A budget line, transaction, reference figure or event type line holds it."
+    inUse: Boolean!
+    version: Int!
+}
+
+input BudgetCategoryCreateInput {
+    kind: BudgetCategoryKind!
+    role: BudgetCategoryRole
+    "1–100 characters, trimmed; the Swedish name is unique."
+    name: LocalizedTextInput!
+}
+
+input BudgetCategoryUpdateInput {
+    id: ID!
+    version: Int!
+    name: LocalizedTextInput!
+    "Null clears it. Refused when another active category of the same kind has the role."
+    role: BudgetCategoryRole
+}
+
+"An earlier revival's budget and outcome, kept as reference (5.10, section 7). Holds no personal data."
+type ReferenceRevival {
+    id: ID!
+    "E.g. \"Nobel 2026\"."
+    label: String!
+    year: Year!
+    "Participants, for figures per participant."
+    participants: Int
+    comment: String
+    "Made automatically from a revival that was deleted or anonymized."
+    automatic: Boolean!
+    figures: [ReferenceFigure!]!
+    version: Int!
+}
+
+type ReferenceFigure {
+    category: BudgetCategory!
+    budgeted: Amount
+    actual: Amount
+}
+
+input ReferenceRevivalInput {
+    "1–100 characters."
+    label: String!
+    year: Year!
+    "0–2000."
+    participants: Int
+    "At most 1000 characters."
+    comment: String
+    "Replaces every figure. A category at most once; at least one of budgeted and actual."
+    figures: [ReferenceFigureInput!]!
+}
+
+input ReferenceFigureInput {
+    categoryId: ID!
+    budgeted: Amount
+    actual: Amount
+}
+
+enum BudgetLineQuantity {
+    "quantity is fixed."
+    FIXED
+    "quantity is the revival's planned number of participants."
+    PER_PARTICIPANT
+}
+
+type EventTypeBudgetLine {
+    id: ID!
+    category: BudgetCategory!
+    description: LocalizedText!
+    quantityRule: BudgetLineQuantity!
+    "FIXED only."
+    quantity: Float
+    unitAmount: Amount!
+    version: Int!
+}
+
+input EventTypeBudgetLineInput {
+    "Only on create."
+    eventTypeId: ID
+    categoryId: ID!
+    description: LocalizedTextInput!
+    quantityRule: BudgetLineQuantity!
+    "FIXED: 0.01–100000."
+    quantity: Float
+    "0–10000000."
+    unitAmount: Amount!
+}
+
+extend type EventType {
+    budgetLines: [EventTypeBudgetLine!]!
+}
+
+"A revival's budget. Readers: SUPER_ADMIN, OBSERVER, directeurs and steering group (5.10 permission matrix)."
+type Budget {
+    revivalId: ID!
+    settings: BudgetSettings!
+    "Without removed lines unless includeRemoved; by category order, then id."
+    lines(includeRemoved: Boolean = false): [BudgetLine!]!
+    "Newest date first. Without cancelled ones unless includeCancelled."
+    transactions(includeCancelled: Boolean = false): [Transaction!]!
+    "Every category with a line, a transaction or an active role, in category order."
+    categories: [BudgetCategorySummary!]!
+    totals: BudgetTotals!
+    "Lines that the revival's events' types propose and that have not been added for that event."
+    proposals: [BudgetLineProposal!]!
+    scenarios: [BudgetScenario!]!
+}
+
+type BudgetSettings {
+    "Used for PER_PARTICIPANT lines, scenarios and figures per participant. 0–2000."
+    participantsPlanned: Int
+    participationFee: Amount
+    "From FGV/JK, typically 10,000 kr."
+    loanAmount: Amount
+    loanReceivedOn: Date
+    loanRepaidOn: Date
+    version: Int!
+}
+
+input BudgetSettingsInput {
+    revivalId: ID!
+    version: Int!
+    participantsPlanned: Int
+    participationFee: Amount
+    loanAmount: Amount
+    loanReceivedOn: Date
+    loanRepaidOn: Date
+}
+
+type BudgetLine {
+    id: ID!
+    category: BudgetCategory!
+    description: String!
+    quantity: Float!
+    unitAmount: Amount!
+    "quantity × unitAmount, rounded to öre."
+    amount: Amount!
+    event: Event
+    "A DECISION row in the log, e.g. \"four external helpers at 1,200 kr\"."
+    logEntry: LogEntrySummary
+    comment: String
+    removed: Boolean!
+    version: Int!
+}
+
+input BudgetLineCreateInput {
+    revivalId: ID!
+    "An active category."
+    categoryId: ID!
+    "1–255 characters."
+    description: String!
+    "0.01–100000, default 1."
+    quantity: Float
+    "0–10000000."
+    unitAmount: Amount!
+    eventId: ID
+    logEntryId: ID
+    "At most 1000 characters."
+    comment: String
+    "From a proposal: the event type line it came from. Then eventId is required."
+    eventTypeLineId: ID
+}
+
+input BudgetLineUpdateInput {
+    id: ID!
+    version: Int!
+    categoryId: ID
+    description: String
+    quantity: Float
+    unitAmount: Amount
+    eventId: ID
+    clearEvent: Boolean = false
+    logEntryId: ID
+    clearLogEntry: Boolean = false
+    comment: String
+    clearComment: Boolean = false
+}
+
+type BudgetLineProposal {
+    event: Event!
+    line: EventTypeBudgetLine!
+    "PER_PARTICIPANT: participantsPlanned, or null when it is not set."
+    quantity: Float
+    amount: Amount
+}
+
+type Transaction {
+    id: ID!
+    date: Date!
+    "Positive. Income or cost follows the category's kind."
+    amount: Amount!
+    category: BudgetCategory!
+    description: String!
+    budgetLine: BudgetLine
+    "Who paid a cost out of their own pocket: a member or a free-text name. Null when paid from the revival's account."
+    paidBy: Owner
+    reimbursed: Boolean!
+    reimbursedAt: Instant
+    receipt: Receipt
+    cancelled: Boolean!
+    version: Int!
+}
+
+"The file is fetched from GET /api/transactions/{id}/receipt."
+type Receipt {
+    filename: String!
+    contentType: String!
+    size: Int!
+    uploadedAt: Instant!
+}
+
+input TransactionCreateInput {
+    revivalId: ID!
+    date: Date!
+    "0.01–10000000."
+    amount: Amount!
+    "An active category."
+    categoryId: ID!
+    "1–255 characters."
+    description: String!
+    budgetLineId: ID
+    "COST categories only."
+    paidBy: OwnerInput
+}
+
+input TransactionUpdateInput {
+    id: ID!
+    version: Int!
+    date: Date
+    amount: Amount
+    categoryId: ID
+    description: String
+    budgetLineId: ID
+    clearBudgetLine: Boolean = false
+    paidBy: OwnerInput
+    clearPaidBy: Boolean = false
+}
+
+type BudgetCategorySummary {
+    category: BudgetCategory!
+    budgeted: Amount!
+    actual: Amount!
+    "Earlier revivals' figures for this category, newest year first."
+    references: [ReferenceFigureView!]!
+}
+
+type ReferenceFigureView {
+    label: String!
+    year: Year!
+    participants: Int
+    budgeted: Amount
+    actual: Amount
+    budgetedPerParticipant: Amount
+    actualPerParticipant: Amount
+}
+
+type BudgetTotals {
+    budgetedIncome: Amount!
+    budgetedCost: Amount!
+    "Income − cost; the loan is not income."
+    budgetedResult: Amount!
+    actualIncome: Amount!
+    actualCost: Amount!
+    actualResult: Amount!
+    "Costs paid by people and not yet reimbursed."
+    unreimbursed: Amount!
+    unreimbursedCount: Int!
+    "Transactions without a receipt."
+    missingReceipts: Int!
+}
+
+input BudgetScenarioInput {
+    participants: Int
+    participationFee: Amount
+    showTicketPrice: Amount
+    showTickets: Int
+    partyTicketPrice: Amount
+    partyTickets: Int
+    venueCost: Amount
+    partyCost: Amount
+}
+
+type BudgetScenarioParameters {
+    participants: Int
+    participationFee: Amount
+    showTicketPrice: Amount
+    showTickets: Int
+    partyTicketPrice: Amount
+    partyTickets: Int
+    venueCost: Amount
+    partyCost: Amount
+}
+
+type BudgetScenarioResult {
+    "The budget's values for every parameter, so a form can show them."
+    baseline: BudgetScenarioParameters!
+    "The parameters used: the input where given, the baseline otherwise."
+    used: BudgetScenarioParameters!
+    income: Amount!
+    cost: Amount!
+    result: Amount!
+    "Show tickets at the used price for a result of zero; null without a show ticket price."
+    breakEvenShowTickets: Int
+    "Party cost minus party ticket income; positive when other income pays for the party."
+    partySubsidy: Amount!
+}
+
+type BudgetScenario {
+    id: ID!
+    name: String!
+    parameters: BudgetScenarioParameters!
+    result: BudgetScenarioResult!
+    version: Int!
+}
+
+input BudgetScenarioSaveInput {
+    "Only on save."
+    revivalId: ID
+    "1–100 characters."
+    name: String!
+    parameters: BudgetScenarioInput!
+}
+
+extend type Revival {
+    "Null for callers who may not read the budget."
+    budget: Budget
+}
+
+extend type RevivalPermissions {
+    canReadBudget: Boolean!
+    "Directeur, or steering group with FINANCE; visible and not ARCHIVED."
+    canWriteBudget: Boolean!
+}

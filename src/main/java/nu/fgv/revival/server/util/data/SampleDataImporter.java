@@ -19,13 +19,16 @@ package nu.fgv.revival.server.util.data;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.audit.AuditSource;
+import nu.fgv.revival.server.budget.BudgetCategory;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
+import nu.fgv.revival.server.event.EventType;
 import nu.fgv.revival.server.guide.GuideChapter;
 import nu.fgv.revival.server.guide.GuideItem;
 import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideSection;
 import nu.fgv.revival.server.guide.GuideVersion;
+import nu.fgv.revival.server.material.LinkService;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalRole;
@@ -101,8 +104,14 @@ public class SampleDataImporter {
     static final String STEERING_GROUP = "steering-group" + SAMPLE_USER_DOMAIN;
     static final String NO_ROLE = "no-role" + SAMPLE_USER_DOMAIN;
     static final String INVITED = "invited" + SAMPLE_USER_DOMAIN;
+    static final String PARTICIPANT = "participant" + SAMPLE_USER_DOMAIN;
+    static final String HELPER = "helper" + SAMPLE_USER_DOMAIN;
     static final String OPERATION = "sampleDataImport";
     static final int NUMBER_OF_SAMPLES_REVIVALS = 2 * RevivalStatus.values().length;
+    /**
+     * How long ago the second archived revival was archived, long enough for the automatic anonymization to take it.
+     */
+    static final int ANONYMIZED_YEARS_AGO = 4;
     private static final int SPEXREGISTER_ATTEMPTS = 30;
     private static final Duration SPEXREGISTER_RETRY_INTERVAL = Duration.ofSeconds(10);
     private static final List<String> VENUES = List.of(
@@ -122,6 +131,7 @@ public class SampleDataImporter {
             RevivalStatus.SETTLING
     );
     private static final Set<RevivalStatus> SUPER_ADMIN_STEPS = EnumSet.of(RevivalStatus.APPROVED, RevivalStatus.REJECTED, RevivalStatus.ARCHIVED);
+    private static final Set<RevivalStatus> PLAYED = EnumSet.of(RevivalStatus.CLOSING, RevivalStatus.SETTLING, RevivalStatus.ARCHIVED);
 
     private final SpexregisterClient spexregisterClient;
     private final Keycloak keycloak;
@@ -179,6 +189,45 @@ public class SampleDataImporter {
 
     private void purgeAllRelevantTables(final JdbcClient jdbcClient) {
         final List<String> tables = List.of(
+                "inventory_item_audit",
+                "inventory_item",
+                "material_position_audit",
+                "material_position",
+                "material_audit",
+                "material",
+                "link_service_host_audit",
+                "link_service_audit",
+                "mailing_reminder",
+                "mailing_recipient_audit",
+                "mailing_recipient",
+                "mailing_audit",
+                "mailing",
+                "mailing_template_audit",
+                "mailing_template",
+                "shift_assignment_audit",
+                "shift_assignment",
+                "shift_slot_audit",
+                "shift_slot",
+                "availability_audit",
+                "availability",
+                "referral",
+                "dietary_need",
+                "pending_person",
+                "participant_audit",
+                "participant",
+                "participation_settings_audit",
+                "participation_settings",
+                "calendar_feed",
+                "receipt_content",
+                "budget_transaction_audit",
+                "budget_line_audit",
+                "budget_scenario_audit",
+                "budget_settings_audit",
+                "reference_figure_audit",
+                "reference_revival_audit",
+                "event_type_budget_line_audit",
+                "budget_category_audit",
+                "spex_calendar_date_audit",
                 "minutes_email_recipient",
                 "minutes_email",
                 "meeting_entry_change",
@@ -190,6 +239,8 @@ public class SampleDataImporter {
                 "meeting_audit",
                 "checklist_item_audit",
                 "checklist_audit",
+                "event_audit",
+                "event_type_audit",
                 "checklist_template_item_audit",
                 "checklist_template_audit",
                 "capability_audit",
@@ -207,6 +258,14 @@ public class SampleDataImporter {
                 "revival_audit",
                 "revchanges",
                 "revinfo",
+                "budget_transaction",
+                "budget_line",
+                "budget_scenario",
+                "budget_settings",
+                "reference_figure",
+                "reference_revival",
+                "event_type_budget_line",
+                "spex_calendar_date",
                 "log_entry_tag",
                 "log_entry",
                 "log_import",
@@ -216,6 +275,7 @@ public class SampleDataImporter {
                 "meeting",
                 "checklist_item",
                 "checklist",
+                "event",
                 "checklist_template_item",
                 "checklist_template",
                 "guide_suggestion",
@@ -234,6 +294,8 @@ public class SampleDataImporter {
 
         jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
         jdbcClient.sql("UPDATE minutes_email SET retry_of = NULL").update();
+        // The event types survive the purge, as the catalogs do, but not the templates they point at
+        jdbcClient.sql("UPDATE event_type SET checklist_template_id = NULL").update();
         tables.forEach(table ->
                 jdbcClient
                         .sql("DELETE FROM %s".formatted(table))
@@ -287,6 +349,8 @@ public class SampleDataImporter {
         users.put(STEERING_GROUP, sampleUser(realm, STEERING_GROUP, "Steering group"));
         Arrays.stream(SeededCapability.values()).forEach(capability ->
                 users.put(steeringGroupWith(capability), sampleUser(realm, steeringGroupWith(capability), "Steering group " + capability.name().toLowerCase(Locale.ROOT))));
+        users.put(PARTICIPANT, sampleUser(realm, PARTICIPANT, "Participant"));
+        users.put(HELPER, sampleUser(realm, HELPER, "Helper"));
         users.put(NO_ROLE, sampleUser(realm, NO_ROLE, "No role"));
 
         final Map<String, SamplePerson> people = new LinkedHashMap<>();
@@ -389,11 +453,12 @@ public class SampleDataImporter {
             final boolean first = i < statuses.length;
             final RevivalStatus status = statuses[i % statuses.length];
             final List<RevivalStatus> path = statusPath(status);
-            final List<Instant> timeline = timeline(path.size());
-            int year = year(status);
+            final @Nullable LocalDate plannedPremiere = premiere(status, first);
+            final int plannedYear = plannedPremiere == null ? LocalDate.now().getYear() + 1 : plannedPremiere.getYear();
+            int year = plannedYear;
             SpexDto revivedSpex = null;
 
-            // One revival per spex and year: try every spex, then the year after (or before, for archived ones)
+            // One revival per spex and year: try every spex, then the year after (or before, for those already played)
             while (revivedSpex == null) {
                 for (int offset = 0; offset < shuffledSpex.size() && revivedSpex == null; offset++) {
                     final SpexDto candidate = shuffledSpex.get((i + offset) % shuffledSpex.size());
@@ -403,12 +468,14 @@ public class SampleDataImporter {
                     }
                 }
                 if (revivedSpex == null) {
-                    year += status == RevivalStatus.ARCHIVED ? -1 : 1;
+                    year += PLAYED.contains(status) ? -1 : 1;
                 }
             }
-            final LocalDate premiereDate = status == RevivalStatus.PROPOSED || status == RevivalStatus.REJECTED ?
-                    null :
-                    LocalDate.of(year, rnd.nextInt(3, 6), rnd.nextInt(1, 29));
+            final LocalDate premiereDate = plannedPremiere == null ? null : plannedPremiere.plusYears(year - plannedYear);
+            // An archived revival was archived some months after its shows; the others moved on recently
+            final List<Instant> timeline = timeline(path.size(), status == RevivalStatus.ARCHIVED
+                    ? Objects.requireNonNull(premiereDate).plusDays(rnd.nextInt(120, 180)).atStartOfDay(ZoneOffset.UTC).toInstant()
+                    : Instant.now().minus(rnd.nextInt(1, 10), ChronoUnit.DAYS));
             final long revivalId = insertRevival(jdbcClient, revivedSpex, year, premiereDate, status, timeline.getFirst(), admin);
 
             pinGuideVersion(jdbcClient, revivalId, guide, timeline.getFirst(), admin);
@@ -507,11 +574,11 @@ public class SampleDataImporter {
     }
 
     /**
-     * When the revival was created and then moved through each step, oldest first and all in the past.
+     * When the revival was created and then moved through each step, oldest first and ending at {@code last}.
      */
-    private List<Instant> timeline(final int steps) {
+    private List<Instant> timeline(final int steps, final Instant last) {
         final List<Instant> timeline = new ArrayList<>();
-        Instant at = Instant.now().minus(rnd.nextInt(1, 10), ChronoUnit.DAYS);
+        Instant at = last;
 
         for (int step = 0; step < steps; step++) {
             timeline.addFirst(at);
@@ -520,14 +587,21 @@ public class SampleDataImporter {
         return timeline;
     }
 
-    private int year(final RevivalStatus status) {
-        final int current = LocalDate.now().getYear();
+    /**
+     * A premiere in line with the status: ahead while the revival is being organised or is open, behind once it has
+     * been played. The second archived revival was played {@value #ANONYMIZED_YEARS_AGO} years ago.
+     */
+    private @Nullable LocalDate premiere(final RevivalStatus status, final boolean first) {
+        final LocalDate today = LocalDate.now();
 
         return switch (status) {
-            case PROPOSED, APPROVED, REJECTED -> current + 1;
-            case ORGANISING -> current + rnd.nextInt(2);
-            case OPEN, CLOSING, SETTLING -> current;
-            case ARCHIVED -> current - rnd.nextInt(1, 10);
+            case PROPOSED, REJECTED -> null;
+            case APPROVED -> LocalDate.of(today.getYear() + 1, rnd.nextInt(3, 6), rnd.nextInt(1, 29));
+            case ORGANISING -> today.plusDays(rnd.nextInt(150, 330));
+            case OPEN -> today.plusDays(rnd.nextInt(20, 90));
+            case CLOSING -> today.minusDays(rnd.nextInt(20, 60));
+            case SETTLING -> today.minusDays(rnd.nextInt(60, 150));
+            case ARCHIVED -> LocalDate.of(today.getYear() - (first ? 1 : ANONYMIZED_YEARS_AGO), rnd.nextInt(3, 6), rnd.nextInt(1, 29));
         };
     }
 
@@ -694,12 +768,32 @@ public class SampleDataImporter {
                 """
                         INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
                         SELECT id, kind, name_sv, name_en, position, retired_at, version, :rev, 0 FROM guide_item_type
+                        """,
+                """
+                        INSERT INTO budget_category_audit (id, kind, role, name_sv, name_en, position, retired_at, version, rev, revtype)
+                        SELECT id, kind, role, name_sv, name_en, position, retired_at, version, :rev, 0 FROM budget_category
+                        """,
+                """
+                        INSERT INTO link_service_audit (id, name_sv, name_en, home_url, position, retired_at, version, rev, revtype)
+                        SELECT id, name_sv, name_en, home_url, position, retired_at, version, :rev, 0 FROM link_service
+                        """,
+                """
+                        INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
+                        SELECT link_service_id, host, :rev, 0 FROM link_service_host
+                        """,
+                """
+                        INSERT INTO event_type_audit (id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                                                      offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at,
+                                                      version, rev, revtype)
+                        SELECT id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                               offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at,
+                               version, :rev, 0 FROM event_type
                         """
         ).forEach(sql -> jdbcClient.sql(sql).param("rev", rev).update());
 
         Stream.of(Revival.class, RevivalShow.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
                         GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
-                        Capability.class, GuideItemType.class).forEach(entity -> jdbcClient
+                        Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class).forEach(entity -> jdbcClient
                 .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
                 .param("rev", rev)
                 .param("entityName", entity.getName())

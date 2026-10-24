@@ -1,0 +1,142 @@
+# M7: closing, the participation sync to Spexregister, anonymization (product spec 5.11, section 7).
+
+enum SyncOperation {
+    "Create the revival in Spexregister (spexRevivalCreate)."
+    REVIVAL
+    "activityCreate + spexActivityCreate for the revival."
+    PARTICIPATION
+    "taskActivityCreate for the position."
+    TASK
+    "actorCreate with role and vocal part."
+    ACTOR
+    "membershipCreate for the year, when the revival paid it."
+    MEMBERSHIP
+}
+
+enum SyncStepStatus {
+    PENDING
+    DONE
+    "Already in Spexregister; nothing written."
+    EXISTED
+    FAILED
+}
+
+enum SyncRunStatus {
+    RUNNING
+    DONE
+    "Some steps failed; running again resumes."
+    FAILED
+}
+
+extend type Query {
+    "Directeurs, and SUPER_ADMIN; readers: steering group too (5.11 matrix)."
+    syncPreview(revivalId: ID!): SyncPreview!
+    syncRun(id: ID!): SyncRun
+}
+
+extend type Mutation {
+    """
+    Directeur, revival in CLOSING or SETTLING; or SUPER_ADMIN. Starts (or resumes) the sync in the background, after
+    checking that the preview the caller confirmed is still what would be done (CONFLICT otherwise). Never runs two at
+    once for a revival (CONFLICT). Every step is recorded per participant, so a run that stops halfway resumes without
+    duplicates.
+    """
+    syncStart(revivalId: ID!, previewHash: String!): SyncRun!
+
+    "Directeur (CLOSING or SETTLING) or SUPER_ADMIN. The year the revival pays FGV membership for, and for whom."
+    membershipSet(input: MembershipSetInput!): [Participant!]!
+
+    """
+    Directeur, revival SETTLING; or SUPER_ADMIN, revival SETTLING, ARCHIVED or REJECTED. Removes the people from the
+    revival for good (section 7): participants, pending people, dietary needs, referrals, availability, shifts, mailing
+    recipients, owner names, attendees and who did what; keeps the guide work, log texts, checklists, events, budget
+    and materials. The budget is kept as an automatic reference revival. Cannot be undone. Requires the revival's
+    title typed as confirmation.
+    """
+    revivalAnonymize(id: ID!, version: Int!, confirmation: String!): Revival!
+}
+
+type SyncPreview {
+    revivalId: ID!
+    "Changes when anything in the preview changes; syncStart requires it."
+    hash: String!
+    "Spexregister's revival for this revival, if it exists yet."
+    spexregisterRevivalExists: Boolean!
+    "Participants who answered YES and are spexare, with what will be written for each."
+    participants: [SyncParticipantPreview!]!
+    "Participants who answered YES but are pending people (did not consent): left out."
+    excluded: [ParticipantRef!]!
+    membershipYear: Year
+    "The latest run, if any."
+    lastRun: SyncRun
+}
+
+type SyncParticipantPreview {
+    participant: ParticipantRef!
+    operations: [SyncOperationPreview!]!
+}
+
+type SyncOperationPreview {
+    operation: SyncOperation!
+    "E.g. the position's name, the role and vocal part, the membership year."
+    detail: String
+    "Already in Spexregister, so nothing will be written."
+    exists: Boolean!
+}
+
+type SyncRun {
+    id: ID!
+    status: SyncRunStatus!
+    startedBy: PersonRef
+    startedAt: Instant!
+    finishedAt: Instant
+    total: Int!
+    done: Int!
+    failed: Int!
+    "FAILED steps, with what failed. Never contact details."
+    failures: [SyncFailure!]!
+}
+
+type SyncFailure {
+    participant: ParticipantRef
+    operation: SyncOperation!
+    "A short code: SPEXREGISTER_UNAVAILABLE, REFUSED, NOT_FOUND."
+    reason: String!
+}
+
+input MembershipSetInput {
+    revivalId: ID!
+    "The year the membership is paid for."
+    year: Year!
+    "Participants (YES) the revival pays for; everyone else is unmarked."
+    participantIds: [ID!]!
+}
+
+"Where the revival stands on closing (5.11): signals from the budget, the log and the sync."
+type ClosingStatus {
+    actualResult: Amount
+    loanAmount: Amount
+    loanRepaid: Boolean!
+    "A DECISION row tagged surplus (case-insensitive tag 'överskott' or 'surplus'), if any."
+    surplusDecision: LogEntrySummary
+    membershipYear: Year
+    membershipsPaid: Int!
+    "Guide suggestions from this revival."
+    suggestions: Int!
+    lastSync: SyncRun
+    anonymizedAt: Instant
+    "Archived or rejected revivals are anonymized automatically 36 months after that status was set."
+    autoAnonymizeOn: Date
+}
+
+extend type Revival {
+    "Readers of the revival's work."
+    closing: ClosingStatus
+    anonymizedAt: Instant
+}
+
+extend type RevivalPermissions {
+    canSync: Boolean!
+    canAnonymize: Boolean!
+    canSetMembership: Boolean!
+}

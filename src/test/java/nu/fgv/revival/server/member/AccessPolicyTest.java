@@ -148,9 +148,9 @@ class AccessPolicyTest {
         }
 
         @Test
-        void participantsAndHelpersSeeNothingInM1() {
-            assertThat(AccessPolicy.visibleStatuses(RevivalRole.PARTICIPANT)).isEmpty();
-            assertThat(AccessPolicy.visibleStatuses(RevivalRole.HELPER)).isEmpty();
+        void participantsAndHelpersSeeTheirRevivalWhileItIsOpen() {
+            assertThat(AccessPolicy.visibleStatuses(RevivalRole.PARTICIPANT)).containsExactly(RevivalStatus.OPEN);
+            assertThat(AccessPolicy.visibleStatuses(RevivalRole.HELPER)).containsExactly(RevivalStatus.OPEN);
         }
 
         @Test

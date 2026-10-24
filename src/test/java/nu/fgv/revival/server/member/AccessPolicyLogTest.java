@@ -57,7 +57,8 @@ class AccessPolicyLogTest {
         @ParameterizedTest
         @EnumSource(RevivalStatus.class)
         void readingFollowsVisibility(final RevivalStatus status) {
-            for (final String role : List.of("SUPER_ADMIN", "OBSERVER", "DIRECTEUR", "STEERING_GROUP", "PARTICIPANT", "HELPER", "NONE")) {
+            // Participants and helpers see an open revival only for their own page (M6-FR-1)
+            for (final String role : List.of("SUPER_ADMIN", "OBSERVER", "DIRECTEUR", "STEERING_GROUP", "NONE")) {
                 assertThat(policy.canReadRevivalWork(caller(role), revivalIn(status)))
                         .as("%s in %s", role, status)
                         .isEqualTo(policy.canSee(caller(role), revivalIn(status)));

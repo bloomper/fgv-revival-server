@@ -19,6 +19,7 @@ package nu.fgv.revival.server.person;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalMemberRepository;
 import nu.fgv.revival.server.member.RevivalRole;
+import nu.fgv.revival.server.member.RevivalRoleAssignment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -157,6 +158,24 @@ class CallerServiceTest {
         service.current();
 
         verify(personRepository, org.mockito.Mockito.times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void aPersonWithoutATokenHoldsOnlyTheirActiveRevivalRoles() {
+        final Person person = person(5L, "kim@example.org", true, "Kim");
+        final RevivalMember member = new RevivalMember();
+
+        member.setRevivalId(3L);
+        member.setPersonId(5L);
+        member.setRole(RevivalRole.STEERING_GROUP);
+        member.setCapabilities(Set.of("FINANCE"));
+        when(memberRepository.findByPersonIdAndRemovedAtIsNull(5L)).thenReturn(List.of(member));
+
+        final Caller caller = service.forPerson(person);
+
+        assertThat(caller.globalRoles()).isEmpty();
+        assertThat(caller.revivalRoles()).containsOnlyKeys(3L);
+        assertThat(caller.roleIn(3L)).isEqualTo(new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of("FINANCE")));
     }
 
     @Test

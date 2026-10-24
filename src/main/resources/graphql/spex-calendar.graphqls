@@ -1,0 +1,29 @@
+# M4 follow-up (product spec 5.1): the current Chalmersspex's show dates, kept by SUPER_ADMIN, so the cross-revival
+# timeline can flag clashes with them.
+
+extend type Query {
+    "SUPER_ADMIN and OBSERVER. By date."
+    spexCalendarDates(from: Date, to: Date): [SpexCalendarDate!]!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, for every mutation below."
+    spexCalendarDateCreate(input: SpexCalendarDateInput!): SpexCalendarDate!
+    spexCalendarDateUpdate(id: ID!, version: Int!, input: SpexCalendarDateInput!): SpexCalendarDate!
+    "Not revival data; deleted for real."
+    spexCalendarDateDelete(id: ID!, version: Int!): Void
+}
+
+"A day the current Chalmersspex plays, e.g. a premiere or a show."
+type SpexCalendarDate {
+    id: ID!
+    date: Date!
+    "1–100 characters, e.g. \"Chalmersspexet: premiär\"."
+    label: String!
+    version: Int!
+}
+
+input SpexCalendarDateInput {
+    date: Date!
+    label: String!
+}

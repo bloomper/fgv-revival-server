@@ -47,7 +47,7 @@ type Revival {
     newerGuideVersion: GuideVersionSummary
     "Newest first."
     guideVersionHistory: [RevivalGuideVersionChange!]!
-    "Directeurs and steering group, without removed members. Visible to everyone who can see the revival."
+    "Directeurs and steering group, without removed members, for readers of the revival's work (permissions.canReadWork); empty for participants and helpers."
     members: [RevivalMember!]!
     "Newest first."
     statusHistory: [RevivalStatusChange!]!

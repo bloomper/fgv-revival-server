@@ -269,6 +269,122 @@ public class GuideMarkdown {
         }
     }
 
+    private static final Pattern SAFE_LINK = Pattern.compile("(?i)^(https?://|mailto:)\\S+$");
+
+    /**
+     * Guide Markdown as HTML for an email (M6B-FR-9), with only the elements the web renders guide text with (FR-010):
+     * paragraphs, bullet and numbered lists, bold, italics, line breaks and http(s) or mailto links. Every other element
+     * becomes its text, raw HTML is escaped and shown literally, and images are dropped, so nothing is ever loaded.
+     */
+    public String toHtml(final String markdown) {
+        final StringBuilder html = new StringBuilder();
+
+        for (Node block = parse(markdown).getFirstChild(); block != null; block = block.getNext()) {
+            htmlBlock(block, html);
+        }
+        return html.toString();
+    }
+
+    private void htmlBlock(final Node block, final StringBuilder html) {
+        if (block instanceof final ListBlock list) {
+            final boolean numbered = list instanceof OrderedList;
+
+            html.append(numbered ? "<ol>" : "<ul>");
+            for (Node item = list.getFirstChild(); item != null; item = item.getNext()) {
+                html.append("<li>");
+                for (Node child = item.getFirstChild(); child != null; child = child.getNext()) {
+                    if (child instanceof ListBlock) {
+                        htmlBlock(child, html);
+                    } else {
+                        htmlInline(child, html);
+                    }
+                }
+                html.append("</li>");
+            }
+            html.append(numbered ? "</ol>" : "</ul>");
+            return;
+        }
+        if (block instanceof HtmlBlock || block instanceof FencedCodeBlock || block instanceof IndentedCodeBlock) {
+            final String literal = block instanceof final HtmlBlock raw ? raw.getLiteral()
+                    : block instanceof final FencedCodeBlock fenced ? fenced.getLiteral() : ((IndentedCodeBlock) block).getLiteral();
+
+            html.append("<p>").append(escapeHtml(literal.strip()).replace("\n", "<br>")).append("</p>");
+            return;
+        }
+        if (block.getFirstChild() instanceof Block) {
+            // A quote or another container: its blocks, unwrapped
+            for (Node child = block.getFirstChild(); child != null; child = child.getNext()) {
+                htmlBlock(child, html);
+            }
+            return;
+        }
+
+        final StringBuilder paragraph = new StringBuilder();
+
+        htmlInline(block, paragraph);
+        if (!paragraph.isEmpty()) {
+            html.append("<p>").append(paragraph).append("</p>");
+        }
+    }
+
+    private void htmlInline(final Node parent, final StringBuilder html) {
+        for (Node node = parent.getFirstChild(); node != null; node = node.getNext()) {
+            switch (node) {
+                case final Text text -> html.append(escapeHtml(text.getLiteral()));
+                case final Code code -> html.append(escapeHtml(code.getLiteral()));
+                case final HtmlInline raw -> html.append(escapeHtml(raw.getLiteral()));
+                case final StrongEmphasis _ -> {
+                    html.append("<strong>");
+                    htmlInline(node, html);
+                    html.append("</strong>");
+                }
+                case final Emphasis _ -> {
+                    html.append("<em>");
+                    htmlInline(node, html);
+                    html.append("</em>");
+                }
+                case final Link link -> {
+                    final String destination = link.getDestination() == null ? "" : link.getDestination().strip();
+
+                    if (SAFE_LINK.matcher(destination).matches()) {
+                        html.append("<a href=\"").append(escapeHtml(destination)).append("\">");
+                        htmlInline(link, html);
+                        html.append("</a>");
+                    } else {
+                        htmlInline(link, html);
+                    }
+                }
+                case final Image _ -> {
+                    // Dropped: an email never loads an image (FR-010)
+                }
+                case final SoftLineBreak _ -> html.append(' ');
+                case final HardLineBreak _ -> html.append("<br>");
+                default -> htmlInline(node, html);
+            }
+        }
+    }
+
+    /**
+     * Escapes text for HTML content and attribute values.
+     */
+    public static String escapeHtml(final String text) {
+        final StringBuilder escaped = new StringBuilder(text.length());
+
+        for (int index = 0; index < text.length(); index++) {
+            final char character = text.charAt(index);
+
+            switch (character) {
+                case '&' -> escaped.append("&amp;");
+                case '<' -> escaped.append("&lt;");
+                case '>' -> escaped.append("&gt;");
+                case '"' -> escaped.append("&quot;");
+                case '\'' -> escaped.append("&#39;");
+                default -> escaped.append(character);
+            }
+        }
+        return escaped.toString();
+    }
+
     private static final Charset WIN_ANSI = Charset.forName("windows-1252");
 
     /**

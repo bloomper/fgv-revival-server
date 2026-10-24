@@ -19,6 +19,8 @@ package nu.fgv.revival.server.util.data;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.audit.AuditSource;
+import nu.fgv.revival.server.calendar.CalendarFeed;
+import nu.fgv.revival.server.calendar.CalendarFeedRepository;
 import nu.fgv.revival.server.checklist.Checklist;
 import nu.fgv.revival.server.checklist.ChecklistItem;
 import nu.fgv.revival.server.checklist.ChecklistItemRepository;
@@ -27,11 +29,29 @@ import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.ChecklistRepository;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemRepository;
+import nu.fgv.revival.server.closing.SyncOperation;
+import nu.fgv.revival.server.closing.SyncRun;
+import nu.fgv.revival.server.closing.SyncRunRepository;
+import nu.fgv.revival.server.closing.SyncRunStatus;
+import nu.fgv.revival.server.closing.SyncStep;
+import nu.fgv.revival.server.closing.SyncStepRepository;
+import nu.fgv.revival.server.closing.SyncStepStatus;
 import nu.fgv.revival.server.decisionlog.LogEntry;
+import nu.fgv.revival.server.decisionlog.LogEntryCounters;
 import nu.fgv.revival.server.decisionlog.LogEntryOrigin;
 import nu.fgv.revival.server.decisionlog.LogEntryRepository;
 import nu.fgv.revival.server.decisionlog.LogEntryStatus;
 import nu.fgv.revival.server.decisionlog.LogEntryType;
+import nu.fgv.revival.server.decisionlog.LogImport;
+import nu.fgv.revival.server.decisionlog.LogImportLayout;
+import nu.fgv.revival.server.decisionlog.LogImportRepository;
+import nu.fgv.revival.server.decisionlog.LogImportWarning;
+import nu.fgv.revival.server.event.Event;
+import nu.fgv.revival.server.event.EventProposals;
+import nu.fgv.revival.server.event.EventRepository;
+import nu.fgv.revival.server.event.EventType;
+import nu.fgv.revival.server.event.EventTypeDto;
+import nu.fgv.revival.server.event.EventTypeRepository;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionKind;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionRepository;
@@ -43,8 +63,18 @@ import nu.fgv.revival.server.meeting.MeetingEntryChangeRepository;
 import nu.fgv.revival.server.meeting.MeetingRepository;
 import nu.fgv.revival.server.meeting.MeetingStatus;
 import nu.fgv.revival.server.meeting.Minutes;
+import nu.fgv.revival.server.meeting.MinutesEmail;
+import nu.fgv.revival.server.meeting.MinutesEmailRecipient;
+import nu.fgv.revival.server.meeting.MinutesEmailRecipientStatus;
+import nu.fgv.revival.server.meeting.MinutesEmailRepository;
 import nu.fgv.revival.server.member.Owner;
+import nu.fgv.revival.server.revival.Revival;
+import nu.fgv.revival.server.revival.RevivalAnonymization;
+import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalStatus;
+import nu.fgv.revival.server.spex.SpexregisterClient;
+import nu.fgv.revival.server.spexcalendar.SpexCalendarDate;
+import nu.fgv.revival.server.spexcalendar.SpexCalendarDateRepository;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -53,11 +83,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.security.SecureRandom;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -70,8 +104,13 @@ import java.util.Set;
 
 /**
  * Brings the sample revivals to life once the guide sync has given them their checklists and guide questions at
- * startup: progress in the checklists in line with each revival's status, event checklists, decision log entries,
- * meetings with minutes, and guide suggestions. Goes through the repositories, so the rows are audited as usual.
+ * startup: progress in the checklists in line with each revival's status, events with their checklists (one cancelled),
+ * decision log entries (some imported from a workbook), meetings with minutes sent by email, guide suggestions, budgets,
+ * materials and inventory, calendar links, and Chalmersspexet's dates, one of them clashing with an open revival's
+ * premiere. Revivals that are or have been open get participants, availability, shifts and mailings; those that have
+ * settled the surplus decision, the FGV membership and a sync to Spexregister, failed while settling and done once
+ * archived. Last, the revival archived {@value SampleDataImporter#ANONYMIZED_YEARS_AGO} years ago is anonymized, as the
+ * nightly job would. Goes through the repositories, so the rows are audited as usual.
  *
  * @author Anders Jacobsson
  * @since 0.3
@@ -85,8 +124,12 @@ public class SampleActivityImporter {
             RevivalStatus.ORGANISING, 3,
             RevivalStatus.OPEN, 6,
             RevivalStatus.CLOSING, 8,
-            RevivalStatus.SETTLING, 9
+            RevivalStatus.SETTLING, 9,
+            RevivalStatus.ARCHIVED, 10
     ));
+    private static final Set<RevivalStatus> PARTICIPATING = EnumSet.of(RevivalStatus.OPEN, RevivalStatus.CLOSING, RevivalStatus.SETTLING,
+            RevivalStatus.ARCHIVED);
+    private static final Set<RevivalStatus> SETTLED = EnumSet.of(RevivalStatus.SETTLING, RevivalStatus.ARCHIVED);
     private static final Map<String, String> ANSWERS = Map.of(
             "b-party-alcohol", "Lokalen har sprittillstånd, så drycken köps via restaurangen.",
             "b-timeline-current", "Årets spex repar i februari, så våra rephelger ligger i mars.",
@@ -106,7 +149,23 @@ public class SampleActivityImporter {
     private final MeetingRepository meetingRepository;
     private final MeetingEntryChangeRepository meetingEntryChangeRepository;
     private final GuideSuggestionRepository suggestionRepository;
+    private final EventRepository eventRepository;
+    private final EventTypeRepository eventTypeRepository;
+    private final SampleBudget sampleBudget;
+    private final SampleStaffing sampleStaffing;
+    private final SampleMaterials sampleMaterials;
+    private final SpexregisterClient spexregisterClient;
+    private final RevivalRepository revivalRepository;
+    private final RevivalAnonymization anonymization;
+    private final SpexCalendarDateRepository spexCalendarRepository;
+    private final LogImportRepository logImportRepository;
+    private final MinutesEmailRepository minutesEmailRepository;
+    private final CalendarFeedRepository calendarFeedRepository;
+    private final SyncRunRepository syncRunRepository;
+    private final SyncStepRepository syncStepRepository;
+    private final LogEntryCounters logEntryCounters;
     private final ZoneId zone;
+    private final SecureRandom rnd = new SecureRandom();
 
     public SampleActivityImporter(@Value("${fgv-revival.data.import-sample-data:false}") final boolean importSampleData,
                                   @Value("${fgv-revival.time-zone}") final ZoneId zone,
@@ -118,7 +177,22 @@ public class SampleActivityImporter {
                                   final LogEntryRepository logEntryRepository,
                                   final MeetingRepository meetingRepository,
                                   final MeetingEntryChangeRepository meetingEntryChangeRepository,
-                                  final GuideSuggestionRepository suggestionRepository) {
+                                  final GuideSuggestionRepository suggestionRepository,
+                                  final EventRepository eventRepository,
+                                  final EventTypeRepository eventTypeRepository,
+                                  final SampleBudget sampleBudget,
+                                  final SampleStaffing sampleStaffing,
+                                  final SampleMaterials sampleMaterials,
+                                  final SpexregisterClient spexregisterClient,
+                                  final RevivalRepository revivalRepository,
+                                  final RevivalAnonymization anonymization,
+                                  final SpexCalendarDateRepository spexCalendarRepository,
+                                  final LogImportRepository logImportRepository,
+                                  final MinutesEmailRepository minutesEmailRepository,
+                                  final CalendarFeedRepository calendarFeedRepository,
+                                  final SyncRunRepository syncRunRepository,
+                                  final SyncStepRepository syncStepRepository,
+                                  final LogEntryCounters logEntryCounters) {
         this.importSampleData = importSampleData;
         this.zone = zone;
         this.jdbcClient = jdbcClient;
@@ -130,6 +204,21 @@ public class SampleActivityImporter {
         this.meetingRepository = meetingRepository;
         this.meetingEntryChangeRepository = meetingEntryChangeRepository;
         this.suggestionRepository = suggestionRepository;
+        this.eventRepository = eventRepository;
+        this.eventTypeRepository = eventTypeRepository;
+        this.sampleBudget = sampleBudget;
+        this.sampleStaffing = sampleStaffing;
+        this.sampleMaterials = sampleMaterials;
+        this.spexregisterClient = spexregisterClient;
+        this.revivalRepository = revivalRepository;
+        this.anonymization = anonymization;
+        this.spexCalendarRepository = spexCalendarRepository;
+        this.logImportRepository = logImportRepository;
+        this.minutesEmailRepository = minutesEmailRepository;
+        this.calendarFeedRepository = calendarFeedRepository;
+        this.syncRunRepository = syncRunRepository;
+        this.syncStepRepository = syncStepRepository;
+        this.logEntryCounters = logEntryCounters;
     }
 
     private record SampleRevival(long id, RevivalStatus status, @Nullable LocalDate premiereDate, @Nullable Long guideVersionId,
@@ -156,17 +245,26 @@ public class SampleActivityImporter {
     public void importSampleActivity() {
         final long started = System.nanoTime();
         final List<SampleRevival> revivals = revivals();
+        final SamplePositions positions = SamplePositions.read(spexregisterClient);
 
+        transactions.executeWithoutResult(status -> {
+            AuditContext.stamp(new AuditContext.Origin(AuditSource.SYSTEM, SampleDataImporter.OPERATION, null));
+            linkEventTemplates();
+            sampleBudget.insertCatalog();
+            sampleStaffing.insertTemplates();
+            createSpexCalendar(revivals);
+        });
         for (final SampleRevival revival : revivals) {
             transactions.executeWithoutResult(status -> {
                 AuditContext.stamp(new AuditContext.Origin(AuditSource.SYSTEM, SampleDataImporter.OPERATION, null));
-                importActivity(revival);
+                importActivity(revival, positions);
             });
         }
         transactions.executeWithoutResult(status -> {
             AuditContext.stamp(new AuditContext.Origin(AuditSource.SYSTEM, SampleDataImporter.OPERATION, null));
             createSuggestions(revivals);
         });
+        anonymization.anonymizeExpired();
         log.info("Imported the sample activity of {} revivals in {} ms", revivals.size(), Duration.ofNanos(System.nanoTime() - started).toMillis());
     }
 
@@ -226,13 +324,19 @@ public class SampleActivityImporter {
         return capabilities;
     }
 
-    private void importActivity(final SampleRevival revival) {
+    private void importActivity(final SampleRevival revival, final SamplePositions positions) {
         final int phasesDone = PHASES_DONE.get(revival.status());
 
+        // The guide sync leaves archived revivals alone, so it has not numbered their log
+        logEntryCounters.ensure(revival.id());
         progressPhaseChecklists(revival, phasesDone);
         if (revival.status() != RevivalStatus.APPROVED && revival.premiereDate() != null) {
-            createEventChecklist(revival, SampleChecklistTemplates.REHEARSAL_WEEKEND + " 1", revival.premiereDate().minusWeeks(6));
-            createEventChecklist(revival, SampleChecklistTemplates.SHOW_WEEKEND, revival.premiereDate());
+            final SampleEvents events = createEvents(revival, revival.premiereDate());
+
+            if (PARTICIPATING.contains(revival.status())) {
+                sampleStaffing.insert(revival.id(), revival.status(), events.rehearsal(), events.showWeekend(), revival.directeur(), payer(revival),
+                        positions, today());
+            }
         }
 
         final List<LogEntry> questions = logEntryRepository.findByRevivalIdAndOriginOrderByNumberAsc(revival.id(), LogEntryOrigin.GUIDE);
@@ -245,8 +349,32 @@ public class SampleActivityImporter {
 
             createLogEntries(revival, meeting, questions, phasesDone);
             closeMeeting(meeting);
-            createMeeting(revival, today().plusDays(14), MeetingStatus.PLANNED, List.of("Biljettsläpp", "Rephelgerna"));
+            emailMinutes(meeting);
+            importLog(revival);
+            if (revival.status() != RevivalStatus.ARCHIVED) {
+                createMeeting(revival, today().plusDays(14), MeetingStatus.PLANNED, List.of("Biljettsläpp", "Rephelgerna"));
+            }
         }
+        if (revival.status() != RevivalStatus.APPROVED && revival.premiereDate() != null) {
+            // An archived revival's money moved around its premiere
+            sampleBudget.insert(revival.id(), revival.status(), revival.premiereDate(), payer(revival), revival.directeur(),
+                    revival.status() == RevivalStatus.ARCHIVED ? revival.premiereDate().plusDays(30) : today());
+        }
+        if (revival.status() != RevivalStatus.APPROVED) {
+            sampleMaterials.insert(revival.id(), revival.directeur(), positions);
+            createCalendarFeeds(revival);
+        }
+        if (SETTLED.contains(revival.status()) && revival.premiereDate() != null) {
+            settle(revival, revival.premiereDate());
+        }
+    }
+
+    /**
+     * The steering group member with the finance area, or the directeur.
+     */
+    private static long payer(final SampleRevival revival) {
+        return revival.steeringGroup().stream().filter(member -> member.capabilities().contains("FINANCE")).map(SteeringGroupMember::personId)
+                .findFirst().orElse(revival.directeur());
     }
 
     // --- Checklists ---------------------------------------------------------------------------------------------------
@@ -291,7 +419,70 @@ public class SampleActivityImporter {
         checklistItemRepository.save(item);
     }
 
-    private void createEventChecklist(final SampleRevival revival, final String name, final LocalDate date) {
+    // --- Events -------------------------------------------------------------------------------------------------------
+
+    /**
+     * The sample event templates on the types they are for, so that a new rehearsal or show weekend gets its checklist.
+     */
+    private void linkEventTemplates() {
+        for (final EventType type : eventTypeRepository.findAllByOrderByPositionAscIdAsc()) {
+            final String template = type.getNameSv().startsWith(SampleChecklistTemplates.REHEARSAL_WEEKEND) ? SampleChecklistTemplates.REHEARSAL_WEEKEND
+                    : type.getNameSv().equals(SampleChecklistTemplates.SHOW_WEEKEND) ? SampleChecklistTemplates.SHOW_WEEKEND : null;
+
+            if (template != null && type.getChecklistTemplateId() == null) {
+                type.setChecklistTemplateId(jdbcClient
+                        .sql("SELECT id FROM checklist_template WHERE kind = 'EVENT' AND name_sv = ? AND retired_at IS NULL")
+                        .param(template)
+                        .query(Long.class)
+                        .single());
+                eventTypeRepository.save(type);
+            }
+        }
+    }
+
+    private record SampleEvents(Event rehearsal, Event showWeekend) {
+    }
+
+    /**
+     * The first rehearsal weekend on the date proposed for it and the show weekend, each with its checklist, a free
+     * event without one and a cancelled one.
+     */
+    private SampleEvents createEvents(final SampleRevival revival, final LocalDate premiere) {
+        final List<EventTypeDto> types = eventTypeRepository.findAllByOrderByPositionAscIdAsc().stream().map(EventTypeDto::of).toList();
+        final EventTypeDto rehearsal = types.stream().filter(type -> type.name().sv().equals(SampleChecklistTemplates.REHEARSAL_WEEKEND + " 1"))
+                .findFirst().orElseThrow();
+        final EventTypeDto show = types.stream().filter(type -> type.name().sv().equals(SampleChecklistTemplates.SHOW_WEEKEND)).findFirst().orElseThrow();
+        final LocalDate rehearsalStart = EventProposals.propose(premiere, List.of(rehearsal), List.of()).getFirst().startDate();
+        final Event rehearsalEvent = createEvent(revival, rehearsal, rehearsal.name().sv(), rehearsalStart, null);
+        final Event showEvent = createEvent(revival, show, show.name().sv(), premiere, "Kårhuset");
+
+        createEventChecklist(revival, rehearsalEvent.getTitle(), rehearsalEvent.getStartDate(), rehearsalEvent.getId());
+        createEventChecklist(revival, showEvent.getTitle(), showEvent.getStartDate(), showEvent.getId());
+        createEvent(revival, null, "Förrådsbesök", premiere.minusDays(30), "V-förrådet");
+
+        final Event visit = createEvent(revival, null, "Studiebesök hos Chalmersspexet", premiere.minusDays(60), "RunAn");
+
+        visit.setCancelledAt(Instant.now().minus(Duration.ofDays(3)));
+        eventRepository.saveAndFlush(visit);
+        return new SampleEvents(rehearsalEvent, showEvent);
+    }
+
+    private Event createEvent(final SampleRevival revival, final @Nullable EventTypeDto type, final String title, final LocalDate start,
+                              final @Nullable String location) {
+        final Event event = new Event();
+
+        event.setRevivalId(revival.id());
+        event.setTypeId(type == null ? null : type.id());
+        event.setTitle(title);
+        event.setStartDate(start);
+        event.setEndDate(start.plusDays(type == null ? 0 : type.days() - 1L));
+        event.setLocation(location);
+        event.setDescription(type == null || type.description() == null ? null : type.description().sv());
+        event.setRevivalPays(type != null && type.revivalPays());
+        return eventRepository.saveAndFlush(event);
+    }
+
+    private void createEventChecklist(final SampleRevival revival, final String name, final LocalDate date, final Long eventId) {
         final long templateId = jdbcClient
                 .sql("SELECT id FROM checklist_template WHERE kind = 'EVENT' AND name_sv = ? AND retired_at IS NULL")
                 .param(date.equals(revival.premiereDate()) ? SampleChecklistTemplates.SHOW_WEEKEND : SampleChecklistTemplates.REHEARSAL_WEEKEND)
@@ -304,6 +495,7 @@ public class SampleActivityImporter {
         checklist.setName(name);
         checklist.setDate(date);
         checklist.setTemplateId(templateId);
+        checklist.setEventId(eventId);
 
         final Checklist saved = checklistRepository.saveAndFlush(checklist);
         final List<ChecklistTemplateItem> templateItems = templateItemRepository.findByTemplateIdAndRetiredAtIsNullOrderByPositionAscIdAsc(templateId);
@@ -402,6 +594,18 @@ public class SampleActivityImporter {
                            final @Nullable Long owner,
                            final @Nullable LocalDate deadline,
                            final Set<String> tags) {
+        return entry(revival, date, type, text, status, owner, deadline, tags, LogEntryOrigin.MANUAL);
+    }
+
+    private LogEntry entry(final SampleRevival revival,
+                           final LocalDate date,
+                           final LogEntryType type,
+                           final String text,
+                           final LogEntryStatus status,
+                           final @Nullable Long owner,
+                           final @Nullable LocalDate deadline,
+                           final Set<String> tags,
+                           final LogEntryOrigin origin) {
         final LogEntry entry = new LogEntry();
 
         entry.setRevivalId(revival.id());
@@ -412,7 +616,7 @@ public class SampleActivityImporter {
         entry.setStatus(status);
         entry.setOwner(owner == null ? Owner.none() : Owner.member(owner));
         entry.setDeadline(deadline);
-        entry.setOrigin(LogEntryOrigin.MANUAL);
+        entry.setOrigin(origin);
         entry.setTags(new LinkedHashSet<>(tags));
         return logEntryRepository.saveAndFlush(entry);
     }
@@ -489,6 +693,133 @@ public class SampleActivityImporter {
         meeting.setMinutes(new Minutes(decisions, todos, questions, closed, meeting.getAgendaPoints(), List.copyOf(meeting.getAttendeeIds()),
                 meeting.getOthersPresent(), meeting.getRecorderPersonId()));
         meetingRepository.save(meeting);
+    }
+
+    /**
+     * The minutes sent to the attendees in Swedish, one address bouncing.
+     */
+    private void emailMinutes(final Meeting meeting) {
+        final MinutesEmail email = new MinutesEmail();
+        final List<Long> attendees = List.copyOf(meeting.getAttendeeIds());
+
+        email.setMeetingId(meeting.getId());
+        email.setLanguage("sv");
+        email.setSentBy(Objects.requireNonNull(meeting.getClosedBy()));
+        email.setSentAt(Objects.requireNonNull(meeting.getClosedAt()).plus(Duration.ofMinutes(15)));
+        for (int index = 0; index < attendees.size(); index++) {
+            email.getRecipients().add(new MinutesEmailRecipient(attendees.get(index),
+                    index == attendees.size() - 1 && index > 0 ? MinutesEmailRecipientStatus.FAILED : MinutesEmailRecipientStatus.SENT));
+        }
+        minutesEmailRepository.save(email);
+    }
+
+    /**
+     * The steering group's old log, imported from a workbook: two rows and a warning about a third.
+     */
+    private void importLog(final SampleRevival revival) {
+        final LocalDate date = today().minusDays(60);
+        final LogImport logImport = new LogImport();
+
+        logImport.setRevivalId(revival.id());
+        logImport.setFileName("Beslutslogg från kickoffen.xlsx");
+        logImport.setLayout(LogImportLayout.ALI_BABA);
+        logImport.setRowCount(2);
+        logImport.setWarnings(new ArrayList<>(List.of(new LogImportWarning("UNKNOWN_STATUS", 4, "Pågår?"))));
+        logImport.setImportedBy(revival.directeur());
+        logImport.setImportedAt(Instant.now().minus(Duration.ofDays(55)));
+        logImportRepository.saveAndFlush(logImport);
+        entry(revival, date, LogEntryType.DECISION, "Vi söker FGV:s lån för uppsättningen.", LogEntryStatus.DONE, null, null, Set.of("ekonomi"),
+                LogEntryOrigin.IMPORT);
+        entry(revival, date, LogEntryType.TODO, "Fråga originalförfattarna om tillstånd.", LogEntryStatus.DONE, null, null, Set.of(),
+                LogEntryOrigin.IMPORT);
+    }
+
+    /**
+     * The directeur's calendar link, and one they revoked before it. The hashes are random, so no link opens them.
+     */
+    private void createCalendarFeeds(final SampleRevival revival) {
+        for (final boolean revoked : List.of(true, false)) {
+            final CalendarFeed feed = new CalendarFeed();
+            final byte[] token = new byte[32];
+
+            rnd.nextBytes(token);
+            feed.setRevivalId(revival.id());
+            feed.setPersonId(revival.directeur());
+            feed.setTokenHash(HexFormat.of().formatHex(token));
+            feed.setCreatedAt(Instant.now().minus(Duration.ofDays(revoked ? 40 : 20)));
+            feed.setRevokedAt(revoked ? Instant.now().minus(Duration.ofDays(20)) : null);
+            calendarFeedRepository.saveAndFlush(feed);
+        }
+    }
+
+    // --- Closing ------------------------------------------------------------------------------------------------------
+
+    /**
+     * The surplus decision, the FGV membership for the year of the premiere, and a sync to Spexregister: failed while
+     * the revival settles, so it can be resumed for real, and done once it is archived. Every sample participant is a
+     * pending person, so only the revival itself is written.
+     */
+    private void settle(final SampleRevival revival, final LocalDate premiere) {
+        final Revival current = revivalRepository.findById(revival.id()).orElseThrow();
+        final boolean archived = revival.status() == RevivalStatus.ARCHIVED;
+        final Instant started = premiere.plusDays(40).atTime(20, 0).atZone(zone).toInstant();
+        final SyncRun run = new SyncRun();
+        final SyncStep step = new SyncStep();
+        final byte[] hash = new byte[32];
+
+        entry(revival, premiere.plusDays(35), LogEntryType.DECISION, "Överskottet går till FGV:s fond för kommande uppsättningar.", LogEntryStatus.DONE,
+                null, null, Set.of("överskott"));
+        current.setMembershipYear(premiere.getYear());
+        revivalRepository.save(current);
+
+        rnd.nextBytes(hash);
+        run.setRevivalId(revival.id());
+        run.setStartedBy(revival.directeur());
+        run.setStartedAt(started);
+        run.setFinishedAt(started.plus(Duration.ofSeconds(archived ? 12 : 31)));
+        run.setStatus(archived ? SyncRunStatus.DONE : SyncRunStatus.FAILED);
+        run.setPreviewHash(HexFormat.of().formatHex(hash));
+
+        final SyncRun saved = syncRunRepository.saveAndFlush(run);
+
+        step.setRunId(saved.getId());
+        step.setOperation(SyncOperation.REVIVAL);
+        step.setStatus(archived ? SyncStepStatus.EXISTED : SyncStepStatus.FAILED);
+        step.setErrorCode(archived ? null : SpexregisterClient.SpexregisterCallException.UNAVAILABLE);
+        step.setUpdatedAt(Objects.requireNonNull(saved.getFinishedAt()));
+        syncStepRepository.saveAndFlush(step);
+    }
+
+    // --- Chalmersspexet's dates ---------------------------------------------------------------------------------------
+
+    /**
+     * Chalmersspexet's shows in February this year and next, and a guest performance in the week of the first open
+     * revival's premiere, which the timeline flags. Unless the dates are there already.
+     */
+    private void createSpexCalendar(final List<SampleRevival> revivals) {
+        if (!spexCalendarRepository.findAllByOrderByDateAscIdAsc().isEmpty()) {
+            return;
+        }
+        for (final int year : List.of(today().getYear(), today().getYear() + 1)) {
+            final LocalDate premiere = LocalDate.of(year, 2, 1).with(TemporalAdjusters.firstInMonth(DayOfWeek.THURSDAY));
+
+            spexCalendarDate(premiere, "Chalmersspexet: premiär");
+            spexCalendarDate(premiere.plusDays(1), "Chalmersspexet");
+            spexCalendarDate(premiere.plusDays(2), "Chalmersspexet");
+            spexCalendarDate(premiere.plusDays(9), "Chalmersspexet: sista föreställningen");
+        }
+        revivals.stream()
+                .filter(revival -> revival.status() == RevivalStatus.OPEN && revival.premiereDate() != null)
+                .findFirst()
+                .ifPresent(revival -> spexCalendarDate(Objects.requireNonNull(revival.premiereDate()).plusDays(1), "Chalmersspexet: gästspel"));
+    }
+
+    private void spexCalendarDate(final LocalDate date, final String label) {
+        final SpexCalendarDate spexCalendarDate = new SpexCalendarDate();
+
+        spexCalendarDate.setDate(date);
+        spexCalendarDate.setLabel(label);
+        spexCalendarRepository.saveAndFlush(spexCalendarDate);
     }
 
     // --- Guide suggestions --------------------------------------------------------------------------------------------
