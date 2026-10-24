@@ -1,4 +1,7 @@
 extend type Query {
+    "Whether the caller reads the guide (FR-001–FR-003). Every signed-in caller; the web shows the guide's menu entry from it."
+    guideReadable: Boolean!
+
     "Published versions, newest first. Readers of the guide (FR-001–FR-003)."
     guideVersions: [GuideVersionSummary!]!
 

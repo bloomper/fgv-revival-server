@@ -23,13 +23,11 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.meeting.MeetingRecorder;
 import nu.fgv.revival.server.meeting.MeetingSummaryDto;
 import nu.fgv.revival.server.member.OwnerInputDto;
-import nu.fgv.revival.server.member.RevivalPermissionsDto;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
-import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.time.LocalDate;
@@ -51,14 +49,11 @@ import java.util.stream.Collectors;
 public class LogEntryGraphqlApi {
 
     private final LogEntryService service;
-    private final LogImportService importService;
     private final MeetingRecorder meetingRecorder;
     private final ChecklistTexts checklistTexts;
 
-    public LogEntryGraphqlApi(final LogEntryService service, final LogImportService importService, final MeetingRecorder meetingRecorder,
-                              final ChecklistTexts checklistTexts) {
+    public LogEntryGraphqlApi(final LogEntryService service, final MeetingRecorder meetingRecorder, final ChecklistTexts checklistTexts) {
         this.service = service;
-        this.importService = importService;
         this.meetingRecorder = meetingRecorder;
         this.checklistTexts = checklistTexts;
     }
@@ -93,16 +88,6 @@ public class LogEntryGraphqlApi {
     @QueryMapping
     public List<String> logTags(@Argument final Long revivalId) {
         return service.tags(revivalId);
-    }
-
-    @QueryMapping
-    public @Nullable LogImportDto logImport(@Argument final Long revivalId, final Locale locale) {
-        return importService.find(revivalId, locale).orElse(null);
-    }
-
-    @SchemaMapping(typeName = "RevivalPermissions", field = "canImportLog")
-    public boolean canImportLog(final RevivalPermissionsDto permissions) {
-        return permissions.revivalId() != null && importService.canImport(permissions.revivalId());
     }
 
     @MutationMapping

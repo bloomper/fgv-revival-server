@@ -64,12 +64,12 @@ public class HttpErrorAdvice {
 
     @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class})
     public ResponseEntity<Error> missing(final Exception e, final Locale locale) {
-        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "error.log.import.notExcel", null, locale);
+        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "error.receipt.empty", null, locale);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Error> tooLarge(final MaxUploadSizeExceededException e, final Locale locale) {
-        return error(HttpStatus.CONTENT_TOO_LARGE, "BAD_REQUEST", "error.log.import.tooLarge", null, locale);
+        return error(HttpStatus.CONTENT_TOO_LARGE, "BAD_REQUEST", "error.receipt.tooLarge", null, locale);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

@@ -51,13 +51,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.regex.Pattern;
 
 /**
- * Guide text is CommonMark (FR-010). This turns it into plain text for search, escapes imported text so it reads as in
- * Word, and renders it for the PDF. Images are always dropped and raw HTML is always literal text.
+ * Guide text is CommonMark (FR-010). This turns it into plain text for search and renders it for the PDF and for
+ * emails. Images are always dropped and raw HTML is always literal text.
  *
  * @author Anders Jacobsson
  * @since 0.2
@@ -65,8 +63,6 @@ import java.util.regex.Pattern;
 @Component
 public class GuideMarkdown {
 
-    private static final Pattern INLINE_SPECIAL = Pattern.compile("[\\\\`*_\\[\\]#<>!]");
-    private static final Pattern LINE_START = Pattern.compile("(?m)^(\\s*)([-+>]|\\d+[.)])(?=\\s|$)");
 
     private final Parser parser = Parser.builder().build();
 
@@ -139,24 +135,6 @@ public class GuideMarkdown {
             }
         });
         return text.toString().strip();
-    }
-
-    /**
-     * Escapes text from Word so that CommonMark reads it literally: inline control characters, and line starts that
-     * would become a list, a heading or a quote.
-     */
-    public String escape(final String text) {
-        final String inline = INLINE_SPECIAL.matcher(text).replaceAll(match -> Matcher.quoteReplacement("\\" + match.group()));
-        final Matcher lineStart = LINE_START.matcher(inline);
-
-        return lineStart.replaceAll(match -> {
-            final String marker = match.group(2);
-            final String escaped = Character.isDigit(marker.charAt(0))
-                    ? marker.substring(0, marker.length() - 1) + "\\" + marker.charAt(marker.length() - 1)
-                    : "\\" + marker;
-
-            return Matcher.quoteReplacement(match.group(1) + escaped);
-        });
     }
 
     /**

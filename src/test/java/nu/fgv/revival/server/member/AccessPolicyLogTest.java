@@ -128,11 +128,9 @@ class AccessPolicyLogTest {
                 "PARTICIPANT,    OPEN,       false",
                 "NONE,           ORGANISING, false"
         })
-        void onlyAVisibleDirecteurImportsAndWaivesRequirements(final String role, final RevivalStatus status, final boolean expected) {
-            assertThat(policy.canImportLog(caller(role), revivalIn(status))).isEqualTo(expected);
+        void onlyAVisibleDirecteurWaivesRequirements(final String role, final RevivalStatus status, final boolean expected) {
             assertThat(policy.canWaiveRequirement(caller(role), revivalIn(status))).isEqualTo(expected);
             if (!expected) {
-                assertThatThrownBy(() -> policy.requireImportLog(caller(role), revivalIn(status))).isInstanceOf(AccessDeniedException.class);
                 assertThatThrownBy(() -> policy.requireWaiveRequirement(caller(role), revivalIn(status))).isInstanceOf(AccessDeniedException.class);
             }
         }

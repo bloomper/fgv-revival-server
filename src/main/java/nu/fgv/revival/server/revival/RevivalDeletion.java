@@ -29,7 +29,6 @@ import nu.fgv.revival.server.closing.SyncRun;
 import nu.fgv.revival.server.closing.SyncStep;
 import nu.fgv.revival.server.decisionlog.LogEntry;
 import nu.fgv.revival.server.decisionlog.LogEntryCounter;
-import nu.fgv.revival.server.decisionlog.LogImport;
 import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
 import nu.fgv.revival.server.mailing.Mailing;
@@ -115,7 +114,6 @@ class RevivalDeletion {
         remove(BY_MEETING, MinutesEmail.class, revivalId);
         remove(BY_MEETING, MeetingEntryChange.class, revivalId);
         remove(BY_REVIVAL, LogEntry.class, revivalId);
-        remove(BY_REVIVAL, LogImport.class, revivalId);
         remove(BY_REVIVAL, LogEntryCounter.class, revivalId);
         remove(BY_REVIVAL, ChecklistItem.class, revivalId);
         // A checklist made for an event points at it, so events go after the checklists

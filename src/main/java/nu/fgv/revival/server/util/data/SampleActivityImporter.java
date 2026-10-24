@@ -42,10 +42,6 @@ import nu.fgv.revival.server.decisionlog.LogEntryOrigin;
 import nu.fgv.revival.server.decisionlog.LogEntryRepository;
 import nu.fgv.revival.server.decisionlog.LogEntryStatus;
 import nu.fgv.revival.server.decisionlog.LogEntryType;
-import nu.fgv.revival.server.decisionlog.LogImport;
-import nu.fgv.revival.server.decisionlog.LogImportLayout;
-import nu.fgv.revival.server.decisionlog.LogImportRepository;
-import nu.fgv.revival.server.decisionlog.LogImportWarning;
 import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.event.EventProposals;
 import nu.fgv.revival.server.event.EventRepository;
@@ -158,7 +154,6 @@ public class SampleActivityImporter {
     private final RevivalRepository revivalRepository;
     private final RevivalAnonymization anonymization;
     private final SpexCalendarDateRepository spexCalendarRepository;
-    private final LogImportRepository logImportRepository;
     private final MinutesEmailRepository minutesEmailRepository;
     private final CalendarFeedRepository calendarFeedRepository;
     private final SyncRunRepository syncRunRepository;
@@ -187,7 +182,6 @@ public class SampleActivityImporter {
                                   final RevivalRepository revivalRepository,
                                   final RevivalAnonymization anonymization,
                                   final SpexCalendarDateRepository spexCalendarRepository,
-                                  final LogImportRepository logImportRepository,
                                   final MinutesEmailRepository minutesEmailRepository,
                                   final CalendarFeedRepository calendarFeedRepository,
                                   final SyncRunRepository syncRunRepository,
@@ -213,7 +207,6 @@ public class SampleActivityImporter {
         this.revivalRepository = revivalRepository;
         this.anonymization = anonymization;
         this.spexCalendarRepository = spexCalendarRepository;
-        this.logImportRepository = logImportRepository;
         this.minutesEmailRepository = minutesEmailRepository;
         this.calendarFeedRepository = calendarFeedRepository;
         this.syncRunRepository = syncRunRepository;
@@ -714,20 +707,11 @@ public class SampleActivityImporter {
     }
 
     /**
-     * The steering group's old log, imported from a workbook: two rows and a warning about a third.
+     * Two rows from the steering group's old log, imported while the Excel import still existed.
      */
     private void importLog(final SampleRevival revival) {
         final LocalDate date = today().minusDays(60);
-        final LogImport logImport = new LogImport();
 
-        logImport.setRevivalId(revival.id());
-        logImport.setFileName("Beslutslogg från kickoffen.xlsx");
-        logImport.setLayout(LogImportLayout.ALI_BABA);
-        logImport.setRowCount(2);
-        logImport.setWarnings(new ArrayList<>(List.of(new LogImportWarning("UNKNOWN_STATUS", 4, "Pågår?"))));
-        logImport.setImportedBy(revival.directeur());
-        logImport.setImportedAt(Instant.now().minus(Duration.ofDays(55)));
-        logImportRepository.saveAndFlush(logImport);
         entry(revival, date, LogEntryType.DECISION, "Vi söker FGV:s lån för uppsättningen.", LogEntryStatus.DONE, null, null, Set.of("ekonomi"),
                 LogEntryOrigin.IMPORT);
         entry(revival, date, LogEntryType.TODO, "Fråga originalförfattarna om tillstånd.", LogEntryStatus.DONE, null, null, Set.of(),

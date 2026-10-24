@@ -331,14 +331,6 @@ public class AccessPolicy {
     }
 
     /**
-     * Importing an Excel log: a directeur who can see the revival, not archived (FR-004). Whether the log is still empty
-     * is checked by the import.
-     */
-    public boolean canImportLog(final Caller caller, final Revival revival) {
-        return revival.getId() != null && isVisibleDirecteur(caller, revival) && !isArchived(revival);
-    }
-
-    /**
      * Marking a guide requirement not applicable: a directeur only (FR-025).
      */
     public boolean canWaiveRequirement(final Caller caller, final Revival revival) {
@@ -748,10 +740,6 @@ public class AccessPolicy {
 
     public void requireWriteRevivalWork(final Caller caller, final Revival revival) {
         require(canWriteRevivalWork(caller, revival));
-    }
-
-    public void requireImportLog(final Caller caller, final Revival revival) {
-        require(canImportLog(caller, revival));
     }
 
     public void requireWaiveRequirement(final Caller caller, final Revival revival) {

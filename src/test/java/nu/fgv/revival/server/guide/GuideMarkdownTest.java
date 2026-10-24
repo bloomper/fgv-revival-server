@@ -17,8 +17,6 @@
 package nu.fgv.revival.server.guide;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,28 +50,6 @@ class GuideMarkdownTest {
     @Test
     void plainTextDropsImages() {
         assertThat(markdown.plainText("Före ![tidplan](https://example.org/x.png) efter")).isEqualTo("Före  efter");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"*", "_", "[", "]", "#", "`", "\\", "<"})
-    void escapeMakesControlCharactersLiteral(final String character) {
-        final String text = "a " + character + " b";
-
-        assertThat(markdown.plainText(markdown.escape(text))).isEqualTo(text);
-    }
-
-    @Test
-    void escapeProtectsLineStartsThatWouldBecomeListsOrHeadings() {
-        assertThat(markdown.plainText(markdown.escape("- inte en lista"))).isEqualTo("- inte en lista");
-        assertThat(markdown.plainText(markdown.escape("+ inte heller"))).isEqualTo("+ inte heller");
-        assertThat(markdown.plainText(markdown.escape("1. inte numrerad"))).isEqualTo("1. inte numrerad");
-        assertThat(markdown.plainText(markdown.escape("2026) inte numrerad"))).isEqualTo("2026) inte numrerad");
-        assertThat(markdown.plainText(markdown.escape("> inget citat"))).isEqualTo("> inget citat");
-    }
-
-    @Test
-    void escapeKeepsSwedishAndPunctuation() {
-        assertThat(markdown.escape("Kåren, sittande spex – och FGV.")).isEqualTo("Kåren, sittande spex – och FGV.");
     }
 
     @Test

@@ -47,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoDeleteIntegrationTest extends AbstractIntegrationTest {
 
-    private static final List<String> M3_PREFIXES = List.of("logEntry", "logImport", "meeting", "minutes", "eventChecklist", "checklist", "event",
+    private static final List<String> M3_PREFIXES = List.of("logEntry", "meeting", "minutes", "eventChecklist", "checklist", "event",
             "calendarFeed");
     private static final List<String> M3_PACKAGES = List.of("decisionlog", "meeting", "checklist", "event", "calendar");
     /**

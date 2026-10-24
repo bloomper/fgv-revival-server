@@ -151,34 +151,3 @@ type LogEntryAnswerPayload {
     question: LogEntry!
     decision: LogEntry!
 }
-
-extend type Query {
-    "The import into this revival, if one was made (FR-042). Readers of the revival."
-    logImport(revivalId: ID!): LogImport
-}
-
-enum LogImportLayout {
-    ALI_BABA
-    NOBEL
-}
-
-type LogImport {
-    fileName: String!
-    layout: LogImportLayout!
-    rowCount: Int!
-    warnings: [LogImportWarning!]!
-    importedBy: PersonRef!
-    importedAt: Instant!
-}
-
-"Codes in specs/004-m3-log/contracts/import.md."
-type LogImportWarning {
-    code: String!
-    sheetRow: Int
-    detail: String
-}
-
-extend type RevivalPermissions {
-    "Directeur, visible, not ARCHIVED, and the log has no row entered by a person yet (FR-004, FR-036)."
-    canImportLog: Boolean!
-}

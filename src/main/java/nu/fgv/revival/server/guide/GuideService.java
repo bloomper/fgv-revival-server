@@ -85,6 +85,14 @@ public class GuideService {
     }
 
     /**
+     * Whether the caller reads the guide, so the web shows its menu entry only to them.
+     */
+    @Transactional(readOnly = true)
+    public boolean canRead() {
+        return guideAccess.canRead(callerService.current());
+    }
+
+    /**
      * Published versions, newest first.
      */
     @Transactional(readOnly = true)

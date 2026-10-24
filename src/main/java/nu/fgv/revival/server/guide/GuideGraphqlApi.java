@@ -53,6 +53,11 @@ public class GuideGraphqlApi {
     }
 
     @QueryMapping
+    public boolean guideReadable() {
+        return service.canRead();
+    }
+
+    @QueryMapping
     public List<GuideVersionSummaryDto> guideVersions() {
         return service.findPublished();
     }

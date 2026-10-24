@@ -46,7 +46,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("revival.guideVersion").valueIsNull();
 
         graphQl(SUPER_ADMIN).document(PUBLISH)
-                .variable("input", Map.of("id", draft, "version", guideVersion(draft), "note", "Från Word"))
+                .variable("input", Map.of("id", draft, "version", guideVersion(draft), "note", "Ny inledning"))
                 .execute()
                 .path("guideDraftPublish.status").entity(String.class).isEqualTo("PUBLISHED")
                 .path("guideDraftPublish.label").entity(String.class).isEqualTo("v1")

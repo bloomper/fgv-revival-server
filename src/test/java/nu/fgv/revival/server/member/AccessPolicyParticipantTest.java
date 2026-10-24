@@ -123,7 +123,6 @@ class AccessPolicyParticipantTest {
             // Decision log, meetings, checklists, events as work
             assertThat(policy.canReadRevivalWork(caller, revival)).as(as).isFalse();
             assertThat(policy.canWriteRevivalWork(caller, revival)).as(as).isFalse();
-            assertThat(policy.canImportLog(caller, revival)).as(as).isFalse();
             assertThat(policy.canWaiveRequirement(caller, revival)).as(as).isFalse();
             assertThat(policy.canManageEventTypes(caller)).as(as).isFalse();
             assertThat(policy.canSeeMeetingsInCalendar(caller, revival)).as(as).isFalse();

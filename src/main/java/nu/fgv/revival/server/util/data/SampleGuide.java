@@ -34,7 +34,7 @@ import java.util.UUID;
 
 /**
  * A made-up guide in the shape of the real one, published as two versions where the second adds a tip and tightens
- * a requirement. Keys are derived from fixed names, so they stay the same across imports and versions.
+ * a requirement. Keys are derived from fixed names, so they stay the same across versions.
  *
  * @author Anders Jacobsson
  * @since 0.3

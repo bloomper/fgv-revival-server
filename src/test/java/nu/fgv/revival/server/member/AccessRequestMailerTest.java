@@ -118,7 +118,7 @@ class AccessRequestMailerTest {
         assertThat(sent.getAllValues().getLast()).satisfies(message -> {
             assertThat(message.getTo()).containsExactly("sven@example.org");
             assertThat(message.getSubject()).startsWith("Väntar på åtkomst till Nyuppsättning");
-            assertThat(message.getText()).contains("har lagts till som styrgruppsmedlem i Ali Baba 2028 av Kim");
+            assertThat(message.getText()).contains("har lagts till som direktionsmedlem i Ali Baba 2028 av Kim");
         });
     }
 

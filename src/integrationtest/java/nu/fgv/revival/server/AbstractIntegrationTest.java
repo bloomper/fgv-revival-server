@@ -267,7 +267,7 @@ public abstract class AbstractIntegrationTest {
                 "availability", "receipt_content", "budget_transaction", "budget_line", "budget_scenario", "budget_settings",
                 "reference_figure", "reference_revival", "event_type_budget_line", "spex_calendar_date", "calendar_feed", "minutes_email_recipient",
                 "minutes_email", "meeting_entry_change", "log_entry_tag",
-                "log_entry", "log_import", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
+                "log_entry", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
                 "checklist_item", "checklist", "event", "checklist_template_item", "checklist_template", "guide_suggestion", "referral", "dietary_need",
                 "pending_person", "participant", "participation_settings", "revival_member_capability", "revival_member", "revival_status_change",
                 "revival_guide_version_change", "revival_show", "revival",
@@ -303,7 +303,7 @@ public abstract class AbstractIntegrationTest {
                     position = FIELD(name_sv, 'AW', 'Kickoff', 'Rephelg 1', 'Rephelg 2', 'Rephelg 3', 'Föreställningshelg', 'Kortafton') - 1""").update();
         for (final String table : List.of("revival_member_capability_audit", "revival_member_audit", "revival_status_change_audit",
                 "revival_guide_version_change_audit", "revival_show_audit", "revival_audit",
-                "log_entry_tag_audit", "log_entry_audit", "log_import_audit", "meeting_agenda_point_audit", "meeting_attendee_audit",
+                "log_entry_tag_audit", "log_entry_audit", "meeting_agenda_point_audit", "meeting_attendee_audit",
                 "meeting_audit", "checklist_item_audit", "checklist_audit", "event_audit", "event_type_audit", "checklist_template_item_audit", "checklist_template_audit",
                 "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",
                 "capability_audit", "guide_item_type_audit", "budget_transaction_audit", "budget_line_audit", "budget_scenario_audit",

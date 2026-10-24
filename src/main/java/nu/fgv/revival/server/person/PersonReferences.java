@@ -78,7 +78,6 @@ public class PersonReferences {
             new Reference("minutes_email_recipient", "person_id",
                     "(SELECT m.revival_id FROM minutes_email e JOIN meeting m ON m.id = e.meeting_id WHERE e.id = t.email_id)", true),
             new Reference("log_entry", "owner_person_id", OWN, true),
-            new Reference("log_import", "imported_by", OWN, true),
             new Reference("meeting_entry_change", "changed_by", VIA_MEETING, true),
             new Reference("calendar_feed", "person_id", OWN, true),
             new Reference("participant", "fee_paid_by", OWN, true),
