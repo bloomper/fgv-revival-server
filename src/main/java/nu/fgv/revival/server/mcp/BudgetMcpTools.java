@@ -130,8 +130,10 @@ public class BudgetMcpTools {
             return new ResolvedPayer(null, LogMcpTools.Resolution.NONE);
         }
         return switch (ownerResolver.resolve(revivalId, paidBy, callerService.current())) {
-            case OwnerResolver.Resolution.Member member -> new ResolvedPayer(new OwnerInputDto(member.personId(), null), LogMcpTools.Resolution.MEMBER);
-            case OwnerResolver.Resolution.FreeText name -> new ResolvedPayer(new OwnerInputDto(null, name.name()), LogMcpTools.Resolution.FREE_TEXT);
+            case OwnerResolver.Resolution.Member member ->
+                    new ResolvedPayer(new OwnerInputDto(member.personId(), null), LogMcpTools.Resolution.MEMBER);
+            case OwnerResolver.Resolution.FreeText name ->
+                    new ResolvedPayer(new OwnerInputDto(null, name.name()), LogMcpTools.Resolution.FREE_TEXT);
             case OwnerResolver.Resolution.Ambiguous ambiguous ->
                     throw new BadRequestException("error.owner.ambiguous", paidBy.strip(), String.join(", ", ambiguous.candidates()));
         };
@@ -143,7 +145,8 @@ public class BudgetMcpTools {
     public record Position(String income, String cost, String result) {
     }
 
-    public record Category(String id, ChecklistMcpTools.Text name, BudgetCategoryKind kind, String budgeted, String actual) {
+    public record Category(String id, ChecklistMcpTools.Text name, BudgetCategoryKind kind, String budgeted,
+                           String actual) {
     }
 
     public record Loan(@Nullable String amount, @Nullable LocalDate receivedOn, @Nullable LocalDate repaidOn) {
@@ -152,14 +155,17 @@ public class BudgetMcpTools {
     /**
      * A budget as get_budget_summary returns it: amounts only, no payers.
      */
-    public record BudgetSummary(Position budgeted, Position actual, List<Category> categories, Loan loan, @Nullable Integer participantsPlanned,
+    public record BudgetSummary(Position budgeted, Position actual, List<Category> categories, Loan loan,
+                                @Nullable Integer participantsPlanned,
                                 int unreimbursedCount, String unreimbursed, int missingReceipts) {
     }
 
     /**
      * A transaction as add_transaction returns it, with how the payer's name was read.
      */
-    public record TransactionWritten(Long id, LocalDate date, String amount, ChecklistMcpTools.Text category, BudgetCategoryKind kind,
-                                     String description, @Nullable McpOwner paidBy, LogMcpTools.Resolution paidByResolution) {
+    public record TransactionWritten(Long id, LocalDate date, String amount, ChecklistMcpTools.Text category,
+                                     BudgetCategoryKind kind,
+                                     String description, @Nullable McpOwner paidBy,
+                                     LogMcpTools.Resolution paidByResolution) {
     }
 }

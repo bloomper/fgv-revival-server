@@ -90,16 +90,8 @@ class MailingAudiences {
         this.assignmentRepository = assignmentRepository;
     }
 
-    /**
-     * An audience: its kind and, for a position or an event, which.
-     */
-    record Audience(MailingAudienceKind kind, @Nullable String taskId, @Nullable Long eventId) {
-    }
-
-    /**
-     * One recipient: a participant or a person, by name, with the address found now or null.
-     */
-    record Recipient(@Nullable Long participantId, @Nullable Long personId, String displayName, @Nullable String email) {
+    private static boolean isParticipant(final Participant participant) {
+        return participant.getKind() == ParticipantKind.PARTICIPANT;
     }
 
     /**
@@ -129,28 +121,24 @@ class MailingAudiences {
         return new Addresses(directory.emails(participants, actingPerson), people);
     }
 
-    record Addresses(Map<Long, String> participants, Map<Long, String> people) {
-    }
-
     private List<Participant> participants(final Long revivalId, final Audience audience) {
         final List<Participant> active = participantRepository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId);
 
         return switch (audience.kind()) {
-            case PARTICIPANTS -> active.stream().filter(participant -> isParticipant(participant) && COMING.contains(participant.getResponse())).toList();
-            case CONFIRMED -> active.stream().filter(participant -> isParticipant(participant) && participant.getResponse() == ParticipantResponse.YES)
-                    .toList();
-            case POSITION -> active.stream().filter(participant -> isParticipant(participant) && COMING.contains(participant.getResponse())
-                    && Objects.equals(participant.getPositionTaskId(), audience.taskId())).toList();
+            case PARTICIPANTS ->
+                    active.stream().filter(participant -> isParticipant(participant) && COMING.contains(participant.getResponse())).toList();
+            case CONFIRMED ->
+                    active.stream().filter(participant -> isParticipant(participant) && participant.getResponse() == ParticipantResponse.YES)
+                            .toList();
+            case POSITION ->
+                    active.stream().filter(participant -> isParticipant(participant) && COMING.contains(participant.getResponse())
+                            && Objects.equals(participant.getPositionTaskId(), audience.taskId())).toList();
             case HELPERS -> active.stream().filter(participant -> participant.getKind() == ParticipantKind.HELPER
                     && participant.getResponse() != ParticipantResponse.NO).toList();
             case NON_RESPONDERS -> nonResponders(active);
             case EVENT_ATTENDEES -> attendees(active, Objects.requireNonNull(audience.eventId()));
             case STEERING_GROUP -> List.of();
         };
-    }
-
-    private static boolean isParticipant(final Participant participant) {
-        return participant.getKind() == ParticipantKind.PARTICIPANT;
     }
 
     /**
@@ -228,5 +216,21 @@ class MailingAudiences {
             }
         }
         return recipients;
+    }
+
+    /**
+     * An audience: its kind and, for a position or an event, which.
+     */
+    record Audience(MailingAudienceKind kind, @Nullable String taskId, @Nullable Long eventId) {
+    }
+
+    /**
+     * One recipient: a participant or a person, by name, with the address found now or null.
+     */
+    record Recipient(@Nullable Long participantId, @Nullable Long personId, String displayName,
+                     @Nullable String email) {
+    }
+
+    record Addresses(Map<Long, String> participants, Map<Long, String> people) {
     }
 }

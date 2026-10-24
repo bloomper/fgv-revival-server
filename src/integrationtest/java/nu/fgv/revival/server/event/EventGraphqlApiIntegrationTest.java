@@ -54,6 +54,19 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private long revival;
 
+    private static Map<String, Object> typeInput(final String sv, final String en, final Integer min, final Integer max, final int days,
+                                                 final boolean pays, final Long templateId) {
+        final Map<String, Object> input = new HashMap<>();
+
+        input.put("name", Map.of("sv", sv, "en", en));
+        input.put("offsetMinDays", min);
+        input.put("offsetMaxDays", max);
+        input.put("days", days);
+        input.put("revivalPays", pays);
+        input.put("checklistTemplateId", templateId);
+        return input;
+    }
+
     @BeforeEach
     void revivalWithAPremiere() {
         revival = organisingRevival();
@@ -83,19 +96,6 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                     Map.of("input", Map.of("templateId", template, "text", Map.of("sv", text), "deadline", Map.of("kind", "DAYS", "amount", -14))));
         }
         return template;
-    }
-
-    private static Map<String, Object> typeInput(final String sv, final String en, final Integer min, final Integer max, final int days,
-                                                 final boolean pays, final Long templateId) {
-        final Map<String, Object> input = new HashMap<>();
-
-        input.put("name", Map.of("sv", sv, "en", en));
-        input.put("offsetMinDays", min);
-        input.put("offsetMaxDays", max);
-        input.put("days", days);
-        input.put("revivalPays", pays);
-        input.put("checklistTemplateId", templateId);
-        return input;
     }
 
     private long createEvent(final String user, final Map<String, Object> fields) {

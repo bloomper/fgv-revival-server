@@ -54,6 +54,15 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private long revival;
     private long participant;
 
+    private static Map<String, Object> material(final String title, final String url, final String visibility, final Object... extra) {
+        final Map<String, Object> input = new HashMap<>(Map.of("title", title, "url", url, "category", "SCRIPT", "visibility", visibility));
+
+        for (int index = 0; index < extra.length; index += 2) {
+            input.put((String) extra[index], extra[index + 1]);
+        }
+        return input;
+    }
+
     @BeforeEach
     void openRevivalWithAParticipant() {
         revival = organisingRevival();
@@ -95,15 +104,6 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, "mutation($input: ParticipantUpdateInput!) { participantUpdate(input: $input) { id } }", Map.of("input", input));
     }
 
-    private static Map<String, Object> material(final String title, final String url, final String visibility, final Object... extra) {
-        final Map<String, Object> input = new HashMap<>(Map.of("title", title, "url", url, "category", "SCRIPT", "visibility", visibility));
-
-        for (int index = 0; index < extra.length; index += 2) {
-            input.put((String) extra[index], extra[index + 1]);
-        }
-        return input;
-    }
-
     private Map<String, Object> create(final Map<String, Object> input) {
         final Map<String, Object> withRevival = new HashMap<>(input);
 
@@ -122,11 +122,11 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void theSteeringGroupAddsLinksAndParticipantsSeeWhatIsForThem() {
         final String drive = execute(STEERING_GROUP, CREATE, Map.of("input", create(material("Manus", "https://docs.google.com/document/d/abc",
-                        "PARTICIPANTS", "comment", "Senaste versionen"))))
+                "PARTICIPANTS", "comment", "Senaste versionen"))))
                 .path("materialCreate.service.id").entity(String.class).isEqualTo("GOOGLE_DRIVE")
                 .path("materialCreate.id").entity(String.class).get();
         final String film = execute(DIRECTEUR, CREATE, Map.of("input", create(material("Originalet på film", "https://spexflix.example.org/v/1",
-                        "POSITIONS", "serviceId", "SPEXFLIX", "positionIds", List.of("BAND")))))
+                "POSITIONS", "serviceId", "SPEXFLIX", "positionIds", List.of("BAND")))))
                 .path("materialCreate.service.id").entity(String.class).isEqualTo("SPEXFLIX")
                 .path("materialCreate.positions[0].name").entity(String.class).isEqualTo("Orkester")
                 .path("materialCreate.id").entity(String.class).get();
@@ -179,7 +179,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         // A changed link is recognised again, unless a service is chosen
         execute(STEERING_GROUP, UPDATE, Map.of("id", film, "v", materialVersion(film), "input", material("Originalet på film",
-                        "https://www.youtube.com/watch?v=abc", "PARTICIPANTS")))
+                "https://www.youtube.com/watch?v=abc", "PARTICIPANTS")))
                 .path("materialUpdate.service.id").entity(String.class).isEqualTo("YOUTUBE")
                 .path("materialUpdate.positions").entityList(Object.class).hasSize(0);
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM material_audit").query(Integer.class).single()).isGreaterThanOrEqualTo(6);
@@ -193,7 +193,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         spexregisterDown(false);
         execute(STEERING_GROUP, UPDATE, Map.of("id", id, "v", materialVersion(id), "input", material("Arr, ny", "https://1drv.ms/x", "POSITIONS",
-                        "positionIds", List.of("BAND"))))
+                "positionIds", List.of("BAND"))))
                 .path("materialUpdate.title").entity(String.class).isEqualTo("Arr, ny")
                 .path("materialUpdate.positions[0].id").entity(String.class).isEqualTo("BAND");
         expectError(execute(STEERING_GROUP, UPDATE, Map.of("id", id, "v", materialVersion(id), "input", material("Arr", "https://1drv.ms/x",
@@ -206,14 +206,14 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("materialCreate.id").entity(String.class).get();
         final long directeur = personId(DIRECTEUR);
         final String crown = execute(STEERING_GROUP, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Kungakrona", "kind", "PROPS",
-                        "status", "BUILD", "owner", Map.of("personId", directeur))))
+                "status", "BUILD", "owner", Map.of("personId", directeur))))
                 .path("inventoryItemCreate.quantity").entity(Integer.class).isEqualTo(1)
                 .path("inventoryItemCreate.owner.person.displayName").entity(String.class).isEqualTo("Dana Directeur")
                 .path("inventoryItemCreate.id").entity(String.class).get();
 
         execute(DIRECTEUR, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Manus, utskrivna", "kind", "SCRIPT", "quantity", 30,
-                        "status", "HAVE", "location", "KEMIFORRADET", "locationNote", "Hylla 3", "owner", Map.of("name", "Kim Kostym"),
-                        "materialId", script)))
+                "status", "HAVE", "location", "KEMIFORRADET", "locationNote", "Hylla 3", "owner", Map.of("name", "Kim Kostym"),
+                "materialId", script)))
                 .path("inventoryItemCreate.material.title").entity(String.class).isEqualTo("Manus")
                 .path("inventoryItemCreate.owner.name").entity(String.class).isEqualTo("Kim Kostym");
         expectError(execute(STEERING_GROUP, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Noll", "kind", "WIG", "quantity", 0,
@@ -235,7 +235,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         execute(STEERING_GROUP, "mutation($id: ID!, $v: Int!, $input: InventoryItemInput!) { inventoryItemUpdate(id: $id, version: $v, input: $input) { "
                 + ITEM_FIELDS + " } }", Map.of("id", crown, "v", version, "input", Map.of("name", "Kungakrona", "kind", "PROPS", "status", "HAVE",
-                        "location", "OTHER", "locationNote", "Hos Danne")))
+                "location", "OTHER", "locationNote", "Hos Danne")))
                 .path("inventoryItemUpdate.status").entity(String.class).isEqualTo("HAVE")
                 .path("inventoryItemUpdate.owner").valueIsNull();
         execute(STEERING_GROUP, "mutation($id: ID!, $v: Int!) { inventoryItemRemove(id: $id, version: $v) { removed } }",

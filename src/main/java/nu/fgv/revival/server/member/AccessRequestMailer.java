@@ -75,6 +75,14 @@ public class AccessRequestMailer {
         this.webUrl = webUrl.endsWith("/") ? webUrl.substring(0, webUrl.length() - 1) : webUrl;
     }
 
+    private static void send(final JavaMailSender sender, final SimpleMailMessage message) {
+        try {
+            sender.send(message);
+        } catch (final MailException e) {
+            log.warn("The mail server refused a message about a member waiting for access: {}", e.getClass().getSimpleName());
+        }
+    }
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void memberAwaitingAccess(final MemberAwaitingAccess event) {
         final JavaMailSender sender = mailSender.getIfAvailable();
@@ -188,14 +196,6 @@ public class AccessRequestMailer {
         message.setSubject(text("member.awaitingAccess.mail.subject", locale, who));
         message.setText(String.join("\n", lines));
         return message;
-    }
-
-    private static void send(final JavaMailSender sender, final SimpleMailMessage message) {
-        try {
-            sender.send(message);
-        } catch (final MailException e) {
-            log.warn("The mail server refused a message about a member waiting for access: {}", e.getClass().getSimpleName());
-        }
     }
 
     private String text(final String key, final Locale locale, final Object... arguments) {

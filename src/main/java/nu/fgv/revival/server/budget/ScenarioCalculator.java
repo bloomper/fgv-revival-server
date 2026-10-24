@@ -50,12 +50,6 @@ public final class ScenarioCalculator {
     private ScenarioCalculator() {
     }
 
-    /**
-     * A budget line that is not removed, with its category's kind and role.
-     */
-    public record Line(BudgetCategoryKind kind, @Nullable BudgetCategoryRole role, BigDecimal quantity, BigDecimal amount) {
-    }
-
     public static ScenarioResultDto calculate(final List<Line> lines, final @Nullable Integer participantsPlanned,
                                               final @Nullable BigDecimal participationFee, final ScenarioParameters input) {
         final Tickets show = tickets(lines, BudgetCategoryRole.SHOW_TICKETS);
@@ -92,13 +86,6 @@ public final class ScenarioCalculator {
 
         return new ScenarioResultDto(baseline, used, income, cost, income.subtract(cost),
                 breakEven(cost, income.subtract(showIncome), used.showTicketPrice()), Amounts.round(partyCost.subtract(partyIncome)));
-    }
-
-    /**
-     * The ticket lines of a role: their count rounded to whole tickets and their price per ticket, both null without
-     * lines or quantity.
-     */
-    private record Tickets(@Nullable Integer count, @Nullable BigDecimal price, BigDecimal amount) {
     }
 
     private static Tickets tickets(final List<Line> lines, final BudgetCategoryRole role) {
@@ -140,5 +127,19 @@ public final class ScenarioCalculator {
 
     private static <T> @Nullable T or(final @Nullable T value, final @Nullable T fallback) {
         return value != null ? value : fallback;
+    }
+
+    /**
+     * A budget line that is not removed, with its category's kind and role.
+     */
+    public record Line(BudgetCategoryKind kind, @Nullable BudgetCategoryRole role, BigDecimal quantity,
+                       BigDecimal amount) {
+    }
+
+    /**
+     * The ticket lines of a role: their count rounded to whole tickets and their price per ticket, both null without
+     * lines or quantity.
+     */
+    private record Tickets(@Nullable Integer count, @Nullable BigDecimal price, BigDecimal amount) {
     }
 }

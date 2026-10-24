@@ -97,6 +97,13 @@ public class SyncWorker implements DisposableBean {
         this.executor.setTaskTerminationTimeout(10_000);
     }
 
+    /**
+     * The contract's reasons: SPEXREGISTER_UNAVAILABLE, REFUSED or NOT_FOUND.
+     */
+    static String reason(final SpexregisterClient.SpexregisterCallException e) {
+        return SpexregisterClient.SpexregisterCallException.EXISTS.equals(e.code()) ? SpexregisterClient.SpexregisterCallException.REFUSED : e.code();
+    }
+
     @Override
     public void destroy() {
         executor.close();
@@ -289,13 +296,6 @@ public class SyncWorker implements DisposableBean {
         } finally {
             directory.evict(spexareId);
         }
-    }
-
-    /**
-     * The contract's reasons: SPEXREGISTER_UNAVAILABLE, REFUSED or NOT_FOUND.
-     */
-    static String reason(final SpexregisterClient.SpexregisterCallException e) {
-        return SpexregisterClient.SpexregisterCallException.EXISTS.equals(e.code()) ? SpexregisterClient.SpexregisterCallException.REFUSED : e.code();
     }
 
     private void record(final SyncStep step, final SyncStepStatus status, final @Nullable String remoteId, final @Nullable String errorCode,

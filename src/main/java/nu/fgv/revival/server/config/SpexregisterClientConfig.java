@@ -51,7 +51,7 @@ public class SpexregisterClientConfig {
 
     @Bean
     public OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager(final ClientRegistrationRepository clientRegistrationRepository,
-                                                                              final OAuth2AuthorizedClientService authorizedClientService) {
+                                                                             final OAuth2AuthorizedClientService authorizedClientService) {
         final AuthorizedClientServiceOAuth2AuthorizedClientManager manager =
                 new AuthorizedClientServiceOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientService);
 

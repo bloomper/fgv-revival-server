@@ -55,7 +55,7 @@ import static org.mockito.Mockito.when;
 class EventTypeBudgetLineServiceTest {
 
     private static final long TYPE = 3L;
-
+    private final List<EventTypeBudgetLine> lines = new ArrayList<>();
     @Mock
     private EventTypeBudgetLineRepository repository;
     @Mock
@@ -66,9 +66,12 @@ class EventTypeBudgetLineServiceTest {
     private BudgetCategoryRepository categoryRepository;
     @Mock
     private CallerService callerService;
-
     private EventTypeBudgetLineService service;
-    private final List<EventTypeBudgetLine> lines = new ArrayList<>();
+
+    private static EventTypeBudgetLineService.Definition definition(final BudgetLineQuantity rule, final @Nullable String quantity) {
+        return new EventTypeBudgetLineService.Definition(TYPE, "FOOD", " Mat per deltagare ", " ", rule, quantity == null ? null : new BigDecimal(quantity),
+                new BigDecimal("150.00"));
+    }
 
     @BeforeEach
     void setUp() {
@@ -105,11 +108,6 @@ class EventTypeBudgetLineServiceTest {
             }
             return line;
         });
-    }
-
-    private static EventTypeBudgetLineService.Definition definition(final BudgetLineQuantity rule, final @Nullable String quantity) {
-        return new EventTypeBudgetLineService.Definition(TYPE, "FOOD", " Mat per deltagare ", " ", rule, quantity == null ? null : new BigDecimal(quantity),
-                new BigDecimal("150.00"));
     }
 
     @Test

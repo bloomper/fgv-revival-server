@@ -55,6 +55,14 @@ public class BudgetHttpApi {
         this.transactionService = transactionService;
     }
 
+    private static byte[] bytes(final MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (final IOException e) {
+            throw new BadRequestException("error.receipt.empty");
+        }
+    }
+
     /**
      * The budget as a workbook, in {@code lang} (sv or en) or the request's language.
      */
@@ -98,13 +106,5 @@ public class BudgetHttpApi {
     public ResponseEntity<Void> removeReceipt(@PathVariable final Long id) {
         transactionService.removeReceipt(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private static byte[] bytes(final MultipartFile file) {
-        try {
-            return file.getBytes();
-        } catch (final IOException e) {
-            throw new BadRequestException("error.receipt.empty");
-        }
     }
 }

@@ -44,13 +44,6 @@ public class LinkServiceGraphqlApi {
         this.catalog = catalog;
     }
 
-    public record LinkServiceInput(LocalizedTextInput name, @Nullable List<String> hosts, @Nullable String homeUrl) {
-
-        CatalogService.Names names() {
-            return new CatalogService.Names(name.sv() == null ? "" : name.sv(), name.en());
-        }
-    }
-
     @QueryMapping
     public List<LinkServiceDto> linkServices(@Argument final @Nullable Boolean includeRetired) {
         return catalog.list(Boolean.TRUE.equals(includeRetired)).stream().map(LinkServiceDto::of).toList();
@@ -91,5 +84,12 @@ public class LinkServiceGraphqlApi {
         final Map<String, Boolean> used = catalog.inUse(services.stream().map(LinkServiceDto::id).toList());
 
         return services.stream().distinct().collect(Collectors.toMap(Function.identity(), service -> used.get(service.id())));
+    }
+
+    public record LinkServiceInput(LocalizedTextInput name, @Nullable List<String> hosts, @Nullable String homeUrl) {
+
+        CatalogService.Names names() {
+            return new CatalogService.Names(name.sv() == null ? "" : name.sv(), name.en());
+        }
     }
 }

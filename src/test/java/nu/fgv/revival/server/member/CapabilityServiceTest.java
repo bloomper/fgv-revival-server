@@ -49,13 +49,22 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CapabilityServiceTest {
 
+    private final List<Capability> capabilities = new ArrayList<>();
     @Mock
     private CapabilityRepository repository;
     @Mock
     private CallerService callerService;
-
     private CapabilityService service;
-    private final List<Capability> capabilities = new ArrayList<>();
+
+    private static Capability capability(final String id, final String name, final int position) {
+        final Capability capability = new Capability();
+
+        capability.setId(id);
+        capability.setNameSv(name);
+        capability.setPosition(position);
+        capability.setVersion(0L);
+        return capability;
+    }
 
     @BeforeEach
     void setUp() {
@@ -74,16 +83,6 @@ class CapabilityServiceTest {
             return found;
         });
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    }
-
-    private static Capability capability(final String id, final String name, final int position) {
-        final Capability capability = new Capability();
-
-        capability.setId(id);
-        capability.setNameSv(name);
-        capability.setPosition(position);
-        capability.setVersion(0L);
-        return capability;
     }
 
     @Test

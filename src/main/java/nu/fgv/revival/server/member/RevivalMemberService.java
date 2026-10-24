@@ -91,6 +91,31 @@ public class RevivalMemberService {
         this.events = events;
     }
 
+    private static void requireAssignable(final RevivalRole role) {
+        if (role != RevivalRole.DIRECTEUR && role != RevivalRole.STEERING_GROUP) {
+            throw new BadRequestException("error.member.roleNotAssignable", role);
+        }
+    }
+
+    private static RevivalMemberDto toDto(final RevivalMember member, final Person person, final boolean showEmail) {
+        final String email = !showEmail ? null : person != null ? person.getEmail() : member.getPendingEmail();
+
+        return REVIVAL_MEMBER_MAPPER.toDto(member, person != null ? person.getDisplayName() : null, email);
+    }
+
+    private static @Nullable String name(final @Nullable String name) {
+        if (!hasText(name)) {
+            return null;
+        }
+
+        final String trimmed = name.trim();
+
+        if (trimmed.length() > NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.member.name.tooLong", NAME_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
     private Revival visibleRevival(final Caller caller, final Long revivalId) {
         return accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
     }
@@ -99,12 +124,6 @@ public class RevivalMemberService {
         return repository.findById(id)
                 .filter(member -> !member.isRemoved())
                 .orElseThrow(() -> new ResourceNotFoundException(RevivalMember.class, id));
-    }
-
-    private static void requireAssignable(final RevivalRole role) {
-        if (role != RevivalRole.DIRECTEUR && role != RevivalRole.STEERING_GROUP) {
-            throw new BadRequestException("error.member.roleNotAssignable", role);
-        }
     }
 
     /**
@@ -133,12 +152,6 @@ public class RevivalMemberService {
         return members.stream()
                 .map(member -> toDto(member, member.getPersonId() == null ? null : people.get(member.getPersonId()), showEmails))
                 .toList();
-    }
-
-    private static RevivalMemberDto toDto(final RevivalMember member, final Person person, final boolean showEmail) {
-        final String email = !showEmail ? null : person != null ? person.getEmail() : member.getPendingEmail();
-
-        return REVIVAL_MEMBER_MAPPER.toDto(member, person != null ? person.getDisplayName() : null, email);
     }
 
     /**
@@ -198,13 +211,6 @@ public class RevivalMemberService {
             events.publishEvent(assignment.awaitingAccess().event(revival.getId(), caller.person().getDisplayName()));
         }
         return toDto(assignment.member(), assignment.person(), accessPolicy.canSeeMemberEmails(caller, revival));
-    }
-
-    /**
-     * A role given by email address: the member, the person who holds it when one has logged in with that verified
-     * address, and who has to be granted access when the address's Keycloak user lacks it.
-     */
-    public record Assignment(RevivalMember member, @Nullable Person person, MembersAwaitingAccess.@Nullable Waiting awaitingAccess) {
     }
 
     /**
@@ -307,19 +313,6 @@ public class RevivalMemberService {
         }
     }
 
-    private static @Nullable String name(final @Nullable String name) {
-        if (!hasText(name)) {
-            return null;
-        }
-
-        final String trimmed = name.trim();
-
-        if (trimmed.length() > NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.member.name.tooLong", NAME_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
     @Transactional
     public RevivalMemberDto setCapabilities(final RevivalMemberCapabilitiesDto dto) {
         final Caller caller = callerService.current();
@@ -361,5 +354,13 @@ public class RevivalMemberService {
         member.setRemovedBy(caller.person().getId());
         member.setPendingEmail(null);
         repository.saveAndFlush(member);
+    }
+
+    /**
+     * A role given by email address: the member, the person who holds it when one has logged in with that verified
+     * address, and who has to be granted access when the address's Keycloak user lacks it.
+     */
+    public record Assignment(RevivalMember member, @Nullable Person person,
+                             MembersAwaitingAccess.@Nullable Waiting awaitingAccess) {
     }
 }

@@ -70,7 +70,7 @@ import static org.mockito.Mockito.when;
 class MaterialServiceTest {
 
     private static final long REVIVAL_ID = TestCallers.REVIVAL_ID;
-
+    private final List<Material> materials = new ArrayList<>();
     @Mock
     private MaterialRepository repository;
     @Mock
@@ -83,10 +83,20 @@ class MaterialServiceTest {
     private ParticipantAccess participantAccess;
     @Mock
     private CallerService callerService;
-
     private MaterialService service;
-    private final List<Material> materials = new ArrayList<>();
     private Revival revival;
+
+    private static Caller participantCaller(final RevivalRole role) {
+        final Person person = new Person();
+
+        person.setId(20L);
+        return new Caller(person, Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(role, Set.of())));
+    }
+
+    private static MaterialService.Input input(final String url, final @Nullable String serviceId, final MaterialVisibility visibility,
+                                               final @Nullable List<String> positions) {
+        return new MaterialService.Input(REVIVAL_ID, " Manus ", url, serviceId, MaterialCategory.SCRIPT, visibility, positions, "  ");
+    }
 
     @BeforeEach
     void setUp() {
@@ -123,13 +133,6 @@ class MaterialServiceTest {
         return material;
     }
 
-    private static Caller participantCaller(final RevivalRole role) {
-        final Person person = new Person();
-
-        person.setId(20L);
-        return new Caller(person, Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(role, Set.of())));
-    }
-
     private void participant(final RevivalRole role, final ParticipantKind kind, final @Nullable String position) {
         final Caller caller = participantCaller(role);
         final Participant participant = new Participant();
@@ -139,11 +142,6 @@ class MaterialServiceTest {
         participant.setPositionTaskId(position);
         when(callerService.current()).thenReturn(caller);
         lenient().when(participantAccess.own(caller, REVIVAL_ID)).thenReturn(new ParticipantAccess.Own(revival, new RevivalMember(), participant));
-    }
-
-    private static MaterialService.Input input(final String url, final @Nullable String serviceId, final MaterialVisibility visibility,
-                                               final @Nullable List<String> positions) {
-        return new MaterialService.Input(REVIVAL_ID, " Manus ", url, serviceId, MaterialCategory.SCRIPT, visibility, positions, "  ");
     }
 
     @Test

@@ -58,55 +58,6 @@ class RevivalGuideSyncTest {
     private final LogEntryService logEntries = mock(LogEntryService.class);
     private ChecklistService service;
 
-    @SuppressWarnings("unchecked")
-    private <T> T repository(final Class<T> type, final Object implementation) {
-        return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, (proxy, method, arguments) ->
-                implementation.getClass().getMethod(method.getName(), method.getParameterTypes()).invoke(implementation, arguments));
-    }
-
-    /**
-     * The repository methods the sync uses, over the lists above.
-     */
-    public final class Store {
-
-        public Checklist save(final Checklist checklist) {
-            if (checklist.getId() == null) {
-                checklist.setId(ids.incrementAndGet());
-                checklists.add(checklist);
-            }
-            return checklist;
-        }
-
-        public List<Checklist> findByRevivalIdAndKind(final Long revivalId, final ChecklistKind kind) {
-            return checklists.stream().filter(checklist -> checklist.getKind() == kind).toList();
-        }
-
-        public void delete(final Checklist checklist) {
-            checklists.remove(checklist);
-        }
-
-        public void deleteAll(final Iterable<ChecklistItem> deleted) {
-            deleted.forEach(items::remove);
-        }
-
-        public ChecklistItem save(final ChecklistItem item) {
-            if (item.getId() == null) {
-                item.setId(ids.incrementAndGet());
-                items.add(item);
-            }
-            return item;
-        }
-
-        public List<ChecklistItem> findByRevivalIdAndRequiredTrue(final Long revivalId) {
-            return items.stream().filter(ChecklistItem::isRequired).toList();
-        }
-
-        public List<ChecklistItem> findByChecklistIdOrderByPositionAscIdAsc(final Long checklistId) {
-            return items.stream().filter(item -> item.getChecklistId().equals(checklistId))
-                    .sorted(Comparator.comparingInt(ChecklistItem::getPosition).thenComparing(ChecklistItem::getId)).toList();
-        }
-    }
-
     private static GuideVersionView.Item requirement(final String key, final String chapter) {
         return new GuideVersionView.Item(1L, key, chapter, null, "REQUIREMENT", GuideItemKind.REQUIREMENT, GuideVersionView.Text.plain("Krav " + key, null), 0L);
     }
@@ -121,6 +72,12 @@ class RevivalGuideSyncTest {
         return new GuideVersionView(1L, GuideVersionStatus.PUBLISHED, label, null, null, null, null, 0L, GuideVersionView.Text.plain("", null),
                 chapters.stream().map(key -> new GuideVersionView.Chapter(1L, key, GuideVersionView.Text.plain(key, null),
                         byChapter.getOrDefault(key, List.of()), List.of(), 0L)).toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T repository(final Class<T> type, final Object implementation) {
+        return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, (proxy, method, arguments) ->
+                implementation.getClass().getMethod(method.getName(), method.getParameterTypes()).invoke(implementation, arguments));
     }
 
     @BeforeEach
@@ -272,5 +229,48 @@ class RevivalGuideSyncTest {
 
         assertThat(items.stream().map(item -> item.getId() + ":" + item.getChecklistId() + ":" + item.getPosition() + ":" + item.getState()).toList())
                 .isEqualTo(before);
+    }
+
+    /**
+     * The repository methods the sync uses, over the lists above.
+     */
+    public final class Store {
+
+        public Checklist save(final Checklist checklist) {
+            if (checklist.getId() == null) {
+                checklist.setId(ids.incrementAndGet());
+                checklists.add(checklist);
+            }
+            return checklist;
+        }
+
+        public List<Checklist> findByRevivalIdAndKind(final Long revivalId, final ChecklistKind kind) {
+            return checklists.stream().filter(checklist -> checklist.getKind() == kind).toList();
+        }
+
+        public void delete(final Checklist checklist) {
+            checklists.remove(checklist);
+        }
+
+        public void deleteAll(final Iterable<ChecklistItem> deleted) {
+            deleted.forEach(items::remove);
+        }
+
+        public ChecklistItem save(final ChecklistItem item) {
+            if (item.getId() == null) {
+                item.setId(ids.incrementAndGet());
+                items.add(item);
+            }
+            return item;
+        }
+
+        public List<ChecklistItem> findByRevivalIdAndRequiredTrue(final Long revivalId) {
+            return items.stream().filter(ChecklistItem::isRequired).toList();
+        }
+
+        public List<ChecklistItem> findByChecklistIdOrderByPositionAscIdAsc(final Long checklistId) {
+            return items.stream().filter(item -> item.getChecklistId().equals(checklistId))
+                    .sorted(Comparator.comparingInt(ChecklistItem::getPosition).thenComparing(ChecklistItem::getId)).toList();
+        }
     }
 }

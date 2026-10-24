@@ -51,30 +51,6 @@ public class ChecklistTemplateGraphqlApi {
         this.service = service;
     }
 
-    public record RelativeDeadlineInput(RelativeDeadlineKind kind, @Nullable Integer amount, @Nullable DayOfWeek weekday) {
-
-        RelativeDeadline toDeadline() {
-            return RelativeDeadline.of(kind, amount, weekday);
-        }
-    }
-
-    public record ChecklistTemplateCreateInput(ChecklistKind kind, @Nullable String chapterKey, @Nullable LocalizedTextInput name) {
-    }
-
-    public record ChecklistTemplateUpdateInput(Long id, Long version, @Nullable LocalizedTextInput name) {
-    }
-
-    public record ChecklistTemplateItemCreateInput(Long templateId, @Nullable Integer position, LocalizedTextInput text,
-                                                   @Nullable String guideItemKey, @Nullable String defaultCapability,
-                                                   @Nullable RelativeDeadlineInput deadline) {
-    }
-
-    public record ChecklistTemplateItemUpdateInput(Long id, Long version, @Nullable LocalizedTextInput text, @Nullable String guideItemKey,
-                                                   @Nullable Boolean clearGuideItem, @Nullable String defaultCapability,
-                                                   @Nullable Boolean clearDefaultCapability, @Nullable RelativeDeadlineInput deadline,
-                                                   @Nullable Boolean clearDeadline) {
-    }
-
     private static ChecklistTemplateService.@Nullable Texts texts(final @Nullable LocalizedTextInput input) {
         return input == null ? null : new ChecklistTemplateService.Texts(input.sv() == null ? "" : input.sv(), input.en());
     }
@@ -156,5 +132,33 @@ public class ChecklistTemplateGraphqlApi {
     @BatchMapping(typeName = "ChecklistTemplateItem", field = "guideItem")
     public Map<ChecklistTemplateItemDto, GuideVersionView.Item> guideItem(final List<ChecklistTemplateItemDto> items) {
         return service.guideItems(items);
+    }
+
+    public record RelativeDeadlineInput(RelativeDeadlineKind kind, @Nullable Integer amount,
+                                        @Nullable DayOfWeek weekday) {
+
+        RelativeDeadline toDeadline() {
+            return RelativeDeadline.of(kind, amount, weekday);
+        }
+    }
+
+    public record ChecklistTemplateCreateInput(ChecklistKind kind, @Nullable String chapterKey,
+                                               @Nullable LocalizedTextInput name) {
+    }
+
+    public record ChecklistTemplateUpdateInput(Long id, Long version, @Nullable LocalizedTextInput name) {
+    }
+
+    public record ChecklistTemplateItemCreateInput(Long templateId, @Nullable Integer position, LocalizedTextInput text,
+                                                   @Nullable String guideItemKey, @Nullable String defaultCapability,
+                                                   @Nullable RelativeDeadlineInput deadline) {
+    }
+
+    public record ChecklistTemplateItemUpdateInput(Long id, Long version, @Nullable LocalizedTextInput text,
+                                                   @Nullable String guideItemKey,
+                                                   @Nullable Boolean clearGuideItem, @Nullable String defaultCapability,
+                                                   @Nullable Boolean clearDefaultCapability,
+                                                   @Nullable RelativeDeadlineInput deadline,
+                                                   @Nullable Boolean clearDeadline) {
     }
 }

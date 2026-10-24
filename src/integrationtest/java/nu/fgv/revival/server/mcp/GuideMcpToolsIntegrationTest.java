@@ -40,6 +40,14 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
     private long version;
     private long revival;
 
+    private static @org.jspecify.annotations.Nullable String text(final JsonNode node, final String field) {
+        return node.get(field).isNull() ? null : node.get(field).asString();
+    }
+
+    private static boolean refused(final JsonNode response) {
+        return response.has("error") || response.path("result").path("isError").asBoolean(false);
+    }
+
     @BeforeEach
     void publishedGuideAndARevival() {
         version = publishedGuide();
@@ -63,14 +71,6 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
             throw new AssertionError("Tool error: " + response);
         }
         return objectMapper.readTree(result.get("content").get(0).get("text").asString());
-    }
-
-    private static @org.jspecify.annotations.Nullable String text(final JsonNode node, final String field) {
-        return node.get(field).isNull() ? null : node.get(field).asString();
-    }
-
-    private static boolean refused(final JsonNode response) {
-        return response.has("error") || response.path("result").path("isError").asBoolean(false);
     }
 
     @Test

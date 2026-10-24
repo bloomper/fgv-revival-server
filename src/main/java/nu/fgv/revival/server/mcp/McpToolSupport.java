@@ -113,13 +113,6 @@ public class McpToolSupport {
         return new McpToolRefusal("%s: %s".formatted(code, messageSource.getMessage(messageCode, arguments, messageCode, Locale.ENGLISH)), cause);
     }
 
-    static final class McpToolRefusal extends RuntimeException {
-
-        McpToolRefusal(final String message, final Throwable cause) {
-            super(message, cause);
-        }
-    }
-
     /**
      * Records {@link AuditSource#MCP} for anything the tool changes (research R10).
      */
@@ -127,6 +120,13 @@ public class McpToolSupport {
         AuditContext.stamp(AuditContext.currentOrSystem()
                 .withSource(AuditSource.MCP)
                 .withOperation("MCP %s".formatted(tool)));
+    }
+
+    static final class McpToolRefusal extends RuntimeException {
+
+        McpToolRefusal(final String message, final Throwable cause) {
+            super(message, cause);
+        }
     }
 
     public record ListResult<T>(List<T> items) {

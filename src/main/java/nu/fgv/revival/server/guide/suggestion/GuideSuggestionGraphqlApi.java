@@ -47,23 +47,6 @@ public class GuideSuggestionGraphqlApi {
         this.titles = titles;
     }
 
-    public record GuideSuggestionCreateInput(Long revivalId, Long versionId, GuideSuggestionKind kind, @Nullable String itemKey,
-                                             @Nullable String chapterKey, @Nullable String sectionKey, @Nullable String proposedType,
-                                             @Nullable String proposedTextSv, @Nullable String proposedTextEn, @Nullable String reason) {
-    }
-
-    public record LocalizedTextInput(@Nullable String sv, @Nullable String en) {
-    }
-
-    public record GuideSuggestionResolutionInput(@Nullable Boolean keep, @Nullable String type, @Nullable LocalizedTextInput text) {
-    }
-
-    public record GuideSuggestionAcceptInput(Long id, Long version, @Nullable String note, @Nullable GuideSuggestionResolutionInput resolution) {
-    }
-
-    public record GuideSuggestionRejectInput(Long id, Long version, @Nullable String reason) {
-    }
-
     @QueryMapping
     public List<GuideSuggestionDto> guideSuggestions(@Argument final @Nullable List<GuideSuggestionStatus> status, @Argument final @Nullable Long revivalId) {
         return service.findVisible(status, revivalId);
@@ -107,5 +90,27 @@ public class GuideSuggestionGraphqlApi {
     @SchemaMapping(typeName = "GuideSuggestion", field = "decidedBy")
     public @Nullable String decidedBy(final GuideSuggestionDto suggestion, final Locale locale) {
         return suggestion.decidedById() == null ? null : personNames.byIds(List.of(suggestion.decidedById()), locale).get(suggestion.decidedById());
+    }
+
+    public record GuideSuggestionCreateInput(Long revivalId, Long versionId, GuideSuggestionKind kind,
+                                             @Nullable String itemKey,
+                                             @Nullable String chapterKey, @Nullable String sectionKey,
+                                             @Nullable String proposedType,
+                                             @Nullable String proposedTextSv, @Nullable String proposedTextEn,
+                                             @Nullable String reason) {
+    }
+
+    public record LocalizedTextInput(@Nullable String sv, @Nullable String en) {
+    }
+
+    public record GuideSuggestionResolutionInput(@Nullable Boolean keep, @Nullable String type,
+                                                 @Nullable LocalizedTextInput text) {
+    }
+
+    public record GuideSuggestionAcceptInput(Long id, Long version, @Nullable String note,
+                                             @Nullable GuideSuggestionResolutionInput resolution) {
+    }
+
+    public record GuideSuggestionRejectInput(Long id, Long version, @Nullable String reason) {
     }
 }

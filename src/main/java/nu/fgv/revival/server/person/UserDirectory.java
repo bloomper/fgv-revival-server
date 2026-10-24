@@ -76,17 +76,27 @@ public class UserDirectory {
         this.consoleUrl = consoleUrl.endsWith("/") ? consoleUrl.substring(0, consoleUrl.length() - 1) : consoleUrl;
     }
 
-    /**
-     * A user of the realm. {@code hasAccess} means they hold {@code fgv-revival}'s {@code USER}, directly or through a
-     * group or composite role, so they can log in to Nyuppsättning.
-     */
-    public record DirectoryUser(String id, String email, @Nullable String displayName, boolean hasAccess, @Nullable Locale locale) {
+    private static @Nullable String displayName(final @Nullable String firstName, final @Nullable String lastName) {
+        final String name = Stream.of(firstName, lastName).filter(part -> hasText(part)).map(String::trim).collect(Collectors.joining(" "));
+
+        return name.isEmpty() ? null : name;
+    }
+
+    private static @Nullable Locale locale(final UserRepresentation user) {
+        final String locale = user.firstAttribute("locale");
+
+        return hasText(locale) ? Locale.forLanguageTag(locale) : null;
     }
 
     /**
-     * A user the application created, and whether Keycloak sent them the invitation.
+     * Runs an admin API call; unreachable, refused and unexpected answers all mean the directory is unavailable.
      */
-    public record Invitation(DirectoryUser user, boolean emailed) {
+    private static <T> T call(final Supplier<T> action) {
+        try {
+            return action.get();
+        } catch (final ProcessingException | WebApplicationException | IllegalStateException e) {
+            throw new DirectoryUnavailableException(e);
+        }
     }
 
     /**
@@ -195,26 +205,17 @@ public class UserDirectory {
         return keycloak.realm(realm);
     }
 
-    private static @Nullable String displayName(final @Nullable String firstName, final @Nullable String lastName) {
-        final String name = Stream.of(firstName, lastName).filter(part -> hasText(part)).map(String::trim).collect(Collectors.joining(" "));
-
-        return name.isEmpty() ? null : name;
-    }
-
-    private static @Nullable Locale locale(final UserRepresentation user) {
-        final String locale = user.firstAttribute("locale");
-
-        return hasText(locale) ? Locale.forLanguageTag(locale) : null;
+    /**
+     * A user of the realm. {@code hasAccess} means they hold {@code fgv-revival}'s {@code USER}, directly or through a
+     * group or composite role, so they can log in to Nyuppsättning.
+     */
+    public record DirectoryUser(String id, String email, @Nullable String displayName, boolean hasAccess,
+                                @Nullable Locale locale) {
     }
 
     /**
-     * Runs an admin API call; unreachable, refused and unexpected answers all mean the directory is unavailable.
+     * A user the application created, and whether Keycloak sent them the invitation.
      */
-    private static <T> T call(final Supplier<T> action) {
-        try {
-            return action.get();
-        } catch (final ProcessingException | WebApplicationException | IllegalStateException e) {
-            throw new DirectoryUnavailableException(e);
-        }
+    public record Invitation(DirectoryUser user, boolean emailed) {
     }
 }

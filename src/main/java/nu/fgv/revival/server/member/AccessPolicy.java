@@ -61,32 +61,27 @@ public class AccessPolicy {
      * The area of responsibility that lets a steering group member change the budget (product spec 5.10).
      */
     public static final String FINANCE = "FINANCE";
-
+    /**
+     * The area of responsibility that lets a steering group member read participants' dietary needs (product spec 3).
+     */
+    public static final String CATERING = "CATERING";
+    /**
+     * The area of responsibility that lets a steering group member plan shifts and assign people (product spec 5.7).
+     */
+    public static final String STAFFING = "STAFFING";
+    /**
+     * The area of responsibility that lets a steering group member send mailings (product spec 5.8).
+     */
+    public static final String COMMS = "COMMS";
     private static final Set<RevivalStatus> DIRECTEUR_CLOSING = EnumSet.of(CLOSING, SETTLING);
     private static final Set<RevivalStatus> BEFORE_WORK = EnumSet.of(PROPOSED, APPROVED, REJECTED);
     private static final Set<RevivalStatus> SUPER_ADMIN_ANONYMIZE = EnumSet.of(SETTLING, ARCHIVED, REJECTED);
-
     private static final Map<RevivalRole, Set<RevivalStatus>> VISIBLE_STATUSES = Map.of(
             RevivalRole.DIRECTEUR, EnumSet.of(APPROVED, ORGANISING, OPEN, CLOSING, SETTLING),
             RevivalRole.STEERING_GROUP, EnumSet.of(ORGANISING, OPEN, CLOSING),
             RevivalRole.PARTICIPANT, EnumSet.of(OPEN),
             RevivalRole.HELPER, EnumSet.of(OPEN)
     );
-
-    /**
-     * The area of responsibility that lets a steering group member read participants' dietary needs (product spec 3).
-     */
-    public static final String CATERING = "CATERING";
-
-    /**
-     * The area of responsibility that lets a steering group member plan shifts and assign people (product spec 5.7).
-     */
-    public static final String STAFFING = "STAFFING";
-
-    /**
-     * The area of responsibility that lets a steering group member send mailings (product spec 5.8).
-     */
-    public static final String COMMS = "COMMS";
 
     /**
      * The statuses in which a revival role sees its revival (FR-015). Participants and helpers see theirs while it is
@@ -110,6 +105,36 @@ public class AccessPolicy {
 
     private static boolean isArchived(final Revival revival) {
         return revival.getStatus() == ARCHIVED;
+    }
+
+    private static boolean holdsRevivalRole(final Caller caller, final Revival revival) {
+        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
+
+        return assignment != null
+                && (assignment.role() == RevivalRole.DIRECTEUR || assignment.role() == RevivalRole.STEERING_GROUP)
+                && visibleStatuses(assignment.role()).contains(revival.getStatus());
+    }
+
+    private static boolean isVisibleParticipant(final Caller caller, final Revival revival, final RevivalRole role) {
+        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
+
+        return assignment != null && assignment.role() == role && visibleStatuses(role).contains(revival.getStatus());
+    }
+
+    private static boolean holdsCapability(final Caller caller, final Revival revival, final String capability) {
+        if (!holdsRevivalRole(caller, revival)) {
+            return false;
+        }
+
+        final RevivalRoleAssignment assignment = caller.roleIn(revival.getId());
+
+        return assignment != null && (assignment.holdsAll() || assignment.capabilities().contains(capability));
+    }
+
+    private static void require(final boolean permitted) {
+        if (!permitted) {
+            throw new AccessDeniedException("Not permitted");
+        }
     }
 
     public boolean canSee(final Caller caller, final Revival revival) {
@@ -209,14 +234,6 @@ public class AccessPolicy {
         return caller.isSuperAdmin();
     }
 
-    private static boolean holdsRevivalRole(final Caller caller, final Revival revival) {
-        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
-
-        return assignment != null
-                && (assignment.role() == RevivalRole.DIRECTEUR || assignment.role() == RevivalRole.STEERING_GROUP)
-                && visibleStatuses(assignment.role()).contains(revival.getStatus());
-    }
-
     /**
      * Super admins and observers read the guide, and so does anyone who is directeur or steering group of a revival
      * they can see (M2 research R10). {@code callerRevivals} are the caller's revivals as {@link #visibilityPredicate}
@@ -276,7 +293,7 @@ public class AccessPolicy {
      * The published versions the caller may pin a revival to, other than the one it follows (FR-020).
      */
     public List<GuideVersionSummaryDto> guideVersionsAllowed(final Caller caller, final Revival revival,
-                                                            final List<GuideVersionSummaryDto> published) {
+                                                             final List<GuideVersionSummaryDto> published) {
         final Instant current = published.stream()
                 .filter(version -> version.id().equals(revival.getGuideVersionId()))
                 .map(GuideVersionSummaryDto::publishedAt)
@@ -305,12 +322,6 @@ public class AccessPolicy {
         final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
 
         return assignment != null && (assignment.role() == RevivalRole.PARTICIPANT || assignment.role() == RevivalRole.HELPER);
-    }
-
-    private static boolean isVisibleParticipant(final Caller caller, final Revival revival, final RevivalRole role) {
-        final RevivalRoleAssignment assignment = revival.getId() == null ? null : caller.roleIn(revival.getId());
-
-        return assignment != null && assignment.role() == role && visibleStatuses(role).contains(revival.getStatus());
     }
 
     /**
@@ -458,16 +469,6 @@ public class AccessPolicy {
      */
     public boolean canParticipate(final Caller caller, final Revival revival) {
         return isVisibleParticipant(caller, revival, RevivalRole.PARTICIPANT) || isVisibleParticipant(caller, revival, RevivalRole.HELPER);
-    }
-
-    private static boolean holdsCapability(final Caller caller, final Revival revival, final String capability) {
-        if (!holdsRevivalRole(caller, revival)) {
-            return false;
-        }
-
-        final RevivalRoleAssignment assignment = caller.roleIn(revival.getId());
-
-        return assignment != null && (assignment.holdsAll() || assignment.capabilities().contains(capability));
     }
 
     /**
@@ -848,11 +849,5 @@ public class AccessPolicy {
 
     public void requireAnonymize(final Caller caller, final Revival revival) {
         require(canAnonymize(caller, revival));
-    }
-
-    private static void require(final boolean permitted) {
-        if (!permitted) {
-            throw new AccessDeniedException("Not permitted");
-        }
     }
 }

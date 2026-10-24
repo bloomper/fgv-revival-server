@@ -209,13 +209,13 @@ class RevivalMemberServiceTest {
 
         private static final String EMAIL = "ny@example.org";
 
+        private static UserDirectory.DirectoryUser user(final boolean hasAccess) {
+            return new UserDirectory.DirectoryUser("kc-1", EMAIL, "Nora Ny", hasAccess, null);
+        }
+
         @BeforeEach
         void nobodyHasLoggedIn() {
             lenient().when(personRepository.findByEmailAndEmailVerifiedTrue(EMAIL)).thenReturn(List.of());
-        }
-
-        private static UserDirectory.DirectoryUser user(final boolean hasAccess) {
-            return new UserDirectory.DirectoryUser("kc-1", EMAIL, "Nora Ny", hasAccess, null);
         }
 
         @Test

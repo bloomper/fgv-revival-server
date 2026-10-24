@@ -67,19 +67,6 @@ public class ParticipantMailer {
         this.webUrl = webUrl.endsWith("/") ? webUrl.substring(0, webUrl.length() - 1) : webUrl;
     }
 
-    /**
-     * What an invitation says about the revival and who sends it.
-     */
-    public record Invitation(String revivalTitle, String inviterName, boolean reminder) {
-    }
-
-    /**
-     * What a confirmation of a yes says; fee and Swish only when a fee is due, WhatsApp only when set.
-     */
-    public record Confirmation(String revivalTitle, @Nullable BigDecimal fee, @Nullable String swishNumber, @Nullable String swishMessage,
-                               @Nullable String whatsappLink) {
-    }
-
     String link(final Long revivalId) {
         return "%s/revivals/%d/me".formatted(webUrl, revivalId);
     }
@@ -192,5 +179,19 @@ public class ParticipantMailer {
 
     private String text(final String key, final Locale locale, final Object... arguments) {
         return messageSource.getMessage(key, arguments, key, locale);
+    }
+
+    /**
+     * What an invitation says about the revival and who sends it.
+     */
+    public record Invitation(String revivalTitle, String inviterName, boolean reminder) {
+    }
+
+    /**
+     * What a confirmation of a yes says; fee and Swish only when a fee is due, WhatsApp only when set.
+     */
+    public record Confirmation(String revivalTitle, @Nullable BigDecimal fee, @Nullable String swishNumber,
+                               @Nullable String swishMessage,
+                               @Nullable String whatsappLink) {
     }
 }

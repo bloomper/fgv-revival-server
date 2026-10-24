@@ -56,6 +56,12 @@ public class EventMcpTools {
         this.support = support;
     }
 
+    static Event toMcp(final EventDto event, final @Nullable EventTypeDto type, final @Nullable ChecklistSummaryDto checklist) {
+        return new Event(event.id(), type == null ? null : new ChecklistMcpTools.Text(type.name().sv(), type.name().en()), event.title(),
+                event.startDate(), event.endDate(), event.startTime(), event.endTime(), event.location(), event.cancelled(), event.daysFromPremiere(),
+                checklist == null ? null : new Checklist(checklist.id(), checklist.openCount(), checklist.totalCount()));
+    }
+
     @McpTool(name = "list_events",
             description = "List a revival's events in date order: rehearsal weekends, the show weekend and anything else in its timeline, with each event's checklist. Events from, to or across the given dates.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
@@ -81,17 +87,13 @@ public class EventMcpTools {
         });
     }
 
-    static Event toMcp(final EventDto event, final @Nullable EventTypeDto type, final @Nullable ChecklistSummaryDto checklist) {
-        return new Event(event.id(), type == null ? null : new ChecklistMcpTools.Text(type.name().sv(), type.name().en()), event.title(),
-                event.startDate(), event.endDate(), event.startTime(), event.endTime(), event.location(), event.cancelled(), event.daysFromPremiere(),
-                checklist == null ? null : new Checklist(checklist.id(), checklist.openCount(), checklist.totalCount()));
-    }
-
     public record Checklist(Long id, int open, int total) {
     }
 
-    public record Event(Long id, ChecklistMcpTools.@Nullable Text type, String title, LocalDate startDate, LocalDate endDate,
-                        @Nullable String startTime, @Nullable String endTime, @Nullable String location, boolean cancelled,
+    public record Event(Long id, ChecklistMcpTools.@Nullable Text type, String title, LocalDate startDate,
+                        LocalDate endDate,
+                        @Nullable String startTime, @Nullable String endTime, @Nullable String location,
+                        boolean cancelled,
                         @Nullable Integer daysFromPremiere, @Nullable Checklist checklist) {
     }
 

@@ -37,6 +37,10 @@ class BudgetMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
     private long revival;
 
+    private static boolean refused(final JsonNode response) {
+        return response.has("error") || response.path("result").path("isError").asBoolean(false);
+    }
+
     @BeforeEach
     void revivalWithABudget() {
         revival = organisingRevival();
@@ -63,10 +67,6 @@ class BudgetMcpToolsIntegrationTest extends AbstractIntegrationTest {
             throw new AssertionError("Tool error: " + response);
         }
         return objectMapper.readTree(result.get("content").get(0).get("text").asString());
-    }
-
-    private static boolean refused(final JsonNode response) {
-        return response.has("error") || response.path("result").path("isError").asBoolean(false);
     }
 
     @Test

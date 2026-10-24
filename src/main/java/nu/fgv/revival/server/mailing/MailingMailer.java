@@ -73,13 +73,6 @@ public class MailingMailer {
         return mailSender.getIfAvailable() != null;
     }
 
-    /**
-     * A mailing as it goes out: the revival's title and the sender for the page and footer, the sender's address for
-     * replies, and the footer's language.
-     */
-    record Content(String revivalTitle, String senderName, @Nullable String replyTo, String subject, String body, Locale locale) {
-    }
-
     String plainText(final Content content) {
         return content.body().strip() + "\n\n-- \n" + footer(content);
     }
@@ -137,12 +130,6 @@ public class MailingMailer {
     }
 
     /**
-     * One entry of a reminder: what to send and when it is due.
-     */
-    record ReminderLine(String name, String dueDate) {
-    }
-
-    /**
      * Reminds an owner of the plan's mailings that are due or overdue, in Swedish and English, with the link to the
      * revival's mailings. Returns false when the mail server refused it.
      */
@@ -182,5 +169,19 @@ public class MailingMailer {
 
     private String text(final String key, final Locale locale, final Object... arguments) {
         return messageSource.getMessage(key, arguments, key, locale);
+    }
+
+    /**
+     * A mailing as it goes out: the revival's title and the sender for the page and footer, the sender's address for
+     * replies, and the footer's language.
+     */
+    record Content(String revivalTitle, String senderName, @Nullable String replyTo, String subject, String body,
+                   Locale locale) {
+    }
+
+    /**
+     * One entry of a reminder: what to send and when it is due.
+     */
+    record ReminderLine(String name, String dueDate) {
     }
 }

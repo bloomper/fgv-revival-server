@@ -50,14 +50,14 @@ public record EventTypeDto(Long id,
                 type.getVersion() == null ? 0L : type.getVersion());
     }
 
+    private static GuideVersionView.@Nullable Text text(final @Nullable String sv, final @Nullable String en) {
+        return sv == null ? null : GuideVersionView.Text.plain(sv, en);
+    }
+
     /**
      * The name in the language, Swedish when there is no English one.
      */
     public String name(final Locale locale) {
         return "en".equals(locale.getLanguage()) && name.en() != null ? name.en() : name.sv();
-    }
-
-    private static GuideVersionView.@Nullable Text text(final @Nullable String sv, final @Nullable String en) {
-        return sv == null ? null : GuideVersionView.Text.plain(sv, en);
     }
 }

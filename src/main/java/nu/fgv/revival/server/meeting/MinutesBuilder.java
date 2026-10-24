@@ -58,10 +58,6 @@ final class MinutesBuilder {
                 meeting.getRecorderPersonId());
     }
 
-    private interface Rule {
-        boolean test(LogEntry entry, Set<MeetingEntryChangeKind> kinds);
-    }
-
     private static List<Minutes.Row> rows(final Map<Long, Set<MeetingEntryChangeKind>> kinds, final Map<Long, LogEntry> entries, final Rule rule) {
         final Predicate<Long> included = id -> entries.containsKey(id) && rule.test(entries.get(id), kinds.get(id));
 
@@ -72,5 +68,9 @@ final class MinutesBuilder {
                 .map(entry -> new Minutes.Row(entry.getId(), entry.getNumber(), entry.getType(), entry.getText(),
                         entry.getOwner().getPersonId(), entry.getOwner().getName(), entry.getDeadline(), entry.getStatus()))
                 .toList();
+    }
+
+    private interface Rule {
+        boolean test(LogEntry entry, Set<MeetingEntryChangeKind> kinds);
     }
 }

@@ -22,10 +22,10 @@ import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonRepository;
 import nu.fgv.revival.server.util.error.BadRequestException;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.List;

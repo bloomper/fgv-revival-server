@@ -50,12 +50,6 @@ public class CapabilityGraphqlApi {
         this.service = service;
     }
 
-    public record CapabilityCreateInput(LocalizedTextInput name) {
-    }
-
-    public record CapabilityUpdateInput(String id, Long version, LocalizedTextInput name) {
-    }
-
     private static CatalogService.Names names(final LocalizedTextInput input) {
         return new CatalogService.Names(input.sv() == null ? "" : input.sv(), input.en());
     }
@@ -145,5 +139,11 @@ public class CapabilityGraphqlApi {
             }
         });
         return result;
+    }
+
+    public record CapabilityCreateInput(LocalizedTextInput name) {
+    }
+
+    public record CapabilityUpdateInput(String id, Long version, LocalizedTextInput name) {
     }
 }

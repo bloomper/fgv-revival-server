@@ -65,7 +65,8 @@ class TransactionServiceTest {
 
     private static final LocalDate TODAY = LocalDate.of(2027, 11, 1);
     private static final long MEMBER = 20L;
-
+    private final List<BudgetCategory> categories = new ArrayList<>(TestBudgetCategories.seeded());
+    private final List<BudgetTransaction> transactions = new ArrayList<>();
     @Mock
     private BudgetTransactionRepository repository;
     @Mock
@@ -80,11 +81,23 @@ class TransactionServiceTest {
     private RevivalRepository revivalRepository;
     @Mock
     private CallerService callerService;
-
     private TransactionService service;
-    private final List<BudgetCategory> categories = new ArrayList<>(TestBudgetCategories.seeded());
-    private final List<BudgetTransaction> transactions = new ArrayList<>();
     private Revival revival;
+
+    private static Owner owner(final @Nullable OwnerInputDto input) {
+        if (input == null || input.personId() == null && input.name() == null) {
+            return Owner.none();
+        }
+        return input.personId() != null ? Owner.member(input.personId()) : Owner.named(input.name().strip());
+    }
+
+    private static BigDecimal kr(final String amount) {
+        return new BigDecimal(amount).setScale(2);
+    }
+
+    private static TransactionService.TransactionChange change(final Long id, final Long version) {
+        return new TransactionService.TransactionChange(id, version, null, null, null, null, null, false, null, false);
+    }
 
     @BeforeEach
     void setUp() {
@@ -122,23 +135,8 @@ class TransactionServiceTest {
         lenient().when(ownerResolver.change(anyLong(), any(), any())).thenAnswer(invocation -> owner(invocation.getArgument(2)));
     }
 
-    private static Owner owner(final @Nullable OwnerInputDto input) {
-        if (input == null || input.personId() == null && input.name() == null) {
-            return Owner.none();
-        }
-        return input.personId() != null ? Owner.member(input.personId()) : Owner.named(input.name().strip());
-    }
-
-    private static BigDecimal kr(final String amount) {
-        return new BigDecimal(amount).setScale(2);
-    }
-
     private Transaction create(final String category, final @Nullable OwnerInputDto paidBy) {
         return service.create(new TransactionService.NewTransaction(REVIVAL_ID, TODAY, kr("349.50"), category, " Mat till rephelgen ", null, paidBy));
-    }
-
-    private static TransactionService.TransactionChange change(final Long id, final Long version) {
-        return new TransactionService.TransactionChange(id, version, null, null, null, null, null, false, null, false);
     }
 
     @Test

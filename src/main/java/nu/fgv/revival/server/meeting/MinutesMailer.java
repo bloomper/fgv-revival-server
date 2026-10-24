@@ -63,17 +63,27 @@ public class MinutesMailer {
         this.webUrl = webUrl.endsWith("/") ? webUrl.substring(0, webUrl.length() - 1) : webUrl;
     }
 
+    private static void section(final List<String> lines, final String heading, final List<MeetingDto.RowDto> rows, final RowText text) {
+        if (rows.isEmpty()) {
+            return;
+        }
+        lines.add("");
+        lines.add(heading);
+        rows.forEach(row -> lines.add(text.apply(row)));
+    }
+
+    private static @Nullable String owner(final @Nullable OwnerDto owner) {
+        if (owner == null) {
+            return null;
+        }
+        return owner.person() != null ? owner.person().displayName() : owner.name();
+    }
+
     /**
      * Whether a mail server is configured at all.
      */
     public boolean available() {
         return mailSender.getIfAvailable() != null;
-    }
-
-    /**
-     * What the revival and the sender look like in the message.
-     */
-    public record Context(String revivalTitle, String senderName) {
     }
 
     public SimpleMailMessage message(final MeetingDto meeting, final Context context, final Locale locale, final String to) {
@@ -140,31 +150,21 @@ public class MinutesMailer {
         }
     }
 
-    private interface RowText {
-        String apply(MeetingDto.RowDto row);
-    }
-
-    private static void section(final List<String> lines, final String heading, final List<MeetingDto.RowDto> rows, final RowText text) {
-        if (rows.isEmpty()) {
-            return;
-        }
-        lines.add("");
-        lines.add(heading);
-        rows.forEach(row -> lines.add(text.apply(row)));
-    }
-
-    private static @Nullable String owner(final @Nullable OwnerDto owner) {
-        if (owner == null) {
-            return null;
-        }
-        return owner.person() != null ? owner.person().displayName() : owner.name();
-    }
-
     private String status(final LogEntryStatus status, final Locale locale) {
         return text("minutes.status." + status.name(), locale);
     }
 
     private String text(final String key, final Locale locale, final Object... arguments) {
         return messageSource.getMessage(key, arguments, key, locale);
+    }
+
+    private interface RowText {
+        String apply(MeetingDto.RowDto row);
+    }
+
+    /**
+     * What the revival and the sender look like in the message.
+     */
+    public record Context(String revivalTitle, String senderName) {
     }
 }

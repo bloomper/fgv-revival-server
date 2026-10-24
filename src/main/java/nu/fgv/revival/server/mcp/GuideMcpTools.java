@@ -145,8 +145,10 @@ public class GuideMcpTools {
         }
     }
 
-    public record Hit(GuideSearch.HitKind kind, @Nullable String chapterKey, @Nullable Text chapterTitle, @Nullable String sectionKey,
-                      @Nullable Text sectionTitle, @Nullable String itemKey, @Nullable String itemType, String snippet) {
+    public record Hit(GuideSearch.HitKind kind, @Nullable String chapterKey, @Nullable Text chapterTitle,
+                      @Nullable String sectionKey,
+                      @Nullable Text sectionTitle, @Nullable String itemKey, @Nullable String itemType,
+                      String snippet) {
 
         static Hit of(final GuideSearch.Hit hit) {
             return new Hit(hit.kind(), hit.chapterKey(), hit.chapterTitle() == null ? null : Text.of(hit.chapterTitle()), hit.sectionKey(),
@@ -175,7 +177,8 @@ public class GuideMcpTools {
         }
     }
 
-    public record SectionResult(Version version, String chapterKey, Text chapterTitle, List<Item> items, List<Section> sections) {
+    public record SectionResult(Version version, String chapterKey, Text chapterTitle, List<Item> items,
+                                List<Section> sections) {
     }
 
     public record SuggestionResult(Long id, GuideSuggestionStatus status, GuideSuggestionKind kind, Version version) {

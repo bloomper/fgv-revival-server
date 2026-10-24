@@ -98,15 +98,48 @@ public class MeetingService {
         this.clock = clock;
     }
 
-    public record Plan(Long revivalId, LocalDate date, @Nullable String title, @Nullable List<Long> attendeeIds,
-                       @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
+    private static @Nullable String validTitle(final @Nullable String title) {
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = title.strip();
+
+        if (trimmed.length() > Meeting.TITLE_MAX_LENGTH) {
+            throw new BadRequestException("error.meeting.title.tooLong", Meeting.TITLE_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
-    /**
-     * Fields left null are unchanged; lists replace.
-     */
-    public record Change(Long id, Long version, @Nullable LocalDate date, @Nullable String title, @Nullable List<Long> attendeeIds,
-                         @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
+    private static @Nullable String validOthersPresent(final @Nullable String othersPresent) {
+        if (othersPresent == null || othersPresent.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = othersPresent.strip();
+
+        if (trimmed.length() > Meeting.OTHERS_PRESENT_MAX_LENGTH) {
+            throw new BadRequestException("error.meeting.othersPresent.tooLong", Meeting.OTHERS_PRESENT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    private static List<String> validAgendaPoints(final @Nullable List<String> points) {
+        final List<String> valid = new ArrayList<>();
+
+        for (final String point : points == null ? List.<String>of() : points) {
+            final String trimmed = point.strip();
+
+            if (trimmed.isEmpty() || trimmed.length() > Meeting.AGENDA_POINT_MAX_LENGTH) {
+                throw new BadRequestException("error.meeting.agendaPoint", Meeting.AGENDA_POINT_MAX_LENGTH);
+            }
+            valid.add(trimmed);
+        }
+        return valid;
+    }
+
+    private static Owner owner(final Minutes.Row row) {
+        return row.ownerPersonId() != null ? Owner.member(row.ownerPersonId()) : row.ownerName() != null ? Owner.named(row.ownerName()) : Owner.none();
     }
 
     @Transactional(readOnly = true)
@@ -225,6 +258,8 @@ public class MeetingService {
         return toDto(repository.saveAndFlush(meeting), locale);
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     @Transactional
     public MeetingDto cancel(final Long id, final Long version, final Locale locale) {
         final Caller caller = callerService.current();
@@ -245,8 +280,6 @@ public class MeetingService {
     public Meeting readable(final Long id) {
         return readable(callerService.current(), id);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private Revival visible(final Caller caller, final Long revivalId) {
         final Revival revival = accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
@@ -282,32 +315,6 @@ public class MeetingService {
         return meeting;
     }
 
-    private static @Nullable String validTitle(final @Nullable String title) {
-        if (title == null || title.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = title.strip();
-
-        if (trimmed.length() > Meeting.TITLE_MAX_LENGTH) {
-            throw new BadRequestException("error.meeting.title.tooLong", Meeting.TITLE_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    private static @Nullable String validOthersPresent(final @Nullable String othersPresent) {
-        if (othersPresent == null || othersPresent.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = othersPresent.strip();
-
-        if (trimmed.length() > Meeting.OTHERS_PRESENT_MAX_LENGTH) {
-            throw new BadRequestException("error.meeting.othersPresent.tooLong", Meeting.OTHERS_PRESENT_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
     private Set<Long> validAttendees(final Long revivalId, final @Nullable List<Long> attendeeIds) {
         final Set<Long> attendees = new LinkedHashSet<>(attendeeIds == null ? List.of() : attendeeIds);
 
@@ -315,20 +322,6 @@ public class MeetingService {
             throw new BadRequestException("error.meeting.attendee");
         }
         return attendees;
-    }
-
-    private static List<String> validAgendaPoints(final @Nullable List<String> points) {
-        final List<String> valid = new ArrayList<>();
-
-        for (final String point : points == null ? List.<String>of() : points) {
-            final String trimmed = point.strip();
-
-            if (trimmed.isEmpty() || trimmed.length() > Meeting.AGENDA_POINT_MAX_LENGTH) {
-                throw new BadRequestException("error.meeting.agendaPoint", Meeting.AGENDA_POINT_MAX_LENGTH);
-            }
-            valid.add(trimmed);
-        }
-        return valid;
     }
 
     MeetingDto toDto(final Meeting meeting, final Locale locale) {
@@ -370,7 +363,15 @@ public class MeetingService {
                 minutes.othersPresent(), minutes.recorderId() == null ? null : person.apply(minutes.recorderId()));
     }
 
-    private static Owner owner(final Minutes.Row row) {
-        return row.ownerPersonId() != null ? Owner.member(row.ownerPersonId()) : row.ownerName() != null ? Owner.named(row.ownerName()) : Owner.none();
+    public record Plan(Long revivalId, LocalDate date, @Nullable String title, @Nullable List<Long> attendeeIds,
+                       @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
+    }
+
+    /**
+     * Fields left null are unchanged; lists replace.
+     */
+    public record Change(Long id, Long version, @Nullable LocalDate date, @Nullable String title,
+                         @Nullable List<Long> attendeeIds,
+                         @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
     }
 }

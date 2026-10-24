@@ -73,6 +73,10 @@ class AccessRequestMailerTest {
 
     private AccessRequestMailer mailer;
 
+    private static UserDirectory.DirectoryUser admin(final String email, final Locale locale) {
+        return new UserDirectory.DirectoryUser("kc-" + email, email, "Admin", true, locale);
+    }
+
     @BeforeEach
     void setUp() {
         final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -89,10 +93,6 @@ class AccessRequestMailerTest {
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
         lenient().when(titles.ofCached(any(), any())).thenReturn("Ali Baba 2028");
         lenient().when(directory.roleMappingUrl("kc-1")).thenReturn("https://auth.example.org/admin/master/console/#/fgv/users/kc-1/role-mapping");
-    }
-
-    private static UserDirectory.DirectoryUser admin(final String email, final Locale locale) {
-        return new UserDirectory.DirectoryUser("kc-" + email, email, "Admin", true, locale);
     }
 
     @Test

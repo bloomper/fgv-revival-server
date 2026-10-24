@@ -28,7 +28,8 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 0.5
  */
-public record CalendarEntry(String uid, String summary, @Nullable String location, @Nullable String description, When when, Instant stamp) {
+public record CalendarEntry(String uid, String summary, @Nullable String location, @Nullable String description,
+                            When when, Instant stamp) {
 
     static final String UID_DOMAIN = "nyuppsattning.fgv.nu";
 

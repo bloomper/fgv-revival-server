@@ -52,26 +52,6 @@ public class MaterialGraphqlApi {
         this.inventory = inventory;
     }
 
-    public record MaterialInput(@Nullable Long revivalId, @Nullable String title, @Nullable String url, @Nullable String serviceId,
-                                MaterialCategory category, MaterialVisibility visibility, @Nullable List<String> positionIds,
-                                @Nullable String comment) {
-
-        MaterialService.Input toInput() {
-            return new MaterialService.Input(revivalId, title, url, serviceId, category, visibility, positionIds, comment);
-        }
-    }
-
-    public record InventoryItemInput(@Nullable Long revivalId, @Nullable String name, InventoryKind kind, @Nullable Integer quantity,
-                                     InventoryStatus status, @Nullable InventoryLocation location, @Nullable String locationNote,
-                                     @Nullable OwnerInputDto owner, @Nullable String comment, @Nullable Long materialId) {
-
-        InventoryService.Input toInput() {
-            return new InventoryService.Input(revivalId, name, kind, quantity, status, location, locationNote, owner, comment, materialId);
-        }
-    }
-
-    // --- Materials --------------------------------------------------------------------------------------------------
-
     @QueryMapping(name = "materials")
     public List<MaterialDto> materialList(@Argument final Long revivalId, @Argument final @Nullable Boolean includeRemoved) {
         return materials.list(revivalId, Boolean.TRUE.equals(includeRemoved));
@@ -81,6 +61,8 @@ public class MaterialGraphqlApi {
     public MaterialDto materialCreate(@Argument final MaterialInput input) {
         return materials.create(input.toInput());
     }
+
+    // --- Materials --------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public MaterialDto materialUpdate(@Argument final Long id, @Argument final Long version, @Argument final MaterialInput input) {
@@ -112,8 +94,6 @@ public class MaterialGraphqlApi {
         return materials.forParticipation(participation.revival().id());
     }
 
-    // --- Inventory --------------------------------------------------------------------------------------------------
-
     @QueryMapping(name = "inventory")
     public List<InventoryItemDto> inventoryList(@Argument final Long revivalId, @Argument final @Nullable Boolean includeRemoved, final Locale locale) {
         return inventory.list(revivalId, Boolean.TRUE.equals(includeRemoved), locale);
@@ -123,6 +103,8 @@ public class MaterialGraphqlApi {
     public InventoryItemDto inventoryItemCreate(@Argument final InventoryItemInput input, final Locale locale) {
         return inventory.create(input.toInput(), locale);
     }
+
+    // --- Inventory --------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public InventoryItemDto inventoryItemUpdate(@Argument final Long id, @Argument final Long version, @Argument final InventoryItemInput input,
@@ -148,5 +130,28 @@ public class MaterialGraphqlApi {
         items.stream().filter(item -> item.materialId() != null && found.containsKey(item.materialId()))
                 .forEach(item -> result.put(item, found.get(item.materialId())));
         return result;
+    }
+
+    public record MaterialInput(@Nullable Long revivalId, @Nullable String title, @Nullable String url,
+                                @Nullable String serviceId,
+                                MaterialCategory category, MaterialVisibility visibility,
+                                @Nullable List<String> positionIds,
+                                @Nullable String comment) {
+
+        MaterialService.Input toInput() {
+            return new MaterialService.Input(revivalId, title, url, serviceId, category, visibility, positionIds, comment);
+        }
+    }
+
+    public record InventoryItemInput(@Nullable Long revivalId, @Nullable String name, InventoryKind kind,
+                                     @Nullable Integer quantity,
+                                     InventoryStatus status, @Nullable InventoryLocation location,
+                                     @Nullable String locationNote,
+                                     @Nullable OwnerInputDto owner, @Nullable String comment,
+                                     @Nullable Long materialId) {
+
+        InventoryService.Input toInput() {
+            return new InventoryService.Input(revivalId, name, kind, quantity, status, location, locationNote, owner, comment, materialId);
+        }
     }
 }

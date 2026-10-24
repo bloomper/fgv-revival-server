@@ -51,12 +51,6 @@ public class ParticipantDirectory {
     }
 
     /**
-     * A participant by name and position only.
-     */
-    public record Named(Long id, String displayName, ParticipantKind kind, SpexareDirectory.@Nullable Position position) {
-    }
-
-    /**
      * Whom the application acts for in Spexregister when the caller reads participants.
      */
     public static String actingPerson(final Caller caller) {
@@ -104,5 +98,12 @@ public class ParticipantDirectory {
             }
         }
         return emails;
+    }
+
+    /**
+     * A participant by name and position only.
+     */
+    public record Named(Long id, String displayName, ParticipantKind kind,
+                        SpexareDirectory.@Nullable Position position) {
     }
 }

@@ -69,16 +69,6 @@ class ParticipantViews {
     }
 
     /**
-     * What to show.
-     *
-     * @param contacts      email and phone (readers of participants, and the person themselves)
-     * @param dietary       dietary needs ({@code CATERING}, and the person themselves)
-     * @param requirePeople fail with SPEXREGISTER_UNAVAILABLE when spexare cannot be read, rather than show them unnamed
-     */
-    record Options(boolean contacts, boolean dietary, boolean requirePeople, String actingPerson, Locale locale) {
-    }
-
-    /**
      * How the participant's invitation stands, from their participant role.
      */
     static InvitationState invitation(final @Nullable RevivalMember member) {
@@ -86,6 +76,39 @@ class ParticipantViews {
             return InvitationState.NOT_INVITED;
         }
         return member.getPersonId() == null ? InvitationState.INVITED : InvitationState.ACTIVE;
+    }
+
+    /**
+     * The fee a participant owes: their own amount, or the revival's participation fee; null for helpers.
+     */
+    static @Nullable BigDecimal fee(final Participant participant, final @Nullable BigDecimal revivalFee) {
+        if (participant.getKind() == ParticipantKind.HELPER) {
+            return null;
+        }
+        return participant.getFee() != null ? participant.getFee() : revivalFee;
+    }
+
+    static SpexareDirectory.@Nullable Position position(final Map<String, SpexareDirectory.Position> positions, final @Nullable String id) {
+        return id == null ? null : positions.getOrDefault(id, new SpexareDirectory.Position(id, id, null, false));
+    }
+
+    /**
+     * Email and phone: a spexare's from their {@code HOME} address, mobile first; a pending person's own.
+     */
+    static @Nullable String[] contact(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable PendingPerson person) {
+        if (spexare != null) {
+            return spexare.home()
+                    .map(home -> new String[]{blankToNull(home.emailAddress()), hasText(home.phoneMobile()) ? home.phoneMobile() : blankToNull(home.phone())})
+                    .orElseGet(() -> new String[]{null, null});
+        }
+        if (person != null) {
+            return new String[]{person.getEmail(), person.getPhone()};
+        }
+        return new String[]{null, null};
+    }
+
+    static @Nullable String blankToNull(final @Nullable String value) {
+        return hasText(value) ? value.strip() : null;
     }
 
     Map<Long, InvitationState> invitations(final Collection<Participant> participants) {
@@ -101,16 +124,6 @@ class ParticipantViews {
         final List<Long> ids = participants.stream().map(Participant::getMemberId).filter(Objects::nonNull).distinct().toList();
 
         return ids.isEmpty() ? Map.of() : memberRepository.findAllById(ids).stream().collect(Collectors.toMap(RevivalMember::getId, Function.identity()));
-    }
-
-    /**
-     * The fee a participant owes: their own amount, or the revival's participation fee; null for helpers.
-     */
-    static @Nullable BigDecimal fee(final Participant participant, final @Nullable BigDecimal revivalFee) {
-        if (participant.getKind() == ParticipantKind.HELPER) {
-            return null;
-        }
-        return participant.getFee() != null ? participant.getFee() : revivalFee;
     }
 
     @Nullable BigDecimal revivalFee(final Long revivalId) {
@@ -204,10 +217,6 @@ class ParticipantViews {
         }).toList();
     }
 
-    static SpexareDirectory.@Nullable Position position(final Map<String, SpexareDirectory.Position> positions, final @Nullable String id) {
-        return id == null ? null : positions.getOrDefault(id, new SpexareDirectory.Position(id, id, null, false));
-    }
-
     /**
      * First, last and nick name: from Spexregister, the pending person, or a placeholder once a pending person's name is
      * deleted or while the spexare cannot be read.
@@ -227,21 +236,12 @@ class ParticipantViews {
     }
 
     /**
-     * Email and phone: a spexare's from their {@code HOME} address, mobile first; a pending person's own.
+     * What to show.
+     *
+     * @param contacts      email and phone (readers of participants, and the person themselves)
+     * @param dietary       dietary needs ({@code CATERING}, and the person themselves)
+     * @param requirePeople fail with SPEXREGISTER_UNAVAILABLE when spexare cannot be read, rather than show them unnamed
      */
-    static @Nullable String[] contact(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable PendingPerson person) {
-        if (spexare != null) {
-            return spexare.home()
-                    .map(home -> new String[]{blankToNull(home.emailAddress()), hasText(home.phoneMobile()) ? home.phoneMobile() : blankToNull(home.phone())})
-                    .orElseGet(() -> new String[]{null, null});
-        }
-        if (person != null) {
-            return new String[]{person.getEmail(), person.getPhone()};
-        }
-        return new String[]{null, null};
-    }
-
-    static @Nullable String blankToNull(final @Nullable String value) {
-        return hasText(value) ? value.strip() : null;
+    record Options(boolean contacts, boolean dietary, boolean requirePeople, String actingPerson, Locale locale) {
     }
 }

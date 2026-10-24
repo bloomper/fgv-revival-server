@@ -25,5 +25,6 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 0.5
  */
-public record EventProposalDto(EventTypeDto type, LocalDate startDate, LocalDate endDate, LocalDate earliest, LocalDate latest) {
+public record EventProposalDto(EventTypeDto type, LocalDate startDate, LocalDate endDate, LocalDate earliest,
+                               LocalDate latest) {
 }

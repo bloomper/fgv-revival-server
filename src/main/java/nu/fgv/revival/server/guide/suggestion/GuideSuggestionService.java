@@ -104,22 +104,17 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         this.accessPolicy = accessPolicy;
     }
 
-    public record Proposal(Long revivalId,
-                           Long versionId,
-                           GuideSuggestionKind kind,
-                           @Nullable String itemKey,
-                           @Nullable String chapterKey,
-                           @Nullable String sectionKey,
-                           @Nullable String proposedType,
-                           @Nullable String proposedTextSv,
-                           @Nullable String proposedTextEn,
-                           @Nullable String reason) {
+    private static void requireOpen(final GuideSuggestion suggestion, final Long expectedVersion) {
+        if (!Objects.equals(suggestion.getVersion(), expectedVersion)) {
+            throw new ConflictException("error.conflict");
+        }
+        if (suggestion.getStatus() != GuideSuggestionStatus.OPEN) {
+            throw new BadRequestException("error.suggestion.notOpen");
+        }
     }
 
-    /**
-     * What the draft gets when its item differs from the suggestion's version (FR-033).
-     */
-    public record Resolution(boolean keep, @Nullable String type, @Nullable String sv, @Nullable String en) {
+    private static @Nullable String text(final @Nullable String value) {
+        return hasText(value) ? value.strip() : null;
     }
 
     private Revival visibleRevival(final Caller caller, final Long revivalId) {
@@ -134,19 +129,6 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
             throw new ResourceNotFoundException(GuideSuggestion.class, id);
         }
         return suggestion;
-    }
-
-    private static void requireOpen(final GuideSuggestion suggestion, final Long expectedVersion) {
-        if (!Objects.equals(suggestion.getVersion(), expectedVersion)) {
-            throw new ConflictException("error.conflict");
-        }
-        if (suggestion.getStatus() != GuideSuggestionStatus.OPEN) {
-            throw new BadRequestException("error.suggestion.notOpen");
-        }
-    }
-
-    private static @Nullable String text(final @Nullable String value) {
-        return hasText(value) ? value.strip() : null;
     }
 
     /**
@@ -468,5 +450,23 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 suggestion.getReopenedAt(),
                 suggestion.getCreatedAt(),
                 suggestion.getVersion() == null ? 0L : suggestion.getVersion());
+    }
+
+    public record Proposal(Long revivalId,
+                           Long versionId,
+                           GuideSuggestionKind kind,
+                           @Nullable String itemKey,
+                           @Nullable String chapterKey,
+                           @Nullable String sectionKey,
+                           @Nullable String proposedType,
+                           @Nullable String proposedTextSv,
+                           @Nullable String proposedTextEn,
+                           @Nullable String reason) {
+    }
+
+    /**
+     * What the draft gets when its item differs from the suggestion's version (FR-033).
+     */
+    public record Resolution(boolean keep, @Nullable String type, @Nullable String sv, @Nullable String en) {
     }
 }

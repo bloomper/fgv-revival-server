@@ -80,6 +80,15 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
     private long bertil;
     private long pia;
 
+    private static StubMapping stub(final String operation, final String body) {
+        return SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing(operation))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
+    }
+
+    private static int calls(final String operation) {
+        return SPEXREGISTER.countRequestsMatching(postRequestedFor(urlEqualTo("/api/graphql")).withRequestBody(containing(operation)).build()).getCount();
+    }
+
     @BeforeEach
     void closingRevival() {
         revival = organisingRevival();
@@ -115,7 +124,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                 Map.of("input", Map.of("revivalId", revival, "kind", "PARTICIPANT", "firstName", "Pia", "lastName", "Deltagare", "email", PARTICIPANT)))
                 .path("participantAdd.id").entity(String.class).get());
         execute(STEERING_GROUP, """
-                mutation($input: ParticipantsInviteInput!) { participantsInvite(input: $input) { invited { id } } }""",
+                        mutation($input: ParticipantsInviteInput!) { participantsInvite(input: $input) { invited { id } } }""",
                 Map.of("input", Map.of("revivalId", revival, "participantIds", List.of(pia), "language", "sv")));
         login(PARTICIPANT);
         jdbcClient.sql("UPDATE participant SET response = 'YES', position_task_id = 'ROLE', role_name = 'Kalifen', vocal_part_id = 'B1' WHERE id = ?")
@@ -123,15 +132,6 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         jdbcClient.sql("UPDATE participant SET response = 'YES', position_task_id = 'TRUMPET' WHERE id = ?").param(bertil).update();
         jdbcClient.sql("UPDATE participant SET response = 'YES' WHERE id = ?").param(pia).update();
         setStatus(revival, "CLOSING");
-    }
-
-    private static StubMapping stub(final String operation, final String body) {
-        return SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing(operation))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
-    }
-
-    private static int calls(final String operation) {
-        return SPEXREGISTER.countRequestsMatching(postRequestedFor(urlEqualTo("/api/graphql")).withRequestBody(containing(operation)).build()).getCount();
     }
 
     private String hash(final String user) {
@@ -258,9 +258,9 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
 
         jdbcClient.sql("UPDATE budget_settings SET loan_amount = 20000 WHERE revival_id = ?").param(revival).update();
         execute(OBSERVER, """
-                        query($id: ID!) {
-                            revival(id: $id) { closing { actualResult loanAmount loanRepaid surplusDecision { id } suggestions anonymizedAt autoAnonymizeOn } }
-                        }""", Map.of("id", revival))
+                query($id: ID!) {
+                    revival(id: $id) { closing { actualResult loanAmount loanRepaid surplusDecision { id } suggestions anonymizedAt autoAnonymizeOn } }
+                }""", Map.of("id", revival))
                 .path("revival.closing.loanAmount").entity(String.class).isEqualTo("20000")
                 .path("revival.closing.loanRepaid").entity(Boolean.class).isEqualTo(false)
                 .path("revival.closing.surplusDecision.id").entity(String.class).isEqualTo(String.valueOf(logEntry))

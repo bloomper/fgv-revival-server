@@ -94,6 +94,14 @@ public class CalendarFeedService {
         this.webUrl = webUrl.endsWith("/") ? webUrl.substring(0, webUrl.length() - 1) : webUrl;
     }
 
+    static String hash(final String token) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.US_ASCII)));
+        } catch (final NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
+    }
+
     /**
      * The caller's active link for the revival, without its token; null when they have none or may not have one.
      */
@@ -193,13 +201,5 @@ public class CalendarFeedService {
             previous.setRevokedAt(clock.instant());
             repository.saveAndFlush(previous);
         });
-    }
-
-    static String hash(final String token) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.US_ASCII)));
-        } catch (final NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 is not available", e);
-        }
     }
 }

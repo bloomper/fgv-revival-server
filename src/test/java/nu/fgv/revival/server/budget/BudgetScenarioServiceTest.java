@@ -53,6 +53,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BudgetScenarioServiceTest {
 
+    private final List<BudgetScenario> scenarios = new ArrayList<>();
     @Mock
     private BudgetScenarioRepository repository;
     @Mock
@@ -61,9 +62,11 @@ class BudgetScenarioServiceTest {
     private RevivalRepository revivalRepository;
     @Mock
     private CallerService callerService;
-
     private BudgetScenarioService service;
-    private final List<BudgetScenario> scenarios = new ArrayList<>();
+
+    private static ScenarioParameters tickets(final int count) {
+        return new ScenarioParameters(null, null, null, count, null, null, null, null);
+    }
 
     @BeforeEach
     void setUp() {
@@ -92,10 +95,6 @@ class BudgetScenarioServiceTest {
             }
             return scenario;
         });
-    }
-
-    private static ScenarioParameters tickets(final int count) {
-        return new ScenarioParameters(null, null, null, count, null, null, null, null);
     }
 
     @Test

@@ -117,29 +117,82 @@ public class BudgetService {
         this.clock = clock;
     }
 
-    /**
-     * The settings as a whole: a null value clears it.
-     */
-    public record SettingsChange(Long revivalId, Long version, @Nullable Integer participantsPlanned, @Nullable BigDecimal participationFee,
-                                 @Nullable BigDecimal loanAmount, @Nullable LocalDate loanReceivedOn, @Nullable LocalDate loanRepaidOn) {
+    private static @Nullable BudgetCategoryKind kind(final Map<String, BudgetCategory> categories, final String categoryId) {
+        final BudgetCategory category = categories.get(categoryId);
+
+        return category == null ? null : category.getKind();
+    }
+
+    private static List<ReferenceFigureView> referenceFigures(final List<ReferenceRevivalDto> references, final String categoryId) {
+        final List<ReferenceFigureView> views = new ArrayList<>();
+
+        for (final ReferenceRevivalDto reference : references) {
+            reference.figures().stream().filter(figure -> figure.categoryId().equals(categoryId)).findFirst().ifPresent(figure ->
+                    views.add(new ReferenceFigureView(reference.label(), reference.year(), reference.participants(), figure.budgeted(),
+                            figure.actual(), perParticipant(figure.budgeted(), reference.participants()),
+                            perParticipant(figure.actual(), reference.participants()))));
+        }
+        return views;
     }
 
     /**
-     * A new line. Quantity defaults to 1. A line from a proposal names the event type's line and the event.
+     * In whole kronor.
      */
-    public record NewLine(Long revivalId, String categoryId, String description, @Nullable BigDecimal quantity, BigDecimal unitAmount,
-                          @Nullable Long eventId, @Nullable Long logEntryId, @Nullable String comment, @Nullable Long eventTypeLineId) {
-    }
-
-    /**
-     * Fields left null are unchanged; the {@code clear*} flags remove a value.
-     */
-    public record LineChange(Long id, Long version, @Nullable String categoryId, @Nullable String description, @Nullable BigDecimal quantity,
-                             @Nullable BigDecimal unitAmount, @Nullable Long eventId, boolean clearEvent, @Nullable Long logEntryId,
-                             boolean clearLogEntry, @Nullable String comment, boolean clearComment) {
+    private static @Nullable BigDecimal perParticipant(final @Nullable BigDecimal amount, final @Nullable Integer participants) {
+        return amount == null || participants == null || participants <= 0 ? null
+                : amount.divide(BigDecimal.valueOf(participants), 0, RoundingMode.HALF_UP).setScale(Amounts.SCALE, RoundingMode.UNNECESSARY);
     }
 
     // --- Budget -----------------------------------------------------------------------------------------------------
+
+    static String validDescription(final @Nullable String description) {
+        final String trimmed = description == null ? "" : description.strip();
+
+        if (trimmed.isEmpty() || trimmed.length() > BudgetLine.DESCRIPTION_MAX_LENGTH) {
+            throw new BadRequestException("error.budget.description", BudgetLine.DESCRIPTION_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    static BigDecimal validQuantity(final BigDecimal quantity) {
+        final @Nullable BigDecimal exact = Amounts.exact(quantity);
+
+        if (exact == null || exact.compareTo(MIN_QUANTITY) < 0 || exact.compareTo(MAX_QUANTITY) > 0) {
+            throw new BadRequestException("error.budget.quantity", MAX_QUANTITY.toPlainString());
+        }
+        return exact;
+    }
+
+    /**
+     * Between {@code min} and {@value #MAX_AMOUNT_TEXT} kronor, at most two decimals; null stays null.
+     */
+    static @Nullable BigDecimal validAmount(final @Nullable BigDecimal amount, final BigDecimal min) {
+        if (amount == null) {
+            return null;
+        }
+
+        final @Nullable BigDecimal exact = Amounts.exact(amount);
+
+        if (exact == null || exact.compareTo(min) < 0 || exact.compareTo(MAX_AMOUNT) > 0) {
+            throw new BadRequestException("error.budget.amount", Amounts.format(min), MAX_AMOUNT_TEXT);
+        }
+        return exact;
+    }
+
+    // --- Settings ---------------------------------------------------------------------------------------------------
+
+    private static @Nullable String validComment(final @Nullable String comment) {
+        if (comment == null || comment.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = comment.strip();
+
+        if (trimmed.length() > BudgetLine.COMMENT_MAX_LENGTH) {
+            throw new BadRequestException("error.budget.comment.tooLong", BudgetLine.COMMENT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
 
     /**
      * The revival's budget, or null when the caller may not read it: a revival field that does not fail (M5-FR-6).
@@ -157,6 +210,8 @@ public class BudgetService {
         return access.canRead(callerService.current(), revivalId);
     }
 
+    // --- Lines ------------------------------------------------------------------------------------------------------
+
     /**
      * The decision log rows lines refer to, by id. No caller check: callers have checked the lines.
      */
@@ -165,8 +220,6 @@ public class BudgetService {
         return ids.isEmpty() ? Map.of()
                 : logEntryRepository.findAllById(Set.copyOf(ids)).stream().collect(Collectors.toMap(LogEntry::getId, LogEntrySummaryDto::of));
     }
-
-    // --- Settings ---------------------------------------------------------------------------------------------------
 
     /**
      * Every revival gets its settings when it is created.
@@ -212,8 +265,6 @@ public class BudgetService {
         return Settings.of(settingsRepository.saveAndFlush(settings));
     }
 
-    // --- Lines ------------------------------------------------------------------------------------------------------
-
     /**
      * By category order, then id.
      */
@@ -239,6 +290,8 @@ public class BudgetService {
         return ids.isEmpty() ? Map.of()
                 : lineRepository.findAllById(Set.copyOf(ids)).stream().collect(Collectors.toMap(BudgetLine::getId, Line::of));
     }
+
+    // --- Overview ---------------------------------------------------------------------------------------------------
 
     @Transactional
     public Line createLine(final NewLine newLine) {
@@ -343,8 +396,6 @@ public class BudgetService {
         line.setRemovedBy(null);
         return Line.of(lineRepository.saveAndFlush(line));
     }
-
-    // --- Overview ---------------------------------------------------------------------------------------------------
 
     /**
      * Budgeted from the lines that are not removed, actual from the transactions that are not cancelled (M5-FR-7). The
@@ -463,6 +514,8 @@ public class BudgetService {
         return proposals;
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     /**
      * The lines that are not removed, as the scenario calculator reads them, and the settings it starts from.
      */
@@ -508,39 +561,8 @@ public class BudgetService {
                 .orElse(null);
     }
 
-    record Baseline(List<ScenarioCalculator.Line> lines, @Nullable Integer participantsPlanned, @Nullable BigDecimal participationFee) {
-    }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private Map<String, Integer> positions() {
         return categoryService.all().stream().collect(Collectors.toMap(BudgetCategory::getId, BudgetCategory::getPosition));
-    }
-
-    private static @Nullable BudgetCategoryKind kind(final Map<String, BudgetCategory> categories, final String categoryId) {
-        final BudgetCategory category = categories.get(categoryId);
-
-        return category == null ? null : category.getKind();
-    }
-
-    private static List<ReferenceFigureView> referenceFigures(final List<ReferenceRevivalDto> references, final String categoryId) {
-        final List<ReferenceFigureView> views = new ArrayList<>();
-
-        for (final ReferenceRevivalDto reference : references) {
-            reference.figures().stream().filter(figure -> figure.categoryId().equals(categoryId)).findFirst().ifPresent(figure ->
-                    views.add(new ReferenceFigureView(reference.label(), reference.year(), reference.participants(), figure.budgeted(),
-                            figure.actual(), perParticipant(figure.budgeted(), reference.participants()),
-                            perParticipant(figure.actual(), reference.participants()))));
-        }
-        return views;
-    }
-
-    /**
-     * In whole kronor.
-     */
-    private static @Nullable BigDecimal perParticipant(final @Nullable BigDecimal amount, final @Nullable Integer participants) {
-        return amount == null || participants == null || participants <= 0 ? null
-                : amount.divide(BigDecimal.valueOf(participants), 0, RoundingMode.HALF_UP).setScale(Amounts.SCALE, RoundingMode.UNNECESSARY);
     }
 
     private BudgetLine changeable(final Caller caller, final Long id, final Long version) {
@@ -605,50 +627,35 @@ public class BudgetService {
         return logEntryId;
     }
 
-    static String validDescription(final @Nullable String description) {
-        final String trimmed = description == null ? "" : description.strip();
-
-        if (trimmed.isEmpty() || trimmed.length() > BudgetLine.DESCRIPTION_MAX_LENGTH) {
-            throw new BadRequestException("error.budget.description", BudgetLine.DESCRIPTION_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    static BigDecimal validQuantity(final BigDecimal quantity) {
-        final @Nullable BigDecimal exact = Amounts.exact(quantity);
-
-        if (exact == null || exact.compareTo(MIN_QUANTITY) < 0 || exact.compareTo(MAX_QUANTITY) > 0) {
-            throw new BadRequestException("error.budget.quantity", MAX_QUANTITY.toPlainString());
-        }
-        return exact;
+    /**
+     * The settings as a whole: a null value clears it.
+     */
+    public record SettingsChange(Long revivalId, Long version, @Nullable Integer participantsPlanned,
+                                 @Nullable BigDecimal participationFee,
+                                 @Nullable BigDecimal loanAmount, @Nullable LocalDate loanReceivedOn,
+                                 @Nullable LocalDate loanRepaidOn) {
     }
 
     /**
-     * Between {@code min} and {@value #MAX_AMOUNT_TEXT} kronor, at most two decimals; null stays null.
+     * A new line. Quantity defaults to 1. A line from a proposal names the event type's line and the event.
      */
-    static @Nullable BigDecimal validAmount(final @Nullable BigDecimal amount, final BigDecimal min) {
-        if (amount == null) {
-            return null;
-        }
-
-        final @Nullable BigDecimal exact = Amounts.exact(amount);
-
-        if (exact == null || exact.compareTo(min) < 0 || exact.compareTo(MAX_AMOUNT) > 0) {
-            throw new BadRequestException("error.budget.amount", Amounts.format(min), MAX_AMOUNT_TEXT);
-        }
-        return exact;
+    public record NewLine(Long revivalId, String categoryId, String description, @Nullable BigDecimal quantity,
+                          BigDecimal unitAmount,
+                          @Nullable Long eventId, @Nullable Long logEntryId, @Nullable String comment,
+                          @Nullable Long eventTypeLineId) {
     }
 
-    private static @Nullable String validComment(final @Nullable String comment) {
-        if (comment == null || comment.isBlank()) {
-            return null;
-        }
+    /**
+     * Fields left null are unchanged; the {@code clear*} flags remove a value.
+     */
+    public record LineChange(Long id, Long version, @Nullable String categoryId, @Nullable String description,
+                             @Nullable BigDecimal quantity,
+                             @Nullable BigDecimal unitAmount, @Nullable Long eventId, boolean clearEvent,
+                             @Nullable Long logEntryId,
+                             boolean clearLogEntry, @Nullable String comment, boolean clearComment) {
+    }
 
-        final String trimmed = comment.strip();
-
-        if (trimmed.length() > BudgetLine.COMMENT_MAX_LENGTH) {
-            throw new BadRequestException("error.budget.comment.tooLong", BudgetLine.COMMENT_MAX_LENGTH);
-        }
-        return trimmed;
+    record Baseline(List<ScenarioCalculator.Line> lines, @Nullable Integer participantsPlanned,
+                    @Nullable BigDecimal participationFee) {
     }
 }

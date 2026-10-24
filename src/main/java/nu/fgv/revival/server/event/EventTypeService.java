@@ -71,21 +71,51 @@ public class EventTypeService {
         this.clock = clock;
     }
 
-    /**
-     * Swedish text and, optionally, English.
-     */
-    public record Text(@Nullable String sv, @Nullable String en) {
+    private static String validName(final @Nullable String name) {
+        final String trimmed = name == null ? "" : name.strip();
+
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("error.eventType.name.blank");
+        }
+        if (trimmed.length() > EventType.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.eventType.name.tooLong", EventType.NAME_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
     /**
-     * Everything the super admin sets on a type. A null or blank Swedish text clears that text.
+     * Swedish and English, trimmed; both null when there is no Swedish text.
      */
-    public record Definition(Text name, @Nullable Text description, @Nullable Text rooms, @Nullable Text catering,
-                             @Nullable Integer offsetMinDays, @Nullable Integer offsetMaxDays, int days, boolean revivalPays,
-                             @Nullable Long checklistTemplateId) {
+    private static Text validText(final @Nullable Text text) {
+        if (text == null || text.sv() == null || text.sv().isBlank()) {
+            return new Text(null, null);
+        }
+
+        final String sv = text.sv().strip();
+        final String en = text.en() == null || text.en().isBlank() ? null : text.en().strip();
+
+        if (sv.length() > EventType.TEXT_MAX_LENGTH || en != null && en.length() > EventType.TEXT_MAX_LENGTH) {
+            throw new BadRequestException("error.eventType.text.tooLong", EventType.TEXT_MAX_LENGTH);
+        }
+        return new Text(sv, en);
     }
 
     // --- Reading ----------------------------------------------------------------------------------------------------
+
+    private static void validOffsets(final @Nullable Integer min, final @Nullable Integer max) {
+        if (min == null && max == null) {
+            return;
+        }
+        if (min == null || max == null) {
+            throw new BadRequestException("error.eventType.offsets.both");
+        }
+        if (min < -EventType.OFFSET_LIMIT || max > EventType.OFFSET_LIMIT) {
+            throw new BadRequestException("error.eventType.offsets.range", EventType.OFFSET_LIMIT);
+        }
+        if (min > max) {
+            throw new BadRequestException("error.eventType.offsets.order");
+        }
+    }
 
     @Transactional(readOnly = true)
     public List<EventTypeDto> list(final boolean includeRetired) {
@@ -111,6 +141,8 @@ public class EventTypeService {
                 : repository.findAllById(Set.copyOf(ids)).stream().map(EventTypeDto::of).collect(Collectors.toMap(EventTypeDto::id, Function.identity()));
     }
 
+    // --- Changing ---------------------------------------------------------------------------------------------------
+
     /**
      * The type's checklist template, retired or not. Template names are readable by everyone who reads the types.
      */
@@ -119,8 +151,6 @@ public class EventTypeService {
         return type.checklistTemplateId() == null ? null
                 : templateRepository.findById(type.checklistTemplateId()).map(ChecklistTemplateSummaryDto::of).orElse(null);
     }
-
-    // --- Changing ---------------------------------------------------------------------------------------------------
 
     /**
      * Appends a new type.
@@ -183,6 +213,8 @@ public class EventTypeService {
         return EventTypeDto.of(repository.saveAndFlush(type));
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     @Transactional
     public EventTypeDto restore(final Long id, final Long version) {
         manageable();
@@ -193,8 +225,6 @@ public class EventTypeService {
         type.setRetiredAt(null);
         return EventTypeDto.of(repository.saveAndFlush(type));
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void manageable() {
         accessPolicy.requireManageEventTypes(callerService.current());
@@ -253,50 +283,6 @@ public class EventTypeService {
         type.setChecklistTemplateId(validTemplate(definition.checklistTemplateId(), type.getChecklistTemplateId()));
     }
 
-    private static String validName(final @Nullable String name) {
-        final String trimmed = name == null ? "" : name.strip();
-
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException("error.eventType.name.blank");
-        }
-        if (trimmed.length() > EventType.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.eventType.name.tooLong", EventType.NAME_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    /**
-     * Swedish and English, trimmed; both null when there is no Swedish text.
-     */
-    private static Text validText(final @Nullable Text text) {
-        if (text == null || text.sv() == null || text.sv().isBlank()) {
-            return new Text(null, null);
-        }
-
-        final String sv = text.sv().strip();
-        final String en = text.en() == null || text.en().isBlank() ? null : text.en().strip();
-
-        if (sv.length() > EventType.TEXT_MAX_LENGTH || en != null && en.length() > EventType.TEXT_MAX_LENGTH) {
-            throw new BadRequestException("error.eventType.text.tooLong", EventType.TEXT_MAX_LENGTH);
-        }
-        return new Text(sv, en);
-    }
-
-    private static void validOffsets(final @Nullable Integer min, final @Nullable Integer max) {
-        if (min == null && max == null) {
-            return;
-        }
-        if (min == null || max == null) {
-            throw new BadRequestException("error.eventType.offsets.both");
-        }
-        if (min < -EventType.OFFSET_LIMIT || max > EventType.OFFSET_LIMIT) {
-            throw new BadRequestException("error.eventType.offsets.range", EventType.OFFSET_LIMIT);
-        }
-        if (min > max) {
-            throw new BadRequestException("error.eventType.offsets.order");
-        }
-    }
-
     /**
      * An EVENT template that is not retired, unless the type already has it.
      */
@@ -315,5 +301,20 @@ public class EventTypeService {
             throw new BadRequestException("error.checklist.template.retired");
         }
         return templateId;
+    }
+
+    /**
+     * Swedish text and, optionally, English.
+     */
+    public record Text(@Nullable String sv, @Nullable String en) {
+    }
+
+    /**
+     * Everything the super admin sets on a type. A null or blank Swedish text clears that text.
+     */
+    public record Definition(Text name, @Nullable Text description, @Nullable Text rooms, @Nullable Text catering,
+                             @Nullable Integer offsetMinDays, @Nullable Integer offsetMaxDays, int days,
+                             boolean revivalPays,
+                             @Nullable Long checklistTemplateId) {
     }
 }

@@ -59,36 +59,6 @@ public class MailingGraphqlApi {
         this.eventTypeService = eventTypeService;
     }
 
-    public record MailingAudienceInput(MailingAudienceKind kind, @Nullable String positionId, @Nullable Long eventId) {
-
-        MailingService.AudienceInput toInput() {
-            return new MailingService.AudienceInput(kind, positionId, eventId);
-        }
-    }
-
-    public record MailingInput(@Nullable Long revivalId, MailingAudienceInput audience, String subject, String body, @Nullable Long templateId,
-                               @Nullable Long eventId) {
-
-        MailingService.Input toInput() {
-            return new MailingService.Input(revivalId, audience.toInput(), subject, body, templateId, eventId);
-        }
-    }
-
-    public record MailingTemplateInput(LocalizedTextInput name, LocalizedTextInput subject, LocalizedTextInput body, MailingAudienceKind audience,
-                                       @Nullable Long eventTypeId, RelativeDeadlineInput due) {
-
-        MailingTemplateService.Definition toDefinition() {
-            return new MailingTemplateService.Definition(text(name), text(subject), text(body), audience, eventTypeId,
-                    RelativeDeadline.of(due.kind(), due.amount(), due.weekday()));
-        }
-
-        private static MailingTemplateService.Text text(final LocalizedTextInput input) {
-            return new MailingTemplateService.Text(input.sv(), input.en());
-        }
-    }
-
-    // --- Mailings ---------------------------------------------------------------------------------------------------
-
     @QueryMapping
     public List<MailingDto> mailings(@Argument final Long revivalId, final Locale locale) {
         return service.list(revivalId, locale);
@@ -104,6 +74,8 @@ public class MailingGraphqlApi {
                                                                 final Locale locale) {
         return service.preview(revivalId, audience.toInput(), locale);
     }
+
+    // --- Mailings ---------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public MailingDto mailingCreate(@Argument final MailingInput input, final Locale locale) {
@@ -140,8 +112,6 @@ public class MailingGraphqlApi {
         return service.plan(revival.id(), locale);
     }
 
-    // --- The plan's templates ---------------------------------------------------------------------------------------
-
     @QueryMapping
     public List<MailingTemplateDto> mailingTemplates(@Argument final @Nullable Boolean includeRetired) {
         return templateService.list(Boolean.TRUE.equals(includeRetired));
@@ -156,6 +126,8 @@ public class MailingGraphqlApi {
     public MailingTemplateDto mailingTemplateUpdate(@Argument final Long id, @Argument final Long version, @Argument final MailingTemplateInput input) {
         return templateService.update(id, version, input.toDefinition());
     }
+
+    // --- The plan's templates ---------------------------------------------------------------------------------------
 
     @MutationMapping
     public List<MailingTemplateDto> mailingTemplateMove(@Argument final Long id, @Argument final Long version, @Argument final int position) {
@@ -180,5 +152,35 @@ public class MailingGraphqlApi {
         templates.stream().filter(template -> template.eventTypeId() != null && types.containsKey(template.eventTypeId()))
                 .forEach(template -> result.put(template, types.get(template.eventTypeId())));
         return result;
+    }
+
+    public record MailingAudienceInput(MailingAudienceKind kind, @Nullable String positionId, @Nullable Long eventId) {
+
+        MailingService.AudienceInput toInput() {
+            return new MailingService.AudienceInput(kind, positionId, eventId);
+        }
+    }
+
+    public record MailingInput(@Nullable Long revivalId, MailingAudienceInput audience, String subject, String body,
+                               @Nullable Long templateId,
+                               @Nullable Long eventId) {
+
+        MailingService.Input toInput() {
+            return new MailingService.Input(revivalId, audience.toInput(), subject, body, templateId, eventId);
+        }
+    }
+
+    public record MailingTemplateInput(LocalizedTextInput name, LocalizedTextInput subject, LocalizedTextInput body,
+                                       MailingAudienceKind audience,
+                                       @Nullable Long eventTypeId, RelativeDeadlineInput due) {
+
+        private static MailingTemplateService.Text text(final LocalizedTextInput input) {
+            return new MailingTemplateService.Text(input.sv(), input.en());
+        }
+
+        MailingTemplateService.Definition toDefinition() {
+            return new MailingTemplateService.Definition(text(name), text(subject), text(body), audience, eventTypeId,
+                    RelativeDeadline.of(due.kind(), due.amount(), due.weekday()));
+        }
     }
 }

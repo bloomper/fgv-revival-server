@@ -42,24 +42,6 @@ public final class GuideSearch {
     private GuideSearch() {
     }
 
-    public enum HitKind {
-        INTRODUCTION,
-        CHAPTER_TITLE,
-        SECTION_TITLE,
-        ITEM
-    }
-
-    public record Hit(HitKind kind,
-                      @Nullable String chapterKey,
-                      GuideVersionView.@Nullable Text chapterTitle,
-                      @Nullable String sectionKey,
-                      GuideVersionView.@Nullable Text sectionTitle,
-                      @Nullable String itemKey,
-                      @Nullable String itemType,
-                      String snippet,
-                      String matchedLanguage) {
-    }
-
     public static List<Hit> search(final GuideVersionView version, final @Nullable String query, final int first) {
         final String needle = query == null ? "" : query.strip().toLowerCase(SWEDISH).replaceAll("\\s+", " ");
 
@@ -106,6 +88,24 @@ public final class GuideSearch {
             folded.append(base.length() == 1 ? base.charAt(0) : character);
         }
         return folded.toString();
+    }
+
+    public enum HitKind {
+        INTRODUCTION,
+        CHAPTER_TITLE,
+        SECTION_TITLE,
+        ITEM
+    }
+
+    public record Hit(HitKind kind,
+                      @Nullable String chapterKey,
+                      GuideVersionView.@Nullable Text chapterTitle,
+                      @Nullable String sectionKey,
+                      GuideVersionView.@Nullable Text sectionTitle,
+                      @Nullable String itemKey,
+                      @Nullable String itemType,
+                      String snippet,
+                      String matchedLanguage) {
     }
 
     private record Match(String snippet, String language) {

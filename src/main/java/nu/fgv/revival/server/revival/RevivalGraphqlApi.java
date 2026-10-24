@@ -111,9 +111,6 @@ public class RevivalGraphqlApi {
         return personNames.byIds(List.of(change.getChangedBy()), locale).get(change.getChangedBy());
     }
 
-    public record RevivalGuideVersionChangeInput(Long revivalId, @Nullable Long fromVersionId, Long toVersionId) {
-    }
-
     @MutationMapping
     public RevivalDto revivalGuideVersionChange(@Argument final RevivalGuideVersionChangeInput input) {
         return service.changeGuideVersion(input.revivalId(), input.fromVersionId(), input.toVersionId());
@@ -185,6 +182,9 @@ public class RevivalGraphqlApi {
     @SchemaMapping(typeName = "RevivalRoleAssignment", field = "revival")
     public RevivalDto assignmentRevival(final RevivalRoleAssignmentDto assignment) {
         return service.findById(assignment.revivalId());
+    }
+
+    public record RevivalGuideVersionChangeInput(Long revivalId, @Nullable Long fromVersionId, Long toVersionId) {
     }
 
 }

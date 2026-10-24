@@ -64,6 +64,11 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     private long revival;
 
+    private static void stub(final String operation, final String body) {
+        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing(operation))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
+    }
+
     @BeforeEach
     void openRevivalAndSpexregister() {
         revival = organisingRevival();
@@ -85,11 +90,6 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         stub("SpexareCreate", "{\"data\": {\"spexareCreate\": {\"id\": \"99\"}}}");
         stub("AddressCreate", "{\"data\": {\"addressCreate\": {\"id\": \"100\"}}}");
         stub("ConsentCreate", "{\"data\": {\"consentCreate\": {\"id\": \"101\"}}}");
-    }
-
-    private static void stub(final String operation, final String body) {
-        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing(operation))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
     }
 
     private long addPending(final String kind, final String email) {
@@ -164,7 +164,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("revival.participantCounts").valueIsNull()
                 .path("revival.participationSettings").valueIsNull();
         execute(STEERING_GROUP, "query($id: ID!) { revival(id: $id) { participantCounts { total notInvited } participationSettings { version } } }",
-                        Map.of("id", revival))
+                Map.of("id", revival))
                 .path("revival.participantCounts.total").entity(Integer.class).isEqualTo(2)
                 .path("revival.participationSettings.version").entity(Integer.class).isEqualTo(0);
     }

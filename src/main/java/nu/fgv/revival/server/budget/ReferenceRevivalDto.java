@@ -27,14 +27,9 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.6
  */
-public record ReferenceRevivalDto(Long id, String label, Integer year, @Nullable Integer participants, @Nullable String comment, boolean automatic,
+public record ReferenceRevivalDto(Long id, String label, Integer year, @Nullable Integer participants,
+                                  @Nullable String comment, boolean automatic,
                                   List<Figure> figures, Long version) {
-
-    /**
-     * GraphQL's {@code ReferenceFigure}; its category is resolved from the id.
-     */
-    public record Figure(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {
-    }
 
     static ReferenceRevivalDto of(final ReferenceRevival reference, final Comparator<String> categoryOrder) {
         return new ReferenceRevivalDto(reference.getId(), reference.getLabel(), reference.getYear(), reference.getParticipants(),
@@ -44,5 +39,11 @@ public record ReferenceRevivalDto(Long id, String label, Integer year, @Nullable
                         .map(figure -> new Figure(figure.getCategoryId(), figure.getBudgeted(), figure.getActual()))
                         .toList(),
                 reference.getVersion() == null ? 0L : reference.getVersion());
+    }
+
+    /**
+     * GraphQL's {@code ReferenceFigure}; its category is resolved from the id.
+     */
+    public record Figure(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {
     }
 }

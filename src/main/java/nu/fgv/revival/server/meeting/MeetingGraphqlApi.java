@@ -52,17 +52,6 @@ public class MeetingGraphqlApi {
         this.logEntryService = logEntryService;
     }
 
-    public record MeetingCreateInput(Long revivalId, LocalDate date, @Nullable String title, @Nullable List<Long> attendeeIds,
-                                     @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
-    }
-
-    public record MeetingUpdateInput(Long id, Long version, @Nullable LocalDate date, @Nullable String title, @Nullable List<Long> attendeeIds,
-                                     @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
-    }
-
-    public record MinutesEmailSendInput(Long meetingId, String language) {
-    }
-
     @QueryMapping
     public List<MeetingSummaryDto> meetings(@Argument final Long revivalId) {
         return service.list(revivalId);
@@ -136,5 +125,18 @@ public class MeetingGraphqlApi {
     @SchemaMapping(typeName = "Meeting", field = "blockingEntries")
     public List<LogEntrySummaryDto> blockingEntries(final MeetingDto meeting) {
         return service.blocking(meeting.id());
+    }
+
+    public record MeetingCreateInput(Long revivalId, LocalDate date, @Nullable String title,
+                                     @Nullable List<Long> attendeeIds,
+                                     @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
+    }
+
+    public record MeetingUpdateInput(Long id, Long version, @Nullable LocalDate date, @Nullable String title,
+                                     @Nullable List<Long> attendeeIds,
+                                     @Nullable String othersPresent, @Nullable List<String> agendaPoints) {
+    }
+
+    public record MinutesEmailSendInput(Long meetingId, String language) {
     }
 }

@@ -55,7 +55,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
 
 /**
  * The budget as an Excel workbook (M5-FR-11): four sheets, labels in the language, amounts with two decimals, receipts
@@ -90,6 +89,30 @@ class BudgetExportServiceTest {
 
     private static BigDecimal kr(final String amount) {
         return new BigDecimal(amount).setScale(2);
+    }
+
+    private static Workbook open(final BudgetExportService.Export export) throws IOException {
+        return new XSSFWorkbook(new ByteArrayInputStream(export.content()));
+    }
+
+    private static List<String> column(final Sheet sheet, final int column) {
+        final List<String> values = new ArrayList<>();
+
+        for (final Row row : sheet) {
+            if (row.getCell(column) != null) {
+                values.add(row.getCell(column).toString());
+            }
+        }
+        return values;
+    }
+
+    private static Row rowStarting(final Sheet sheet, final String text) {
+        for (final Row row : sheet) {
+            if (row.getCell(0) != null && text.equals(row.getCell(0).toString())) {
+                return row;
+            }
+        }
+        throw new AssertionError("No row " + text);
     }
 
     @BeforeEach
@@ -130,30 +153,6 @@ class BudgetExportServiceTest {
             }
             return owners;
         });
-    }
-
-    private static Workbook open(final BudgetExportService.Export export) throws IOException {
-        return new XSSFWorkbook(new ByteArrayInputStream(export.content()));
-    }
-
-    private static List<String> column(final Sheet sheet, final int column) {
-        final List<String> values = new ArrayList<>();
-
-        for (final Row row : sheet) {
-            if (row.getCell(column) != null) {
-                values.add(row.getCell(column).toString());
-            }
-        }
-        return values;
-    }
-
-    private static Row rowStarting(final Sheet sheet, final String text) {
-        for (final Row row : sheet) {
-            if (row.getCell(0) != null && text.equals(row.getCell(0).toString())) {
-                return row;
-            }
-        }
-        throw new AssertionError("No row " + text);
     }
 
     @Test

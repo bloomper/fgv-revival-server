@@ -46,6 +46,11 @@ public class StaffingMcpTools {
         this.support = support;
     }
 
+    static Slot toMcp(final ShiftSlotDto slot) {
+        return new Slot(slot.id(), slot.event().id(), slot.event().title(), slot.date(), slot.startTime(), slot.endTime(), slot.task(), slot.needed(),
+                slot.assigned().stream().map(assigned -> assigned.participant().displayName()).toList(), slot.open(), slot.comment());
+    }
+
     @McpTool(name = "get_staffing",
             description = "List a revival's shift slots for its events that are not cancelled, by date and time: the event, the task, the time, how many people are needed, who holds each slot by name, and how many places are open. Never contact details.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
@@ -57,12 +62,8 @@ public class StaffingMcpTools {
                 .toList()));
     }
 
-    static Slot toMcp(final ShiftSlotDto slot) {
-        return new Slot(slot.id(), slot.event().id(), slot.event().title(), slot.date(), slot.startTime(), slot.endTime(), slot.task(), slot.needed(),
-                slot.assigned().stream().map(assigned -> assigned.participant().displayName()).toList(), slot.open(), slot.comment());
-    }
-
-    public record Slot(Long id, Long eventId, String event, LocalDate date, String startTime, String endTime, String task, int needed,
+    public record Slot(Long id, Long eventId, String event, LocalDate date, String startTime, String endTime,
+                       String task, int needed,
                        List<String> assigned, int open, @Nullable String comment) {
     }
 }

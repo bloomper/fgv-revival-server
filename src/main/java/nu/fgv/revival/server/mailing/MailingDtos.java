@@ -39,7 +39,8 @@ public final class MailingDtos {
     private MailingDtos() {
     }
 
-    public record MailingAudience(MailingAudienceKind kind, SpexareDirectory.@Nullable Position position, @Nullable EventDto event) {
+    public record MailingAudience(MailingAudienceKind kind, SpexareDirectory.@Nullable Position position,
+                                  @Nullable EventDto event) {
     }
 
     public record MailingRecipientDto(String displayName, MailingRecipientStatus status) {
@@ -51,14 +52,19 @@ public final class MailingDtos {
     /**
      * A mailing; {@code plannedFor} is resolved from the template and plan event ids.
      */
-    public record MailingDto(Long id, Long revivalId, MailingAudience audience, String subject, String body, MailingStatus status,
-                             @Nullable Long templateId, @Nullable Long planEventId, @Nullable PersonRefDto createdBy, Instant createdAt,
-                             @Nullable PersonRefDto sentBy, @Nullable Instant sentAt, List<MailingRecipientDto> recipients, boolean canSend,
+    public record MailingDto(Long id, Long revivalId, MailingAudience audience, String subject, String body,
+                             MailingStatus status,
+                             @Nullable Long templateId, @Nullable Long planEventId, @Nullable PersonRefDto createdBy,
+                             Instant createdAt,
+                             @Nullable PersonRefDto sentBy, @Nullable Instant sentAt,
+                             List<MailingRecipientDto> recipients, boolean canSend,
                              Long version) {
     }
 
-    public record MailingTemplateDto(Long id, GuideVersionView.Text name, GuideVersionView.Text subject, GuideVersionView.Text body,
-                                     MailingAudienceKind audience, @Nullable Long eventTypeId, RelativeDeadline due, int position, boolean retired,
+    public record MailingTemplateDto(Long id, GuideVersionView.Text name, GuideVersionView.Text subject,
+                                     GuideVersionView.Text body,
+                                     MailingAudienceKind audience, @Nullable Long eventTypeId, RelativeDeadline due,
+                                     int position, boolean retired,
                                      Long version) {
 
         static MailingTemplateDto of(final MailingTemplate template) {
@@ -77,7 +83,8 @@ public final class MailingDtos {
         }
     }
 
-    public record MailingPlanEntry(MailingTemplateDto template, @Nullable EventDto event, LocalDate dueDate, @Nullable MailingDto mailing,
+    public record MailingPlanEntry(MailingTemplateDto template, @Nullable EventDto event, LocalDate dueDate,
+                                   @Nullable MailingDto mailing,
                                    boolean due) {
     }
 }

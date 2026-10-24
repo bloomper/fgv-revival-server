@@ -25,7 +25,8 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistItemFilterDto(@Nullable Boolean mine, @Nullable Boolean open, @Nullable Boolean overdue, @Nullable Long checklistId,
+public record ChecklistItemFilterDto(@Nullable Boolean mine, @Nullable Boolean open, @Nullable Boolean overdue,
+                                     @Nullable Long checklistId,
                                      @Nullable Boolean requiredOnly) {
 
     public static ChecklistItemFilterDto none() {

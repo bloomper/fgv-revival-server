@@ -119,20 +119,33 @@ public class StaffingService {
         this.clock = clock;
     }
 
-    /**
-     * A slot as the writer gives it. The event is read only on create.
-     */
-    public record SlotInput(@Nullable Long eventId, LocalDate date, String startTime, String endTime, String task, int needed,
-                            @Nullable String comment) {
+    private static boolean maySignUp(final Participant participant) {
+        return participant.getKind() == ParticipantKind.PARTICIPANT && !participant.isRemoved() && COMING.contains(participant.getResponse());
     }
 
-    /**
-     * The caller's answer for an event day; a null answer clears it.
-     */
-    public record AvailabilityInput(Long revivalId, Long eventId, LocalDate date, @Nullable AvailabilityAnswer answer, @Nullable String comment) {
+    private static LocalTime time(final @Nullable String time) {
+        final String trimmed = time == null ? "" : time.strip();
+
+        if (!TIME.matcher(trimmed).matches()) {
+            throw new BadRequestException("error.shift.time");
+        }
+        return LocalTime.parse(trimmed, TIME_FORMAT);
     }
 
     // --- Reading ----------------------------------------------------------------------------------------------------
+
+    private static @Nullable String text(final @Nullable String text, final int maxLength, final String tooLong) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = text.strip();
+
+        if (trimmed.length() > maxLength) {
+            throw new BadRequestException(tooLong, maxLength);
+        }
+        return trimmed;
+    }
 
     /**
      * Everyone's answers for the revival's events that are not cancelled, or one of them, by participant name. Readers
@@ -180,6 +193,8 @@ public class StaffingService {
         return toDtos(events.isEmpty() ? List.of() : slotRepository.findByEventIdIn(events.keySet()), revival, events, caller, locale);
     }
 
+    // --- The participant's own --------------------------------------------------------------------------------------
+
     /**
      * The revival's events that are not cancelled, by id; only {@code eventId} when given, which must be one of them.
      */
@@ -194,8 +209,6 @@ public class StaffingService {
         }
         return events;
     }
-
-    // --- The participant's own --------------------------------------------------------------------------------------
 
     /**
      * The events a participant sees: the revival's that are not cancelled; for a helper only those they hold shifts in
@@ -264,10 +277,6 @@ public class StaffingService {
 
     private Participant participant(final Long participantId) {
         return participantRepository.findById(participantId).orElseThrow(() -> new ResourceNotFoundException(Participant.class, participantId));
-    }
-
-    private static boolean maySignUp(final Participant participant) {
-        return participant.getKind() == ParticipantKind.PARTICIPANT && !participant.isRemoved() && COMING.contains(participant.getResponse());
     }
 
     private Map<Long, Event> activeEvents(final Long revivalId) {
@@ -564,28 +573,6 @@ public class StaffingService {
         }
     }
 
-    private static LocalTime time(final @Nullable String time) {
-        final String trimmed = time == null ? "" : time.strip();
-
-        if (!TIME.matcher(trimmed).matches()) {
-            throw new BadRequestException("error.shift.time");
-        }
-        return LocalTime.parse(trimmed, TIME_FORMAT);
-    }
-
-    private static @Nullable String text(final @Nullable String text, final int maxLength, final String tooLong) {
-        if (text == null || text.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = text.strip();
-
-        if (trimmed.length() > maxLength) {
-            throw new BadRequestException(tooLong, maxLength);
-        }
-        return trimmed;
-    }
-
     /**
      * Refuses a slot that overlaps another the participant already holds on the same day, in any of the revival's
      * events (M6B-FR-3).
@@ -653,5 +640,20 @@ public class StaffingService {
                     Math.max(0, slot.getNeeded() - assigned.size()), slot.getVersion() == null ? 0L : slot.getVersion()));
         }
         return dtos;
+    }
+
+    /**
+     * A slot as the writer gives it. The event is read only on create.
+     */
+    public record SlotInput(@Nullable Long eventId, LocalDate date, String startTime, String endTime, String task,
+                            int needed,
+                            @Nullable String comment) {
+    }
+
+    /**
+     * The caller's answer for an event day; a null answer clears it.
+     */
+    public record AvailabilityInput(Long revivalId, Long eventId, LocalDate date, @Nullable AvailabilityAnswer answer,
+                                    @Nullable String comment) {
     }
 }

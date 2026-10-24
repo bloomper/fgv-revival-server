@@ -46,12 +46,6 @@ public class BudgetCategoryGraphqlApi {
         this.service = service;
     }
 
-    public record BudgetCategoryCreateInput(BudgetCategoryKind kind, @Nullable BudgetCategoryRole role, LocalizedTextInput name) {
-    }
-
-    public record BudgetCategoryUpdateInput(String id, Long version, LocalizedTextInput name, @Nullable BudgetCategoryRole role) {
-    }
-
     private static CatalogService.Names names(final LocalizedTextInput input) {
         return new CatalogService.Names(input.sv() == null ? "" : input.sv(), input.en());
     }
@@ -130,5 +124,13 @@ public class BudgetCategoryGraphqlApi {
             }
         });
         return result;
+    }
+
+    public record BudgetCategoryCreateInput(BudgetCategoryKind kind, @Nullable BudgetCategoryRole role,
+                                            LocalizedTextInput name) {
+    }
+
+    public record BudgetCategoryUpdateInput(String id, Long version, LocalizedTextInput name,
+                                            @Nullable BudgetCategoryRole role) {
     }
 }

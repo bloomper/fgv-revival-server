@@ -119,23 +119,70 @@ public class ParticipantService {
     }
 
     /**
-     * A new participant: a spexare, or a pending person by name with email or phone.
+     * "Title year" for each spex they took part in, newest first; only the given family's when there is one.
      */
-    public record NewParticipant(Long revivalId, ParticipantKind kind, @Nullable Long spexareId, @Nullable String firstName,
-                                 @Nullable String lastName, @Nullable String email, @Nullable String phone, @Nullable String positionId,
-                                 @Nullable String roleName, @Nullable String vocalPartId, @Nullable BigDecimal compensationPerShift) {
+    static List<String> history(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable Set<Long> family) {
+        if (spexare == null) {
+            return List.of();
+        }
+        return spexare.spex().stream()
+                .filter(spex -> family == null || family.contains(Long.valueOf(spex.id())))
+                .sorted(Comparator.comparing((SpexregisterClient.SpexNode spex) -> spex.year() == null ? "" : spex.year()).reversed())
+                .map(spex -> ((spex.title() == null ? "" : spex.title()) + " " + (spex.year() == null ? "" : spex.year())).strip())
+                .distinct()
+                .toList();
+    }
+
+    private static SpexareCandidate candidate(final SpexregisterClient.Spexare spexare, final SpexregisterClient.@Nullable Spexare detailed,
+                                              final @Nullable Set<Long> family, final boolean added) {
+        return new SpexareCandidate(Long.valueOf(spexare.id()), spexare.firstName(), spexare.lastName(), ParticipantViews.blankToNull(spexare.nickName()),
+                ParticipantViews.blankToNull(spexare.graduation()), history(detailed, family), added);
+    }
+
+    private static void requireCurrent(final Participant participant, final Long version) {
+        if (!Objects.equals(version, participant.getVersion())) {
+            throw new ConflictException("error.conflict");
+        }
     }
 
     /**
-     * Omitted fields are unchanged; the {@code clear*} flags clear them.
+     * A pending person: names 1–100 characters; a participant needs an email address, a helper an email address or a phone
+     * number.
      */
-    public record Change(Long id, Long version, @Nullable String positionId, boolean clearPosition, @Nullable String roleName,
-                         boolean clearRoleName, @Nullable String vocalPartId, boolean clearVocalPart, @Nullable BigDecimal fee, boolean clearFee,
-                         @Nullable BigDecimal compensationPerShift, @Nullable String firstName, @Nullable String lastName, @Nullable String email,
-                         boolean clearEmail, @Nullable String phone, boolean clearPhone) {
+    static PendingPerson pendingPerson(final ParticipantKind kind, final @Nullable String firstName, final @Nullable String lastName,
+                                       final @Nullable String email, final @Nullable String phone) {
+        final PendingPerson person = new PendingPerson();
+        final String validEmail = ParticipantRules.email(email);
+        final String validPhone = ParticipantRules.phone(phone);
+
+        person.setFirstName(ParticipantRules.name(firstName));
+        person.setLastName(ParticipantRules.name(lastName));
+        requireReachable(kind, validEmail, validPhone);
+        person.setEmail(validEmail);
+        person.setPhone(validPhone);
+        return person;
     }
 
-    public record SettingsChange(Long revivalId, Long version, @Nullable String swishNumber, @Nullable String whatsappLink, @Nullable String terms) {
+    private static void requireReachable(final ParticipantKind kind, final @Nullable String email, final @Nullable String phone) {
+        if (kind == ParticipantKind.PARTICIPANT && email == null) {
+            throw new BadRequestException("error.participant.emailRequired");
+        }
+        if (email == null && phone == null) {
+            throw new BadRequestException("error.participant.contactRequired");
+        }
+    }
+
+    // --- Reading ----------------------------------------------------------------------------------------------------
+
+    private static @Nullable BigDecimal compensation(final ParticipantKind kind, final @Nullable BigDecimal compensation) {
+        if (compensation != null && kind != ParticipantKind.HELPER) {
+            throw new BadRequestException("error.participant.compensation.helperOnly");
+        }
+        return ParticipantRules.amount(compensation);
+    }
+
+    private static String truncate(final String value, final int max) {
+        return value.length() <= max ? value : value.substring(0, max);
     }
 
     private ParticipantViews.Options options(final Caller caller, final Revival revival, final Locale locale) {
@@ -146,8 +193,6 @@ public class ParticipantService {
     private ParticipantDto toDto(final Caller caller, final Revival revival, final Participant participant, final Locale locale) {
         return views.toDto(participant, options(caller, revival, locale));
     }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     /**
      * The revival's participants and helpers, by id, removed ones only when asked. SPEXREGISTER_UNAVAILABLE when any is
@@ -230,26 +275,7 @@ public class ParticipantService {
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * "Title year" for each spex they took part in, newest first; only the given family's when there is one.
-     */
-    static List<String> history(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable Set<Long> family) {
-        if (spexare == null) {
-            return List.of();
-        }
-        return spexare.spex().stream()
-                .filter(spex -> family == null || family.contains(Long.valueOf(spex.id())))
-                .sorted(Comparator.comparing((SpexregisterClient.SpexNode spex) -> spex.year() == null ? "" : spex.year()).reversed())
-                .map(spex -> ((spex.title() == null ? "" : spex.title()) + " " + (spex.year() == null ? "" : spex.year())).strip())
-                .distinct()
-                .toList();
-    }
-
-    private static SpexareCandidate candidate(final SpexregisterClient.Spexare spexare, final SpexregisterClient.@Nullable Spexare detailed,
-                                              final @Nullable Set<Long> family, final boolean added) {
-        return new SpexareCandidate(Long.valueOf(spexare.id()), spexare.firstName(), spexare.lastName(), ParticipantViews.blankToNull(spexare.nickName()),
-                ParticipantViews.blankToNull(spexare.graduation()), history(detailed, family), added);
-    }
+    // --- Adding and changing ----------------------------------------------------------------------------------------
 
     /**
      * Spexregister's tasks as positions. Every signed-in caller.
@@ -263,8 +289,6 @@ public class ParticipantService {
         callerService.current();
         return directory.vocalParts();
     }
-
-    // --- Adding and changing ----------------------------------------------------------------------------------------
 
     /**
      * Adds a spexare who exists in Spexregister, is not deceased and is not already a participant, or a pending person:
@@ -493,12 +517,6 @@ public class ParticipantService {
         return participant;
     }
 
-    private static void requireCurrent(final Participant participant, final Long version) {
-        if (!Objects.equals(version, participant.getVersion())) {
-            throw new ConflictException("error.conflict");
-        }
-    }
-
     private Participant save(final Participant participant) {
         try {
             return repository.saveAndFlush(participant);
@@ -520,33 +538,6 @@ public class ParticipantService {
             throw new BadRequestException("error.participant.duplicate");
         }
         return spexareId;
-    }
-
-    /**
-     * A pending person: names 1–100 characters; a participant needs an email address, a helper an email address or a phone
-     * number.
-     */
-    static PendingPerson pendingPerson(final ParticipantKind kind, final @Nullable String firstName, final @Nullable String lastName,
-                                       final @Nullable String email, final @Nullable String phone) {
-        final PendingPerson person = new PendingPerson();
-        final String validEmail = ParticipantRules.email(email);
-        final String validPhone = ParticipantRules.phone(phone);
-
-        person.setFirstName(ParticipantRules.name(firstName));
-        person.setLastName(ParticipantRules.name(lastName));
-        requireReachable(kind, validEmail, validPhone);
-        person.setEmail(validEmail);
-        person.setPhone(validPhone);
-        return person;
-    }
-
-    private static void requireReachable(final ParticipantKind kind, final @Nullable String email, final @Nullable String phone) {
-        if (kind == ParticipantKind.PARTICIPANT && email == null) {
-            throw new BadRequestException("error.participant.emailRequired");
-        }
-        if (email == null && phone == null) {
-            throw new BadRequestException("error.participant.contactRequired");
-        }
     }
 
     /**
@@ -577,15 +568,6 @@ public class ParticipantService {
         participant.setRoleName(trimmedRole);
         participant.setVocalPartId(vocalPartId);
     }
-
-    private static @Nullable BigDecimal compensation(final ParticipantKind kind, final @Nullable BigDecimal compensation) {
-        if (compensation != null && kind != ParticipantKind.HELPER) {
-            throw new BadRequestException("error.participant.compensation.helperOnly");
-        }
-        return ParticipantRules.amount(compensation);
-    }
-
-    // --- Settings ---------------------------------------------------------------------------------------------------
 
     /**
      * The revival's Swish number, WhatsApp link and extra terms, for readers of participants; null for others.
@@ -629,7 +611,7 @@ public class ParticipantService {
         }
     }
 
-    // --- Counts -----------------------------------------------------------------------------------------------------
+    // --- Settings ---------------------------------------------------------------------------------------------------
 
     /**
      * Counts for the dashboard, from the database alone; null for callers who do not read participants. Fees count
@@ -693,8 +675,6 @@ public class ParticipantService {
                 (int) participants.stream().filter(participant -> participant.getKind() == ParticipantKind.HELPER).count());
     }
 
-    // --- Referrals --------------------------------------------------------------------------------------------------
-
     /**
      * Open referrals, oldest first, for readers of participants; empty for others. The referrer's name is left out while
      * Spexregister cannot be read.
@@ -726,6 +706,8 @@ public class ParticipantService {
                     referrer == null ? null : (referrer.firstName() + " " + referrer.lastName()).strip(), referral.getCreatedAt());
         }).toList();
     }
+
+    // --- Counts -----------------------------------------------------------------------------------------------------
 
     /**
      * Handles a referral: ADDED makes a pending participant of it, named by splitting at the last space, with the
@@ -773,9 +755,7 @@ public class ParticipantService {
         return added;
     }
 
-    private static String truncate(final String value, final int max) {
-        return value.length() <= max ? value : value.substring(0, max);
-    }
+    // --- Referrals --------------------------------------------------------------------------------------------------
 
     /**
      * Whether the caller reads participants of the revival, for resolvers that leave others out.
@@ -787,5 +767,32 @@ public class ParticipantService {
         return revivalRepository.findById(revivalId)
                 .filter(revival -> accessPolicy.canSee(caller, revival) && accessPolicy.canReadParticipants(caller, revival))
                 .isPresent();
+    }
+
+    /**
+     * A new participant: a spexare, or a pending person by name with email or phone.
+     */
+    public record NewParticipant(Long revivalId, ParticipantKind kind, @Nullable Long spexareId,
+                                 @Nullable String firstName,
+                                 @Nullable String lastName, @Nullable String email, @Nullable String phone,
+                                 @Nullable String positionId,
+                                 @Nullable String roleName, @Nullable String vocalPartId,
+                                 @Nullable BigDecimal compensationPerShift) {
+    }
+
+    /**
+     * Omitted fields are unchanged; the {@code clear*} flags clear them.
+     */
+    public record Change(Long id, Long version, @Nullable String positionId, boolean clearPosition,
+                         @Nullable String roleName,
+                         boolean clearRoleName, @Nullable String vocalPartId, boolean clearVocalPart,
+                         @Nullable BigDecimal fee, boolean clearFee,
+                         @Nullable BigDecimal compensationPerShift, @Nullable String firstName,
+                         @Nullable String lastName, @Nullable String email,
+                         boolean clearEmail, @Nullable String phone, boolean clearPhone) {
+    }
+
+    public record SettingsChange(Long revivalId, Long version, @Nullable String swishNumber,
+                                 @Nullable String whatsappLink, @Nullable String terms) {
     }
 }

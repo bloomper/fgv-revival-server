@@ -89,17 +89,17 @@ public class SampleStaffing {
 
     private static final String ALLERGIES_BODY_SV = """
             Hej!
-
+            
             Om en vecka är det rephelg. Har du allergier eller andra kostbehov som vi inte känner till? Fyll i dem på \
             din sida i Nyuppsättning senast på torsdag.
-
+            
             Väl mött!""";
     private static final String ALLERGIES_BODY_EN = """
             Hi!
-
+            
             The rehearsal weekend is a week away. Do you have allergies or other dietary needs we do not know about? Add \
             them on your page in Nyuppsättning by Thursday.
-
+            
             See you there!""";
     private static final String TERMS = """
             Deltagaravgiften betalas med Swish inom två veckor från att du tackat ja. Den täcker mat på rephelgerna och \
@@ -308,7 +308,7 @@ public class SampleStaffing {
         // Sent, so with its recipients; the one who is gone now was still there
         final Mailing welcome = mailing(revivalId, MailingAudienceKind.PARTICIPANTS, "Välkommen till uppsättningen!", """
                 Hej!
-
+                
                 Kul att du vill vara med! Svara på inbjudan på din sida i Nyuppsättning, och fyll i dina kostbehov där.""", directeur);
 
         sent(welcome, invited.plus(Duration.ofHours(1)), directeur, everyone, undelivered);
@@ -318,9 +318,9 @@ public class SampleStaffing {
         if (open) {
             final Mailing schedule = mailing(revivalId, MailingAudienceKind.CONFIRMED, "Schema för föreställningshelgen", """
                     Hej!
-
+                    
                     Nu finns **schemat** för föreställningshelgen. Anmäl dig till de pass du kan ta på din sida i Nyuppsättning.
-
+                    
                     - Biljettkontroll
                     - Sälja dryckesbiljetter
                     - Bålvakt""", directeur);
@@ -341,7 +341,7 @@ public class SampleStaffing {
         } else {
             final Mailing thanks = mailing(revivalId, MailingAudienceKind.CONFIRMED, "Tack för i år!", """
                     Hej!
-
+                    
                     Tack för en fantastisk föreställningshelg! Bilderna från kalaset finns under Material.""", directeur);
 
             sent(thanks, showWeekend.getEndDate().plusDays(3).atStartOfDay(ZoneOffset.UTC).toInstant(), directeur, confirmed, null);

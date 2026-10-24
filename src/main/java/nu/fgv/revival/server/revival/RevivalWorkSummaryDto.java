@@ -27,6 +27,7 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record RevivalWorkSummaryDto(Long revivalId, int openEntries, int overdueEntries, int overdueChecklistItems, int openRequiredItems,
+public record RevivalWorkSummaryDto(Long revivalId, int openEntries, int overdueEntries, int overdueChecklistItems,
+                                    int openRequiredItems,
                                     @Nullable MeetingSummaryDto meetingInProgress) {
 }

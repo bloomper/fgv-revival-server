@@ -27,8 +27,10 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistTemplateItemDto(Long id, Long templateId, int position, GuideVersionView.Text text, @Nullable String guideItemKey,
-                                       @Nullable String defaultCapability, @Nullable RelativeDeadline deadline, boolean retired, Long version) {
+public record ChecklistTemplateItemDto(Long id, Long templateId, int position, GuideVersionView.Text text,
+                                       @Nullable String guideItemKey,
+                                       @Nullable String defaultCapability, @Nullable RelativeDeadline deadline,
+                                       boolean retired, Long version) {
 
     public static ChecklistTemplateItemDto of(final ChecklistTemplateItem item) {
         return new ChecklistTemplateItemDto(item.getId(), item.getTemplateId(), item.getPosition(),

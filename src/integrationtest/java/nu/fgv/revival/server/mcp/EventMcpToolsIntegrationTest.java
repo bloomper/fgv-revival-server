@@ -41,6 +41,13 @@ class EventMcpToolsIntegrationTest extends AbstractIntegrationTest {
     private long revival;
     private long rehearsal;
 
+    private static List<String> titles(final JsonNode events) {
+        final List<String> titles = new ArrayList<>();
+
+        events.get("items").forEach(event -> titles.add(event.get("title").asString()));
+        return titles;
+    }
+
     @BeforeEach
     void revivalWithEvents() {
         revival = organisingRevival();
@@ -72,13 +79,6 @@ class EventMcpToolsIntegrationTest extends AbstractIntegrationTest {
             throw new AssertionError("Tool error: " + response);
         }
         return objectMapper.readTree(result.get("content").get(0).get("text").asString());
-    }
-
-    private static List<String> titles(final JsonNode events) {
-        final List<String> titles = new ArrayList<>();
-
-        events.get("items").forEach(event -> titles.add(event.get("title").asString()));
-        return titles;
     }
 
     @Test

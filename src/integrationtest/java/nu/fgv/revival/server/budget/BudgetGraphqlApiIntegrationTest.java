@@ -262,7 +262,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         createLine(STEERING_GROUP, Map.of("categoryId", "VENUE", "description", "Lokal", "unitAmount", "72000"));
 
         execute(OBSERVER, "query($id: ID!, $input: BudgetScenarioInput!) { budgetScenarioCalculate(revivalId: $id, input: $input) { baseline { "
-                + "showTickets showTicketPrice venueCost } used { showTickets showTicketPrice } income cost result breakEvenShowTickets partySubsidy } }",
+                        + "showTickets showTicketPrice venueCost } used { showTickets showTicketPrice } income cost result breakEvenShowTickets partySubsidy } }",
                 Map.of("id", revival, "input", Map.of("showTicketPrice", "200")))
                 .path("budgetScenarioCalculate.baseline.showTickets").entity(Integer.class).isEqualTo(400)
                 .path("budgetScenarioCalculate.baseline.showTicketPrice").entity(String.class).isEqualTo("150")

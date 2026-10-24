@@ -93,25 +93,60 @@ public class ChecklistTemplateService {
         this.clock = clock;
     }
 
-    public record Texts(String sv, @Nullable String en) {
+    private static void renumber(final List<ChecklistTemplateItem> items) {
+        for (int position = 0; position < items.size(); position++) {
+            if (items.get(position).getPosition() != position) {
+                items.get(position).setPosition(position);
+            }
+        }
     }
 
-    public record NewTemplate(ChecklistKind kind, @Nullable String chapterKey, @Nullable Texts name) {
+    private static int clamp(final @Nullable Integer position, final int size) {
+        return position == null ? size : Math.clamp(position, 0, size);
     }
 
-    public record NewItem(Long templateId, @Nullable Integer position, Texts text, @Nullable String guideItemKey,
-                          @Nullable String defaultCapability, @Nullable RelativeDeadline deadline) {
+    private static void setName(final ChecklistTemplate template, final @Nullable Texts name) {
+        if (name == null || name.sv().isBlank()) {
+            throw new BadRequestException("error.template.name.blank");
+        }
+        template.setNameSv(validName(name.sv()));
+        template.setNameEn(name.en() == null || name.en().isBlank() ? null : validName(name.en()));
     }
 
-    /**
-     * Fields left null are unchanged; the {@code clear*} flags remove a value.
-     */
-    public record ItemChange(Long id, Long version, @Nullable Texts text, @Nullable String guideItemKey, boolean clearGuideItem,
-                             @Nullable String defaultCapability, boolean clearDefaultCapability, @Nullable RelativeDeadline deadline,
-                             boolean clearDeadline) {
+    private static String validName(final String name) {
+        final String trimmed = name.strip();
+
+        if (trimmed.length() > ChecklistTemplate.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.template.name.tooLong", ChecklistTemplate.NAME_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
     // --- Reading ----------------------------------------------------------------------------------------------------
+
+    private static void setText(final ChecklistTemplateItem item, final Texts text) {
+        if (text.sv().isBlank()) {
+            throw new BadRequestException("error.checklist.text.blank");
+        }
+        item.setTextSv(validText(text.sv()));
+        item.setTextEn(text.en() == null || text.en().isBlank() ? null : validText(text.en()));
+    }
+
+    private static String validText(final String text) {
+        final String trimmed = text.strip();
+
+        if (trimmed.length() > ChecklistTemplateItem.TEXT_MAX_LENGTH) {
+            throw new BadRequestException("error.checklist.text.tooLong", ChecklistTemplateItem.TEXT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    private static @Nullable RelativeDeadline validDeadline(final ChecklistTemplate template, final @Nullable RelativeDeadline deadline) {
+        if (deadline != null && template.getKind() == ChecklistKind.CHAPTER) {
+            throw new BadRequestException("error.template.chapterDeadline");
+        }
+        return deadline;
+    }
 
     @Transactional(readOnly = true)
     public List<ChecklistTemplateDto> list(final boolean includeRetired) {
@@ -178,6 +213,8 @@ public class ChecklistTemplateService {
                 });
     }
 
+    // --- Templates --------------------------------------------------------------------------------------------------
+
     @Transactional(readOnly = true)
     public ChecklistTemplateDto get(final Long id) {
         readable();
@@ -217,8 +254,6 @@ public class ChecklistTemplateService {
         return found;
     }
 
-    // --- Templates --------------------------------------------------------------------------------------------------
-
     @Transactional
     public ChecklistTemplateDto create(final NewTemplate newTemplate) {
         manageable();
@@ -245,6 +280,8 @@ public class ChecklistTemplateService {
         AuditContext.operation("checklistTemplateCreate");
         return toDto(templateRepository.saveAndFlush(template));
     }
+
+    // --- Items ------------------------------------------------------------------------------------------------------
 
     @Transactional
     public ChecklistTemplateDto update(final Long id, final Long version, final @Nullable Texts name) {
@@ -298,8 +335,6 @@ public class ChecklistTemplateService {
         template.setRetiredAt(null);
         return toDto(templateRepository.saveAndFlush(template));
     }
-
-    // --- Items ------------------------------------------------------------------------------------------------------
 
     @Transactional
     public ChecklistTemplateItemDto createItem(final NewItem newItem) {
@@ -359,6 +394,8 @@ public class ChecklistTemplateService {
         return ChecklistTemplateItemDto.of(itemRepository.saveAndFlush(item));
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     @Transactional
     public ChecklistTemplateDto moveItem(final Long id, final Long version, final int position) {
         manageable();
@@ -411,8 +448,6 @@ public class ChecklistTemplateService {
         return toDto(template);
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private Caller readable() {
         final Caller caller = callerService.current();
 
@@ -460,56 +495,23 @@ public class ChecklistTemplateService {
         return ChecklistTemplateDto.of(template, template.getId() == null ? List.of() : activeItems(template.getId()));
     }
 
-    private static void renumber(final List<ChecklistTemplateItem> items) {
-        for (int position = 0; position < items.size(); position++) {
-            if (items.get(position).getPosition() != position) {
-                items.get(position).setPosition(position);
-            }
-        }
+    public record Texts(String sv, @Nullable String en) {
     }
 
-    private static int clamp(final @Nullable Integer position, final int size) {
-        return position == null ? size : Math.clamp(position, 0, size);
+    public record NewTemplate(ChecklistKind kind, @Nullable String chapterKey, @Nullable Texts name) {
     }
 
-    private static void setName(final ChecklistTemplate template, final @Nullable Texts name) {
-        if (name == null || name.sv().isBlank()) {
-            throw new BadRequestException("error.template.name.blank");
-        }
-        template.setNameSv(validName(name.sv()));
-        template.setNameEn(name.en() == null || name.en().isBlank() ? null : validName(name.en()));
+    public record NewItem(Long templateId, @Nullable Integer position, Texts text, @Nullable String guideItemKey,
+                          @Nullable String defaultCapability, @Nullable RelativeDeadline deadline) {
     }
 
-    private static String validName(final String name) {
-        final String trimmed = name.strip();
-
-        if (trimmed.length() > ChecklistTemplate.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.template.name.tooLong", ChecklistTemplate.NAME_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    private static void setText(final ChecklistTemplateItem item, final Texts text) {
-        if (text.sv().isBlank()) {
-            throw new BadRequestException("error.checklist.text.blank");
-        }
-        item.setTextSv(validText(text.sv()));
-        item.setTextEn(text.en() == null || text.en().isBlank() ? null : validText(text.en()));
-    }
-
-    private static String validText(final String text) {
-        final String trimmed = text.strip();
-
-        if (trimmed.length() > ChecklistTemplateItem.TEXT_MAX_LENGTH) {
-            throw new BadRequestException("error.checklist.text.tooLong", ChecklistTemplateItem.TEXT_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    private static @Nullable RelativeDeadline validDeadline(final ChecklistTemplate template, final @Nullable RelativeDeadline deadline) {
-        if (deadline != null && template.getKind() == ChecklistKind.CHAPTER) {
-            throw new BadRequestException("error.template.chapterDeadline");
-        }
-        return deadline;
+    /**
+     * Fields left null are unchanged; the {@code clear*} flags remove a value.
+     */
+    public record ItemChange(Long id, Long version, @Nullable Texts text, @Nullable String guideItemKey,
+                             boolean clearGuideItem,
+                             @Nullable String defaultCapability, boolean clearDefaultCapability,
+                             @Nullable RelativeDeadline deadline,
+                             boolean clearDeadline) {
     }
 }

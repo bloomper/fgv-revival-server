@@ -60,6 +60,10 @@ public class GuideVersionViews {
         this.markdown = markdown;
     }
 
+    private static Long versionOf(final @Nullable Long version) {
+        return version == null ? 0L : version;
+    }
+
     @Cacheable(cacheNames = CacheConfig.GUIDE_VERSIONS, unless = "#result == null || #result.draft()")
     @Transactional(readOnly = true)
     public @Nullable GuideVersionView find(final Long versionId) {
@@ -140,9 +144,5 @@ public class GuideVersionViews {
 
     private GuideVersionView.Text text(final String sv, final @Nullable String en) {
         return new GuideVersionView.Text(sv, en, markdown.plainText(sv), en == null ? null : markdown.plainText(en));
-    }
-
-    private static Long versionOf(final @Nullable Long version) {
-        return version == null ? 0L : version;
     }
 }

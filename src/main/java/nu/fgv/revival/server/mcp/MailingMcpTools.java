@@ -60,7 +60,8 @@ public class MailingMcpTools {
                 new MailingService.AudienceInput(audience, positionId, eventId), subject, body, null, null), Locale.ENGLISH)));
     }
 
-    public record DraftedMailing(Long id, Long revivalId, MailingAudienceKind audience, String subject, MailingStatus status, String note) {
+    public record DraftedMailing(Long id, Long revivalId, MailingAudienceKind audience, String subject,
+                                 MailingStatus status, String note) {
 
         static DraftedMailing of(final MailingDto mailing) {
             return new DraftedMailing(mailing.id(), mailing.revivalId(), mailing.audience().kind(), mailing.subject(), mailing.status(),

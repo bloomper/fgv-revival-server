@@ -74,19 +74,11 @@ public class ReferenceRevivalService {
         this.clock = clock;
     }
 
-    /**
-     * A category's figures; at least one of the two is set.
-     */
-    public record FigureInput(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {
+    private static void validAmount(final @Nullable BigDecimal amount) {
+        if (amount != null && (amount.signum() < 0 || amount.compareTo(MAX_AMOUNT) > 0)) {
+            throw new BadRequestException("error.reference.figure.amount", MAX_AMOUNT.toPlainString());
+        }
     }
-
-    /**
-     * Everything the super admin sets. The figures replace every figure the reference had.
-     */
-    public record Definition(String label, Integer year, @Nullable Integer participants, @Nullable String comment, List<FigureInput> figures) {
-    }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     /**
      * Newest year first.
@@ -99,6 +91,8 @@ public class ReferenceRevivalService {
 
         return repository.findAllByOrderByYearDescLabelAscIdAsc().stream().map(reference -> ReferenceRevivalDto.of(reference, order)).toList();
     }
+
+    // --- Reading ----------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public ReferenceRevivalDto get(final Long id) {
@@ -118,8 +112,6 @@ public class ReferenceRevivalService {
         return repository.findAllByOrderByYearDescLabelAscIdAsc().stream().map(reference -> ReferenceRevivalDto.of(reference, order)).toList();
     }
 
-    // --- Changing ---------------------------------------------------------------------------------------------------
-
     @Transactional
     public ReferenceRevivalDto create(final Definition definition) {
         manageable();
@@ -131,6 +123,8 @@ public class ReferenceRevivalService {
         define(reference, definition);
         return ReferenceRevivalDto.of(repository.saveAndFlush(reference), categoryOrder());
     }
+
+    // --- Changing ---------------------------------------------------------------------------------------------------
 
     @Transactional
     public ReferenceRevivalDto update(final Long id, final Long version, final Definition definition) {
@@ -185,14 +179,14 @@ public class ReferenceRevivalService {
         return repository.saveAndFlush(reference);
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private Caller readable() {
         final Caller caller = callerService.current();
 
         accessPolicy.requireReadReferenceFigures(caller, guideAccess.callerRevivals(caller));
         return caller;
     }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void manageable() {
         accessPolicy.requireManageReferenceFigures(callerService.current());
@@ -280,9 +274,16 @@ public class ReferenceRevivalService {
         });
     }
 
-    private static void validAmount(final @Nullable BigDecimal amount) {
-        if (amount != null && (amount.signum() < 0 || amount.compareTo(MAX_AMOUNT) > 0)) {
-            throw new BadRequestException("error.reference.figure.amount", MAX_AMOUNT.toPlainString());
-        }
+    /**
+     * A category's figures; at least one of the two is set.
+     */
+    public record FigureInput(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {
+    }
+
+    /**
+     * Everything the super admin sets. The figures replace every figure the reference had.
+     */
+    public record Definition(String label, Integer year, @Nullable Integer participants, @Nullable String comment,
+                             List<FigureInput> figures) {
     }
 }

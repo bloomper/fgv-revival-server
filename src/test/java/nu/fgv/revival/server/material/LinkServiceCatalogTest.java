@@ -50,13 +50,16 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LinkServiceCatalogTest {
 
+    private final List<LinkService> services = new ArrayList<>();
     @Mock
     private LinkServiceRepository repository;
     @Mock
     private CallerService callerService;
-
     private LinkServiceCatalog catalog;
-    private final List<LinkService> services = new ArrayList<>();
+
+    private static CatalogService.Names names(final String sv) {
+        return new CatalogService.Names(sv, null);
+    }
 
     @BeforeEach
     void setUp() {
@@ -67,10 +70,6 @@ class LinkServiceCatalogTest {
         lenient().when(repository.findById(any())).thenAnswer(invocation ->
                 services.stream().filter(service -> service.getId().equals(invocation.getArgument(0))).findFirst());
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    }
-
-    private static CatalogService.Names names(final String sv) {
-        return new CatalogService.Names(sv, null);
     }
 
     private LinkService find(final String id) {

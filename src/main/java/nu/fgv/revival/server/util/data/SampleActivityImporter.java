@@ -87,11 +87,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -214,18 +214,48 @@ public class SampleActivityImporter {
         this.logEntryCounters = logEntryCounters;
     }
 
-    private record SampleRevival(long id, RevivalStatus status, @Nullable LocalDate premiereDate, @Nullable Long guideVersionId,
-                                 long directeur, List<SteeringGroupMember> steeringGroup) {
-
-        List<Long> people() {
-            final List<Long> people = new ArrayList<>(List.of(directeur));
-
-            steeringGroup.forEach(member -> people.add(member.personId()));
-            return people;
-        }
+    /**
+     * The steering group member with the finance area, or the directeur.
+     */
+    private static long payer(final SampleRevival revival) {
+        return revival.steeringGroup().stream().filter(member -> member.capabilities().contains("FINANCE")).map(SteeringGroupMember::personId)
+                .findFirst().orElse(revival.directeur());
     }
 
-    private record SteeringGroupMember(long personId, Set<String> capabilities) {
+    private static Owner defaultOwner(final @Nullable String capability, final List<SteeringGroupMember> steeringGroup) {
+        if (capability == null) {
+            return Owner.none();
+        }
+
+        final List<SteeringGroupMember> holders = steeringGroup.stream().filter(member -> member.capabilities().contains(capability)).toList();
+
+        return holders.size() == 1 ? Owner.member(holders.getFirst().personId()) : Owner.none();
+    }
+
+    private static @Nullable String guideItemName(final @Nullable String key) {
+        return key == null ? null : ANSWERS.keySet().stream().filter(name -> SampleGuide.key(name).equals(key)).findFirst().orElse(null);
+    }
+
+    private static GuideSuggestion suggestion(final SampleRevival revival,
+                                              final long versionId,
+                                              final GuideSuggestionKind kind,
+                                              final @Nullable String item,
+                                              final String chapter,
+                                              final @Nullable String type,
+                                              final @Nullable String text,
+                                              final @Nullable String reason) {
+        final GuideSuggestion suggestion = new GuideSuggestion();
+
+        suggestion.setRevivalId(revival.id());
+        suggestion.setAuthorId(revival.directeur());
+        suggestion.setVersionId(versionId);
+        suggestion.setKind(kind);
+        suggestion.setItemKey(item == null ? null : SampleGuide.key(item));
+        suggestion.setChapterKey(SampleGuide.key(chapter));
+        suggestion.setProposedType(type);
+        suggestion.setProposedTextSv(text);
+        suggestion.setReason(reason);
+        return suggestion;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -259,9 +289,6 @@ public class SampleActivityImporter {
         });
         anonymization.anonymizeExpired();
         log.info("Imported the sample activity of {} revivals in {} ms", revivals.size(), Duration.ofNanos(System.nanoTime() - started).toMillis());
-    }
-
-    private record RevivalRow(long id, RevivalStatus status, @Nullable LocalDate premiereDate, @Nullable Long guideVersionId) {
     }
 
     private List<SampleRevival> revivals() {
@@ -362,14 +389,6 @@ public class SampleActivityImporter {
         }
     }
 
-    /**
-     * The steering group member with the finance area, or the directeur.
-     */
-    private static long payer(final SampleRevival revival) {
-        return revival.steeringGroup().stream().filter(member -> member.capabilities().contains("FINANCE")).map(SteeringGroupMember::personId)
-                .findFirst().orElse(revival.directeur());
-    }
-
     // --- Checklists ---------------------------------------------------------------------------------------------------
 
     private void progressPhaseChecklists(final SampleRevival revival, final int phasesDone) {
@@ -431,9 +450,6 @@ public class SampleActivityImporter {
                 eventTypeRepository.save(type);
             }
         }
-    }
-
-    private record SampleEvents(Event rehearsal, Event showWeekend) {
     }
 
     /**
@@ -516,18 +532,6 @@ public class SampleActivityImporter {
         }
     }
 
-    private static Owner defaultOwner(final @Nullable String capability, final List<SteeringGroupMember> steeringGroup) {
-        if (capability == null) {
-            return Owner.none();
-        }
-
-        final List<SteeringGroupMember> holders = steeringGroup.stream().filter(member -> member.capabilities().contains(capability)).toList();
-
-        return holders.size() == 1 ? Owner.member(holders.getFirst().personId()) : Owner.none();
-    }
-
-    // --- Decision log and meetings ------------------------------------------------------------------------------------
-
     private void createLogEntries(final SampleRevival revival, final @Nullable Meeting meeting, final List<LogEntry> questions, final int phasesDone) {
         final long somebody = revival.people().getLast();
         final LocalDate earlier = today().minusDays(40);
@@ -575,10 +579,6 @@ public class SampleActivityImporter {
         logEntryRepository.save(matinee);
     }
 
-    private static @Nullable String guideItemName(final @Nullable String key) {
-        return key == null ? null : ANSWERS.keySet().stream().filter(name -> SampleGuide.key(name).equals(key)).findFirst().orElse(null);
-    }
-
     private LogEntry entry(final SampleRevival revival,
                            final LocalDate date,
                            final LogEntryType type,
@@ -589,6 +589,8 @@ public class SampleActivityImporter {
                            final Set<String> tags) {
         return entry(revival, date, type, text, status, owner, deadline, tags, LogEntryOrigin.MANUAL);
     }
+
+    // --- Decision log and meetings ------------------------------------------------------------------------------------
 
     private LogEntry entry(final SampleRevival revival,
                            final LocalDate date,
@@ -736,8 +738,6 @@ public class SampleActivityImporter {
         }
     }
 
-    // --- Closing ------------------------------------------------------------------------------------------------------
-
     /**
      * The surplus decision, the FGV membership for the year of the premiere, and a sync to Spexregister: failed while
      * the revival settles, so it can be resumed for real, and done once it is archived. Every sample participant is a
@@ -774,8 +774,6 @@ public class SampleActivityImporter {
         syncStepRepository.saveAndFlush(step);
     }
 
-    // --- Chalmersspexet's dates ---------------------------------------------------------------------------------------
-
     /**
      * Chalmersspexet's shows in February this year and next, and a guest performance in the week of the first open
      * revival's premiere, which the timeline flags. Unless the dates are there already.
@@ -806,7 +804,7 @@ public class SampleActivityImporter {
         spexCalendarRepository.saveAndFlush(spexCalendarDate);
     }
 
-    // --- Guide suggestions --------------------------------------------------------------------------------------------
+    // --- Closing ------------------------------------------------------------------------------------------------------
 
     /**
      * An accepted suggestion behind the tip v2 added, one rejected and two open ones.
@@ -848,29 +846,33 @@ public class SampleActivityImporter {
         suggestionRepository.saveAll(List.of(accepted, rejected, change, add));
     }
 
-    private static GuideSuggestion suggestion(final SampleRevival revival,
-                                              final long versionId,
-                                              final GuideSuggestionKind kind,
-                                              final @Nullable String item,
-                                              final String chapter,
-                                              final @Nullable String type,
-                                              final @Nullable String text,
-                                              final @Nullable String reason) {
-        final GuideSuggestion suggestion = new GuideSuggestion();
-
-        suggestion.setRevivalId(revival.id());
-        suggestion.setAuthorId(revival.directeur());
-        suggestion.setVersionId(versionId);
-        suggestion.setKind(kind);
-        suggestion.setItemKey(item == null ? null : SampleGuide.key(item));
-        suggestion.setChapterKey(SampleGuide.key(chapter));
-        suggestion.setProposedType(type);
-        suggestion.setProposedTextSv(text);
-        suggestion.setReason(reason);
-        return suggestion;
-    }
+    // --- Chalmersspexet's dates ---------------------------------------------------------------------------------------
 
     private LocalDate today() {
         return LocalDate.now(zone);
+    }
+
+    private record SampleRevival(long id, RevivalStatus status, @Nullable LocalDate premiereDate,
+                                 @Nullable Long guideVersionId,
+                                 long directeur, List<SteeringGroupMember> steeringGroup) {
+
+        List<Long> people() {
+            final List<Long> people = new ArrayList<>(List.of(directeur));
+
+            steeringGroup.forEach(member -> people.add(member.personId()));
+            return people;
+        }
+    }
+
+    // --- Guide suggestions --------------------------------------------------------------------------------------------
+
+    private record SteeringGroupMember(long personId, Set<String> capabilities) {
+    }
+
+    private record RevivalRow(long id, RevivalStatus status, @Nullable LocalDate premiereDate,
+                              @Nullable Long guideVersionId) {
+    }
+
+    private record SampleEvents(Event rehearsal, Event showWeekend) {
     }
 }

@@ -75,6 +75,28 @@ public class GuideService {
         this.titles = titles;
     }
 
+    /**
+     * {@code nyuppsattningsguide-<name>-<lang>.pdf}, ASCII-folded and slugged (contracts/http.md).
+     */
+    static String fileName(final @Nullable String name, final Locale locale) {
+        final String slug = GuideSearch.fold(name == null ? "" : name.toLowerCase(Locale.ROOT))
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+
+        return "nyuppsattningsguide-%s%s.pdf".formatted(slug.isEmpty() ? "" : slug + "-", locale.getLanguage());
+    }
+
+    static int untranslated(final GuideVersionView view) {
+        final long introduction = !view.introduction().sv().isBlank() && !view.introduction().translated() ? 1 : 0;
+        final long titles = view.chapters().stream()
+                .flatMap(chapter -> Stream.concat(Stream.of(chapter.title()), chapter.sections().stream().map(GuideVersionView.Section::title)))
+                .filter(title -> !title.translated())
+                .count();
+        final long items = view.items().filter(item -> !item.text().translated()).count();
+
+        return (int) (introduction + titles + items);
+    }
+
     private GuideVersionView load(final Long id) {
         final GuideVersionView view = views.find(id);
 
@@ -139,12 +161,6 @@ public class GuideService {
         return new SearchResult(version, GuideSearch.search(version, query, first));
     }
 
-    public record SearchResult(GuideVersionView version, List<GuideSearch.Hit> hits) {
-    }
-
-    public record Pdf(byte[] content, String fileName) {
-    }
-
     /**
      * A version the caller may read, as a PDF (FR-028).
      */
@@ -171,17 +187,6 @@ public class GuideService {
 
     private String draftName(final Locale locale) {
         return Locale.ENGLISH.getLanguage().equals(locale.getLanguage()) ? "draft" : "utkast";
-    }
-
-    /**
-     * {@code nyuppsattningsguide-<name>-<lang>.pdf}, ASCII-folded and slugged (contracts/http.md).
-     */
-    static String fileName(final @Nullable String name, final Locale locale) {
-        final String slug = GuideSearch.fold(name == null ? "" : name.toLowerCase(Locale.ROOT))
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("(^-|-$)", "");
-
-        return "nyuppsattningsguide-%s%s.pdf".formatted(slug.isEmpty() ? "" : slug + "-", locale.getLanguage());
     }
 
     /**
@@ -289,14 +294,9 @@ public class GuideService {
         return versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED).map(GUIDE_MAPPER::toSummary);
     }
 
-    static int untranslated(final GuideVersionView view) {
-        final long introduction = !view.introduction().sv().isBlank() && !view.introduction().translated() ? 1 : 0;
-        final long titles = view.chapters().stream()
-                .flatMap(chapter -> Stream.concat(Stream.of(chapter.title()), chapter.sections().stream().map(GuideVersionView.Section::title)))
-                .filter(title -> !title.translated())
-                .count();
-        final long items = view.items().filter(item -> !item.text().translated()).count();
+    public record SearchResult(GuideVersionView version, List<GuideSearch.Hit> hits) {
+    }
 
-        return (int) (introduction + titles + items);
+    public record Pdf(byte[] content, String fileName) {
     }
 }

@@ -19,8 +19,8 @@ package nu.fgv.revival.server.guide.suggestion;
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.guide.GuideChapterRepository;
 import nu.fgv.revival.server.guide.GuideDraftService;
-import nu.fgv.revival.server.guide.GuideItemRepository;
 import nu.fgv.revival.server.guide.GuideItemKind;
+import nu.fgv.revival.server.guide.GuideItemRepository;
 import nu.fgv.revival.server.guide.GuideSectionRepository;
 import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.guide.GuideVersion;
@@ -108,6 +108,10 @@ class GuideSuggestionServiceTest {
         return new GuideSuggestionService.Proposal(REVIVAL_ID, VERSION_ID, kind, itemKey, chapterKey, sectionKey, type, sv, null, reason);
     }
 
+    private static String code(final Throwable e) {
+        return ((BadRequestException) e).getDetailMessageCode();
+    }
+
     @BeforeEach
     void setUp() {
         service = new GuideSuggestionService(repository, revivalRepository, versionRepository, chapterRepository, sectionRepository,
@@ -128,10 +132,6 @@ class GuideSuggestionServiceTest {
             suggestion.setId(9L);
             return suggestion;
         });
-    }
-
-    private static String code(final Throwable e) {
-        return ((BadRequestException) e).getDetailMessageCode();
     }
 
     @Test

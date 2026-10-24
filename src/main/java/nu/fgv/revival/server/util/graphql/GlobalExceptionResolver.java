@@ -56,6 +56,15 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
         this.messageSource = messageSource;
     }
 
+    private static GraphQLError error(final ErrorClassification type, final @Nullable String message, final DataFetchingEnvironment environment) {
+        return GraphQLError.newError()
+                .errorType(type)
+                .message(message)
+                .path(environment.getExecutionStepInfo().getPath())
+                .location(environment.getField().getSourceLocation())
+                .build();
+    }
+
     @Override
     protected @Nullable List<GraphQLError> resolveToMultipleErrors(final Throwable ex, final DataFetchingEnvironment environment) {
         if (ex instanceof final ConstraintViolationException e) {
@@ -73,15 +82,20 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
     protected @Nullable GraphQLError resolveToSingleError(final Throwable ex, final DataFetchingEnvironment environment) {
         return switch (ex) {
             case final AccessDeniedException _ -> localized(ErrorType.FORBIDDEN, "error.forbidden", null, environment);
-            case final AuthenticationException _ -> localized(ErrorType.UNAUTHORIZED, "error.unauthorized", null, environment);
+            case final AuthenticationException _ ->
+                    localized(ErrorType.UNAUTHORIZED, "error.unauthorized", null, environment);
             case final BadRequestException e -> localized(ErrorType.BAD_REQUEST, e, environment);
             case final ResourceNotFoundException e -> localized(ErrorType.NOT_FOUND, e, environment);
             case final ConflictException e -> localized(CustomErrorType.CONFLICT, e, environment);
-            case final SpexregisterUnavailableException e -> localized(CustomErrorType.SPEXREGISTER_UNAVAILABLE, e, environment);
-            case final DirectoryUnavailableException e -> localized(CustomErrorType.DIRECTORY_UNAVAILABLE, e, environment);
+            case final SpexregisterUnavailableException e ->
+                    localized(CustomErrorType.SPEXREGISTER_UNAVAILABLE, e, environment);
+            case final DirectoryUnavailableException e ->
+                    localized(CustomErrorType.DIRECTORY_UNAVAILABLE, e, environment);
             case final MailUnavailableException e -> localized(CustomErrorType.MAIL_UNAVAILABLE, e, environment);
-            case final OptimisticLockingFailureException _ -> localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
-            case final OptimisticLockException _ -> localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
+            case final OptimisticLockingFailureException _ ->
+                    localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
+            case final OptimisticLockException _ ->
+                    localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
             default -> null;
         };
     }
@@ -94,15 +108,6 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
         final Locale locale = Locales.supported(environment.getLocale());
 
         return error(type, messageSource.getMessage(code, arguments, code, locale), environment);
-    }
-
-    private static GraphQLError error(final ErrorClassification type, final @Nullable String message, final DataFetchingEnvironment environment) {
-        return GraphQLError.newError()
-                .errorType(type)
-                .message(message)
-                .path(environment.getExecutionStepInfo().getPath())
-                .location(environment.getField().getSourceLocation())
-                .build();
     }
 
 }

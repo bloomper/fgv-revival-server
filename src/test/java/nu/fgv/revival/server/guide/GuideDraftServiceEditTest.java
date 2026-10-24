@@ -114,7 +114,8 @@ class GuideDraftServiceEditTest {
         @BeforeEach
         void setUp() {
             service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
-                    views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(), event -> { }, mock(GuideItemTypeService.class));
+                    views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(), event -> {
+            }, mock(GuideItemTypeService.class));
             lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
             lenient().when(versionRepository.saveAndFlush(any())).thenAnswer(invocation -> {
                 final GuideVersion version = invocation.getArgument(0);

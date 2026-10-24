@@ -47,13 +47,12 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SpexCalendarServiceTest {
 
+    private final List<SpexCalendarDate> dates = new ArrayList<>();
     @Mock
     private SpexCalendarDateRepository repository;
     @Mock
     private CallerService callerService;
-
     private SpexCalendarService service;
-    private final List<SpexCalendarDate> dates = new ArrayList<>();
 
     @BeforeEach
     void setUp() {

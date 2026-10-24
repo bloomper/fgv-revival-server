@@ -133,17 +133,37 @@ public class MailingService {
         this.clock = clock;
     }
 
-    public record AudienceInput(MailingAudienceKind kind, @Nullable String positionId, @Nullable Long eventId) {
+    /**
+     * Refuses with MAIL_UNAVAILABLE when there were addresses and none of them could be sent to.
+     */
+    private static void failIfNothingWentOut(final Long mailingId, final Collection<MailingRecipientStatus> results) {
+        if (results.contains(MailingRecipientStatus.FAILED) && !results.contains(MailingRecipientStatus.SENT)) {
+            log.warn("Mailing {} could not be sent to anyone", mailingId);
+            throw new MailUnavailableException(null);
+        }
+        log.info("Sent mailing {}: {} sent, {} failed, {} without an address", mailingId,
+                results.stream().filter(result -> result == MailingRecipientStatus.SENT).count(),
+                results.stream().filter(result -> result == MailingRecipientStatus.FAILED).count(),
+                results.stream().filter(result -> result == MailingRecipientStatus.NO_ADDRESS).count());
     }
 
-    /**
-     * A draft as written. The revival, template and event are read only on create.
-     */
-    public record Input(@Nullable Long revivalId, AudienceInput audience, String subject, String body, @Nullable Long templateId,
-                        @Nullable Long eventId) {
+    private static PlanItem item(final MailingTemplate template, final @Nullable Event event, final LocalDate dueDate,
+                                 final Map<String, List<Mailing>> planned) {
+        final List<Mailing> mailings = planned.getOrDefault(key(template.getId(), event == null ? null : event.getId()), List.of());
+
+        return new PlanItem(template, event, dueDate, mailings.isEmpty() ? null : mailings.getFirst(),
+                mailings.stream().anyMatch(mailing -> mailing.getStatus() == MailingStatus.SENT));
     }
 
     // --- Reading ----------------------------------------------------------------------------------------------------
+
+    static String key(final Long templateId, final @Nullable Long eventId) {
+        return templateId + "/" + (eventId == null ? "premiere" : eventId);
+    }
+
+    private static @Nullable PersonRefDto person(final @Nullable Long id, final Map<Long, String> names) {
+        return id == null ? null : new PersonRefDto(id, names.get(id));
+    }
 
     /**
      * Newest first. Readers of mailings.
@@ -155,6 +175,8 @@ public class MailingService {
 
         return toDtos(repository.findByRevivalIdOrderByCreatedAtDescIdDesc(revivalId), revival, caller, locale);
     }
+
+    // --- Drafting ---------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public MailingDto get(final Long id, final Locale locale) {
@@ -177,8 +199,6 @@ public class MailingService {
                 .map(recipient -> new MailingRecipientPreview(recipient.displayName(), recipient.email() != null))
                 .toList();
     }
-
-    // --- Drafting ---------------------------------------------------------------------------------------------------
 
     /**
      * A new draft (M6B-FR-12). From a plan entry, its template and event are kept so the plan shows it; the web fills in
@@ -203,6 +223,8 @@ public class MailingService {
         return toDto(repository.saveAndFlush(mailing), revival, caller, locale);
     }
 
+    // --- Sending ----------------------------------------------------------------------------------------------------
+
     @Transactional
     public MailingDto update(final Long id, final Long version, final Input input, final Locale locale) {
         final Caller caller = callerService.current();
@@ -226,11 +248,6 @@ public class MailingService {
         mailing.setStatus(MailingStatus.CANCELLED);
         mailing.setCancelledAt(clock.instant());
         return toDto(repository.saveAndFlush(mailing), revivalRepository.findById(mailing.getRevivalId()).orElseThrow(), caller, locale);
-    }
-
-    // --- Sending ----------------------------------------------------------------------------------------------------
-
-    private record Prepared(Caller caller, Long mailingId, Long revivalId, MailingMailer.Content content, List<MailingAudiences.Recipient> recipients) {
     }
 
     /**
@@ -296,10 +313,6 @@ public class MailingService {
         }));
     }
 
-    private record Retry(Caller caller, Long mailingId, Long revivalId, MailingMailer.Content content, List<MailingRecipient> failed,
-                         MailingAudiences.Addresses addresses) {
-    }
-
     /**
      * Sends a sent mailing again to the recipients it failed for, with their addresses as they are now.
      */
@@ -356,37 +369,11 @@ public class MailingService {
         }));
     }
 
-    /**
-     * Refuses with MAIL_UNAVAILABLE when there were addresses and none of them could be sent to.
-     */
-    private static void failIfNothingWentOut(final Long mailingId, final Collection<MailingRecipientStatus> results) {
-        if (results.contains(MailingRecipientStatus.FAILED) && !results.contains(MailingRecipientStatus.SENT)) {
-            log.warn("Mailing {} could not be sent to anyone", mailingId);
-            throw new MailUnavailableException(null);
-        }
-        log.info("Sent mailing {}: {} sent, {} failed, {} without an address", mailingId,
-                results.stream().filter(result -> result == MailingRecipientStatus.SENT).count(),
-                results.stream().filter(result -> result == MailingRecipientStatus.FAILED).count(),
-                results.stream().filter(result -> result == MailingRecipientStatus.NO_ADDRESS).count());
-    }
-
     private MailingMailer.Content content(final Caller caller, final Revival revival, final Mailing mailing, final Locale locale) {
         final String name = caller.person().getDisplayName();
 
         return new MailingMailer.Content(titles.ofCached(revival, locale), name == null || name.isBlank() ? "" : name.strip(),
                 caller.person().getEmail(), mailing.getSubject(), mailing.getBody(), locale);
-    }
-
-    // --- The plan ---------------------------------------------------------------------------------------------------
-
-    /**
-     * One entry of a revival's plan, before it is shown.
-     */
-    record PlanItem(MailingTemplate template, @Nullable Event event, LocalDate dueDate, @Nullable Mailing mailing, boolean sent) {
-
-        boolean due(final LocalDate today) {
-            return !sent && !dueDate.isAfter(today.plusDays(DUE_WITHIN_DAYS));
-        }
     }
 
     /**
@@ -410,6 +397,8 @@ public class MailingService {
                 item.event() == null ? null : EventDto.of(item.event(), revival.getPremiereDate()), item.dueDate(),
                 item.mailing() == null ? null : mailings.get(item.mailing().getId()), item.due(today))).toList();
     }
+
+    // --- The plan ---------------------------------------------------------------------------------------------------
 
     /**
      * The plan entry a mailing was drafted from, as the plan shows it; null when it was not, or the entry is gone.
@@ -472,20 +461,6 @@ public class MailingService {
         return items;
     }
 
-    private static PlanItem item(final MailingTemplate template, final @Nullable Event event, final LocalDate dueDate,
-                                 final Map<String, List<Mailing>> planned) {
-        final List<Mailing> mailings = planned.getOrDefault(key(template.getId(), event == null ? null : event.getId()), List.of());
-
-        return new PlanItem(template, event, dueDate, mailings.isEmpty() ? null : mailings.getFirst(),
-                mailings.stream().anyMatch(mailing -> mailing.getStatus() == MailingStatus.SENT));
-    }
-
-    static String key(final Long templateId, final @Nullable Long eventId) {
-        return templateId + "/" + (eventId == null ? "premiere" : eventId);
-    }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private Revival readableRevival(final Caller caller, final Long revivalId) {
         final Revival revival = accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
 
@@ -525,6 +500,8 @@ public class MailingService {
         }
         return mailing;
     }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void define(final Mailing mailing, final Revival revival, final Input input) {
         final MailingAudiences.Audience audience = audience(revival, input.audience());
@@ -668,7 +645,34 @@ public class MailingService {
         }).toList();
     }
 
-    private static @Nullable PersonRefDto person(final @Nullable Long id, final Map<Long, String> names) {
-        return id == null ? null : new PersonRefDto(id, names.get(id));
+    public record AudienceInput(MailingAudienceKind kind, @Nullable String positionId, @Nullable Long eventId) {
+    }
+
+    /**
+     * A draft as written. The revival, template and event are read only on create.
+     */
+    public record Input(@Nullable Long revivalId, AudienceInput audience, String subject, String body,
+                        @Nullable Long templateId,
+                        @Nullable Long eventId) {
+    }
+
+    private record Prepared(Caller caller, Long mailingId, Long revivalId, MailingMailer.Content content,
+                            List<MailingAudiences.Recipient> recipients) {
+    }
+
+    private record Retry(Caller caller, Long mailingId, Long revivalId, MailingMailer.Content content,
+                         List<MailingRecipient> failed,
+                         MailingAudiences.Addresses addresses) {
+    }
+
+    /**
+     * One entry of a revival's plan, before it is shown.
+     */
+    record PlanItem(MailingTemplate template, @Nullable Event event, LocalDate dueDate, @Nullable Mailing mailing,
+                    boolean sent) {
+
+        boolean due(final LocalDate today) {
+            return !sent && !dueDate.isAfter(today.plusDays(DUE_WITHIN_DAYS));
+        }
     }
 }

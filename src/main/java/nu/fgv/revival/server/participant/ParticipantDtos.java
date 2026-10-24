@@ -73,7 +73,8 @@ public final class ParticipantDtos {
                                  Long version) {
     }
 
-    public record SpexareCandidate(Long spexareId, String firstName, String lastName, @Nullable String nickName, @Nullable String graduation,
+    public record SpexareCandidate(Long spexareId, String firstName, String lastName, @Nullable String nickName,
+                                   @Nullable String graduation,
                                    List<String> history, boolean added) {
     }
 
@@ -83,7 +84,8 @@ public final class ParticipantDtos {
     public record InviteResult(List<ParticipantDto> invited, List<ParticipantSkip> skipped) {
     }
 
-    public record Settings(@Nullable String swishNumber, @Nullable String whatsappLink, @Nullable String terms, Long version) {
+    public record Settings(@Nullable String swishNumber, @Nullable String whatsappLink, @Nullable String terms,
+                           Long version) {
 
         static Settings of(final @Nullable ParticipationSettings settings) {
             return settings == null ? new Settings(null, null, null, 0L)
@@ -98,22 +100,26 @@ public final class ParticipantDtos {
     public record PositionCount(SpexareDirectory.@Nullable Position position, int yes, int maybe, int pending) {
     }
 
-    public record Counts(int total, List<ResponseCount> byResponse, List<PositionCount> byPosition, int notInvited, int waitingForAccess,
+    public record Counts(int total, List<ResponseCount> byResponse, List<PositionCount> byPosition, int notInvited,
+                         int waitingForAccess,
                          int feesPaid, int feesUnpaid, int helpers) {
     }
 
-    public record ReferralDto(Long id, String name, @Nullable String contact, @Nullable String comment, @Nullable String referredBy,
+    public record ReferralDto(Long id, String name, @Nullable String contact, @Nullable String comment,
+                              @Nullable String referredBy,
                               Instant createdAt) {
     }
 
-    public record Contact(@Nullable String email, @Nullable String phone, @Nullable String streetAddress, @Nullable String postalCode,
+    public record Contact(@Nullable String email, @Nullable String phone, @Nullable String streetAddress,
+                          @Nullable String postalCode,
                           @Nullable String city) {
     }
 
     public record SwishPayment(String number, BigDecimal amount, String message, boolean qrAvailable) {
     }
 
-    public record Participation(ParticipantDto participant, RevivalDto revival, Settings settings, List<String> terms, @Nullable Contact contact,
+    public record Participation(ParticipantDto participant, RevivalDto revival, Settings settings, List<String> terms,
+                                @Nullable Contact contact,
                                 @Nullable String dietary, @Nullable SwishPayment swish, @Nullable String whatsappLink,
                                 List<PersonRefDto> steeringGroup) {
     }

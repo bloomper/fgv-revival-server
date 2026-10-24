@@ -52,13 +52,16 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BudgetCategoryServiceTest {
 
+    private final List<BudgetCategory> categories = new ArrayList<>();
     @Mock
     private BudgetCategoryRepository repository;
     @Mock
     private CallerService callerService;
-
     private BudgetCategoryService service;
-    private final List<BudgetCategory> categories = new ArrayList<>();
+
+    private static CatalogService.Names names(final String sv) {
+        return new CatalogService.Names(sv, null);
+    }
 
     @BeforeEach
     void setUp() {
@@ -76,10 +79,6 @@ class BudgetCategoryServiceTest {
             return found;
         });
         lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    }
-
-    private static CatalogService.Names names(final String sv) {
-        return new CatalogService.Names(sv, null);
     }
 
     private BudgetCategory find(final String id) {

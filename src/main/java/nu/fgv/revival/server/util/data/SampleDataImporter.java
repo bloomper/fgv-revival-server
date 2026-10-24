@@ -153,6 +153,241 @@ public class SampleDataImporter {
         return "steering-group-" + capability.name().toLowerCase(Locale.ROOT) + SAMPLE_USER_DOMAIN;
     }
 
+    private static void sleep() {
+        try {
+            Thread.sleep(SPEXREGISTER_RETRY_INTERVAL);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for Spexregister", e);
+        }
+    }
+
+    private static void grantClientRoles(final RealmResource realm,
+                                         final ClientResource client,
+                                         final String clientUuid,
+                                         final UserRepresentation user,
+                                         final String... roles) {
+        final List<RoleRepresentation> representations = Arrays.stream(roles)
+                .map(role -> client.roles().get(role).toRepresentation())
+                .toList();
+
+        realm.users().get(user.getId()).roles().clientLevel(clientUuid).add(representations);
+    }
+
+    private static SamplePerson insertPerson(final JdbcClient jdbcClient, final UserRepresentation user) {
+        final KeyHolder keyHolder = new GeneratedKeyHolder();
+        final String displayName = Stream.of(user.getFirstName(), user.getLastName())
+                .filter(part -> hasText(part))
+                .collect(Collectors.joining(" "));
+
+        jdbcClient
+                .sql("""
+                        INSERT INTO person
+                            (external_id, email, email_verified, display_name)
+                        VALUES
+                            (:externalId, :email, :emailVerified, :displayName)
+                        """)
+                .param("externalId", user.getId())
+                .param("email", CallerService.normalizedEmail(user.getEmail()))
+                .param("emailVerified", Boolean.TRUE.equals(user.isEmailVerified()))
+                .param("displayName", displayName.isEmpty() ? null : displayName)
+                .update(keyHolder);
+
+        return new SamplePerson(Objects.requireNonNull(keyHolder.getKey()).longValue(), user.getId());
+    }
+
+    /**
+     * The latest version when the revival was created, as when a super admin creates one.
+     */
+    private static void pinGuideVersion(final JdbcClient jdbcClient,
+                                        final long revivalId,
+                                        final List<SampleGuide.Version> guide,
+                                        final Instant createdAt,
+                                        final SamplePerson admin) {
+        final long versionId = guide.stream()
+                .filter(version -> !version.publishedAt().isAfter(createdAt))
+                .reduce((first, second) -> second)
+                .orElseThrow()
+                .id();
+
+        jdbcClient
+                .sql("UPDATE revival SET guide_version_id = :versionId WHERE id = :id")
+                .param("versionId", versionId)
+                .param("id", revivalId)
+                .update();
+        jdbcClient
+                .sql("""
+                        INSERT INTO revival_guide_version_change
+                            (revival_id, from_version_id, to_version_id, to_label, changed_by, changed_at)
+                        SELECT :revivalId, NULL, id, label, :changedBy, :changedAt FROM guide_version WHERE id = :versionId
+                        """)
+                .param("revivalId", revivalId)
+                .param("versionId", versionId)
+                .param("changedBy", admin.id())
+                .param("changedAt", utc(createdAt))
+                .update();
+    }
+
+    private static List<RevivalStatus> statusPath(final RevivalStatus status) {
+        return switch (status) {
+            case REJECTED -> List.of(RevivalStatus.PROPOSED, RevivalStatus.REJECTED);
+            case ARCHIVED -> Stream.concat(DIRECTEUR_PATH.stream(), Stream.of(RevivalStatus.ARCHIVED)).toList();
+            default -> DIRECTEUR_PATH.subList(0, DIRECTEUR_PATH.indexOf(status) + 1);
+        };
+    }
+
+    private static long insertMember(final JdbcClient jdbcClient,
+                                     final long revivalId,
+                                     final @Nullable Long personId,
+                                     final @Nullable String pendingEmail,
+                                     final RevivalRole role,
+                                     final Set<SeededCapability> capabilities,
+                                     final Instant createdAt,
+                                     final String createdBy) {
+        final KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcClient
+                .sql("""
+                        INSERT INTO revival_member
+                            (revival_id, person_id, pending_email, role, created_by, created_at, version)
+                        VALUES
+                            (:revivalId, :personId, :pendingEmail, :role, :createdBy, :createdAt, 0)
+                        """)
+                .param("revivalId", revivalId)
+                .param("personId", personId)
+                .param("pendingEmail", pendingEmail)
+                .param("role", role.name())
+                .param("createdBy", createdBy)
+                .param("createdAt", utc(createdAt))
+                .update(keyHolder);
+
+        final long memberId = Objects.requireNonNull(keyHolder.getKey()).longValue();
+
+        capabilities.forEach(capability -> jdbcClient
+                .sql("INSERT INTO revival_member_capability (member_id, capability) VALUES (:memberId, :capability)")
+                .param("memberId", memberId)
+                .param("capability", capability.name())
+                .update());
+
+        return memberId;
+    }
+
+    /**
+     * Gives every sample row one revision, so that the history starts from the sample data.
+     */
+    private static void seedBaselineRevision(final JdbcClient jdbcClient) {
+        final KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcClient
+                .sql("""
+                        INSERT INTO revinfo
+                            (modified_at, modified_by, source, operation)
+                        VALUES
+                            (:modifiedAt, :modifiedBy, :source, :operation)
+                        """)
+                .param("modifiedAt", System.currentTimeMillis())
+                .param("modifiedBy", SecurityUtil.SYSTEM)
+                .param("source", AuditSource.SYSTEM.name())
+                .param("operation", OPERATION)
+                .update(keyHolder);
+
+        final long rev = Objects.requireNonNull(keyHolder.getKey()).longValue();
+
+        List.of(
+                """
+                        INSERT INTO revival_audit (id, spex_id, year, premiere_date, status, guide_version_id, version, rev, revtype)
+                        SELECT id, spex_id, year, premiere_date, status, guide_version_id, version, :rev, 0 FROM revival
+                        """,
+                """
+                        INSERT INTO revival_show_audit (id, revival_id, show_date, start_time, venue, rev, revtype)
+                        SELECT id, revival_id, show_date, start_time, venue, :rev, 0 FROM revival_show
+                        """,
+                """
+                        INSERT INTO revival_status_change_audit (id, revival_id, from_status, to_status, changed_by, changed_at, rev, revtype)
+                        SELECT id, revival_id, from_status, to_status, changed_by, changed_at, :rev, 0 FROM revival_status_change
+                        """,
+                """
+                        INSERT INTO revival_member_audit (id, revival_id, person_id, role, removed_at, removed_by, version, rev, revtype)
+                        SELECT id, revival_id, person_id, role, removed_at, removed_by, version, :rev, 0 FROM revival_member
+                        """,
+                """
+                        INSERT INTO revival_member_capability_audit (member_id, capability, rev, revtype)
+                        SELECT member_id, capability, :rev, 0 FROM revival_member_capability
+                        """,
+                """
+                        INSERT INTO revival_guide_version_change_audit (id, revival_id, from_version_id, to_version_id, from_label, to_label, changed_by, changed_at, rev, revtype)
+                        SELECT id, revival_id, from_version_id, to_version_id, from_label, to_label, changed_by, changed_at, :rev, 0 FROM revival_guide_version_change
+                        """,
+                """
+                        INSERT INTO guide_version_audit (id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
+                        SELECT id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
+                        """,
+                """
+                        INSERT INTO guide_chapter_audit (id, version_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_chapter
+                        """,
+                """
+                        INSERT INTO guide_section_audit (id, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, version_id, chapter_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_section
+                        """,
+                """
+                        INSERT INTO guide_item_audit (id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, rev, revtype)
+                        SELECT id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
+                        """,
+                """
+                        INSERT INTO checklist_template_audit (id, kind, chapter_key, name_sv, name_en, retired_at, version, rev, revtype)
+                        SELECT id, kind, chapter_key, name_sv, name_en, retired_at, version, :rev, 0 FROM checklist_template
+                        """,
+                """
+                        INSERT INTO checklist_template_item_audit (id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
+                                                                   deadline_kind, deadline_amount, deadline_weekday, retired_at, version, rev, revtype)
+                        SELECT id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
+                               deadline_kind, deadline_amount, deadline_weekday, retired_at, version, :rev, 0 FROM checklist_template_item
+                        """,
+                // The catalogs survive the purge, but their history does not; updating one needs a previous revision
+                """
+                        INSERT INTO capability_audit (id, name_sv, name_en, position, retired_at, version, rev, revtype)
+                        SELECT id, name_sv, name_en, position, retired_at, version, :rev, 0 FROM capability
+                        """,
+                """
+                        INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
+                        SELECT id, kind, name_sv, name_en, position, retired_at, version, :rev, 0 FROM guide_item_type
+                        """,
+                """
+                        INSERT INTO budget_category_audit (id, kind, role, name_sv, name_en, position, retired_at, version, rev, revtype)
+                        SELECT id, kind, role, name_sv, name_en, position, retired_at, version, :rev, 0 FROM budget_category
+                        """,
+                """
+                        INSERT INTO link_service_audit (id, name_sv, name_en, home_url, position, retired_at, version, rev, revtype)
+                        SELECT id, name_sv, name_en, home_url, position, retired_at, version, :rev, 0 FROM link_service
+                        """,
+                """
+                        INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
+                        SELECT link_service_id, host, :rev, 0 FROM link_service_host
+                        """,
+                """
+                        INSERT INTO event_type_audit (id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                                                      offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at,
+                                                      version, rev, revtype)
+                        SELECT id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                               offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at,
+                               version, :rev, 0 FROM event_type
+                        """
+        ).forEach(sql -> jdbcClient.sql(sql).param("rev", rev).update());
+
+        Stream.of(Revival.class, RevivalShow.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
+                GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
+                Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class).forEach(entity -> jdbcClient
+                .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
+                .param("rev", rev)
+                .param("entityName", entity.getName())
+                .update());
+    }
+
+    private static OffsetDateTime utc(final Instant instant) {
+        return instant.atOffset(ZoneOffset.UTC);
+    }
+
     public void importSampleData(final Connection connection) {
         final JdbcClient jdbcClient = JdbcClient.create(new SingleConnectionDataSource(connection, true));
         final long started = System.nanoTime();
@@ -323,15 +558,6 @@ public class SampleDataImporter {
         }
     }
 
-    private static void sleep() {
-        try {
-            Thread.sleep(SPEXREGISTER_RETRY_INTERVAL);
-        } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while waiting for Spexregister", e);
-        }
-    }
-
     private Map<String, SamplePerson> createSampleUsers(final JdbcClient jdbcClient, final RealmResource realm) {
         final ClientResource client = realm.clients().get(realm.clients().findByClientId(SecurityUtil.CLIENT_ID).getFirst().getId());
         final String clientUuid = client.toRepresentation().getId();
@@ -394,40 +620,6 @@ public class SampleDataImporter {
 
             return realm.users().get(path.substring(path.lastIndexOf('/') + 1)).toRepresentation();
         }
-    }
-
-    private static void grantClientRoles(final RealmResource realm,
-                                         final ClientResource client,
-                                         final String clientUuid,
-                                         final UserRepresentation user,
-                                         final String... roles) {
-        final List<RoleRepresentation> representations = Arrays.stream(roles)
-                .map(role -> client.roles().get(role).toRepresentation())
-                .toList();
-
-        realm.users().get(user.getId()).roles().clientLevel(clientUuid).add(representations);
-    }
-
-    private static SamplePerson insertPerson(final JdbcClient jdbcClient, final UserRepresentation user) {
-        final KeyHolder keyHolder = new GeneratedKeyHolder();
-        final String displayName = Stream.of(user.getFirstName(), user.getLastName())
-                .filter(part -> hasText(part))
-                .collect(Collectors.joining(" "));
-
-        jdbcClient
-                .sql("""
-                        INSERT INTO person
-                            (external_id, email, email_verified, display_name)
-                        VALUES
-                            (:externalId, :email, :emailVerified, :displayName)
-                        """)
-                .param("externalId", user.getId())
-                .param("email", CallerService.normalizedEmail(user.getEmail()))
-                .param("emailVerified", Boolean.TRUE.equals(user.isEmailVerified()))
-                .param("displayName", displayName.isEmpty() ? null : displayName)
-                .update(keyHolder);
-
-        return new SamplePerson(Objects.requireNonNull(keyHolder.getKey()).longValue(), user.getId());
     }
 
     /**
@@ -532,46 +724,6 @@ public class SampleDataImporter {
     }
 
     /**
-     * The latest version when the revival was created, as when a super admin creates one.
-     */
-    private static void pinGuideVersion(final JdbcClient jdbcClient,
-                                        final long revivalId,
-                                        final List<SampleGuide.Version> guide,
-                                        final Instant createdAt,
-                                        final SamplePerson admin) {
-        final long versionId = guide.stream()
-                .filter(version -> !version.publishedAt().isAfter(createdAt))
-                .reduce((first, second) -> second)
-                .orElseThrow()
-                .id();
-
-        jdbcClient
-                .sql("UPDATE revival SET guide_version_id = :versionId WHERE id = :id")
-                .param("versionId", versionId)
-                .param("id", revivalId)
-                .update();
-        jdbcClient
-                .sql("""
-                        INSERT INTO revival_guide_version_change
-                            (revival_id, from_version_id, to_version_id, to_label, changed_by, changed_at)
-                        SELECT :revivalId, NULL, id, label, :changedBy, :changedAt FROM guide_version WHERE id = :versionId
-                        """)
-                .param("revivalId", revivalId)
-                .param("versionId", versionId)
-                .param("changedBy", admin.id())
-                .param("changedAt", utc(createdAt))
-                .update();
-    }
-
-    private static List<RevivalStatus> statusPath(final RevivalStatus status) {
-        return switch (status) {
-            case REJECTED -> List.of(RevivalStatus.PROPOSED, RevivalStatus.REJECTED);
-            case ARCHIVED -> Stream.concat(DIRECTEUR_PATH.stream(), Stream.of(RevivalStatus.ARCHIVED)).toList();
-            default -> DIRECTEUR_PATH.subList(0, DIRECTEUR_PATH.indexOf(status) + 1);
-        };
-    }
-
-    /**
      * When the revival was created and then moved through each step, oldest first and ending at {@code last}.
      */
     private List<Instant> timeline(final int steps, final Instant last) {
@@ -599,7 +751,8 @@ public class SampleDataImporter {
             case OPEN -> today.plusDays(rnd.nextInt(20, 90));
             case CLOSING -> today.minusDays(rnd.nextInt(20, 60));
             case SETTLING -> today.minusDays(rnd.nextInt(60, 150));
-            case ARCHIVED -> LocalDate.of(today.getYear() - (first ? 1 : ANONYMIZED_YEARS_AGO), rnd.nextInt(3, 6), rnd.nextInt(1, 29));
+            case ARCHIVED ->
+                    LocalDate.of(today.getYear() - (first ? 1 : ANONYMIZED_YEARS_AGO), rnd.nextInt(3, 6), rnd.nextInt(1, 29));
         };
     }
 
@@ -648,158 +801,6 @@ public class SampleDataImporter {
                         : premiereDate.plusDays(days.get(index)).getDayOfWeek().getValue() >= 6 ? java.time.LocalTime.of(14, 0) : java.time.LocalTime.of(19, 0))
                 .param("venue", lastUndecided && index == days.size() - 1 ? null : venues.get(index % venueCount))
                 .update());
-    }
-
-    private static long insertMember(final JdbcClient jdbcClient,
-                                     final long revivalId,
-                                     final @Nullable Long personId,
-                                     final @Nullable String pendingEmail,
-                                     final RevivalRole role,
-                                     final Set<SeededCapability> capabilities,
-                                     final Instant createdAt,
-                                     final String createdBy) {
-        final KeyHolder keyHolder = new GeneratedKeyHolder();
-
-        jdbcClient
-                .sql("""
-                        INSERT INTO revival_member
-                            (revival_id, person_id, pending_email, role, created_by, created_at, version)
-                        VALUES
-                            (:revivalId, :personId, :pendingEmail, :role, :createdBy, :createdAt, 0)
-                        """)
-                .param("revivalId", revivalId)
-                .param("personId", personId)
-                .param("pendingEmail", pendingEmail)
-                .param("role", role.name())
-                .param("createdBy", createdBy)
-                .param("createdAt", utc(createdAt))
-                .update(keyHolder);
-
-        final long memberId = Objects.requireNonNull(keyHolder.getKey()).longValue();
-
-        capabilities.forEach(capability -> jdbcClient
-                .sql("INSERT INTO revival_member_capability (member_id, capability) VALUES (:memberId, :capability)")
-                .param("memberId", memberId)
-                .param("capability", capability.name())
-                .update());
-
-        return memberId;
-    }
-
-    /**
-     * Gives every sample row one revision, so that the history starts from the sample data.
-     */
-    private static void seedBaselineRevision(final JdbcClient jdbcClient) {
-        final KeyHolder keyHolder = new GeneratedKeyHolder();
-
-        jdbcClient
-                .sql("""
-                        INSERT INTO revinfo
-                            (modified_at, modified_by, source, operation)
-                        VALUES
-                            (:modifiedAt, :modifiedBy, :source, :operation)
-                        """)
-                .param("modifiedAt", System.currentTimeMillis())
-                .param("modifiedBy", SecurityUtil.SYSTEM)
-                .param("source", AuditSource.SYSTEM.name())
-                .param("operation", OPERATION)
-                .update(keyHolder);
-
-        final long rev = Objects.requireNonNull(keyHolder.getKey()).longValue();
-
-        List.of(
-                """
-                        INSERT INTO revival_audit (id, spex_id, year, premiere_date, status, guide_version_id, version, rev, revtype)
-                        SELECT id, spex_id, year, premiere_date, status, guide_version_id, version, :rev, 0 FROM revival
-                        """,
-                """
-                        INSERT INTO revival_show_audit (id, revival_id, show_date, start_time, venue, rev, revtype)
-                        SELECT id, revival_id, show_date, start_time, venue, :rev, 0 FROM revival_show
-                        """,
-                """
-                        INSERT INTO revival_status_change_audit (id, revival_id, from_status, to_status, changed_by, changed_at, rev, revtype)
-                        SELECT id, revival_id, from_status, to_status, changed_by, changed_at, :rev, 0 FROM revival_status_change
-                        """,
-                """
-                        INSERT INTO revival_member_audit (id, revival_id, person_id, role, removed_at, removed_by, version, rev, revtype)
-                        SELECT id, revival_id, person_id, role, removed_at, removed_by, version, :rev, 0 FROM revival_member
-                        """,
-                """
-                        INSERT INTO revival_member_capability_audit (member_id, capability, rev, revtype)
-                        SELECT member_id, capability, :rev, 0 FROM revival_member_capability
-                        """,
-                """
-                        INSERT INTO revival_guide_version_change_audit (id, revival_id, from_version_id, to_version_id, from_label, to_label, changed_by, changed_at, rev, revtype)
-                        SELECT id, revival_id, from_version_id, to_version_id, from_label, to_label, changed_by, changed_at, :rev, 0 FROM revival_guide_version_change
-                        """,
-                """
-                        INSERT INTO guide_version_audit (id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
-                        SELECT id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
-                        """,
-                """
-                        INSERT INTO guide_chapter_audit (id, version_id, `key`, position, title_sv, title_en, version, rev, revtype)
-                        SELECT id, version_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_chapter
-                        """,
-                """
-                        INSERT INTO guide_section_audit (id, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
-                        SELECT id, version_id, chapter_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_section
-                        """,
-                """
-                        INSERT INTO guide_item_audit (id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, rev, revtype)
-                        SELECT id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
-                        """,
-                """
-                        INSERT INTO checklist_template_audit (id, kind, chapter_key, name_sv, name_en, retired_at, version, rev, revtype)
-                        SELECT id, kind, chapter_key, name_sv, name_en, retired_at, version, :rev, 0 FROM checklist_template
-                        """,
-                """
-                        INSERT INTO checklist_template_item_audit (id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
-                                                                   deadline_kind, deadline_amount, deadline_weekday, retired_at, version, rev, revtype)
-                        SELECT id, template_id, position, text_sv, text_en, guide_item_key, default_capability,
-                               deadline_kind, deadline_amount, deadline_weekday, retired_at, version, :rev, 0 FROM checklist_template_item
-                        """,
-                // The catalogs survive the purge, but their history does not; updating one needs a previous revision
-                """
-                        INSERT INTO capability_audit (id, name_sv, name_en, position, retired_at, version, rev, revtype)
-                        SELECT id, name_sv, name_en, position, retired_at, version, :rev, 0 FROM capability
-                        """,
-                """
-                        INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
-                        SELECT id, kind, name_sv, name_en, position, retired_at, version, :rev, 0 FROM guide_item_type
-                        """,
-                """
-                        INSERT INTO budget_category_audit (id, kind, role, name_sv, name_en, position, retired_at, version, rev, revtype)
-                        SELECT id, kind, role, name_sv, name_en, position, retired_at, version, :rev, 0 FROM budget_category
-                        """,
-                """
-                        INSERT INTO link_service_audit (id, name_sv, name_en, home_url, position, retired_at, version, rev, revtype)
-                        SELECT id, name_sv, name_en, home_url, position, retired_at, version, :rev, 0 FROM link_service
-                        """,
-                """
-                        INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
-                        SELECT link_service_id, host, :rev, 0 FROM link_service_host
-                        """,
-                """
-                        INSERT INTO event_type_audit (id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
-                                                      offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at,
-                                                      version, rev, revtype)
-                        SELECT id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
-                               offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at,
-                               version, :rev, 0 FROM event_type
-                        """
-        ).forEach(sql -> jdbcClient.sql(sql).param("rev", rev).update());
-
-        Stream.of(Revival.class, RevivalShow.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
-                        GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
-                        Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class).forEach(entity -> jdbcClient
-                .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
-                .param("rev", rev)
-                .param("entityName", entity.getName())
-                .update());
-    }
-
-    private static OffsetDateTime utc(final Instant instant) {
-        return instant.atOffset(ZoneOffset.UTC);
     }
 
     private record SamplePerson(long id, String externalId) {

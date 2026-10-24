@@ -100,6 +100,35 @@ class CalendarFeedServiceTest {
     private Revival revival;
     private Person person;
 
+    private static String token() {
+        return "A".repeat(43);
+    }
+
+    private static Event event(final long id, final String title, final LocalDate date, final LocalTime time, final boolean cancelled) {
+        final Event event = new Event();
+
+        event.setId(id);
+        event.setRevivalId(REVIVAL_ID);
+        event.setTitle(title);
+        event.setStartDate(date);
+        event.setEndDate(date.plusDays(1));
+        event.setStartTime(time);
+        event.setCreatedAt(Instant.parse("2027-10-01T00:00:00Z"));
+        event.setCancelledAt(cancelled ? Instant.EPOCH : null);
+        return event;
+    }
+
+    private static Meeting meeting(final long id, final MeetingStatus status) {
+        final Meeting meeting = new Meeting();
+
+        meeting.setId(id);
+        meeting.setRevivalId(REVIVAL_ID);
+        meeting.setDate(TODAY.plusDays(id));
+        meeting.setStatus(status);
+        meeting.setCreatedAt(Instant.parse("2027-10-01T00:00:00Z"));
+        return meeting;
+    }
+
     @BeforeEach
     void setUp() {
         final Clock clock = TestClocks.at(TODAY);
@@ -134,35 +163,6 @@ class CalendarFeedServiceTest {
         feed.setCreatedAt(Instant.parse("2027-11-01T00:00:00Z"));
         lenient().when(repository.findByTokenHashAndRevokedAtIsNull(CalendarFeedService.hash(token))).thenReturn(Optional.of(feed));
         return feed;
-    }
-
-    private static String token() {
-        return "A".repeat(43);
-    }
-
-    private static Event event(final long id, final String title, final LocalDate date, final LocalTime time, final boolean cancelled) {
-        final Event event = new Event();
-
-        event.setId(id);
-        event.setRevivalId(REVIVAL_ID);
-        event.setTitle(title);
-        event.setStartDate(date);
-        event.setEndDate(date.plusDays(1));
-        event.setStartTime(time);
-        event.setCreatedAt(Instant.parse("2027-10-01T00:00:00Z"));
-        event.setCancelledAt(cancelled ? Instant.EPOCH : null);
-        return event;
-    }
-
-    private static Meeting meeting(final long id, final MeetingStatus status) {
-        final Meeting meeting = new Meeting();
-
-        meeting.setId(id);
-        meeting.setRevivalId(REVIVAL_ID);
-        meeting.setDate(TODAY.plusDays(id));
-        meeting.setStatus(status);
-        meeting.setCreatedAt(Instant.parse("2027-10-01T00:00:00Z"));
-        return meeting;
     }
 
     @Test

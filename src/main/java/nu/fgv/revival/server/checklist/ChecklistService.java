@@ -127,32 +127,75 @@ public class ChecklistService {
         this.logEntries = logEntries;
     }
 
-    public record NewItem(Long checklistId, String text, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
-                          @Nullable String comment, @Nullable String guideItemKey) {
+    private static @Nullable LocalDate deadline(final @Nullable RelativeDeadline rule, final @Nullable LocalDate date) {
+        return date == null || rule == null ? null : rule.apply(date);
     }
 
     /**
-     * Fields left null are unchanged; the {@code clear*} flags remove a value. Setting or clearing the deadline marks it
-     * as set by hand.
+     * Directeurs hold every capability implicitly, so only steering group members holding it explicitly count, and only
+     * when there is exactly one.
      */
-    public record ItemChange(Long id, Long version, @Nullable String text, @Nullable OwnerInputDto owner, boolean clearOwner,
-                             @Nullable LocalDate deadline, boolean clearDeadline, @Nullable String comment, boolean clearComment) {
+    private static Owner defaultOwner(final @Nullable String capability, final List<RevivalMember> steeringGroup) {
+        if (capability == null) {
+            return Owner.none();
+        }
+
+        final List<RevivalMember> holders = steeringGroup.stream().filter(member -> member.getCapabilities().contains(capability)).toList();
+
+        return holders.size() == 1 ? Owner.member(Objects.requireNonNull(holders.getFirst().getPersonId())) : Owner.none();
     }
 
-    public record NewEventChecklist(Long revivalId, String name, @Nullable LocalDate date, @Nullable Long templateId) {
+    static String validName(final String name) {
+        final String trimmed = name.strip();
+
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("error.checklist.name.blank");
+        }
+        if (trimmed.length() > Checklist.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.checklist.name.tooLong", Checklist.NAME_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
-    /**
-     * Fields left null are unchanged; {@code clearDate} removes the date.
-     */
-    public record EventChecklistChange(Long id, Long version, @Nullable String name, @Nullable LocalDate date, boolean clearDate) {
+    private static boolean hasWords(final @Nullable String name, final List<String> words) {
+        return name != null && words.stream().allMatch(name.toLowerCase(Locale.ROOT)::contains);
+    }
+
+    static String validText(final String text) {
+        final String trimmed = text.strip();
+
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("error.checklist.text.blank");
+        }
+        if (trimmed.length() > ChecklistItem.TEXT_MAX_LENGTH) {
+            throw new BadRequestException("error.checklist.text.tooLong", ChecklistItem.TEXT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    // --- Reading ----------------------------------------------------------------------------------------------------
+
+    static @Nullable String validComment(final @Nullable String comment) {
+        if (comment == null || comment.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = comment.strip();
+
+        if (trimmed.length() > ChecklistItem.COMMENT_MAX_LENGTH) {
+            throw new BadRequestException("error.checklist.comment.tooLong", ChecklistItem.COMMENT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    private static GuideVersionView.@Nullable Text chapterTitle(final Optional<GuideVersionView> version, final Checklist checklist) {
+        return checklist.getChapterKey() == null ? null
+                : version.flatMap(view -> view.chapter(Objects.requireNonNull(checklist.getChapterKey()))).map(GuideVersionView.Chapter::title).orElse(null);
     }
 
     public LocalDate today() {
         return LocalDate.now(clock);
     }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<ChecklistSummaryDto> list(final Long revivalId, final boolean includeCancelled) {
@@ -196,6 +239,8 @@ public class ChecklistService {
     public List<ChecklistItemDto> items(final Long revivalId, final @Nullable ChecklistItemFilterDto filter, final Locale locale) {
         return items(revivalId, filter, null, null, locale);
     }
+
+    // --- Writing ----------------------------------------------------------------------------------------------------
 
     /**
      * As {@link #items(Long, ChecklistItemFilterDto, Locale)}, also limited to one chapter's checklist or to event
@@ -258,8 +303,6 @@ public class ChecklistService {
 
         return templates.stream().map(ChecklistTemplateSummaryDto::of).toList();
     }
-
-    // --- Writing ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public ChecklistDto createEventChecklist(final NewEventChecklist newChecklist, final Locale locale) {
@@ -377,6 +420,8 @@ public class ChecklistService {
         return toDtos(List.of(itemRepository.saveAndFlush(item)), locale).getFirst();
     }
 
+    // --- Internal, for the guide sync and templates (research R10); callers have checked access -----------------------
+
     @Transactional
     public ChecklistItemDto updateItem(final ItemChange change, final Locale locale) {
         final Caller caller = callerService.current();
@@ -454,8 +499,6 @@ public class ChecklistService {
 
         return setState(id, version, ChecklistItemState.DONE, null, locale);
     }
-
-    // --- Internal, for the guide sync and templates (research R10); callers have checked access -----------------------
 
     /**
      * Adds a chapter template's items to chapter checklists the sync has just created (User Story 5, scenario 8).
@@ -583,6 +626,8 @@ public class ChecklistService {
         return removals;
     }
 
+    // --- Internal, for events (M4-FR-4); the event service has checked access ----------------------------------------
+
     /**
      * What removing the chapter from the guide would delete, over every revival that is not archived: their checklists
      * for it and the items in them. An upper bound, since required items follow their requirement if it moves to another
@@ -665,8 +710,6 @@ public class ChecklistService {
         }
     }
 
-    // --- Internal, for events (M4-FR-4); the event service has checked access ----------------------------------------
-
     /**
      * Creates the event's EVENT checklist from its type's template, named and dated as the event. Nothing when the
      * template is retired or not an event template. Returns the checklist's id.
@@ -695,6 +738,8 @@ public class ChecklistService {
         addTemplateItems(saved, template.get(), locale);
         return Optional.of(saved.getId());
     }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     /**
      * Names and dates the event's checklist as the event, recomputing the deadlines not set by hand when the date moves
@@ -744,30 +789,10 @@ public class ChecklistService {
                 .collect(Collectors.toMap(summary -> Objects.requireNonNull(summary.eventId()), Function.identity()));
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private void recomputeDeadlines(final Checklist checklist) {
         itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId()).stream()
                 .filter(item -> item.getTemplateItemId() != null && !item.isDeadlineManual())
                 .forEach(item -> item.setDeadline(deadline(item.getRelativeDeadline(), checklist.getDate())));
-    }
-
-    private static @Nullable LocalDate deadline(final @Nullable RelativeDeadline rule, final @Nullable LocalDate date) {
-        return date == null || rule == null ? null : rule.apply(date);
-    }
-
-    /**
-     * Directeurs hold every capability implicitly, so only steering group members holding it explicitly count, and only
-     * when there is exactly one.
-     */
-    private static Owner defaultOwner(final @Nullable String capability, final List<RevivalMember> steeringGroup) {
-        if (capability == null) {
-            return Owner.none();
-        }
-
-        final List<RevivalMember> holders = steeringGroup.stream().filter(member -> member.getCapabilities().contains(capability)).toList();
-
-        return holders.size() == 1 ? Owner.member(Objects.requireNonNull(holders.getFirst().getPersonId())) : Owner.none();
     }
 
     private ChecklistTemplate activeTemplate(final Long templateId) {
@@ -801,18 +826,6 @@ public class ChecklistService {
             throw new ConflictException("error.conflict");
         }
         return checklist;
-    }
-
-    static String validName(final String name) {
-        final String trimmed = name.strip();
-
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException("error.checklist.name.blank");
-        }
-        if (trimmed.length() > Checklist.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.checklist.name.tooLong", Checklist.NAME_MAX_LENGTH);
-        }
-        return trimmed;
     }
 
     private int nextPosition(final Long checklistId) {
@@ -865,35 +878,6 @@ public class ChecklistService {
         return item;
     }
 
-    private static boolean hasWords(final @Nullable String name, final List<String> words) {
-        return name != null && words.stream().allMatch(name.toLowerCase(Locale.ROOT)::contains);
-    }
-
-    static String validText(final String text) {
-        final String trimmed = text.strip();
-
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException("error.checklist.text.blank");
-        }
-        if (trimmed.length() > ChecklistItem.TEXT_MAX_LENGTH) {
-            throw new BadRequestException("error.checklist.text.tooLong", ChecklistItem.TEXT_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    static @Nullable String validComment(final @Nullable String comment) {
-        if (comment == null || comment.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = comment.strip();
-
-        if (trimmed.length() > ChecklistItem.COMMENT_MAX_LENGTH) {
-            throw new BadRequestException("error.checklist.comment.tooLong", ChecklistItem.COMMENT_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
     /**
      * Chapter checklists first, in the order of the chapters in the pinned version, then event checklists by date.
      */
@@ -909,11 +893,6 @@ public class ChecklistService {
                 .thenComparing(checklist -> checklist.getChapterKey() == null ? -1 : positions.getOrDefault(checklist.getChapterKey(), Integer.MAX_VALUE))
                 .thenComparing(Checklist::getDate, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(Checklist::getId);
-    }
-
-    private static GuideVersionView.@Nullable Text chapterTitle(final Optional<GuideVersionView> version, final Checklist checklist) {
-        return checklist.getChapterKey() == null ? null
-                : version.flatMap(view -> view.chapter(Objects.requireNonNull(checklist.getChapterKey()))).map(GuideVersionView.Chapter::title).orElse(null);
     }
 
     Map<Long, ChecklistSummaryDto> summaries(final List<Checklist> checklists) {
@@ -970,5 +949,29 @@ public class ChecklistService {
                     item.getReasonKey(), locale);
         }
         return item.getReason();
+    }
+
+    public record NewItem(Long checklistId, String text, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
+                          @Nullable String comment, @Nullable String guideItemKey) {
+    }
+
+    /**
+     * Fields left null are unchanged; the {@code clear*} flags remove a value. Setting or clearing the deadline marks it
+     * as set by hand.
+     */
+    public record ItemChange(Long id, Long version, @Nullable String text, @Nullable OwnerInputDto owner,
+                             boolean clearOwner,
+                             @Nullable LocalDate deadline, boolean clearDeadline, @Nullable String comment,
+                             boolean clearComment) {
+    }
+
+    public record NewEventChecklist(Long revivalId, String name, @Nullable LocalDate date, @Nullable Long templateId) {
+    }
+
+    /**
+     * Fields left null are unchanged; {@code clearDate} removes the date.
+     */
+    public record EventChecklistChange(Long id, Long version, @Nullable String name, @Nullable LocalDate date,
+                                       boolean clearDate) {
     }
 }

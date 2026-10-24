@@ -27,7 +27,8 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistTemplateSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey, GuideVersionView.@Nullable Text name,
+public record ChecklistTemplateSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
+                                          GuideVersionView.@Nullable Text name,
                                           boolean retired) {
 
     public static ChecklistTemplateSummaryDto of(final ChecklistTemplate template) {

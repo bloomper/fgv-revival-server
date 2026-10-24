@@ -93,6 +93,19 @@ public class SyncService {
         this.clock = clock;
     }
 
+    private static void afterCommit(final Runnable work) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    work.run();
+                }
+            });
+        } else {
+            work.run();
+        }
+    }
+
     private Revival visible(final Caller caller, final Long revivalId) {
         return accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
     }
@@ -188,19 +201,6 @@ public class SyncService {
             afterCommit(() -> worker.submit(saved.getId(), acting));
         }
         return SyncRunDto.of(saved, steps);
-    }
-
-    private static void afterCommit(final Runnable work) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    work.run();
-                }
-            });
-        } else {
-            work.run();
-        }
     }
 
     /**

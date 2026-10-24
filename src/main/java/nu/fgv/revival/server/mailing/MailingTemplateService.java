@@ -70,12 +70,16 @@ public class MailingTemplateService {
     }
 
     /**
-     * Swedish text and, optionally, English.
+     * Swedish required and English optional, trimmed, each 1 to {@code maxLength} characters.
      */
-    public record Text(@Nullable String sv, @Nullable String en) {
-    }
+    private static Text required(final @Nullable Text text, final int maxLength, final String key) {
+        final String sv = text == null || text.sv() == null ? "" : text.sv().strip();
+        final String en = text == null || text.en() == null || text.en().isBlank() ? null : text.en().strip();
 
-    public record Definition(Text name, Text subject, Text body, MailingAudienceKind audience, @Nullable Long eventTypeId, RelativeDeadline due) {
+        if (sv.isEmpty() || sv.length() > maxLength || en != null && en.length() > maxLength) {
+            throw new BadRequestException(key, maxLength);
+        }
+        return new Text(sv, en);
     }
 
     @Transactional(readOnly = true)
@@ -158,11 +162,11 @@ public class MailingTemplateService {
         return MailingTemplateDto.of(repository.saveAndFlush(template));
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private void manageable() {
         accessPolicy.requireManageMailingTemplates(callerService.current());
     }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private MailingTemplate changeable(final Long id, final Long version) {
         final MailingTemplate template = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(MailingTemplate.class, id));
@@ -203,15 +207,12 @@ public class MailingTemplateService {
     }
 
     /**
-     * Swedish required and English optional, trimmed, each 1 to {@code maxLength} characters.
+     * Swedish text and, optionally, English.
      */
-    private static Text required(final @Nullable Text text, final int maxLength, final String key) {
-        final String sv = text == null || text.sv() == null ? "" : text.sv().strip();
-        final String en = text == null || text.en() == null || text.en().isBlank() ? null : text.en().strip();
+    public record Text(@Nullable String sv, @Nullable String en) {
+    }
 
-        if (sv.isEmpty() || sv.length() > maxLength || en != null && en.length() > maxLength) {
-            throw new BadRequestException(key, maxLength);
-        }
-        return new Text(sv, en);
+    public record Definition(Text name, Text subject, Text body, MailingAudienceKind audience,
+                             @Nullable Long eventTypeId, RelativeDeadline due) {
     }
 }

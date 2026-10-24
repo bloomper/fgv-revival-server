@@ -41,7 +41,8 @@ public record MembersAwaitingAccess(Long revivalId, List<Waiting> members, @Null
      * @param keycloakUserId the user in the FGV realm
      * @param invited        whether this application created the user and Keycloak emailed them
      */
-    public record Waiting(String email, @Nullable String displayName, String keycloakUserId, RevivalRole role, boolean invited) {
+    public record Waiting(String email, @Nullable String displayName, String keycloakUserId, RevivalRole role,
+                          boolean invited) {
 
         public MemberAwaitingAccess event(final Long revivalId, final @Nullable String addedBy) {
             return new MemberAwaitingAccess(revivalId, email, displayName, keycloakUserId, role, invited, addedBy);

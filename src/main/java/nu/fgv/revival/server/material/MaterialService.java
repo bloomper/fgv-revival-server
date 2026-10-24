@@ -88,16 +88,29 @@ public class MaterialService {
         this.clock = clock;
     }
 
-    /**
-     * A material as entered. {@code revivalId} only on create; {@code serviceId} null to recognise the service from the
-     * link; {@code positionIds} only for {@link MaterialVisibility#POSITIONS}.
-     */
-    public record Input(@Nullable Long revivalId, @Nullable String title, @Nullable String url, @Nullable String serviceId,
-                        MaterialCategory category, MaterialVisibility visibility, @Nullable List<String> positionIds,
-                        @Nullable String comment) {
+    private static String validTitle(final @Nullable String title) {
+        final String trimmed = title == null ? "" : title.strip();
+
+        if (trimmed.isEmpty() || trimmed.length() > Material.TITLE_MAX_LENGTH) {
+            throw new BadRequestException("error.material.title", Material.TITLE_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
     // --- Reading ----------------------------------------------------------------------------------------------------
+
+    private static @Nullable String validComment(final @Nullable String comment) {
+        if (comment == null || comment.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = comment.strip();
+
+        if (trimmed.length() > Material.COMMENT_MAX_LENGTH) {
+            throw new BadRequestException("error.material.comment", Material.COMMENT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
 
     /**
      * By title. Removed ones only with {@code includeRemoved}, and only for writers; a participant gets what is meant
@@ -163,6 +176,8 @@ public class MaterialService {
         return result;
     }
 
+    // --- Writing ----------------------------------------------------------------------------------------------------
+
     /**
      * Each material's positions as Spexregister names them; by id alone while it is unavailable. No caller check:
      * callers have read the materials.
@@ -177,8 +192,6 @@ public class MaterialService {
                 .toList()));
         return result;
     }
-
-    // --- Writing ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public MaterialDto create(final Input input) {
@@ -223,6 +236,8 @@ public class MaterialService {
         return MaterialDto.of(repository.saveAndFlush(material));
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     @Transactional
     public MaterialDto restore(final Long id, final Long version) {
         final Material material = changeable(callerService.current(), id, version);
@@ -235,8 +250,6 @@ public class MaterialService {
         material.setRemovedBy(null);
         return MaterialDto.of(repository.saveAndFlush(material));
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void apply(final Material material, final Input input) {
         final String url = Links.requireHttps(input.url(), Material.URL_MAX_LENGTH);
@@ -350,25 +363,13 @@ public class MaterialService {
         return material;
     }
 
-    private static String validTitle(final @Nullable String title) {
-        final String trimmed = title == null ? "" : title.strip();
-
-        if (trimmed.isEmpty() || trimmed.length() > Material.TITLE_MAX_LENGTH) {
-            throw new BadRequestException("error.material.title", Material.TITLE_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    private static @Nullable String validComment(final @Nullable String comment) {
-        if (comment == null || comment.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = comment.strip();
-
-        if (trimmed.length() > Material.COMMENT_MAX_LENGTH) {
-            throw new BadRequestException("error.material.comment", Material.COMMENT_MAX_LENGTH);
-        }
-        return trimmed;
+    /**
+     * A material as entered. {@code revivalId} only on create; {@code serviceId} null to recognise the service from the
+     * link; {@code positionIds} only for {@link MaterialVisibility#POSITIONS}.
+     */
+    public record Input(@Nullable Long revivalId, @Nullable String title, @Nullable String url,
+                        @Nullable String serviceId,
+                        MaterialCategory category, MaterialVisibility visibility, @Nullable List<String> positionIds,
+                        @Nullable String comment) {
     }
 }

@@ -28,7 +28,8 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record MinutesEmailDto(Long id, String language, PersonRefDto sentBy, Instant sentAt, List<Recipient> recipients, int waitingLeftOut) {
+public record MinutesEmailDto(Long id, String language, PersonRefDto sentBy, Instant sentAt, List<Recipient> recipients,
+                              int waitingLeftOut) {
 
     public record Recipient(PersonRefDto person, MinutesEmailRecipientStatus status) {
     }

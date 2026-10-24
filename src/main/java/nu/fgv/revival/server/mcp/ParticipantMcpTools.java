@@ -49,6 +49,12 @@ public class ParticipantMcpTools {
         this.support = support;
     }
 
+    static Participant toMcp(final ParticipantDtos.ParticipantDto participant) {
+        return new Participant(participant.id(), (participant.firstName() + " " + participant.lastName()).strip(), participant.nickName(),
+                participant.kind(), participant.position() == null ? null : participant.position().name(), participant.roleName(),
+                participant.response(), participant.invitation(), participant.kind() == ParticipantKind.PARTICIPANT ? participant.feePaid() : null);
+    }
+
     @McpTool(name = "list_participants",
             description = "List a revival's participants and helpers: name, kind, planned position and role, response to the invitation, how far the invitation has come, and whether the fee is paid. Never contact details or dietary needs.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
@@ -64,16 +70,6 @@ public class ParticipantMcpTools {
                 .toList()));
     }
 
-    static Participant toMcp(final ParticipantDtos.ParticipantDto participant) {
-        return new Participant(participant.id(), (participant.firstName() + " " + participant.lastName()).strip(), participant.nickName(),
-                participant.kind(), participant.position() == null ? null : participant.position().name(), participant.roleName(),
-                participant.response(), participant.invitation(), participant.kind() == ParticipantKind.PARTICIPANT ? participant.feePaid() : null);
-    }
-
-    public record Participant(Long id, String name, @Nullable String nickName, ParticipantKind kind, @Nullable String position,
-                              @Nullable String roleName, ParticipantResponse response, InvitationState invitation, @Nullable Boolean feePaid) {
-    }
-
     /**
      * Counts by response, for {@code get_revival_status}; null for callers who do not read participants.
      */
@@ -81,5 +77,11 @@ public class ParticipantMcpTools {
         final ParticipantDtos.Counts counts = participantService.counts(revivalId);
 
         return counts == null ? null : counts.byResponse();
+    }
+
+    public record Participant(Long id, String name, @Nullable String nickName, ParticipantKind kind,
+                              @Nullable String position,
+                              @Nullable String roleName, ParticipantResponse response, InvitationState invitation,
+                              @Nullable Boolean feePaid) {
     }
 }

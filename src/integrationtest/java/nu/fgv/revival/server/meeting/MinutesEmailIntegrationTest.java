@@ -48,6 +48,16 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
     private long revival;
     private long meeting;
 
+    private static List<String> recipients() throws Exception {
+        return Arrays.stream(MAIL.getReceivedMessages()).map(message -> {
+            try {
+                return message.getAllRecipients()[0].toString();
+            } catch (final Exception e) {
+                throw new IllegalStateException(e);
+            }
+        }).sorted().toList();
+    }
+
     @BeforeEach
     void closedMeeting() {
         revival = organisingRevival();
@@ -68,16 +78,6 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
 
     private long version() {
         return jdbcClient.sql("SELECT version FROM meeting WHERE id = ?").param(meeting).query(Long.class).single();
-    }
-
-    private static List<String> recipients() throws Exception {
-        return Arrays.stream(MAIL.getReceivedMessages()).map(message -> {
-            try {
-                return message.getAllRecipients()[0].toString();
-            } catch (final Exception e) {
-                throw new IllegalStateException(e);
-            }
-        }).sorted().toList();
     }
 
     @Test

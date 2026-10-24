@@ -136,7 +136,7 @@ class SpexregisterClientTest {
     void anUnknownSpexHasNoParticipants() {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess("""
-                        {"data": {"spexareBySpex": null}, "errors": [{"message": "Not found", "extensions": {"classification": "NOT_FOUND"}}]}""",
+                                {"data": {"spexareBySpex": null}, "errors": [{"message": "Not found", "extensions": {"classification": "NOT_FOUND"}}]}""",
                         MediaType.APPLICATION_JSON));
 
         assertThat(client.spexareBySpex(5L, ACTING)).isEmpty();
@@ -155,8 +155,8 @@ class SpexregisterClientTest {
                 .andExpect(jsonPath("$.query").value(org.hamcrest.Matchers.containsString("taskActivities")))
                 .andExpect(header("X-Acting-Person", SpexregisterClient.actingPersonHeader(ACTING)))
                 .andRespond(withSuccess("""
-                        {"data": {"spexareByIds": [{"id": "7", "activities": [{"id": "70", "spexActivity": {"id": "71", "spex": {"id": "500"}},
-                          "taskActivities": [{"id": "72", "task": {"id": "ROLE"}, "actors": [{"id": "73", "role": "Kalifen", "vocal": {"id": "B1"}}]}]}]}]}}""",
+                                {"data": {"spexareByIds": [{"id": "7", "activities": [{"id": "70", "spexActivity": {"id": "71", "spex": {"id": "500"}},
+                                  "taskActivities": [{"id": "72", "task": {"id": "ROLE"}, "actors": [{"id": "73", "role": "Kalifen", "vocal": {"id": "B1"}}]}]}]}]}}""",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo(URL))
                 .andExpect(jsonPath("$.query").value(org.hamcrest.Matchers.containsString("actorCreate")))
@@ -183,11 +183,11 @@ class SpexregisterClientTest {
         server.expect(requestTo(URL))
                 .andExpect(jsonPath("$.variables.typeId").value("FGV"))
                 .andRespond(withSuccess("""
-                        {"data": {"membershipCreate": null}, "errors": [{"message": "Exists", "extensions": {"classification": "CONFLICT"}}]}""",
+                                {"data": {"membershipCreate": null}, "errors": [{"message": "Exists", "extensions": {"classification": "CONFLICT"}}]}""",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo(URL))
                 .andRespond(withSuccess("""
-                        {"data": {"taskActivityCreate": null}, "errors": [{"message": "No", "extensions": {"classification": "NOT_FOUND"}}]}""",
+                                {"data": {"taskActivityCreate": null}, "errors": [{"message": "No", "extensions": {"classification": "NOT_FOUND"}}]}""",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo(URL)).andRespond(withServerError());
 

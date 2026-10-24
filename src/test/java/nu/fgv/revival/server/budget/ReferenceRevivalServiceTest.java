@@ -56,7 +56,7 @@ import static org.mockito.Mockito.when;
 class ReferenceRevivalServiceTest {
 
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 23);
-
+    private final List<BudgetCategory> categories = new ArrayList<>(TestBudgetCategories.seeded());
     @Mock
     private ReferenceRevivalRepository repository;
     @Mock
@@ -65,10 +65,20 @@ class ReferenceRevivalServiceTest {
     private GuideAccess guideAccess;
     @Mock
     private CallerService callerService;
-
     private ReferenceRevivalService service;
-    private final List<BudgetCategory> categories = new ArrayList<>(TestBudgetCategories.seeded());
     private ReferenceRevival stored;
+
+    private static BigDecimal kr(final String amount) {
+        return new BigDecimal(amount).setScale(2);
+    }
+
+    private static ReferenceRevivalService.FigureInput figure(final String category, final @Nullable String budgeted, final @Nullable String actual) {
+        return new ReferenceRevivalService.FigureInput(category, budgeted == null ? null : kr(budgeted), actual == null ? null : kr(actual));
+    }
+
+    private static ReferenceRevivalService.Definition nobel(final List<ReferenceRevivalService.FigureInput> figures) {
+        return new ReferenceRevivalService.Definition(" Nobel 2026 ", 2026, 50, " Från JK:s slutrapport ", figures);
+    }
 
     @BeforeEach
     void setUp() {
@@ -96,18 +106,6 @@ class ReferenceRevivalServiceTest {
             return stored;
         });
         lenient().when(repository.findById(1L)).thenAnswer(invocation -> Optional.ofNullable(stored));
-    }
-
-    private static BigDecimal kr(final String amount) {
-        return new BigDecimal(amount).setScale(2);
-    }
-
-    private static ReferenceRevivalService.FigureInput figure(final String category, final @Nullable String budgeted, final @Nullable String actual) {
-        return new ReferenceRevivalService.FigureInput(category, budgeted == null ? null : kr(budgeted), actual == null ? null : kr(actual));
-    }
-
-    private static ReferenceRevivalService.Definition nobel(final List<ReferenceRevivalService.FigureInput> figures) {
-        return new ReferenceRevivalService.Definition(" Nobel 2026 ", 2026, 50, " Från JK:s slutrapport ", figures);
     }
 
     @Test

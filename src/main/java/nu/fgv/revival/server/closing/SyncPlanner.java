@@ -71,84 +71,6 @@ public class SyncPlanner {
     }
 
     /**
-     * One operation of the plan; {@code key} identifies what it writes, for the hash.
-     */
-    public record Operation(@Nullable Long participantId, SyncOperation operation, @Nullable String detail, boolean exists, String key) {
-    }
-
-    public record ParticipantPlan(Participant participant, List<Operation> operations) {
-    }
-
-    /**
-     * {@code revival} is the {@link SyncOperation#REVIVAL} operation; {@code spexregisterRevivalId} is Spexregister's
-     * revival when it exists.
-     */
-    public record Plan(Long revivalId, @Nullable Long spexregisterRevivalId, Operation revival, List<ParticipantPlan> participants,
-                       List<Participant> excluded, String hash) {
-
-        /**
-         * Everything that would be written, the revival first, then per participant in operation order.
-         */
-        public List<Operation> planned() {
-            final List<Operation> planned = new ArrayList<>();
-
-            if (!revival.exists()) {
-                planned.add(revival);
-            }
-            participants.forEach(participant -> participant.operations().stream().filter(operation -> !operation.exists()).forEach(planned::add));
-            return planned;
-        }
-    }
-
-    /**
-     * The participants the sync is about: they answered yes, are participants and are not removed.
-     */
-    public List<Participant> participants(final Long revivalId) {
-        return participantRepository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId).stream()
-                .filter(participant -> participant.getKind() == ParticipantKind.PARTICIPANT && participant.getResponse() == ParticipantResponse.YES)
-                .toList();
-    }
-
-    /**
-     * The plan for the revival as things are now. SPEXREGISTER_UNAVAILABLE when Spexregister cannot be read.
-     */
-    public Plan plan(final Revival revival, final String actingPerson) {
-        final List<Participant> all = participants(revival.getId());
-        final List<Participant> spexare = all.stream().filter(participant -> participant.getSpexareId() != null).toList();
-        final List<Participant> excluded = all.stream().filter(participant -> participant.getSpexareId() == null).toList();
-        final @Nullable Long remoteRevival = revival.getSpexregisterRevivalId() != null ? revival.getSpexregisterRevivalId()
-                : findRemoteRevival(revival).orElse(null);
-        final Operation revivalOperation = new Operation(null, SyncOperation.REVIVAL, String.valueOf(revival.getYear()), remoteRevival != null,
-                "%d/%d".formatted(revival.getSpexId(), revival.getYear()));
-        final Map<Long, SpexregisterClient.SpexareActivities> activities = remoteRevival == null ? Map.of() : activities(spexare, actingPerson);
-        final Map<String, SpexareDirectory.Position> positions = positions();
-        final Map<String, SpexareDirectory.VocalPart> vocalParts = vocalParts();
-        final Set<Long> memberships = memberships(spexare, revival.getMembershipYear());
-        final List<ParticipantPlan> plans = new ArrayList<>();
-
-        for (final Participant participant : spexare) {
-            final SpexregisterClient.@Nullable ActivityDetail activity = activityFor(activities.get(participant.getSpexareId()), remoteRevival);
-
-            plans.add(new ParticipantPlan(participant, operations(participant, activity, positions, vocalParts, revival.getMembershipYear(),
-                    memberships.contains(participant.getId()))));
-        }
-
-        final Plan unhashed = new Plan(revival.getId(), remoteRevival, revivalOperation, List.copyOf(plans), List.copyOf(excluded), "");
-
-        return new Plan(revival.getId(), remoteRevival, revivalOperation, unhashed.participants(), unhashed.excluded(), hash(unhashed.planned()));
-    }
-
-    /**
-     * Spexregister's revival of the revival's spex in its year, if it records one.
-     */
-    public Optional<Long> findRemoteRevival(final Revival revival) {
-        return unavailableOnFailure(() -> client.spexRevivals(revival.getSpexId())).stream()
-                .filter(remote -> Objects.equals(remote.year(), revival.getYear()))
-                .map(SpexregisterClient.SpexRevival::id)
-                .findFirst();
-    }
-
-    /**
      * The participant's activity in Spexregister's revival, if any.
      */
     static SpexregisterClient.@Nullable ActivityDetail activityFor(final SpexregisterClient.@Nullable SpexareActivities spexare,
@@ -219,6 +141,62 @@ public class SyncPlanner {
         }
     }
 
+    private static <T> T unavailableOnFailure(final Supplier<T> supplier) {
+        try {
+            return supplier.get();
+        } catch (final SpexregisterClient.SpexregisterCallException e) {
+            throw new SpexregisterUnavailableException(e);
+        }
+    }
+
+    /**
+     * The participants the sync is about: they answered yes, are participants and are not removed.
+     */
+    public List<Participant> participants(final Long revivalId) {
+        return participantRepository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId).stream()
+                .filter(participant -> participant.getKind() == ParticipantKind.PARTICIPANT && participant.getResponse() == ParticipantResponse.YES)
+                .toList();
+    }
+
+    /**
+     * The plan for the revival as things are now. SPEXREGISTER_UNAVAILABLE when Spexregister cannot be read.
+     */
+    public Plan plan(final Revival revival, final String actingPerson) {
+        final List<Participant> all = participants(revival.getId());
+        final List<Participant> spexare = all.stream().filter(participant -> participant.getSpexareId() != null).toList();
+        final List<Participant> excluded = all.stream().filter(participant -> participant.getSpexareId() == null).toList();
+        final @Nullable Long remoteRevival = revival.getSpexregisterRevivalId() != null ? revival.getSpexregisterRevivalId()
+                : findRemoteRevival(revival).orElse(null);
+        final Operation revivalOperation = new Operation(null, SyncOperation.REVIVAL, String.valueOf(revival.getYear()), remoteRevival != null,
+                "%d/%d".formatted(revival.getSpexId(), revival.getYear()));
+        final Map<Long, SpexregisterClient.SpexareActivities> activities = remoteRevival == null ? Map.of() : activities(spexare, actingPerson);
+        final Map<String, SpexareDirectory.Position> positions = positions();
+        final Map<String, SpexareDirectory.VocalPart> vocalParts = vocalParts();
+        final Set<Long> memberships = memberships(spexare, revival.getMembershipYear());
+        final List<ParticipantPlan> plans = new ArrayList<>();
+
+        for (final Participant participant : spexare) {
+            final SpexregisterClient.@Nullable ActivityDetail activity = activityFor(activities.get(participant.getSpexareId()), remoteRevival);
+
+            plans.add(new ParticipantPlan(participant, operations(participant, activity, positions, vocalParts, revival.getMembershipYear(),
+                    memberships.contains(participant.getId()))));
+        }
+
+        final Plan unhashed = new Plan(revival.getId(), remoteRevival, revivalOperation, List.copyOf(plans), List.copyOf(excluded), "");
+
+        return new Plan(revival.getId(), remoteRevival, revivalOperation, unhashed.participants(), unhashed.excluded(), hash(unhashed.planned()));
+    }
+
+    /**
+     * Spexregister's revival of the revival's spex in its year, if it records one.
+     */
+    public Optional<Long> findRemoteRevival(final Revival revival) {
+        return unavailableOnFailure(() -> client.spexRevivals(revival.getSpexId())).stream()
+                .filter(remote -> Objects.equals(remote.year(), revival.getYear()))
+                .map(SpexregisterClient.SpexRevival::id)
+                .findFirst();
+    }
+
     private Map<Long, SpexregisterClient.SpexareActivities> activities(final List<Participant> participants, final String actingPerson) {
         final List<Long> ids = participants.stream().map(Participant::getSpexareId).filter(Objects::nonNull).distinct().toList();
         final Map<Long, SpexregisterClient.SpexareActivities> found = new HashMap<>();
@@ -251,11 +229,35 @@ public class SyncPlanner {
         return Set.copyOf(stepRepository.membershipsRecorded(paid, String.valueOf(year), List.of(SyncStepStatus.DONE, SyncStepStatus.EXISTED)));
     }
 
-    private static <T> T unavailableOnFailure(final Supplier<T> supplier) {
-        try {
-            return supplier.get();
-        } catch (final SpexregisterClient.SpexregisterCallException e) {
-            throw new SpexregisterUnavailableException(e);
+    /**
+     * One operation of the plan; {@code key} identifies what it writes, for the hash.
+     */
+    public record Operation(@Nullable Long participantId, SyncOperation operation, @Nullable String detail,
+                            boolean exists, String key) {
+    }
+
+    public record ParticipantPlan(Participant participant, List<Operation> operations) {
+    }
+
+    /**
+     * {@code revival} is the {@link SyncOperation#REVIVAL} operation; {@code spexregisterRevivalId} is Spexregister's
+     * revival when it exists.
+     */
+    public record Plan(Long revivalId, @Nullable Long spexregisterRevivalId, Operation revival,
+                       List<ParticipantPlan> participants,
+                       List<Participant> excluded, String hash) {
+
+        /**
+         * Everything that would be written, the revival first, then per participant in operation order.
+         */
+        public List<Operation> planned() {
+            final List<Operation> planned = new ArrayList<>();
+
+            if (!revival.exists()) {
+                planned.add(revival);
+            }
+            participants.forEach(participant -> participant.operations().stream().filter(operation -> !operation.exists()).forEach(planned::add));
+            return planned;
         }
     }
 }

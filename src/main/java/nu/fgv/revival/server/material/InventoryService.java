@@ -82,12 +82,26 @@ public class InventoryService {
         this.clock = clock;
     }
 
-    /**
-     * An item as entered. {@code revivalId} only on create; a null quantity is 1.
-     */
-    public record Input(@Nullable Long revivalId, @Nullable String name, InventoryKind kind, @Nullable Integer quantity, InventoryStatus status,
-                        @Nullable InventoryLocation location, @Nullable String locationNote, @Nullable OwnerInputDto owner,
-                        @Nullable String comment, @Nullable Long materialId) {
+    private static String validName(final @Nullable String name) {
+        final String trimmed = name == null ? "" : name.strip();
+
+        if (trimmed.isEmpty() || trimmed.length() > InventoryItem.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.inventory.name", InventoryItem.NAME_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    private static @Nullable String optional(final @Nullable String text, final int maxLength, final String messageCode) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = text.strip();
+
+        if (trimmed.length() > maxLength) {
+            throw new BadRequestException(messageCode, maxLength);
+        }
+        return trimmed;
     }
 
     /**
@@ -155,6 +169,8 @@ public class InventoryService {
         return dto(repository.saveAndFlush(item), locale);
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     @Transactional
     public InventoryItemDto restore(final Long id, final Long version, final Locale locale) {
         final InventoryItem item = changeable(callerService.current(), id, version);
@@ -167,8 +183,6 @@ public class InventoryService {
         item.setRemovedBy(null);
         return dto(repository.saveAndFlush(item), locale);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private InventoryItemDto dto(final InventoryItem item, final Locale locale) {
         return InventoryItemDto.of(item, ownerViews.toDto(item.getRevivalId(), item.getOwner(), locale));
@@ -235,25 +249,13 @@ public class InventoryService {
         return item;
     }
 
-    private static String validName(final @Nullable String name) {
-        final String trimmed = name == null ? "" : name.strip();
-
-        if (trimmed.isEmpty() || trimmed.length() > InventoryItem.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.inventory.name", InventoryItem.NAME_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    private static @Nullable String optional(final @Nullable String text, final int maxLength, final String messageCode) {
-        if (text == null || text.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = text.strip();
-
-        if (trimmed.length() > maxLength) {
-            throw new BadRequestException(messageCode, maxLength);
-        }
-        return trimmed;
+    /**
+     * An item as entered. {@code revivalId} only on create; a null quantity is 1.
+     */
+    public record Input(@Nullable Long revivalId, @Nullable String name, InventoryKind kind, @Nullable Integer quantity,
+                        InventoryStatus status,
+                        @Nullable InventoryLocation location, @Nullable String locationNote,
+                        @Nullable OwnerInputDto owner,
+                        @Nullable String comment, @Nullable Long materialId) {
     }
 }

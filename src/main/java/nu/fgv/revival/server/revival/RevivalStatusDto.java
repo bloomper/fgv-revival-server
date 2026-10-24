@@ -39,6 +39,7 @@ public record RevivalStatusDto(Summary revival,
     public record Summary(Long id, String title, Integer year, RevivalStatus status) {
     }
 
-    public record OpenRequirements(String chapterKey, GuideVersionView.@Nullable Text chapterTitle, int open, int total) {
+    public record OpenRequirements(String chapterKey, GuideVersionView.@Nullable Text chapterTitle, int open,
+                                   int total) {
     }
 }

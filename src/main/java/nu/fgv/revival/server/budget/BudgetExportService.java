@@ -106,9 +106,13 @@ public class BudgetExportService {
     }
 
     /**
-     * The workbook and its file name.
+     * {@code budget-<title>.xlsx} in ASCII letters, digits and hyphens, e.g. {@code budget-Ali-Baba-2028.xlsx}.
      */
-    public record Export(String fileName, byte[] content) {
+    static String fileName(final String title) {
+        final String ascii = Normalizer.normalize(title, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .replaceAll("[^A-Za-z0-9]+", "-").replaceAll("^-+|-+$", "");
+
+        return "budget" + (ascii.isEmpty() ? "" : "-" + ascii) + ".xlsx";
     }
 
     @Transactional(readOnly = true)
@@ -138,16 +142,6 @@ public class BudgetExportService {
         }
     }
 
-    /**
-     * {@code budget-<title>.xlsx} in ASCII letters, digits and hyphens, e.g. {@code budget-Ali-Baba-2028.xlsx}.
-     */
-    static String fileName(final String title) {
-        final String ascii = Normalizer.normalize(title, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
-                .replaceAll("[^A-Za-z0-9]+", "-").replaceAll("^-+|-+$", "");
-
-        return "budget" + (ascii.isEmpty() ? "" : "-" + ascii) + ".xlsx";
-    }
-
     private Map<Long, String> payers(final List<Transaction> transactions, final Locale locale) {
         final Map<OwnerViews.Ref, @Nullable OwnerDto> owners = ownerViews.toDtos(transactions.stream()
                 .map(transaction -> new OwnerViews.Ref(transaction.revivalId(), transaction.payer())).collect(Collectors.toSet()), locale);
@@ -165,11 +159,19 @@ public class BudgetExportService {
     }
 
     /**
+     * The workbook and its file name.
+     */
+    public record Export(String fileName, byte[] content) {
+    }
+
+    /**
      * @param helpers         the helpers' compensation for their shifts, a budgeted cost
      * @param helpersCategory the category it belongs to; null without an active helper category
      */
-    private record Data(String title, Settings settings, Totals totals, List<Line> lines, List<Transaction> transactions,
-                        List<BudgetCategory> categories, Map<Long, EventDto> events, Map<Long, String> payers, BigDecimal helpers,
+    private record Data(String title, Settings settings, Totals totals, List<Line> lines,
+                        List<Transaction> transactions,
+                        List<BudgetCategory> categories, Map<Long, EventDto> events, Map<Long, String> payers,
+                        BigDecimal helpers,
                         @Nullable String helpersCategory) {
 
         boolean hasHelpers() {
@@ -221,12 +223,44 @@ public class BudgetExportService {
             date.setDataFormat(workbook.createDataFormat().getFormat(DATE_FORMAT));
         }
 
+        private static void amountCell(final Row row, final int column, final BigDecimal value, final CellStyle style) {
+            final Cell cell = row.createCell(column);
+
+            cell.setCellValue(value.doubleValue());
+            cell.setCellStyle(style);
+        }
+
+        private static void text(final Row row, final int column, final String value, final @Nullable CellStyle style) {
+            final Cell cell = row.createCell(column);
+
+            cell.setCellValue(value);
+            if (style != null) {
+                cell.setCellStyle(style);
+            }
+        }
+
+        private static BigDecimal sum(final List<BigDecimal> amounts) {
+            return Amounts.round(amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add));
+        }
+
+        /**
+         * Fixed widths: sizing columns to their content needs fonts, which a server image may not have.
+         */
+        private static void widths(final Sheet sheet, final int columns) {
+            sheet.setColumnWidth(0, 40 * 256);
+            for (int column = 1; column < columns; column++) {
+                sheet.setColumnWidth(column, 18 * 256);
+            }
+        }
+
         void write() {
             summary();
             budget();
             transactions();
             report();
         }
+
+        // --- Helpers ------------------------------------------------------------------------------------------------
 
         private void summary() {
             final Sheet sheet = workbook.createSheet(message("budget.export.sheet.summary"));
@@ -396,8 +430,6 @@ public class BudgetExportService {
             widths(sheet, 5);
         }
 
-        // --- Helpers ------------------------------------------------------------------------------------------------
-
         /**
          * The categories of the kind that hold a line or a transaction, in category order.
          */
@@ -451,36 +483,6 @@ public class BudgetExportService {
 
             cell.setCellValue(value);
             cell.setCellStyle(date);
-        }
-
-        private static void amountCell(final Row row, final int column, final BigDecimal value, final CellStyle style) {
-            final Cell cell = row.createCell(column);
-
-            cell.setCellValue(value.doubleValue());
-            cell.setCellStyle(style);
-        }
-
-        private static void text(final Row row, final int column, final String value, final @Nullable CellStyle style) {
-            final Cell cell = row.createCell(column);
-
-            cell.setCellValue(value);
-            if (style != null) {
-                cell.setCellStyle(style);
-            }
-        }
-
-        private static BigDecimal sum(final List<BigDecimal> amounts) {
-            return Amounts.round(amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add));
-        }
-
-        /**
-         * Fixed widths: sizing columns to their content needs fonts, which a server image may not have.
-         */
-        private static void widths(final Sheet sheet, final int columns) {
-            sheet.setColumnWidth(0, 40 * 256);
-            for (int column = 1; column < columns; column++) {
-                sheet.setColumnWidth(column, 18 * 256);
-            }
         }
     }
 }

@@ -58,21 +58,17 @@ public class LogEntryGraphqlApi {
         this.checklistTexts = checklistTexts;
     }
 
-    public record LogEntryCreateInput(Long revivalId, @Nullable Long meetingId, @Nullable LocalDate date, LogEntryType type, String text,
-                                      @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
-                                      @Nullable String comment, @Nullable List<String> tags, @Nullable String guideItemKey,
-                                      @Nullable Long checklistItemId) {
-    }
+    private static <V> Map<LogEntryDto, V> mapped(final List<LogEntryDto> entries, final java.util.function.Function<LogEntryDto, @Nullable V> value) {
+        final Map<LogEntryDto, V> result = new HashMap<>();
 
-    public record LogEntryUpdateInput(Long id, Long version, @Nullable Long meetingId, @Nullable LocalDate date, @Nullable LogEntryType type,
-                                      @Nullable String text, @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner,
-                                      @Nullable Boolean clearOwner, @Nullable LocalDate deadline, @Nullable Boolean clearDeadline,
-                                      @Nullable String comment, @Nullable Boolean clearComment, @Nullable List<String> tags,
-                                      @Nullable String guideItemKey, @Nullable Long checklistItemId, @Nullable Boolean clearLinks) {
-    }
+        entries.forEach(entry -> {
+            final V found = value.apply(entry);
 
-    public record LogEntryAnswerInput(Long questionId, Long questionVersion, @Nullable Long meetingId, String text,
-                                      @Nullable OwnerInputDto owner, @Nullable LocalDate deadline, @Nullable String comment) {
+            if (found != null) {
+                result.put(entry, found);
+            }
+        });
+        return result;
     }
 
     @QueryMapping
@@ -154,16 +150,29 @@ public class LogEntryGraphqlApi {
         return mapped(entries, entry -> decisions.containsKey(entry.id()) ? LogEntrySummaryDto.of(decisions.get(entry.id())) : null);
     }
 
-    private static <V> Map<LogEntryDto, V> mapped(final List<LogEntryDto> entries, final java.util.function.Function<LogEntryDto, @Nullable V> value) {
-        final Map<LogEntryDto, V> result = new HashMap<>();
+    public record LogEntryCreateInput(Long revivalId, @Nullable Long meetingId, @Nullable LocalDate date,
+                                      LogEntryType type, String text,
+                                      @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner,
+                                      @Nullable LocalDate deadline,
+                                      @Nullable String comment, @Nullable List<String> tags,
+                                      @Nullable String guideItemKey,
+                                      @Nullable Long checklistItemId) {
+    }
 
-        entries.forEach(entry -> {
-            final V found = value.apply(entry);
+    public record LogEntryUpdateInput(Long id, Long version, @Nullable Long meetingId, @Nullable LocalDate date,
+                                      @Nullable LogEntryType type,
+                                      @Nullable String text, @Nullable LogEntryStatus status,
+                                      @Nullable OwnerInputDto owner,
+                                      @Nullable Boolean clearOwner, @Nullable LocalDate deadline,
+                                      @Nullable Boolean clearDeadline,
+                                      @Nullable String comment, @Nullable Boolean clearComment,
+                                      @Nullable List<String> tags,
+                                      @Nullable String guideItemKey, @Nullable Long checklistItemId,
+                                      @Nullable Boolean clearLinks) {
+    }
 
-            if (found != null) {
-                result.put(entry, found);
-            }
-        });
-        return result;
+    public record LogEntryAnswerInput(Long questionId, Long questionVersion, @Nullable Long meetingId, String text,
+                                      @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
+                                      @Nullable String comment) {
     }
 }

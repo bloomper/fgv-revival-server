@@ -56,38 +56,6 @@ public class ParticipantGraphqlApi {
         this.participation = participation;
     }
 
-    public record ParticipantAddInput(Long revivalId, ParticipantKind kind, @Nullable Long spexareId, @Nullable String firstName,
-                                      @Nullable String lastName, @Nullable String email, @Nullable String phone, @Nullable String positionId,
-                                      @Nullable String roleName, @Nullable String vocalPartId, @Nullable BigDecimal compensationPerShift) {
-    }
-
-    public record ParticipantUpdateInput(Long id, Long version, @Nullable String positionId, @Nullable Boolean clearPosition,
-                                         @Nullable String roleName, @Nullable Boolean clearRoleName, @Nullable String vocalPartId,
-                                         @Nullable Boolean clearVocalPart, @Nullable BigDecimal fee, @Nullable Boolean clearFee,
-                                         @Nullable BigDecimal compensationPerShift, @Nullable String firstName, @Nullable String lastName,
-                                         @Nullable String email, @Nullable Boolean clearEmail, @Nullable String phone, @Nullable Boolean clearPhone) {
-    }
-
-    public record ParticipantsInviteInput(Long revivalId, List<Long> participantIds, @Nullable String email, String language) {
-    }
-
-    public record ParticipationSettingsInput(Long revivalId, Long version, @Nullable String swishNumber, @Nullable String whatsappLink,
-                                             @Nullable String terms) {
-    }
-
-    public record ReferralInput(Long revivalId, String name, @Nullable String contact, @Nullable String comment) {
-    }
-
-    public record ContactInput(Long revivalId, @Nullable String email, @Nullable String phone, @Nullable String streetAddress,
-                               @Nullable String postalCode, @Nullable String city) {
-    }
-
-    public record ParticipationRespondInput(Long revivalId, ParticipantResponse response, @Nullable String preferredPositionId,
-                                            @Nullable String comment, @Nullable Boolean termsAccepted, @Nullable Boolean registerConsent) {
-    }
-
-    // --- Steering group ---------------------------------------------------------------------------------------------
-
     @QueryMapping
     public List<ParticipantDto> participants(@Argument final Long revivalId, @Argument final @Nullable Boolean includeRemoved, final Locale locale) {
         return service.list(revivalId, Boolean.TRUE.equals(includeRemoved), locale);
@@ -125,6 +93,8 @@ public class ParticipantGraphqlApi {
                 input.compensationPerShift()), locale);
     }
 
+    // --- Steering group ---------------------------------------------------------------------------------------------
+
     @MutationMapping
     public List<ParticipantDto> participantsAddSpexare(@Argument final Long revivalId, @Argument final List<Long> spexareIds, final Locale locale) {
         return service.addSpexare(revivalId, spexareIds, locale);
@@ -151,9 +121,6 @@ public class ParticipantGraphqlApi {
     @MutationMapping
     public ParticipantDto participantFeeSetPaid(@Argument final Long id, @Argument final Long version, @Argument final boolean paid, final Locale locale) {
         return service.setFeePaid(id, version, paid, locale);
-    }
-
-    public record MembershipSetInput(Long revivalId, Integer year, List<Long> participantIds) {
     }
 
     @MutationMapping
@@ -187,8 +154,6 @@ public class ParticipantGraphqlApi {
         return service.referrals(revival.id(), locale);
     }
 
-    // --- The participant's own --------------------------------------------------------------------------------------
-
     @SchemaMapping(typeName = "Revival", field = "myRole")
     public @Nullable RevivalRole myRole(final RevivalDto revival) {
         return participation.myRole(revival.id());
@@ -219,5 +184,53 @@ public class ParticipantGraphqlApi {
     @MutationMapping
     public void referralCreate(@Argument final ReferralInput input) {
         participation.createReferral(new ParticipationService.NewReferral(input.revivalId(), input.name(), input.contact(), input.comment()));
+    }
+
+    public record ParticipantAddInput(Long revivalId, ParticipantKind kind, @Nullable Long spexareId,
+                                      @Nullable String firstName,
+                                      @Nullable String lastName, @Nullable String email, @Nullable String phone,
+                                      @Nullable String positionId,
+                                      @Nullable String roleName, @Nullable String vocalPartId,
+                                      @Nullable BigDecimal compensationPerShift) {
+    }
+
+    public record ParticipantUpdateInput(Long id, Long version, @Nullable String positionId,
+                                         @Nullable Boolean clearPosition,
+                                         @Nullable String roleName, @Nullable Boolean clearRoleName,
+                                         @Nullable String vocalPartId,
+                                         @Nullable Boolean clearVocalPart, @Nullable BigDecimal fee,
+                                         @Nullable Boolean clearFee,
+                                         @Nullable BigDecimal compensationPerShift, @Nullable String firstName,
+                                         @Nullable String lastName,
+                                         @Nullable String email, @Nullable Boolean clearEmail, @Nullable String phone,
+                                         @Nullable Boolean clearPhone) {
+    }
+
+    // --- The participant's own --------------------------------------------------------------------------------------
+
+    public record ParticipantsInviteInput(Long revivalId, List<Long> participantIds, @Nullable String email,
+                                          String language) {
+    }
+
+    public record ParticipationSettingsInput(Long revivalId, Long version, @Nullable String swishNumber,
+                                             @Nullable String whatsappLink,
+                                             @Nullable String terms) {
+    }
+
+    public record ReferralInput(Long revivalId, String name, @Nullable String contact, @Nullable String comment) {
+    }
+
+    public record ContactInput(Long revivalId, @Nullable String email, @Nullable String phone,
+                               @Nullable String streetAddress,
+                               @Nullable String postalCode, @Nullable String city) {
+    }
+
+    public record ParticipationRespondInput(Long revivalId, ParticipantResponse response,
+                                            @Nullable String preferredPositionId,
+                                            @Nullable String comment, @Nullable Boolean termsAccepted,
+                                            @Nullable Boolean registerConsent) {
+    }
+
+    public record MembershipSetInput(Long revivalId, Integer year, List<Long> participantIds) {
     }
 }

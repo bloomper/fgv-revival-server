@@ -43,11 +43,6 @@ public class EventTypeGraphqlApi {
         this.service = service;
     }
 
-    public record EventTypeInput(LocalizedTextInput name, @Nullable LocalizedTextInput description, @Nullable LocalizedTextInput rooms,
-                                 @Nullable LocalizedTextInput catering, @Nullable Integer offsetMinDays, @Nullable Integer offsetMaxDays,
-                                 int days, boolean revivalPays, @Nullable Long checklistTemplateId) {
-    }
-
     private static EventTypeService.Definition definition(final EventTypeInput input) {
         return new EventTypeService.Definition(text(input.name()), input.description() == null ? null : text(input.description()),
                 input.rooms() == null ? null : text(input.rooms()), input.catering() == null ? null : text(input.catering()),
@@ -96,5 +91,12 @@ public class EventTypeGraphqlApi {
     @SchemaMapping(typeName = "EventType", field = "checklistTemplate")
     public @Nullable ChecklistTemplateSummaryDto checklistTemplate(final EventTypeDto type) {
         return service.template(type);
+    }
+
+    public record EventTypeInput(LocalizedTextInput name, @Nullable LocalizedTextInput description,
+                                 @Nullable LocalizedTextInput rooms,
+                                 @Nullable LocalizedTextInput catering, @Nullable Integer offsetMinDays,
+                                 @Nullable Integer offsetMaxDays,
+                                 int days, boolean revivalPays, @Nullable Long checklistTemplateId) {
     }
 }

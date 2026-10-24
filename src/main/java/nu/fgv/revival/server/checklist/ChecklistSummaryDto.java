@@ -28,6 +28,9 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey, GuideVersionView.@Nullable Text chapterTitle, @Nullable String name, @Nullable LocalDate date,
-                                  boolean cancelled, int openCount, int overdueCount, int totalCount, @Nullable Long eventId) {
+public record ChecklistSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
+                                  GuideVersionView.@Nullable Text chapterTitle, @Nullable String name,
+                                  @Nullable LocalDate date,
+                                  boolean cancelled, int openCount, int overdueCount, int totalCount,
+                                  @Nullable Long eventId) {
 }

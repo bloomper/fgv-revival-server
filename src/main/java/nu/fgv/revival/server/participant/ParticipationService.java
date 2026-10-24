@@ -134,15 +134,24 @@ public class ParticipationService {
         this.clock = clock;
     }
 
-    public record Response(Long revivalId, ParticipantResponse response, @Nullable String preferredPositionId, @Nullable String comment,
-                           @Nullable Boolean termsAccepted, @Nullable Boolean registerConsent) {
-    }
-
-    public record ContactChange(Long revivalId, @Nullable String email, @Nullable String phone, @Nullable String streetAddress,
-                                @Nullable String postalCode, @Nullable String city) {
-    }
-
-    public record NewReferral(Long revivalId, String name, @Nullable String contact, @Nullable String comment) {
+    /**
+     * Their contact details: a spexare's {@code HOME} address in Spexregister, null while it cannot be read; a pending
+     * person's own.
+     */
+    private static @Nullable Contact contact(final Participant participant, final SpexregisterClient.@Nullable Spexare spexare,
+                                             final @Nullable PendingPerson person) {
+        if (participant.getSpexareId() != null) {
+            if (spexare == null) {
+                return null;
+            }
+            return spexare.home()
+                    .map(home -> new Contact(ParticipantViews.blankToNull(home.emailAddress()),
+                            hasText(home.phoneMobile()) ? home.phoneMobile() : ParticipantViews.blankToNull(home.phone()),
+                            ParticipantViews.blankToNull(home.streetAddress()), ParticipantViews.blankToNull(home.postalCode()),
+                            ParticipantViews.blankToNull(home.city())))
+                    .orElseGet(() -> new Contact(null, null, null, null, null));
+        }
+        return person == null ? null : new Contact(person.getEmail(), person.getPhone(), person.getStreetAddress(), person.getPostalCode(), person.getCity());
     }
 
     /**
@@ -207,26 +216,6 @@ public class ParticipationService {
         final String year = " " + revival.getYear();
 
         return title.endsWith(year) ? title.substring(0, title.length() - year.length()) : title;
-    }
-
-    /**
-     * Their contact details: a spexare's {@code HOME} address in Spexregister, null while it cannot be read; a pending
-     * person's own.
-     */
-    private static @Nullable Contact contact(final Participant participant, final SpexregisterClient.@Nullable Spexare spexare,
-                                             final @Nullable PendingPerson person) {
-        if (participant.getSpexareId() != null) {
-            if (spexare == null) {
-                return null;
-            }
-            return spexare.home()
-                    .map(home -> new Contact(ParticipantViews.blankToNull(home.emailAddress()),
-                            hasText(home.phoneMobile()) ? home.phoneMobile() : ParticipantViews.blankToNull(home.phone()),
-                            ParticipantViews.blankToNull(home.streetAddress()), ParticipantViews.blankToNull(home.postalCode()),
-                            ParticipantViews.blankToNull(home.city())))
-                    .orElseGet(() -> new Contact(null, null, null, null, null));
-        }
-        return person == null ? null : new Contact(person.getEmail(), person.getPhone(), person.getStreetAddress(), person.getPostalCode(), person.getCity());
     }
 
     /**
@@ -496,5 +485,18 @@ public class ParticipationService {
 
     private String text(final String key, final Locale locale, final Object... arguments) {
         return Objects.requireNonNull(messageSource.getMessage(key, arguments, key, locale));
+    }
+
+    public record Response(Long revivalId, ParticipantResponse response, @Nullable String preferredPositionId,
+                           @Nullable String comment,
+                           @Nullable Boolean termsAccepted, @Nullable Boolean registerConsent) {
+    }
+
+    public record ContactChange(Long revivalId, @Nullable String email, @Nullable String phone,
+                                @Nullable String streetAddress,
+                                @Nullable String postalCode, @Nullable String city) {
+    }
+
+    public record NewReferral(Long revivalId, String name, @Nullable String contact, @Nullable String comment) {
     }
 }

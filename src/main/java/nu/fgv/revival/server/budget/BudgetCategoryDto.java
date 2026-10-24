@@ -26,7 +26,8 @@ import java.util.Locale;
  * @author Anders Jacobsson
  * @since 0.6
  */
-public record BudgetCategoryDto(String id, BudgetCategoryKind kind, @Nullable BudgetCategoryRole role, GuideVersionView.Text name, int position,
+public record BudgetCategoryDto(String id, BudgetCategoryKind kind, @Nullable BudgetCategoryRole role,
+                                GuideVersionView.Text name, int position,
                                 boolean retired, Long version) {
 
     public static BudgetCategoryDto of(final BudgetCategory category) {

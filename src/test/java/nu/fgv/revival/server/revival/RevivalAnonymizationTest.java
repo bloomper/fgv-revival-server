@@ -60,6 +60,15 @@ class RevivalAnonymizationTest {
 
     private RevivalAnonymization anonymization;
 
+    private static RevivalStatusChange change(final RevivalStatus to, final String at) {
+        final RevivalStatusChange change = new RevivalStatusChange();
+
+        change.setRevivalId(1L);
+        change.setToStatus(to);
+        change.setChangedAt(Instant.parse(at));
+        return change;
+    }
+
     @BeforeEach
     void setUp() {
         anonymization = new RevivalAnonymization(entityManager, budgetSnapshot, personReferences, statusChangeRepository, transactionManager,
@@ -83,15 +92,6 @@ class RevivalAnonymizationTest {
         assertThat(scrubbed.othersPresent()).isNull();
         assertThat(scrubbed.recorderId()).isNull();
         assertThat(scrubbed.agendaPoints()).containsExactly("Budget");
-    }
-
-    private static RevivalStatusChange change(final RevivalStatus to, final String at) {
-        final RevivalStatusChange change = new RevivalStatusChange();
-
-        change.setRevivalId(1L);
-        change.setToStatus(to);
-        change.setChangedAt(Instant.parse(at));
-        return change;
     }
 
     @Test

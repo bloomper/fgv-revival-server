@@ -49,12 +49,6 @@ public class OwnerViews {
         this.personNames = personNames;
     }
 
-    /**
-     * An owner within a revival.
-     */
-    public record Ref(Long revivalId, Owner owner) {
-    }
-
     @Transactional(readOnly = true)
     public Map<Ref, @Nullable OwnerDto> toDtos(final Collection<Ref> refs, final Locale locale) {
         final Map<Long, Map<Long, @Nullable String>> active = new HashMap<>();
@@ -86,5 +80,11 @@ public class OwnerViews {
         final Ref ref = new Ref(revivalId, owner);
 
         return toDtos(List.of(ref), locale).get(ref);
+    }
+
+    /**
+     * An owner within a revival.
+     */
+    public record Ref(Long revivalId, Owner owner) {
     }
 }

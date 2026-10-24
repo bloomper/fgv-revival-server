@@ -109,40 +109,70 @@ public class LogEntryService {
         this.clock = clock;
     }
 
-    /**
-     * A new row. {@code meetingId} makes it belong to that meeting in progress.
-     */
-    public record Draft(Long revivalId, @Nullable Long meetingId, @Nullable LocalDate date, LogEntryType type, String text,
-                        @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
-                        @Nullable String comment, @Nullable List<String> tags, @Nullable String guideItemKey,
-                        @Nullable Long checklistItemId) {
+    private static boolean isClosed(final LogEntryStatus status) {
+        return status == LogEntryStatus.DONE || status == LogEntryStatus.CANCELLED;
     }
 
-    /**
-     * A change to a row. Fields left null are unchanged; the {@code clear*} flags remove a value.
-     */
-    public record Change(Long id, Long version, @Nullable Long meetingId, @Nullable LocalDate date, @Nullable LogEntryType type,
-                         @Nullable String text, @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner, boolean clearOwner,
-                         @Nullable LocalDate deadline, boolean clearDeadline, @Nullable String comment, boolean clearComment,
-                         @Nullable List<String> tags, @Nullable String guideItemKey, @Nullable Long checklistItemId,
-                         boolean clearLinks) {
+    private static String snapshot(final LogEntry entry) {
+        return Stream.of(entry.getDate(), entry.getType(), entry.getText(), entry.getDeadline(), entry.getComment(),
+                        new TreeSet<>(entry.getTags()), entry.getGuideItemKey(), entry.getChecklistItemId())
+                .map(String::valueOf)
+                .collect(Collectors.joining("\u0000"));
     }
 
-    /**
-     * The decision answering a question (FR-013).
-     */
-    public record Answer(Long questionId, Long questionVersion, @Nullable Long meetingId, String text, @Nullable OwnerInputDto owner,
-                         @Nullable LocalDate deadline, @Nullable String comment) {
+    static String validText(final String text) {
+        final String trimmed = text.strip();
+
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("error.log.text.blank");
+        }
+        if (trimmed.length() > LogEntry.TEXT_MAX_LENGTH) {
+            throw new BadRequestException("error.log.text.tooLong", LogEntry.TEXT_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
-    public record Answered(LogEntryDto question, LogEntryDto decision) {
+    static @Nullable String validComment(final @Nullable String comment) {
+        if (comment == null || comment.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = comment.strip();
+
+        if (trimmed.length() > LogEntry.TEXT_MAX_LENGTH) {
+            throw new BadRequestException("error.log.comment.tooLong", LogEntry.TEXT_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    static Set<String> validTags(final @Nullable List<String> tags) {
+        final Set<String> valid = new LinkedHashSet<>();
+
+        if (tags == null) {
+            return valid;
+        }
+        for (final String tag : tags) {
+            final String trimmed = tag.strip();
+
+            if (trimmed.isEmpty() || trimmed.length() > LogEntry.TAG_MAX_LENGTH) {
+                throw new BadRequestException("error.log.tag.invalid", LogEntry.TAG_MAX_LENGTH);
+            }
+            valid.add(trimmed);
+        }
+        return valid;
+    }
+
+    // --- Reading ----------------------------------------------------------------------------------------------------
+
+    static String truncate(final String text, final int max) {
+        final String trimmed = text.strip();
+
+        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
     }
 
     public LocalDate today() {
         return LocalDate.now(clock);
     }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<LogEntryDto> list(final Long revivalId, final @Nullable LogEntryFilterDto filter, final Locale locale) {
@@ -194,6 +224,8 @@ public class LogEntryService {
                 .collect(Collectors.toMap(entry -> Objects.requireNonNull(entry.getAnswersEntryId()), Function.identity()));
     }
 
+    // --- Writing ----------------------------------------------------------------------------------------------------
+
     /**
      * To-dos, open or waiting, without an owner who still counts (FR-019). Callers have checked access.
      */
@@ -212,8 +244,6 @@ public class LogEntryService {
     public List<LogEntry> linkedTo(final Long checklistItemId) {
         return repository.findByChecklistItemIdOrderByNumberAsc(checklistItemId);
     }
-
-    // --- Writing ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public LogEntryDto create(final Draft draft, final Locale locale) {
@@ -249,6 +279,8 @@ public class LogEntryService {
         }
         return toDto(saved, locale);
     }
+
+    // --- Internal, for the guide sync (research R10) -------------------------------------------------------------------
 
     @Transactional
     public LogEntryDto update(final Change change, final Locale locale) {
@@ -373,8 +405,6 @@ public class LogEntryService {
         return new Answered(toDto(savedQuestion, locale), toDto(savedDecision, locale));
     }
 
-    // --- Internal, for the guide sync (research R10) -------------------------------------------------------------------
-
     /**
      * Creates an open question row for each guide question not yet in the log, numbered after existing rows. Called by
      * the guide sync, which is itself access-checked through the operation that triggered it.
@@ -404,6 +434,8 @@ public class LogEntryService {
         });
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     /**
      * Clears the link to checklist items the guide sync is about to delete. The rows stay: log rows are never deleted.
      * Internal, for the guide sync.
@@ -426,8 +458,6 @@ public class LogEntryService {
     public int countLinkedToChecklistItems(final Collection<Long> checklistItemIds) {
         return checklistItemIds.isEmpty() ? 0 : (int) repository.countByChecklistItemIdIn(checklistItemIds);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private Revival visible(final Caller caller, final Long revivalId) {
         final Revival revival = accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
@@ -453,59 +483,6 @@ public class LogEntryService {
         return entry;
     }
 
-    private static boolean isClosed(final LogEntryStatus status) {
-        return status == LogEntryStatus.DONE || status == LogEntryStatus.CANCELLED;
-    }
-
-    private static String snapshot(final LogEntry entry) {
-        return Stream.of(entry.getDate(), entry.getType(), entry.getText(), entry.getDeadline(), entry.getComment(),
-                        new TreeSet<>(entry.getTags()), entry.getGuideItemKey(), entry.getChecklistItemId())
-                .map(String::valueOf)
-                .collect(Collectors.joining("\u0000"));
-    }
-
-    static String validText(final String text) {
-        final String trimmed = text.strip();
-
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException("error.log.text.blank");
-        }
-        if (trimmed.length() > LogEntry.TEXT_MAX_LENGTH) {
-            throw new BadRequestException("error.log.text.tooLong", LogEntry.TEXT_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    static @Nullable String validComment(final @Nullable String comment) {
-        if (comment == null || comment.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = comment.strip();
-
-        if (trimmed.length() > LogEntry.TEXT_MAX_LENGTH) {
-            throw new BadRequestException("error.log.comment.tooLong", LogEntry.TEXT_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    static Set<String> validTags(final @Nullable List<String> tags) {
-        final Set<String> valid = new LinkedHashSet<>();
-
-        if (tags == null) {
-            return valid;
-        }
-        for (final String tag : tags) {
-            final String trimmed = tag.strip();
-
-            if (trimmed.isEmpty() || trimmed.length() > LogEntry.TAG_MAX_LENGTH) {
-                throw new BadRequestException("error.log.tag.invalid", LogEntry.TAG_MAX_LENGTH);
-            }
-            valid.add(trimmed);
-        }
-        return valid;
-    }
-
     private @Nullable Long validChecklistItem(final Long revivalId, final @Nullable Long checklistItemId) {
         if (checklistItemId == null) {
             return null;
@@ -518,12 +495,6 @@ public class LogEntryService {
             throw new BadRequestException("error.log.checklistItem.otherRevival");
         }
         return checklistItemId;
-    }
-
-    static String truncate(final String text, final int max) {
-        final String trimmed = text.strip();
-
-        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
     }
 
     List<LogEntryDto> toDtos(final List<LogEntry> entries, final Locale locale) {
@@ -556,5 +527,39 @@ public class LogEntryService {
 
     LogEntryDto toDto(final LogEntry entry, final Locale locale) {
         return toDtos(List.of(entry), locale).getFirst();
+    }
+
+    /**
+     * A new row. {@code meetingId} makes it belong to that meeting in progress.
+     */
+    public record Draft(Long revivalId, @Nullable Long meetingId, @Nullable LocalDate date, LogEntryType type,
+                        String text,
+                        @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
+                        @Nullable String comment, @Nullable List<String> tags, @Nullable String guideItemKey,
+                        @Nullable Long checklistItemId) {
+    }
+
+    /**
+     * A change to a row. Fields left null are unchanged; the {@code clear*} flags remove a value.
+     */
+    public record Change(Long id, Long version, @Nullable Long meetingId, @Nullable LocalDate date,
+                         @Nullable LogEntryType type,
+                         @Nullable String text, @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner,
+                         boolean clearOwner,
+                         @Nullable LocalDate deadline, boolean clearDeadline, @Nullable String comment,
+                         boolean clearComment,
+                         @Nullable List<String> tags, @Nullable String guideItemKey, @Nullable Long checklistItemId,
+                         boolean clearLinks) {
+    }
+
+    /**
+     * The decision answering a question (FR-013).
+     */
+    public record Answer(Long questionId, Long questionVersion, @Nullable Long meetingId, String text,
+                         @Nullable OwnerInputDto owner,
+                         @Nullable LocalDate deadline, @Nullable String comment) {
+    }
+
+    public record Answered(LogEntryDto question, LogEntryDto decision) {
     }
 }

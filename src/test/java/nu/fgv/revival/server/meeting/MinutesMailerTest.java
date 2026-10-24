@@ -89,18 +89,18 @@ class MinutesMailerTest {
                 Direktionsmöte 4 2026-10-21
                 Närvarande: Kim Svensson, Stina Styrgrupp; Sam från lokalen
                 Protokollförare: Stina Styrgrupp
-
+                
                 Beslut
                 #7 Vi spelar i RunAn (Kim Svensson)
-
+                
                 Att göra
                 #8 Skicka offert. Ansvarig: Sam. Klart senast: 2026-11-01
-
+                
                 Avslutat på mötet
                 #2 Boka lokal (klar)
-
+                
                 Öppna mötet: https://revival.example.org/revivals/1/meetings/5
-
+                
                 Skickat av Stina Styrgrupp från Nyuppsättning.""");
     }
 

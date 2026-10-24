@@ -80,36 +80,6 @@ public class BudgetGraphqlApi {
         this.ownerViews = ownerViews;
     }
 
-    public record BudgetSettingsInput(Long revivalId, Long version, @Nullable Integer participantsPlanned, @Nullable BigDecimal participationFee,
-                                      @Nullable BigDecimal loanAmount, @Nullable LocalDate loanReceivedOn, @Nullable LocalDate loanRepaidOn) {
-    }
-
-    public record BudgetLineCreateInput(Long revivalId, String categoryId, String description, @Nullable Double quantity, BigDecimal unitAmount,
-                                        @Nullable Long eventId, @Nullable Long logEntryId, @Nullable String comment, @Nullable Long eventTypeLineId) {
-    }
-
-    public record BudgetLineUpdateInput(Long id, Long version, @Nullable String categoryId, @Nullable String description, @Nullable Double quantity,
-                                        @Nullable BigDecimal unitAmount, @Nullable Long eventId, @Nullable Boolean clearEvent,
-                                        @Nullable Long logEntryId, @Nullable Boolean clearLogEntry, @Nullable String comment,
-                                        @Nullable Boolean clearComment) {
-    }
-
-    public record TransactionCreateInput(Long revivalId, LocalDate date, BigDecimal amount, String categoryId, String description,
-                                         @Nullable Long budgetLineId, @Nullable OwnerInputDto paidBy) {
-    }
-
-    public record TransactionUpdateInput(Long id, Long version, @Nullable LocalDate date, @Nullable BigDecimal amount, @Nullable String categoryId,
-                                         @Nullable String description, @Nullable Long budgetLineId, @Nullable Boolean clearBudgetLine,
-                                         @Nullable OwnerInputDto paidBy, @Nullable Boolean clearPaidBy) {
-    }
-
-    public record BudgetScenarioSaveInput(@Nullable Long revivalId, String name, ScenarioParameters parameters) {
-    }
-
-    public record EventTypeBudgetLineInput(@Nullable Long eventTypeId, String categoryId, LocalizedTextInput description,
-                                           BudgetLineQuantity quantityRule, @Nullable Double quantity, BigDecimal unitAmount) {
-    }
-
     private static @Nullable BigDecimal decimal(final @Nullable Double value) {
         return value == null ? null : BigDecimal.valueOf(value);
     }
@@ -118,8 +88,6 @@ public class BudgetGraphqlApi {
         return new EventTypeBudgetLineService.Definition(input.eventTypeId(), input.categoryId(), input.description().sv(),
                 input.description().en(), input.quantityRule(), decimal(input.quantity()), input.unitAmount());
     }
-
-    // --- Budget -----------------------------------------------------------------------------------------------------
 
     @SchemaMapping(typeName = "Revival", field = "budget")
     public @Nullable Budget budget(final RevivalDto revival) {
@@ -156,6 +124,8 @@ public class BudgetGraphqlApi {
         return budgetService.proposals(budget.revivalId());
     }
 
+    // --- Budget -----------------------------------------------------------------------------------------------------
+
     @SchemaMapping(typeName = "Budget", field = "scenarios")
     public List<Scenario> scenarios(final Budget budget) {
         return scenarioService.list(budget.revivalId());
@@ -172,8 +142,6 @@ public class BudgetGraphqlApi {
                 input.participationFee(), input.loanAmount(), input.loanReceivedOn(), input.loanRepaidOn()));
         return new Budget(input.revivalId());
     }
-
-    // --- Lines ------------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public Line budgetLineCreate(@Argument final BudgetLineCreateInput input) {
@@ -220,13 +188,13 @@ public class BudgetGraphqlApi {
         return result;
     }
 
-    // --- Transactions -----------------------------------------------------------------------------------------------
-
     @MutationMapping
     public Transaction transactionCreate(@Argument final TransactionCreateInput input) {
         return transactionService.create(new TransactionService.NewTransaction(input.revivalId(), input.date(), input.amount(), input.categoryId(),
                 input.description(), input.budgetLineId(), input.paidBy()));
     }
+
+    // --- Lines ------------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public Transaction transactionUpdate(@Argument final TransactionUpdateInput input) {
@@ -263,12 +231,12 @@ public class BudgetGraphqlApi {
         return transaction.payer().isSet() ? ownerViews.toDto(transaction.revivalId(), transaction.payer(), locale) : null;
     }
 
-    // --- Scenarios --------------------------------------------------------------------------------------------------
-
     @MutationMapping
     public Scenario budgetScenarioSave(@Argument final BudgetScenarioSaveInput input) {
         return scenarioService.save(input.revivalId(), input.name(), input.parameters());
     }
+
+    // --- Transactions -----------------------------------------------------------------------------------------------
 
     @MutationMapping
     public Scenario budgetScenarioUpdate(@Argument final Long id, @Argument final Long version, @Argument final BudgetScenarioSaveInput input) {
@@ -279,8 +247,6 @@ public class BudgetGraphqlApi {
     public void budgetScenarioRemove(@Argument final Long id, @Argument final Long version) {
         scenarioService.remove(id, version);
     }
-
-    // --- Event type lines -------------------------------------------------------------------------------------------
 
     @BatchMapping(typeName = "EventType", field = "budgetLines")
     public Map<EventTypeDto, List<EventTypeBudgetLineDto>> eventTypeBudgetLines(final List<EventTypeDto> types) {
@@ -302,5 +268,51 @@ public class BudgetGraphqlApi {
     @MutationMapping
     public EventTypeDto eventTypeBudgetLineRemove(@Argument final Long id, @Argument final Long version) {
         return typeLineService.remove(id, version);
+    }
+
+    // --- Scenarios --------------------------------------------------------------------------------------------------
+
+    public record BudgetSettingsInput(Long revivalId, Long version, @Nullable Integer participantsPlanned,
+                                      @Nullable BigDecimal participationFee,
+                                      @Nullable BigDecimal loanAmount, @Nullable LocalDate loanReceivedOn,
+                                      @Nullable LocalDate loanRepaidOn) {
+    }
+
+    public record BudgetLineCreateInput(Long revivalId, String categoryId, String description,
+                                        @Nullable Double quantity, BigDecimal unitAmount,
+                                        @Nullable Long eventId, @Nullable Long logEntryId, @Nullable String comment,
+                                        @Nullable Long eventTypeLineId) {
+    }
+
+    public record BudgetLineUpdateInput(Long id, Long version, @Nullable String categoryId,
+                                        @Nullable String description, @Nullable Double quantity,
+                                        @Nullable BigDecimal unitAmount, @Nullable Long eventId,
+                                        @Nullable Boolean clearEvent,
+                                        @Nullable Long logEntryId, @Nullable Boolean clearLogEntry,
+                                        @Nullable String comment,
+                                        @Nullable Boolean clearComment) {
+    }
+
+    // --- Event type lines -------------------------------------------------------------------------------------------
+
+    public record TransactionCreateInput(Long revivalId, LocalDate date, BigDecimal amount, String categoryId,
+                                         String description,
+                                         @Nullable Long budgetLineId, @Nullable OwnerInputDto paidBy) {
+    }
+
+    public record TransactionUpdateInput(Long id, Long version, @Nullable LocalDate date, @Nullable BigDecimal amount,
+                                         @Nullable String categoryId,
+                                         @Nullable String description, @Nullable Long budgetLineId,
+                                         @Nullable Boolean clearBudgetLine,
+                                         @Nullable OwnerInputDto paidBy, @Nullable Boolean clearPaidBy) {
+    }
+
+    public record BudgetScenarioSaveInput(@Nullable Long revivalId, String name, ScenarioParameters parameters) {
+    }
+
+    public record EventTypeBudgetLineInput(@Nullable Long eventTypeId, String categoryId,
+                                           LocalizedTextInput description,
+                                           BudgetLineQuantity quantityRule, @Nullable Double quantity,
+                                           BigDecimal unitAmount) {
     }
 }

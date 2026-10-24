@@ -46,16 +46,6 @@ public class GuideHttpApi {
         this.guideService = guideService;
     }
 
-    @GetMapping("/api/guide/versions/{id}/pdf")
-    public ResponseEntity<byte[]> versionPdf(@PathVariable final Long id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
-        return pdf(guideService.versionPdf(id, language(lang, locale)));
-    }
-
-    @GetMapping("/api/revivals/{id}/guide/pdf")
-    public ResponseEntity<byte[]> revivalPdf(@PathVariable final Long id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
-        return pdf(guideService.revivalPdf(id, language(lang, locale)));
-    }
-
     private static Locale language(final @Nullable String lang, final Locale requested) {
         return Locales.supported(lang == null || lang.isBlank() ? requested : Locale.of(lang));
     }
@@ -66,5 +56,15 @@ public class GuideHttpApi {
                 .cacheControl(CacheControl.noStore())
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(pdf.fileName()).build().toString())
                 .body(pdf.content());
+    }
+
+    @GetMapping("/api/guide/versions/{id}/pdf")
+    public ResponseEntity<byte[]> versionPdf(@PathVariable final Long id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
+        return pdf(guideService.versionPdf(id, language(lang, locale)));
+    }
+
+    @GetMapping("/api/revivals/{id}/guide/pdf")
+    public ResponseEntity<byte[]> revivalPdf(@PathVariable final Long id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
+        return pdf(guideService.revivalPdf(id, language(lang, locale)));
     }
 }

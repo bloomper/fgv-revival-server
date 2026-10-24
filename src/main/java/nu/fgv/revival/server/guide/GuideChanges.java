@@ -37,64 +37,6 @@ public final class GuideChanges {
     private GuideChanges() {
     }
 
-    public enum Kind {
-        ADDED,
-        REMOVED,
-        CHANGED
-    }
-
-    public record Result(GuideVersionSummaryDto from,
-                         GuideVersionSummaryDto to,
-                         List<String> introductionChanged,
-                         List<ChapterChange> chapters,
-                         List<SectionChange> sections,
-                         List<ItemChange> items) {
-    }
-
-    /**
-     * A chapter as it is in one of the versions.
-     */
-    public record ChapterRef(String key, GuideVersionView.Text title) {
-    }
-
-    /**
-     * {@code moved}: the chapter is in a different place among the chapters both versions have.
-     */
-    public record ChapterChange(String key,
-                                Kind kind,
-                                List<String> renamed,
-                                boolean moved,
-                                GuideVersionView.@Nullable Text before,
-                                GuideVersionView.@Nullable Text after) {
-    }
-
-    public record SectionChange(String key,
-                                Kind kind,
-                                @Nullable ChapterRef chapterBefore,
-                                @Nullable ChapterRef chapterAfter,
-                                List<String> renamed,
-                                boolean moved,
-                                boolean reordered,
-                                GuideVersionView.@Nullable Text before,
-                                GuideVersionView.@Nullable Text after) {
-    }
-
-    public record ItemChange(String key,
-                             Kind kind,
-                             List<String> reworded,
-                             boolean retyped,
-                             boolean moved,
-                             @Nullable ItemSnapshot before,
-                             @Nullable ItemSnapshot after) {
-    }
-
-    public record ItemSnapshot(ChapterRef chapter,
-                               @Nullable String sectionKey,
-                               GuideVersionView.@Nullable Text sectionTitle,
-                               String type,
-                               GuideVersionView.Text text) {
-    }
-
     public static Result compare(final GuideVersionView from, final GuideVersionView to) {
         return new Result(
                 GuideMapper.GUIDE_MAPPER.toSummary(from),
@@ -250,5 +192,63 @@ public final class GuideChanges {
                     snapshots.put(item.key(), new ItemSnapshot(ref(chapter), section.key(), section.title(), item.type(), item.text()))));
         }
         return snapshots;
+    }
+
+    public enum Kind {
+        ADDED,
+        REMOVED,
+        CHANGED
+    }
+
+    public record Result(GuideVersionSummaryDto from,
+                         GuideVersionSummaryDto to,
+                         List<String> introductionChanged,
+                         List<ChapterChange> chapters,
+                         List<SectionChange> sections,
+                         List<ItemChange> items) {
+    }
+
+    /**
+     * A chapter as it is in one of the versions.
+     */
+    public record ChapterRef(String key, GuideVersionView.Text title) {
+    }
+
+    /**
+     * {@code moved}: the chapter is in a different place among the chapters both versions have.
+     */
+    public record ChapterChange(String key,
+                                Kind kind,
+                                List<String> renamed,
+                                boolean moved,
+                                GuideVersionView.@Nullable Text before,
+                                GuideVersionView.@Nullable Text after) {
+    }
+
+    public record SectionChange(String key,
+                                Kind kind,
+                                @Nullable ChapterRef chapterBefore,
+                                @Nullable ChapterRef chapterAfter,
+                                List<String> renamed,
+                                boolean moved,
+                                boolean reordered,
+                                GuideVersionView.@Nullable Text before,
+                                GuideVersionView.@Nullable Text after) {
+    }
+
+    public record ItemChange(String key,
+                             Kind kind,
+                             List<String> reworded,
+                             boolean retyped,
+                             boolean moved,
+                             @Nullable ItemSnapshot before,
+                             @Nullable ItemSnapshot after) {
+    }
+
+    public record ItemSnapshot(ChapterRef chapter,
+                               @Nullable String sectionKey,
+                               GuideVersionView.@Nullable Text sectionTitle,
+                               String type,
+                               GuideVersionView.Text text) {
     }
 }

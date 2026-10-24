@@ -61,17 +61,6 @@ public class GuideVersionService {
         this.accessPolicy = accessPolicy;
     }
 
-    /**
-     * How many revivals follow a version, and how many suggestions were made on it. A version is deletable when both
-     * are zero.
-     */
-    public record Usage(int revivalCount, int suggestionCount) {
-
-        public boolean deletable() {
-            return revivalCount == 0 && suggestionCount == 0;
-        }
-    }
-
     @Transactional(readOnly = true)
     public Usage usage(final Long id) {
         accessPolicy.requireManageGuide(callerService.current());
@@ -108,5 +97,16 @@ public class GuideVersionService {
         versionRepository.delete(version);
         versionRepository.flush();
         views.evict(id);
+    }
+
+    /**
+     * How many revivals follow a version, and how many suggestions were made on it. A version is deletable when both
+     * are zero.
+     */
+    public record Usage(int revivalCount, int suggestionCount) {
+
+        public boolean deletable() {
+            return revivalCount == 0 && suggestionCount == 0;
+        }
     }
 }

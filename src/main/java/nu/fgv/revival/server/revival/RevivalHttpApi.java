@@ -50,18 +50,6 @@ public class RevivalHttpApi {
         this.revivalService = revivalService;
     }
 
-    /**
-     * 200 with the image, 204 when the spex has no poster, 404 when the revival is missing or not visible and 503 when
-     * Spexregister is unavailable. The image is sandboxed, since an SVG opened on its own could otherwise run script.
-     */
-    @GetMapping("/api/revivals/{id}/poster")
-    public ResponseEntity<byte[]> poster(@PathVariable final Long id) {
-        return revivalService.poster(id)
-                .filter(poster -> POSTER_TYPES.contains(baseType(poster.contentType())))
-                .map(RevivalHttpApi::image)
-                .orElseGet(() -> ResponseEntity.noContent().cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate()).build());
-    }
-
     private static ResponseEntity<byte[]> image(final SpexregisterClient.Poster poster) {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(poster.contentType()))
@@ -79,5 +67,17 @@ public class RevivalHttpApi {
         } catch (final InvalidMediaTypeException _) {
             return "";
         }
+    }
+
+    /**
+     * 200 with the image, 204 when the spex has no poster, 404 when the revival is missing or not visible and 503 when
+     * Spexregister is unavailable. The image is sandboxed, since an SVG opened on its own could otherwise run script.
+     */
+    @GetMapping("/api/revivals/{id}/poster")
+    public ResponseEntity<byte[]> poster(@PathVariable final Long id) {
+        return revivalService.poster(id)
+                .filter(poster -> POSTER_TYPES.contains(baseType(poster.contentType())))
+                .map(RevivalHttpApi::image)
+                .orElseGet(() -> ResponseEntity.noContent().cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate()).build());
     }
 }

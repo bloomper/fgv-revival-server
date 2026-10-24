@@ -185,7 +185,7 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM availability_audit a JOIN availability b ON a.id = b.id").query(Integer.class).single())
                 .isPositive();
         execute(STEERING_GROUP, "query($id: ID!) { availability(revivalId: $id) { participant { displayName } days { date answer comment } } }",
-                        Map.of("id", revival))
+                Map.of("id", revival))
                 .path("availability[0].participant.displayName").entity(String.class).isEqualTo("Pia Deltagare")
                 .path("availability[0].days[0].comment").entity(String.class).isEqualTo("Dåligt knä, men kan sitta i kassan");
         expectError(execute(OBSERVER, "query($id: ID!) { availability(revivalId: $id) { days { date } } }", Map.of("id", revival)), "FORBIDDEN");
@@ -239,7 +239,7 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, "mutation($input: ParticipantUpdateInput!) { participantUpdate(input: $input) { compensationPerShift } }",
                 Map.of("input", Map.of("id", helper, "version", version, "compensationPerShift", 350)));
         execute(DIRECTEUR, "query($id: ID!) { revival(id: $id) { budget { totals { budgetedCost } categories { category { id } budgeted } } } }",
-                        Map.of("id", revival))
+                Map.of("id", revival))
                 .path("revival.budget.totals.budgetedCost").entity(BigDecimal.class).satisfies(cost -> assertThat(cost).isEqualByComparingTo("700"))
                 .path("revival.budget.categories[?(@.category.id == 'HELPERS')].budgeted").entityList(BigDecimal.class)
                 .satisfies(budgeted -> assertThat(budgeted).singleElement().satisfies(amount -> assertThat(amount).isEqualByComparingTo("700")));

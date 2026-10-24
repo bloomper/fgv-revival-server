@@ -32,9 +32,11 @@ public final class MaterialDtos {
     private MaterialDtos() {
     }
 
-    public record MaterialDto(Long id, Long revivalId, String title, String url, @Nullable String serviceId, boolean serviceChosen,
+    public record MaterialDto(Long id, Long revivalId, String title, String url, @Nullable String serviceId,
+                              boolean serviceChosen,
                               MaterialCategory category,
-                              MaterialVisibility visibility, List<String> positionIds, @Nullable String comment, boolean removed, Long version) {
+                              MaterialVisibility visibility, List<String> positionIds, @Nullable String comment,
+                              boolean removed, Long version) {
 
         static MaterialDto of(final Material material) {
             return new MaterialDto(material.getId(), material.getRevivalId(), material.getTitle(), material.getUrl(), material.getServiceId(),
@@ -43,8 +45,10 @@ public final class MaterialDtos {
         }
     }
 
-    public record InventoryItemDto(Long id, Long revivalId, String name, InventoryKind kind, int quantity, InventoryStatus status,
-                                   @Nullable InventoryLocation location, @Nullable String locationNote, @Nullable OwnerDto owner,
+    public record InventoryItemDto(Long id, Long revivalId, String name, InventoryKind kind, int quantity,
+                                   InventoryStatus status,
+                                   @Nullable InventoryLocation location, @Nullable String locationNote,
+                                   @Nullable OwnerDto owner,
                                    @Nullable String comment, @Nullable Long materialId, boolean removed, Long version) {
 
         static InventoryItemDto of(final InventoryItem item, final @Nullable OwnerDto owner) {

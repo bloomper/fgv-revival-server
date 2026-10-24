@@ -59,18 +59,28 @@ public class OwnerResolver {
     }
 
     /**
-     * The outcome of matching a name to the revival's members.
+     * A trimmed free-text owner name of 1–100 characters.
      */
-    public sealed interface Resolution {
+    public static String validName(final String name) {
+        final String trimmed = name.strip();
 
-        record Member(Long personId, @Nullable String displayName) implements Resolution {
+        if (trimmed.isEmpty() || trimmed.length() > Owner.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.owner.name", Owner.NAME_MAX_LENGTH);
         }
+        return trimmed;
+    }
 
-        record Ambiguous(List<String> candidates) implements Resolution {
-        }
+    static String normalize(final String text) {
+        return Normalizer.normalize(text.strip(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("\\s+", " ")
+                .toLowerCase(Locale.ROOT);
+    }
 
-        record FreeText(String name) implements Resolution {
-        }
+    private static String firstName(final String normalized) {
+        final int space = normalized.indexOf(' ');
+
+        return space < 0 ? normalized : normalized.substring(0, space);
     }
 
     /**
@@ -162,18 +172,6 @@ public class OwnerResolver {
     }
 
     /**
-     * A trimmed free-text owner name of 1–100 characters.
-     */
-    public static String validName(final String name) {
-        final String trimmed = name.strip();
-
-        if (trimmed.isEmpty() || trimmed.length() > Owner.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.owner.name", Owner.NAME_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    /**
      * Owned for FR-019: a free-text name, or a person who is still an active member.
      */
     @Transactional(readOnly = true)
@@ -184,16 +182,18 @@ public class OwnerResolver {
         return owner.getPersonId() != null && activeMembers(revivalId).containsKey(owner.getPersonId());
     }
 
-    static String normalize(final String text) {
-        return Normalizer.normalize(text.strip(), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .replaceAll("\\s+", " ")
-                .toLowerCase(Locale.ROOT);
-    }
+    /**
+     * The outcome of matching a name to the revival's members.
+     */
+    public sealed interface Resolution {
 
-    private static String firstName(final String normalized) {
-        final int space = normalized.indexOf(' ');
+        record Member(Long personId, @Nullable String displayName) implements Resolution {
+        }
 
-        return space < 0 ? normalized : normalized.substring(0, space);
+        record Ambiguous(List<String> candidates) implements Resolution {
+        }
+
+        record FreeText(String name) implements Resolution {
+        }
     }
 }

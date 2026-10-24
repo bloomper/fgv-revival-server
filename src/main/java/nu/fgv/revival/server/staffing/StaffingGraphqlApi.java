@@ -50,17 +50,6 @@ public class StaffingGraphqlApi {
         this.participation = participation;
     }
 
-    public record ShiftSlotInput(@Nullable Long eventId, LocalDate date, String startTime, String endTime, String task, int needed,
-                                 @Nullable String comment) {
-
-        StaffingService.SlotInput toInput() {
-            return new StaffingService.SlotInput(eventId, date, startTime, endTime, task, needed, comment);
-        }
-    }
-
-    public record AvailabilityInput(Long revivalId, Long eventId, LocalDate date, @Nullable AvailabilityAnswer answer, @Nullable String comment) {
-    }
-
     @QueryMapping
     public List<ParticipantAvailability> availability(@Argument final Long revivalId, @Argument final @Nullable Long eventId, final Locale locale) {
         return service.availability(revivalId, eventId, locale);
@@ -113,8 +102,6 @@ public class StaffingGraphqlApi {
         return participation.mine(input.revivalId(), locale);
     }
 
-    // --- Participation ----------------------------------------------------------------------------------------------
-
     @SchemaMapping(typeName = "Participation", field = "events")
     public List<EventDto> events(final Participation source) {
         return service.eventsOf(source.participant().id());
@@ -125,6 +112,8 @@ public class StaffingGraphqlApi {
         return service.availabilityOf(source.participant().id());
     }
 
+    // --- Participation ----------------------------------------------------------------------------------------------
+
     @SchemaMapping(typeName = "Participation", field = "shifts")
     public List<ShiftSlotDto> shifts(final Participation source, final Locale locale) {
         return service.shiftsOf(source.participant().id(), locale);
@@ -133,5 +122,18 @@ public class StaffingGraphqlApi {
     @SchemaMapping(typeName = "Participation", field = "openShifts")
     public List<ShiftSlotDto> openShifts(final Participation source, final Locale locale) {
         return service.openShiftsOf(source.participant().id(), locale);
+    }
+
+    public record ShiftSlotInput(@Nullable Long eventId, LocalDate date, String startTime, String endTime, String task,
+                                 int needed,
+                                 @Nullable String comment) {
+
+        StaffingService.SlotInput toInput() {
+            return new StaffingService.SlotInput(eventId, date, startTime, endTime, task, needed, comment);
+        }
+    }
+
+    public record AvailabilityInput(Long revivalId, Long eventId, LocalDate date, @Nullable AvailabilityAnswer answer,
+                                    @Nullable String comment) {
     }
 }

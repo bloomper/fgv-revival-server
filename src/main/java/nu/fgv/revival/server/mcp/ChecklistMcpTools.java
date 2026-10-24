@@ -57,6 +57,14 @@ public class ChecklistMcpTools {
         this.support = support;
     }
 
+    static ChecklistItem toMcp(final ChecklistItemDto item) {
+        return new ChecklistItem(item.id(),
+                new ChecklistRef(item.checklist().kind(), item.checklist().name(), item.checklist().chapterKey(),
+                        item.checklist().chapterTitle() == null ? null : Text.of(item.checklist().chapterTitle()), item.checklist().date()),
+                item.required(), Text.of(item.text()), item.state(), item.overdue(), McpOwner.of(item.owner()),
+                item.deadline(), item.comment());
+    }
+
     @McpTool(name = "list_checklist_items",
             description = "List items in a revival's checklists: one per guide chapter with the guide's requirements, and event checklists. Filters combine: mine, open, overdue, chapter, checklist name.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
@@ -91,16 +99,8 @@ public class ChecklistMcpTools {
         });
     }
 
-
-    static ChecklistItem toMcp(final ChecklistItemDto item) {
-        return new ChecklistItem(item.id(),
-                new ChecklistRef(item.checklist().kind(), item.checklist().name(), item.checklist().chapterKey(),
-                        item.checklist().chapterTitle() == null ? null : Text.of(item.checklist().chapterTitle()), item.checklist().date()),
-                item.required(), Text.of(item.text()), item.state(), item.overdue(), McpOwner.of(item.owner()),
-                item.deadline(), item.comment());
-    }
-
-    public record ChecklistRef(ChecklistKind kind, @Nullable String name, @Nullable String chapterKey, @Nullable Text chapterTitle,
+    public record ChecklistRef(ChecklistKind kind, @Nullable String name, @Nullable String chapterKey,
+                               @Nullable Text chapterTitle,
                                @Nullable LocalDate date) {
     }
 
@@ -111,7 +111,8 @@ public class ChecklistMcpTools {
         }
     }
 
-    public record ChecklistItem(Long id, ChecklistRef checklist, boolean required, Text text, ChecklistItemState state, boolean overdue,
+    public record ChecklistItem(Long id, ChecklistRef checklist, boolean required, Text text, ChecklistItemState state,
+                                boolean overdue,
                                 @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment) {
     }
 

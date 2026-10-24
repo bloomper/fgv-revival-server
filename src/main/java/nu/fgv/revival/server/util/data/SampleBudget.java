@@ -24,11 +24,11 @@ import nu.fgv.revival.server.budget.BudgetSettings;
 import nu.fgv.revival.server.budget.BudgetSettingsRepository;
 import nu.fgv.revival.server.budget.BudgetTransaction;
 import nu.fgv.revival.server.budget.BudgetTransactionRepository;
+import nu.fgv.revival.server.budget.EventTypeBudgetLine;
+import nu.fgv.revival.server.budget.EventTypeBudgetLineRepository;
 import nu.fgv.revival.server.budget.ReceiptContent;
 import nu.fgv.revival.server.budget.ReceiptContentRepository;
 import nu.fgv.revival.server.budget.Receipts;
-import nu.fgv.revival.server.budget.EventTypeBudgetLine;
-import nu.fgv.revival.server.budget.EventTypeBudgetLineRepository;
 import nu.fgv.revival.server.budget.ReferenceFigure;
 import nu.fgv.revival.server.budget.ReferenceRevival;
 import nu.fgv.revival.server.budget.ReferenceRevivalRepository;
@@ -100,6 +100,44 @@ class SampleBudget {
         this.receiptRepository = receiptRepository;
     }
 
+    private static void figure(final ReferenceRevival reference, final String category, final String budgeted, final String actual) {
+        final ReferenceFigure figure = new ReferenceFigure(reference, category);
+
+        figure.setBudgeted(new BigDecimal(budgeted).setScale(2));
+        figure.setActual(new BigDecimal(actual).setScale(2));
+        reference.getFigures().add(figure);
+    }
+
+    /**
+     * A one-page PDF saying what the receipt is for.
+     */
+    static byte[] receiptPdf(final String description, final BigDecimal amount) {
+        final String text = "BT /F1 18 Tf 72 760 Td (Exempelkvitto) Tj 0 -28 Td /F1 12 Tf (%s) Tj 0 -18 Td (%s kr) Tj ET"
+                .formatted(description.replaceAll("[^A-Za-z0-9 ,.-]", "?"), amount.toPlainString());
+        final List<String> objects = List.of(
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+                "<< /Length %d >>\nstream\n%s\nendstream".formatted(text.length(), text),
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+        final ByteArrayOutputStream pdf = new ByteArrayOutputStream();
+        final List<Integer> offsets = new ArrayList<>();
+
+        pdf.writeBytes("%PDF-1.4\n".getBytes(StandardCharsets.US_ASCII));
+        for (int index = 0; index < objects.size(); index++) {
+            offsets.add(pdf.size());
+            pdf.writeBytes("%d 0 obj\n%s\nendobj\n".formatted(index + 1, objects.get(index)).getBytes(StandardCharsets.US_ASCII));
+        }
+
+        final int xref = pdf.size();
+        final StringBuilder trailer = new StringBuilder("xref\n0 %d\n0000000000 65535 f \n".formatted(objects.size() + 1));
+
+        offsets.forEach(offset -> trailer.append("%010d 00000 n \n".formatted(offset)));
+        trailer.append("trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n".formatted(objects.size() + 1, xref));
+        pdf.writeBytes(trailer.toString().getBytes(StandardCharsets.US_ASCII));
+        return pdf.toByteArray();
+    }
+
     /**
      * Food per participant on each rehearsal weekend type that proposes nothing yet, and the reference revival.
      */
@@ -136,14 +174,6 @@ class SampleBudget {
             figure(reference, "HELPERS", "4800", "4800");
             referenceRepository.saveAndFlush(reference);
         }
-    }
-
-    private static void figure(final ReferenceRevival reference, final String category, final String budgeted, final String actual) {
-        final ReferenceFigure figure = new ReferenceFigure(reference, category);
-
-        figure.setBudgeted(new BigDecimal(budgeted).setScale(2));
-        figure.setActual(new BigDecimal(actual).setScale(2));
-        reference.getFigures().add(figure);
     }
 
     /**
@@ -233,7 +263,7 @@ class SampleBudget {
     }
 
     private BudgetTransaction transaction(final long revivalId, final LocalDate date, final String amount, final String category, final String description,
-                             final @Nullable Long budgetLineId, final Owner paidBy, final boolean reimbursed) {
+                                          final @Nullable Long budgetLineId, final Owner paidBy, final boolean reimbursed) {
         final BudgetTransaction transaction = new BudgetTransaction();
 
         transaction.setRevivalId(revivalId);
@@ -252,35 +282,5 @@ class SampleBudget {
         transaction.setReceiptContentType(Receipts.PDF);
         transactionRepository.saveAndFlush(transaction);
         receiptRepository.save(new ReceiptContent(transaction.getId(), receiptPdf(transaction.getDescription(), transaction.getAmount())));
-    }
-
-    /**
-     * A one-page PDF saying what the receipt is for.
-     */
-    static byte[] receiptPdf(final String description, final BigDecimal amount) {
-        final String text = "BT /F1 18 Tf 72 760 Td (Exempelkvitto) Tj 0 -28 Td /F1 12 Tf (%s) Tj 0 -18 Td (%s kr) Tj ET"
-                .formatted(description.replaceAll("[^A-Za-z0-9 ,.-]", "?"), amount.toPlainString());
-        final List<String> objects = List.of(
-                "<< /Type /Catalog /Pages 2 0 R >>",
-                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-                "<< /Length %d >>\nstream\n%s\nendstream".formatted(text.length(), text),
-                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-        final ByteArrayOutputStream pdf = new ByteArrayOutputStream();
-        final List<Integer> offsets = new ArrayList<>();
-
-        pdf.writeBytes("%PDF-1.4\n".getBytes(StandardCharsets.US_ASCII));
-        for (int index = 0; index < objects.size(); index++) {
-            offsets.add(pdf.size());
-            pdf.writeBytes("%d 0 obj\n%s\nendobj\n".formatted(index + 1, objects.get(index)).getBytes(StandardCharsets.US_ASCII));
-        }
-
-        final int xref = pdf.size();
-        final StringBuilder trailer = new StringBuilder("xref\n0 %d\n0000000000 65535 f \n".formatted(objects.size() + 1));
-
-        offsets.forEach(offset -> trailer.append("%010d 00000 n \n".formatted(offset)));
-        trailer.append("trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n".formatted(objects.size() + 1, xref));
-        pdf.writeBytes(trailer.toString().getBytes(StandardCharsets.US_ASCII));
-        return pdf.toByteArray();
     }
 }

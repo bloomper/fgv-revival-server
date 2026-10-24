@@ -93,25 +93,87 @@ public class EventService {
         this.clock = clock;
     }
 
-    /**
-     * A new event. Without a type the title is required; with one, its name in the request's language is the default
-     * title, its revival pays the default, and its days give the default end date.
-     */
-    public record NewEvent(Long revivalId, @Nullable Long typeId, @Nullable String title, LocalDate startDate, @Nullable LocalDate endDate,
-                           @Nullable String startTime, @Nullable String endTime, @Nullable String location, @Nullable String description,
-                           @Nullable Boolean revivalPays) {
+    private static String defaultTitle(final @Nullable EventType type, final Locale locale) {
+        if (type == null) {
+            throw new BadRequestException("error.event.title.blank");
+        }
+        return EventTypeDto.of(type).name(locale);
     }
 
-    /**
-     * Fields left null are unchanged; the {@code clear*} flags remove a value.
-     */
-    public record Change(Long id, Long version, @Nullable String title, @Nullable LocalDate startDate, @Nullable LocalDate endDate,
-                         @Nullable String startTime, boolean clearStartTime, @Nullable String endTime, boolean clearEndTime,
-                         @Nullable String location, boolean clearLocation, @Nullable String description, boolean clearDescription,
-                         @Nullable Boolean revivalPays) {
+    private static String validTitle(final String title) {
+        final String trimmed = title.strip();
+
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("error.event.title.blank");
+        }
+        if (trimmed.length() > Event.TITLE_MAX_LENGTH) {
+            throw new BadRequestException("error.event.title.tooLong", Event.TITLE_MAX_LENGTH);
+        }
+        return trimmed;
     }
 
     // --- Reading ----------------------------------------------------------------------------------------------------
+
+    /**
+     * {@code HH:mm} from 00:00 to 23:59, trimmed, or null when blank, as a show's time.
+     */
+    private static @Nullable LocalTime validTime(final @Nullable String time) {
+        if (time == null || time.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = time.strip();
+
+        if (!TIME.matcher(trimmed).matches()) {
+            throw new BadRequestException("error.event.time.invalid");
+        }
+        return LocalTime.parse(trimmed, TIME_FORMAT);
+    }
+
+    private static @Nullable String validLocation(final @Nullable String location) {
+        if (location == null || location.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = location.strip();
+
+        if (trimmed.length() > Event.LOCATION_MAX_LENGTH) {
+            throw new BadRequestException("error.event.location.tooLong", Event.LOCATION_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    private static @Nullable String validDescription(final @Nullable String description) {
+        if (description == null || description.isBlank()) {
+            return null;
+        }
+
+        final String trimmed = description.strip();
+
+        if (trimmed.length() > Event.DESCRIPTION_MAX_LENGTH) {
+            throw new BadRequestException("error.event.description.tooLong", Event.DESCRIPTION_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    /**
+     * The end not before the start and at most {@value Event#MAX_SPAN_DAYS} days after it; an end time only with a
+     * start time, and not before it on a one-day event.
+     */
+    private static void validSchedule(final Event event) {
+        if (event.getEndDate().isBefore(event.getStartDate())) {
+            throw new BadRequestException("error.event.endBeforeStart");
+        }
+        if (ChronoUnit.DAYS.between(event.getStartDate(), event.getEndDate()) > Event.MAX_SPAN_DAYS) {
+            throw new BadRequestException("error.event.tooLong", Event.MAX_SPAN_DAYS);
+        }
+        if (event.getEndTime() != null && event.getStartTime() == null) {
+            throw new BadRequestException("error.event.endTimeWithoutStart");
+        }
+        if (event.getEndTime() != null && event.getStartDate().equals(event.getEndDate()) && event.getEndTime().isBefore(event.getStartTime())) {
+            throw new BadRequestException("error.event.endTimeBeforeStart");
+        }
+    }
 
     /**
      * By start date, then start time with all-day events first, then id.
@@ -135,6 +197,8 @@ public class EventService {
         visible(callerService.current(), revivalId);
         return list(revivalId, includeCancelled);
     }
+
+    // --- Writing ----------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public EventDto get(final Long id) {
@@ -185,7 +249,7 @@ public class EventService {
         return readable.isEmpty() ? Map.of() : checklistService.summariesByEvent(readable);
     }
 
-    // --- Writing ----------------------------------------------------------------------------------------------------
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public EventDto create(final NewEvent newEvent, final Locale locale) {
@@ -314,8 +378,6 @@ public class EventService {
         return EventDto.of(saved, premiere(saved));
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private @Nullable LocalDate premiere(final Event event) {
         return revivalRepository.findById(event.getRevivalId()).map(Revival::getPremiereDate).orElse(null);
     }
@@ -376,83 +438,26 @@ public class EventService {
         return type;
     }
 
-    private static String defaultTitle(final @Nullable EventType type, final Locale locale) {
-        if (type == null) {
-            throw new BadRequestException("error.event.title.blank");
-        }
-        return EventTypeDto.of(type).name(locale);
-    }
-
-    private static String validTitle(final String title) {
-        final String trimmed = title.strip();
-
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException("error.event.title.blank");
-        }
-        if (trimmed.length() > Event.TITLE_MAX_LENGTH) {
-            throw new BadRequestException("error.event.title.tooLong", Event.TITLE_MAX_LENGTH);
-        }
-        return trimmed;
+    /**
+     * A new event. Without a type the title is required; with one, its name in the request's language is the default
+     * title, its revival pays the default, and its days give the default end date.
+     */
+    public record NewEvent(Long revivalId, @Nullable Long typeId, @Nullable String title, LocalDate startDate,
+                           @Nullable LocalDate endDate,
+                           @Nullable String startTime, @Nullable String endTime, @Nullable String location,
+                           @Nullable String description,
+                           @Nullable Boolean revivalPays) {
     }
 
     /**
-     * {@code HH:mm} from 00:00 to 23:59, trimmed, or null when blank, as a show's time.
+     * Fields left null are unchanged; the {@code clear*} flags remove a value.
      */
-    private static @Nullable LocalTime validTime(final @Nullable String time) {
-        if (time == null || time.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = time.strip();
-
-        if (!TIME.matcher(trimmed).matches()) {
-            throw new BadRequestException("error.event.time.invalid");
-        }
-        return LocalTime.parse(trimmed, TIME_FORMAT);
-    }
-
-    private static @Nullable String validLocation(final @Nullable String location) {
-        if (location == null || location.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = location.strip();
-
-        if (trimmed.length() > Event.LOCATION_MAX_LENGTH) {
-            throw new BadRequestException("error.event.location.tooLong", Event.LOCATION_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    private static @Nullable String validDescription(final @Nullable String description) {
-        if (description == null || description.isBlank()) {
-            return null;
-        }
-
-        final String trimmed = description.strip();
-
-        if (trimmed.length() > Event.DESCRIPTION_MAX_LENGTH) {
-            throw new BadRequestException("error.event.description.tooLong", Event.DESCRIPTION_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    /**
-     * The end not before the start and at most {@value Event#MAX_SPAN_DAYS} days after it; an end time only with a
-     * start time, and not before it on a one-day event.
-     */
-    private static void validSchedule(final Event event) {
-        if (event.getEndDate().isBefore(event.getStartDate())) {
-            throw new BadRequestException("error.event.endBeforeStart");
-        }
-        if (ChronoUnit.DAYS.between(event.getStartDate(), event.getEndDate()) > Event.MAX_SPAN_DAYS) {
-            throw new BadRequestException("error.event.tooLong", Event.MAX_SPAN_DAYS);
-        }
-        if (event.getEndTime() != null && event.getStartTime() == null) {
-            throw new BadRequestException("error.event.endTimeWithoutStart");
-        }
-        if (event.getEndTime() != null && event.getStartDate().equals(event.getEndDate()) && event.getEndTime().isBefore(event.getStartTime())) {
-            throw new BadRequestException("error.event.endTimeBeforeStart");
-        }
+    public record Change(Long id, Long version, @Nullable String title, @Nullable LocalDate startDate,
+                         @Nullable LocalDate endDate,
+                         @Nullable String startTime, boolean clearStartTime, @Nullable String endTime,
+                         boolean clearEndTime,
+                         @Nullable String location, boolean clearLocation, @Nullable String description,
+                         boolean clearDescription,
+                         @Nullable Boolean revivalPays) {
     }
 }

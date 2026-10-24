@@ -60,27 +60,6 @@ public class ChecklistGraphqlApi {
         this.guideService = guideService;
     }
 
-    public record ChecklistItemCreateInput(Long checklistId, String text, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
-                                           @Nullable String comment, @Nullable String guideItemKey) {
-    }
-
-    public record ChecklistItemUpdateInput(Long id, Long version, @Nullable String text, @Nullable OwnerInputDto owner, @Nullable Boolean clearOwner,
-                                           @Nullable LocalDate deadline, @Nullable Boolean clearDeadline, @Nullable String comment,
-                                           @Nullable Boolean clearComment) {
-    }
-
-    public record EventChecklistCreateInput(Long revivalId, String name, @Nullable LocalDate date, @Nullable Long templateId) {
-    }
-
-    public record EventChecklistUpdateInput(Long id, Long version, @Nullable String name, @Nullable LocalDate date, @Nullable Boolean clearDate) {
-    }
-
-    public record ChecklistAddFromTemplateInput(Long checklistId, Long version, @Nullable Long templateId) {
-    }
-
-    public record ChecklistItemSetStateInput(Long id, Long version, ChecklistItemState state, @Nullable String reason) {
-    }
-
     @QueryMapping
     public List<ChecklistSummaryDto> checklists(@Argument final Long revivalId, @Argument final @Nullable Boolean includeCancelled) {
         return service.list(revivalId, Boolean.TRUE.equals(includeCancelled));
@@ -166,5 +145,31 @@ public class ChecklistGraphqlApi {
     public Map<ChecklistItemDto, List<LogEntrySummaryDto>> logEntries(final List<ChecklistItemDto> items) {
         return items.stream().collect(Collectors.toMap(Function.identity(),
                 item -> logEntryService.linkedTo(item.id()).stream().map(LogEntrySummaryDto::of).toList(), (first, second) -> first));
+    }
+
+    public record ChecklistItemCreateInput(Long checklistId, String text, @Nullable OwnerInputDto owner,
+                                           @Nullable LocalDate deadline,
+                                           @Nullable String comment, @Nullable String guideItemKey) {
+    }
+
+    public record ChecklistItemUpdateInput(Long id, Long version, @Nullable String text, @Nullable OwnerInputDto owner,
+                                           @Nullable Boolean clearOwner,
+                                           @Nullable LocalDate deadline, @Nullable Boolean clearDeadline,
+                                           @Nullable String comment,
+                                           @Nullable Boolean clearComment) {
+    }
+
+    public record EventChecklistCreateInput(Long revivalId, String name, @Nullable LocalDate date,
+                                            @Nullable Long templateId) {
+    }
+
+    public record EventChecklistUpdateInput(Long id, Long version, @Nullable String name, @Nullable LocalDate date,
+                                            @Nullable Boolean clearDate) {
+    }
+
+    public record ChecklistAddFromTemplateInput(Long checklistId, Long version, @Nullable Long templateId) {
+    }
+
+    public record ChecklistItemSetStateInput(Long id, Long version, ChecklistItemState state, @Nullable String reason) {
     }
 }

@@ -63,15 +63,35 @@ public abstract class CatalogService<E extends CatalogEntry> {
         this.clock = clock;
     }
 
-    public record Names(String sv, @Nullable String en) {
+    private static <E extends CatalogEntry> void setNames(final E entry, final Names names, final List<E> entries) {
+        final String sv = validName(names.sv());
+        final String folded = sv.toLowerCase(Locale.ROOT);
+
+        if (entries.stream().anyMatch(other -> !other.getId().equals(entry.getId()) && other.getNameSv().toLowerCase(Locale.ROOT).equals(folded))) {
+            throw new BadRequestException("error.catalog.name.taken", sv);
+        }
+        entry.setNameSv(sv);
+        entry.setNameEn(names.en() == null || names.en().isBlank() ? null : validName(names.en()));
     }
+
+    private static String validName(final @Nullable String name) {
+        final String trimmed = name == null ? "" : name.strip();
+
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("error.catalog.name.blank");
+        }
+        if (trimmed.length() > CatalogEntry.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.catalog.name.tooLong", CatalogEntry.NAME_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    // --- Reading ----------------------------------------------------------------------------------------------------
 
     /**
      * The ids that rows refer to. Only these entries cannot be deleted.
      */
     protected abstract Set<String> used();
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<E> list(final boolean includeRetired) {
@@ -97,6 +117,8 @@ public abstract class CatalogService<E extends CatalogEntry> {
         return ids.stream().distinct().collect(Collectors.toMap(Function.identity(), used::contains));
     }
 
+    // --- Changing ---------------------------------------------------------------------------------------------------
+
     /**
      * Refuses ids that do not exist, and retired ones unless the row already {@code held} them.
      */
@@ -115,8 +137,6 @@ public abstract class CatalogService<E extends CatalogEntry> {
             }
         }
     }
-
-    // --- Changing ---------------------------------------------------------------------------------------------------
 
     /**
      * Appends a new entry, set up by the subclass, with a new id.
@@ -189,6 +209,8 @@ public abstract class CatalogService<E extends CatalogEntry> {
         return repository.saveAndFlush(entry);
     }
 
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
     /**
      * Deletes an entry nothing uses, such as one created by mistake. One in use is refused: retire it instead.
      */
@@ -216,8 +238,6 @@ public abstract class CatalogService<E extends CatalogEntry> {
         repository.flush();
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     protected void manageable() {
         accessPolicy.requireManageCatalogs(callerService.current());
     }
@@ -231,26 +251,6 @@ public abstract class CatalogService<E extends CatalogEntry> {
         return entry;
     }
 
-    private static <E extends CatalogEntry> void setNames(final E entry, final Names names, final List<E> entries) {
-        final String sv = validName(names.sv());
-        final String folded = sv.toLowerCase(Locale.ROOT);
-
-        if (entries.stream().anyMatch(other -> !other.getId().equals(entry.getId()) && other.getNameSv().toLowerCase(Locale.ROOT).equals(folded))) {
-            throw new BadRequestException("error.catalog.name.taken", sv);
-        }
-        entry.setNameSv(sv);
-        entry.setNameEn(names.en() == null || names.en().isBlank() ? null : validName(names.en()));
-    }
-
-    private static String validName(final @Nullable String name) {
-        final String trimmed = name == null ? "" : name.strip();
-
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException("error.catalog.name.blank");
-        }
-        if (trimmed.length() > CatalogEntry.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.catalog.name.tooLong", CatalogEntry.NAME_MAX_LENGTH);
-        }
-        return trimmed;
+    public record Names(String sv, @Nullable String en) {
     }
 }

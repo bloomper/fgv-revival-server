@@ -41,6 +41,10 @@ class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
     private long version;
     private long revival;
 
+    private static String firstPage(final byte[] pdf) throws IOException {
+        return new PdfTextExtractor(new PdfReader(pdf)).getTextFromPage(1);
+    }
+
     @BeforeEach
     void publishedGuideAndARevival() {
         version = publishedGuide();
@@ -58,10 +62,6 @@ class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, token(user))
                 .header(HttpHeaders.ACCEPT_LANGUAGE, language)
                 .exchange();
-    }
-
-    private static String firstPage(final byte[] pdf) throws IOException {
-        return new PdfTextExtractor(new PdfReader(pdf)).getTextFromPage(1);
     }
 
     @Test

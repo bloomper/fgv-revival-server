@@ -49,27 +49,6 @@ final class SampleChecklistTemplates {
     private SampleChecklistTemplates() {
     }
 
-    private record Item(String textSv, String textEn, @Nullable SeededCapability capability, @Nullable String guideItem,
-                        @Nullable RelativeDeadlineKind deadlineKind, @Nullable Integer deadlineAmount,
-                        @Nullable DayOfWeek deadlineWeekday) {
-
-        Item(final String textSv, final String textEn, final @Nullable SeededCapability capability, final @Nullable String guideItem) {
-            this(textSv, textEn, capability, guideItem, null, null, null);
-        }
-
-        static Item days(final String textSv, final String textEn, final @Nullable SeededCapability capability, final int amount) {
-            return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.DAYS, amount, null);
-        }
-
-        static Item workingDays(final String textSv, final String textEn, final @Nullable SeededCapability capability, final int amount) {
-            return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.WORKING_DAYS, amount, null);
-        }
-
-        static Item weekBefore(final String textSv, final String textEn, final @Nullable SeededCapability capability, final DayOfWeek weekday) {
-            return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.WEEKDAY_WEEK_BEFORE, null, weekday);
-        }
-    }
-
     static void insert(final JdbcClient jdbcClient, final String createdBy) {
         final OffsetDateTime at = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
 
@@ -161,6 +140,27 @@ final class SampleChecklistTemplates {
                     .param("createdBy", createdBy)
                     .param("createdAt", at)
                     .update();
+        }
+    }
+
+    private record Item(String textSv, String textEn, @Nullable SeededCapability capability, @Nullable String guideItem,
+                        @Nullable RelativeDeadlineKind deadlineKind, @Nullable Integer deadlineAmount,
+                        @Nullable DayOfWeek deadlineWeekday) {
+
+        Item(final String textSv, final String textEn, final @Nullable SeededCapability capability, final @Nullable String guideItem) {
+            this(textSv, textEn, capability, guideItem, null, null, null);
+        }
+
+        static Item days(final String textSv, final String textEn, final @Nullable SeededCapability capability, final int amount) {
+            return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.DAYS, amount, null);
+        }
+
+        static Item workingDays(final String textSv, final String textEn, final @Nullable SeededCapability capability, final int amount) {
+            return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.WORKING_DAYS, amount, null);
+        }
+
+        static Item weekBefore(final String textSv, final String textEn, final @Nullable SeededCapability capability, final DayOfWeek weekday) {
+            return new Item(textSv, textEn, capability, null, RelativeDeadlineKind.WEEKDAY_WEEK_BEFORE, null, weekday);
         }
     }
 }

@@ -29,7 +29,8 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.3
  */
-public record ChecklistTemplateDto(Long id, ChecklistKind kind, @Nullable String chapterKey, GuideVersionView.@Nullable Text name, boolean retired,
+public record ChecklistTemplateDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
+                                   GuideVersionView.@Nullable Text name, boolean retired,
                                    List<ChecklistTemplateItemDto> items, Long version) {
 
     public static ChecklistTemplateDto of(final ChecklistTemplate template, final List<ChecklistTemplateItem> items) {

@@ -36,8 +36,10 @@ public final class ClosingDtos {
     private ClosingDtos() {
     }
 
-    public record SyncPreviewDto(Long revivalId, String hash, boolean spexregisterRevivalExists, List<SyncParticipantPreviewDto> participants,
-                                 List<ParticipantRef> excluded, @Nullable Integer membershipYear, @Nullable SyncRunDto lastRun) {
+    public record SyncPreviewDto(Long revivalId, String hash, boolean spexregisterRevivalExists,
+                                 List<SyncParticipantPreviewDto> participants,
+                                 List<ParticipantRef> excluded, @Nullable Integer membershipYear,
+                                 @Nullable SyncRunDto lastRun) {
     }
 
     public record SyncParticipantPreviewDto(ParticipantRef participant, List<SyncOperationPreviewDto> operations) {
@@ -49,7 +51,8 @@ public final class ClosingDtos {
     /**
      * A run; {@code done} counts steps written or found, {@code startedBy} is a person id the GraphQL layer resolves.
      */
-    public record SyncRunDto(Long id, Long revivalId, SyncRunStatus status, @Nullable Long startedById, Instant startedAt, @Nullable Instant finishedAt,
+    public record SyncRunDto(Long id, Long revivalId, SyncRunStatus status, @Nullable Long startedById,
+                             Instant startedAt, @Nullable Instant finishedAt,
                              int total, int done, int failed) {
 
         static SyncRunDto of(final SyncRun run, final List<SyncStep> steps) {
@@ -62,8 +65,11 @@ public final class ClosingDtos {
     public record SyncFailureDto(@Nullable ParticipantRef participant, SyncOperation operation, String reason) {
     }
 
-    public record ClosingStatusDto(@Nullable BigDecimal actualResult, @Nullable BigDecimal loanAmount, boolean loanRepaid,
-                                   @Nullable LogEntrySummaryDto surplusDecision, @Nullable Integer membershipYear, int membershipsPaid, int suggestions,
-                                   @Nullable SyncRunDto lastSync, @Nullable Instant anonymizedAt, @Nullable LocalDate autoAnonymizeOn) {
+    public record ClosingStatusDto(@Nullable BigDecimal actualResult, @Nullable BigDecimal loanAmount,
+                                   boolean loanRepaid,
+                                   @Nullable LogEntrySummaryDto surplusDecision, @Nullable Integer membershipYear,
+                                   int membershipsPaid, int suggestions,
+                                   @Nullable SyncRunDto lastSync, @Nullable Instant anonymizedAt,
+                                   @Nullable LocalDate autoAnonymizeOn) {
     }
 }

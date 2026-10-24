@@ -79,7 +79,7 @@ import static org.mockito.Mockito.when;
 class LogEntryServiceTest {
 
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 21);
-
+    private final LogEntryCounter counter = new LogEntryCounter(REVIVAL_ID);
     @Mock
     private LogEntryRepository repository;
     @Mock
@@ -100,31 +100,8 @@ class LogEntryServiceTest {
     private MeetingRecorder meetingRecorder;
     @Mock
     private SpecificationQueries specificationQueries;
-
-    private final LogEntryCounter counter = new LogEntryCounter(REVIVAL_ID);
     private LogEntryService service;
     private Revival revival;
-
-    @BeforeEach
-    void setUp() {
-        service = new LogEntryService(repository, new LogEntryCounters(counterRepository), revivalRepository, checklistItemRepository,
-                callerService, new AccessPolicy(), ownerResolver, ownerViews, personNames, meetingRecorder, specificationQueries,
-                TestClocks.at(TODAY));
-        revival = TestCallers.revival(RevivalStatus.ORGANISING);
-        lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
-        lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
-        lenient().when(counterRepository.findForUpdate(REVIVAL_ID)).thenReturn(Optional.of(counter));
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> {
-            final LogEntry entry = invocation.getArgument(0);
-
-            if (entry.getId() == null) {
-                entry.setId(100L + entry.getNumber());
-            }
-            return entry;
-        });
-        lenient().when(ownerResolver.validate(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
-        lenient().when(ownerResolver.change(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validate(REVIVAL_ID, invocation.getArgument(2)));
-    }
 
     private static LogEntryService.Draft draft(final LogEntryType type, final String text) {
         return new LogEntryService.Draft(REVIVAL_ID, null, null, type, text, null, null, null, null, null, null, null);
@@ -148,6 +125,27 @@ class LogEntryServiceTest {
 
     private static LogEntryService.Change change(final long id) {
         return new LogEntryService.Change(id, 2L, null, null, null, null, null, null, false, null, false, null, false, null, null, null, false);
+    }
+
+    @BeforeEach
+    void setUp() {
+        service = new LogEntryService(repository, new LogEntryCounters(counterRepository), revivalRepository, checklistItemRepository,
+                callerService, new AccessPolicy(), ownerResolver, ownerViews, personNames, meetingRecorder, specificationQueries,
+                TestClocks.at(TODAY));
+        revival = TestCallers.revival(RevivalStatus.ORGANISING);
+        lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
+        lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
+        lenient().when(counterRepository.findForUpdate(REVIVAL_ID)).thenReturn(Optional.of(counter));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> {
+            final LogEntry entry = invocation.getArgument(0);
+
+            if (entry.getId() == null) {
+                entry.setId(100L + entry.getNumber());
+            }
+            return entry;
+        });
+        lenient().when(ownerResolver.validate(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
+        lenient().when(ownerResolver.change(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validate(REVIVAL_ID, invocation.getArgument(2)));
     }
 
     @Nested

@@ -40,9 +40,6 @@ public class SpexCalendarGraphqlApi {
         this.service = service;
     }
 
-    public record SpexCalendarDateInput(LocalDate date, String label) {
-    }
-
     @QueryMapping
     public List<SpexCalendarDateDto> spexCalendarDates(@Argument final @Nullable LocalDate from, @Argument final @Nullable LocalDate to) {
         return service.list(from, to);
@@ -61,5 +58,8 @@ public class SpexCalendarGraphqlApi {
     @MutationMapping
     public void spexCalendarDateDelete(@Argument final Long id, @Argument final Long version) {
         service.delete(id, version);
+    }
+
+    public record SpexCalendarDateInput(LocalDate date, String label) {
     }
 }

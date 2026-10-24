@@ -43,6 +43,19 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
     private long other;
     private long proposed;
 
+    private static Map<String, Object> show(final String date, final @Nullable String venue) {
+        return show(date, null, venue);
+    }
+
+    private static Map<String, Object> show(final String date, final @Nullable String time, final @Nullable String venue) {
+        final Map<String, Object> show = new HashMap<>();
+
+        show.put("date", date);
+        show.put("time", time);
+        show.put("venue", venue);
+        return show;
+    }
+
     @BeforeEach
     void setUp() {
         own = createRevival(ALI_BABA, 2028);
@@ -57,19 +70,6 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
     private Map<String, Object> details(final long id, final String premiere, final List<String> showDates) {
         return Map.of("input", Map.of("id", id, "version", version(id), "premiereDate", premiere,
                 "shows", showDates.stream().map(date -> Map.of("date", date, "venue", "Chalmers kårhus")).toList()));
-    }
-
-    private static Map<String, Object> show(final String date, final @Nullable String venue) {
-        return show(date, null, venue);
-    }
-
-    private static Map<String, Object> show(final String date, final @Nullable String time, final @Nullable String venue) {
-        final Map<String, Object> show = new HashMap<>();
-
-        show.put("date", date);
-        show.put("time", time);
-        show.put("venue", venue);
-        return show;
     }
 
     @Test
@@ -93,7 +93,7 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
     void showsAreDatesAtVenuesThatMayBeUndecided() {
         execute(DIRECTEUR, UPDATE, details(own, "2028-02-10", List.of()));
         execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows",
-                        List.of(show("2028-02-12", " RunAn "), show("2028-02-10", null), show("2028-02-10", "Gasquen"), show("2028-02-12", "")))))
+                List.of(show("2028-02-12", " RunAn "), show("2028-02-10", null), show("2028-02-10", "Gasquen"), show("2028-02-12", "")))))
                 .path("revivalUpdate.shows[*].date").entityList(String.class).containsExactly("2028-02-10", "2028-02-10", "2028-02-12", "2028-02-12")
                 .path("revivalUpdate.shows[0].venue").entity(String.class).isEqualTo("Gasquen")
                 .path("revivalUpdate.shows[1].venue").valueIsNull()
@@ -103,7 +103,7 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
                 List.of(show("2028-02-12", "RunAn"), show("2028-02-12", "RunAn "))))), "BAD_REQUEST");
 
         execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", own, "version", version(own), "shows",
-                        List.of(show("2028-02-12", "19:00", "RunAn"), show("2028-02-12", " 14:00 ", "RunAn"), show("2028-02-12", null, "RunAn")))))
+                List.of(show("2028-02-12", "19:00", "RunAn"), show("2028-02-12", " 14:00 ", "RunAn"), show("2028-02-12", null, "RunAn")))))
                 .path("revivalUpdate.shows[*].time").entityList(String.class).containsExactly("14:00", "19:00", null)
                 .path("revivalUpdate.shows[*].venue").entityList(String.class).containsExactly("RunAn", "RunAn", "RunAn");
         assertThat(jdbcClient.sql("SELECT start_time FROM revival_show WHERE revival_id = ? AND start_time IS NOT NULL ORDER BY start_time")

@@ -87,6 +87,27 @@ class EventServiceTest {
     private EventType type;
     private Event event;
 
+    private static Event event(final long id, final LocalDate start, final @Nullable Instant cancelledAt) {
+        final Event event = new Event();
+
+        event.setId(id);
+        event.setRevivalId(REVIVAL_ID);
+        event.setTitle("Rephelg 1");
+        event.setStartDate(start);
+        event.setEndDate(start.plusDays(1));
+        event.setVersion(2L);
+        event.setCancelledAt(cancelledAt);
+        return event;
+    }
+
+    private static EventService.NewEvent newEvent(final @Nullable Long typeId, final @Nullable String title) {
+        return new EventService.NewEvent(REVIVAL_ID, typeId, title, START, null, null, null, null, null, null);
+    }
+
+    private static EventService.Change change() {
+        return new EventService.Change(EVENT_ID, 2L, null, null, null, null, false, null, false, null, false, null, false, null);
+    }
+
     @BeforeEach
     void setUp() {
         service = new EventService(repository, typeRepository, revivalRepository, checklistService, callerService, new AccessPolicy(),
@@ -114,25 +135,14 @@ class EventServiceTest {
         });
     }
 
-    private static Event event(final long id, final LocalDate start, final @Nullable Instant cancelledAt) {
-        final Event event = new Event();
+    @Test
+    void theRevivalMustBeVisible() {
+        when(callerService.current()).thenReturn(TestCallers.nobody());
 
-        event.setId(id);
-        event.setRevivalId(REVIVAL_ID);
-        event.setTitle("Rephelg 1");
-        event.setStartDate(start);
-        event.setEndDate(start.plusDays(1));
-        event.setVersion(2L);
-        event.setCancelledAt(cancelledAt);
-        return event;
-    }
-
-    private static EventService.NewEvent newEvent(final @Nullable Long typeId, final @Nullable String title) {
-        return new EventService.NewEvent(REVIVAL_ID, typeId, title, START, null, null, null, null, null, null);
-    }
-
-    private static EventService.Change change() {
-        return new EventService.Change(EVENT_ID, 2L, null, null, null, null, false, null, false, null, false, null, false, null);
+        assertThatThrownBy(() -> service.list(REVIVAL_ID, false)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.create(newEvent(null, "AW"), Locale.of("sv"))).isInstanceOf(ResourceNotFoundException.class);
+        verify(repository, never()).saveAndFlush(any());
+        verify(checklistService, never()).followEvent(eq(EVENT_ID), any(), any());
     }
 
     @Nested
@@ -365,15 +375,5 @@ class EventServiceTest {
             event.setCancelledAt(Instant.EPOCH);
             assertThat(service.proposals(REVIVAL_ID)).extracting(proposal -> proposal.type().id()).containsExactly(TYPE_ID, 6L);
         }
-    }
-
-    @Test
-    void theRevivalMustBeVisible() {
-        when(callerService.current()).thenReturn(TestCallers.nobody());
-
-        assertThatThrownBy(() -> service.list(REVIVAL_ID, false)).isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.create(newEvent(null, "AW"), Locale.of("sv"))).isInstanceOf(ResourceNotFoundException.class);
-        verify(repository, never()).saveAndFlush(any());
-        verify(checklistService, never()).followEvent(eq(EVENT_ID), any(), any());
     }
 }

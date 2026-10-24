@@ -118,6 +118,28 @@ public class ParticipantInvitations {
     }
 
     /**
+     * The address to invite: a pending person's own, a spexare's {@code HOME} email in Spexregister, or the one given.
+     */
+    static @Nullable String address(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable PendingPerson person,
+                                    final @Nullable String given) {
+        if (person != null && hasText(person.getEmail())) {
+            return person.getEmail();
+        }
+        if (spexare != null) {
+            final String home = spexare.home().map(SpexregisterClient.Address::emailAddress).filter(email -> hasText(email)).orElse(null);
+
+            if (home != null) {
+                try {
+                    return ParticipantRules.email(home);
+                } catch (final BadRequestException _) {
+                    // Not an address Nyuppsättning can invite; the steering group may give one instead
+                }
+            }
+        }
+        return given;
+    }
+
+    /**
      * Invites the participants, in the revival's {@code OPEN} status, by writers of participants.
      *
      * @param email    for a single participant without an address: the address to invite, kept only on the waiting role
@@ -239,27 +261,5 @@ public class ParticipantInvitations {
 
         return new InviteResult(invited.stream().map(participant -> dtos.get(participant.getId())).toList(),
                 skipped.entrySet().stream().map(entry -> new ParticipantSkip(dtos.get(entry.getKey().getId()), entry.getValue())).toList());
-    }
-
-    /**
-     * The address to invite: a pending person's own, a spexare's {@code HOME} email in Spexregister, or the one given.
-     */
-    static @Nullable String address(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable PendingPerson person,
-                                    final @Nullable String given) {
-        if (person != null && hasText(person.getEmail())) {
-            return person.getEmail();
-        }
-        if (spexare != null) {
-            final String home = spexare.home().map(SpexregisterClient.Address::emailAddress).filter(email -> hasText(email)).orElse(null);
-
-            if (home != null) {
-                try {
-                    return ParticipantRules.email(home);
-                } catch (final BadRequestException _) {
-                    // Not an address Nyuppsättning can invite; the steering group may give one instead
-                }
-            }
-        }
-        return given;
     }
 }

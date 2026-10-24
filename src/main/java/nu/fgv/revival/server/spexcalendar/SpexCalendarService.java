@@ -49,6 +49,15 @@ public class SpexCalendarService {
         this.accessPolicy = accessPolicy;
     }
 
+    private static String validLabel(final @Nullable String label) {
+        final String trimmed = label == null ? "" : label.strip();
+
+        if (trimmed.isEmpty() || trimmed.length() > SpexCalendarDate.LABEL_MAX_LENGTH) {
+            throw new BadRequestException("error.spexCalendar.label", SpexCalendarDate.LABEL_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
     /**
      * By date, within the dates given; either may be left open.
      */
@@ -108,14 +117,5 @@ public class SpexCalendarService {
             throw new ConflictException("error.conflict");
         }
         return date;
-    }
-
-    private static String validLabel(final @Nullable String label) {
-        final String trimmed = label == null ? "" : label.strip();
-
-        if (trimmed.isEmpty() || trimmed.length() > SpexCalendarDate.LABEL_MAX_LENGTH) {
-            throw new BadRequestException("error.spexCalendar.label", SpexCalendarDate.LABEL_MAX_LENGTH);
-        }
-        return trimmed;
     }
 }

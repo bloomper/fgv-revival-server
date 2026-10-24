@@ -76,6 +76,20 @@ public class RelativeDeadline {
         return new RelativeDeadline(kind, amount, weekday);
     }
 
+    private static LocalDate workingDays(final LocalDate date, final int amount) {
+        final int step = amount < 0 ? -1 : 1;
+        LocalDate result = date;
+        int remaining = Math.abs(amount);
+
+        while (remaining > 0) {
+            result = result.plusDays(step);
+            if (result.getDayOfWeek() != DayOfWeek.SATURDAY && result.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                remaining--;
+            }
+        }
+        return result;
+    }
+
     public RelativeDeadline copy() {
         return new RelativeDeadline(kind, amount, weekday);
     }
@@ -100,20 +114,6 @@ public class RelativeDeadline {
                     .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                     .with(TemporalAdjusters.nextOrSame(Objects.requireNonNull(weekday)));
         };
-    }
-
-    private static LocalDate workingDays(final LocalDate date, final int amount) {
-        final int step = amount < 0 ? -1 : 1;
-        LocalDate result = date;
-        int remaining = Math.abs(amount);
-
-        while (remaining > 0) {
-            result = result.plusDays(step);
-            if (result.getDayOfWeek() != DayOfWeek.SATURDAY && result.getDayOfWeek() != DayOfWeek.SUNDAY) {
-                remaining--;
-            }
-        }
-        return result;
     }
 
     @Override

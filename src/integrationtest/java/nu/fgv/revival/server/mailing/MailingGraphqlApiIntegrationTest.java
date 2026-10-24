@@ -71,6 +71,27 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private long helper;
     private long weekend;
 
+    private static Map<String, Object> audience(final String kind) {
+        return Map.of("kind", kind);
+    }
+
+    private static String partOf(final Part part, final String type) throws Exception {
+        if (part.isMimeType(type)) {
+            return part.getContent().toString();
+        }
+        if (part.getContent() instanceof final Multipart multipart) {
+            for (int index = 0; index < multipart.getCount(); index++) {
+                final BodyPart body = multipart.getBodyPart(index);
+                final String found = partOf(body, type);
+
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
     @BeforeEach
     void openRevivalWithParticipants() {
         revival = organisingRevival();
@@ -106,10 +127,6 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 Map.of("input", Map.of("id", member.get("id"), "version", member.get("version"), "capabilities", List.of(capabilities))));
     }
 
-    private static Map<String, Object> audience(final String kind) {
-        return Map.of("kind", kind);
-    }
-
     private long draft(final String user, final Map<String, Object> audience, final String subject) {
         return Long.parseLong(execute(user, CREATE, Map.of("input", Map.of("revivalId", revival, "audience", audience, "subject", subject,
                 "body", "Hej **alla**!\n\n- Biljettkontroll\n- Bålvakt\n\n<script>alert(1)</script>"))).path("mailingCreate.id").entity(String.class).get());
@@ -122,23 +139,6 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private List<String> previewNames(final Map<String, Object> audience) {
         return execute(STEERING_GROUP, PREVIEW, Map.of("id", revival, "audience", audience))
                 .path("mailingAudiencePreview[*].displayName").entityList(String.class).get();
-    }
-
-    private static String partOf(final Part part, final String type) throws Exception {
-        if (part.isMimeType(type)) {
-            return part.getContent().toString();
-        }
-        if (part.getContent() instanceof final Multipart multipart) {
-            for (int index = 0; index < multipart.getCount(); index++) {
-                final BodyPart body = multipart.getBodyPart(index);
-                final String found = partOf(body, type);
-
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-        return null;
     }
 
     @Test

@@ -52,15 +52,18 @@ class GuideSearchTest {
 
         for (final String key : GuideTestChapters.KEYS) {
             switch (key) {
-                case "A" -> chapters.add(new GuideVersionView.Chapter(1L, key, GuideVersionView.Text.plain("Först: godkännande", "First: approval"),
-                        List.of(item("a1", key, null, GuideItemKind.REQUIREMENT, "Kontakta **JK** via kåren.", "Contact JK through the student union.")),
-                        List.of(), 0L));
-                case "B" -> chapters.add(new GuideVersionView.Chapter(2L, key, GuideVersionView.Text.plain("Boka lokaler", null), List.of(),
-                        List.of(new GuideVersionView.Section(3L, "kalas", key, GuideVersionView.Text.plain("Kalaslokal", "Party venue"), List.of(
-                                item("b1", key, "kalas", GuideItemKind.TIP, "Kontrollera sprittillstånd i vald lokal.", null),
-                                item("b2", key, "kalas", GuideItemKind.TIP, "Se [kårens sida](https://example.org/kar) om bokning.", null)), 0L)),
-                        0L));
-                default -> chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key) + 10, key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L));
+                case "A" ->
+                        chapters.add(new GuideVersionView.Chapter(1L, key, GuideVersionView.Text.plain("Först: godkännande", "First: approval"),
+                                List.of(item("a1", key, null, GuideItemKind.REQUIREMENT, "Kontakta **JK** via kåren.", "Contact JK through the student union.")),
+                                List.of(), 0L));
+                case "B" ->
+                        chapters.add(new GuideVersionView.Chapter(2L, key, GuideVersionView.Text.plain("Boka lokaler", null), List.of(),
+                                List.of(new GuideVersionView.Section(3L, "kalas", key, GuideVersionView.Text.plain("Kalaslokal", "Party venue"), List.of(
+                                        item("b1", key, "kalas", GuideItemKind.TIP, "Kontrollera sprittillstånd i vald lokal.", null),
+                                        item("b2", key, "kalas", GuideItemKind.TIP, "Se [kårens sida](https://example.org/kar) om bokning.", null)), 0L)),
+                                0L));
+                default ->
+                        chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key) + 10, key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L));
             }
         }
         return new GuideVersionView(1L, GuideVersionStatus.PUBLISHED, "v1", null, null, null, null, 0L,

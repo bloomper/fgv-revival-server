@@ -105,6 +105,25 @@ class ParticipantServiceTest {
     private ParticipantService service;
     private Revival revival;
 
+    private static ParticipantService.NewParticipant pending(final ParticipantKind kind, final String email, final String phone) {
+        return new ParticipantService.NewParticipant(REVIVAL_ID, kind, null, "Pia", "Persson", email, phone, null, null, null, null);
+    }
+
+    private static Participant participant(final long id, final ParticipantKind kind, final Long spexareId) {
+        final Participant participant = new Participant();
+
+        participant.setId(id);
+        participant.setRevivalId(REVIVAL_ID);
+        participant.setKind(kind);
+        participant.setSpexareId(spexareId);
+        participant.setVersion(2L);
+        return participant;
+    }
+
+    private static Caller with(final RevivalRole role, final String... capabilities) {
+        return new Caller(TestCallers.steeringGroup().person(), Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(role, Set.of(capabilities))));
+    }
+
     @BeforeEach
     void setUp() {
         final AccessPolicy accessPolicy = new AccessPolicy();
@@ -134,25 +153,6 @@ class ParticipantServiceTest {
         when(directory.vocalParts()).thenReturn(List.of(new SpexareDirectory.VocalPart("B1", "Bas 1")));
         when(directory.positionsOrEmpty()).thenReturn(Map.of());
         when(directory.vocalPartsOrEmpty()).thenReturn(Map.of());
-    }
-
-    private static ParticipantService.NewParticipant pending(final ParticipantKind kind, final String email, final String phone) {
-        return new ParticipantService.NewParticipant(REVIVAL_ID, kind, null, "Pia", "Persson", email, phone, null, null, null, null);
-    }
-
-    private static Participant participant(final long id, final ParticipantKind kind, final Long spexareId) {
-        final Participant participant = new Participant();
-
-        participant.setId(id);
-        participant.setRevivalId(REVIVAL_ID);
-        participant.setKind(kind);
-        participant.setSpexareId(spexareId);
-        participant.setVersion(2L);
-        return participant;
-    }
-
-    private static Caller with(final RevivalRole role, final String... capabilities) {
-        return new Caller(TestCallers.steeringGroup().person(), Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(role, Set.of(capabilities))));
     }
 
     @Test

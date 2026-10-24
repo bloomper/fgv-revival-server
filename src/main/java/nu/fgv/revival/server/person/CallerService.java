@@ -93,6 +93,10 @@ public class CallerService {
                 .anyMatch(SecurityUtil.ROLE_USER::equals);
     }
 
+    public static String normalizedEmail(final String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
     /**
      * The current caller. Refuses a caller without a token, or without the {@code USER} role on {@code fgv-revival}
      * (FR-001).
@@ -219,9 +223,5 @@ public class CallerService {
             waiting.setPendingEmail(null);
             memberRepository.saveAndFlush(waiting);
         }
-    }
-
-    public static String normalizedEmail(final String email) {
-        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
     }
 }

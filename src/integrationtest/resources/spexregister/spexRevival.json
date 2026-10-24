@@ -1,5 +1,10 @@
 {
   "data": {
-    "spex": { "id": "99", "year": "2004", "title": "Ali Baba", "revival": true }
+    "spex": {
+      "id": "99",
+      "year": "2004",
+      "title": "Ali Baba",
+      "revival": true
+    }
   }
 }

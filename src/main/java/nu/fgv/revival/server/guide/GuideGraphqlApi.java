@@ -49,9 +49,6 @@ public class GuideGraphqlApi {
         this.personNames = personNames;
     }
 
-    public record GuideDraftPublishInput(Long id, Long version, @Nullable String note) {
-    }
-
     @QueryMapping
     public boolean guideReadable() {
         return service.canRead();
@@ -101,39 +98,6 @@ public class GuideGraphqlApi {
     @QueryMapping
     public GuideChanges.Result guideChanges(@Argument final Long fromId, @Argument final Long toId) {
         return service.changes(fromId, toId);
-    }
-
-    public record LocalizedTextInput(@Nullable String sv, @Nullable String en) {
-    }
-
-    public record GuideIntroductionInput(Long versionId, Long version, LocalizedTextInput introduction) {
-    }
-
-    public record GuideChapterCreateInput(Long versionId, @Nullable Integer position, LocalizedTextInput title) {
-    }
-
-    public record GuideChapterInput(Long id, Long version, LocalizedTextInput title) {
-    }
-
-    public record GuideChapterMoveInput(Long id, Long version, int position) {
-    }
-
-    public record GuideSectionCreateInput(Long chapterId, @Nullable Integer position, LocalizedTextInput title) {
-    }
-
-    public record GuideSectionUpdateInput(Long id, Long version, LocalizedTextInput title) {
-    }
-
-    public record GuideSectionMoveInput(Long id, Long version, Long chapterId, int position) {
-    }
-
-    public record GuideItemCreateInput(Long chapterId, @Nullable Long sectionId, @Nullable Integer position, String type, LocalizedTextInput text) {
-    }
-
-    public record GuideItemUpdateInput(Long id, Long version, String type, LocalizedTextInput text) {
-    }
-
-    public record GuideItemMoveInput(Long id, Long version, Long chapterId, @Nullable Long sectionId, int position) {
     }
 
     @MutationMapping
@@ -237,5 +201,42 @@ public class GuideGraphqlApi {
     @SchemaMapping(typeName = "GuideVersion", field = "basedOn")
     public @Nullable GuideVersionSummaryDto basedOn(final GuideVersionView version) {
         return service.summary(version.basedOnId());
+    }
+
+    public record GuideDraftPublishInput(Long id, Long version, @Nullable String note) {
+    }
+
+    public record LocalizedTextInput(@Nullable String sv, @Nullable String en) {
+    }
+
+    public record GuideIntroductionInput(Long versionId, Long version, LocalizedTextInput introduction) {
+    }
+
+    public record GuideChapterCreateInput(Long versionId, @Nullable Integer position, LocalizedTextInput title) {
+    }
+
+    public record GuideChapterInput(Long id, Long version, LocalizedTextInput title) {
+    }
+
+    public record GuideChapterMoveInput(Long id, Long version, int position) {
+    }
+
+    public record GuideSectionCreateInput(Long chapterId, @Nullable Integer position, LocalizedTextInput title) {
+    }
+
+    public record GuideSectionUpdateInput(Long id, Long version, LocalizedTextInput title) {
+    }
+
+    public record GuideSectionMoveInput(Long id, Long version, Long chapterId, int position) {
+    }
+
+    public record GuideItemCreateInput(Long chapterId, @Nullable Long sectionId, @Nullable Integer position,
+                                       String type, LocalizedTextInput text) {
+    }
+
+    public record GuideItemUpdateInput(Long id, Long version, String type, LocalizedTextInput text) {
+    }
+
+    public record GuideItemMoveInput(Long id, Long version, Long chapterId, @Nullable Long sectionId, int position) {
     }
 }

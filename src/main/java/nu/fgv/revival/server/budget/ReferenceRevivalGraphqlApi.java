@@ -40,13 +40,6 @@ public class ReferenceRevivalGraphqlApi {
         this.service = service;
     }
 
-    public record ReferenceFigureInput(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {
-    }
-
-    public record ReferenceRevivalInput(String label, Integer year, @Nullable Integer participants, @Nullable String comment,
-                                        @Nullable List<ReferenceFigureInput> figures) {
-    }
-
     private static ReferenceRevivalService.Definition definition(final ReferenceRevivalInput input) {
         return new ReferenceRevivalService.Definition(input.label(), input.year(), input.participants(), input.comment(),
                 input.figures() == null ? List.of() : input.figures().stream()
@@ -77,5 +70,13 @@ public class ReferenceRevivalGraphqlApi {
     @MutationMapping
     public void referenceRevivalDelete(@Argument final Long id, @Argument final Long version) {
         service.delete(id, version);
+    }
+
+    public record ReferenceFigureInput(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {
+    }
+
+    public record ReferenceRevivalInput(String label, Integer year, @Nullable Integer participants,
+                                        @Nullable String comment,
+                                        @Nullable List<ReferenceFigureInput> figures) {
     }
 }

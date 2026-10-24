@@ -37,7 +37,8 @@ public final class StaffingDtos {
     private StaffingDtos() {
     }
 
-    public record ParticipantRef(Long id, String displayName, ParticipantKind kind, SpexareDirectory.@Nullable Position position) {
+    public record ParticipantRef(Long id, String displayName, ParticipantKind kind,
+                                 SpexareDirectory.@Nullable Position position) {
 
         public static ParticipantRef of(final ParticipantDirectory.Named named) {
             return new ParticipantRef(named.id(), named.displayName(), named.kind(), named.position());
@@ -57,7 +58,8 @@ public final class StaffingDtos {
     public record ShiftAssignmentDto(ParticipantRef participant, boolean selfSignedUp) {
     }
 
-    public record ShiftSlotDto(Long id, EventDto event, LocalDate date, String startTime, String endTime, String task, int needed,
+    public record ShiftSlotDto(Long id, EventDto event, LocalDate date, String startTime, String endTime, String task,
+                               int needed,
                                @Nullable String comment, List<ShiftAssignmentDto> assigned, int open, Long version) {
     }
 }

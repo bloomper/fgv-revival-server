@@ -67,8 +67,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -117,6 +117,10 @@ class ChecklistServiceTest {
     private Revival revival;
     private Checklist checklist;
 
+    private static ChecklistService.ItemChange change(final String text, final LocalDate deadline) {
+        return new ChecklistService.ItemChange(7L, 2L, text, null, false, deadline, false, null, false);
+    }
+
     @BeforeEach
     void setUp() {
         service = new ChecklistService(checklistRepository, itemRepository, texts, templateRepository, templateItemRepository, memberRepository,
@@ -161,8 +165,16 @@ class ChecklistServiceTest {
         return item;
     }
 
-    private static ChecklistService.ItemChange change(final String text, final LocalDate deadline) {
-        return new ChecklistService.ItemChange(7L, 2L, text, null, false, deadline, false, null, false);
+    @Test
+    void requiredItemTextsComeFromTheGuide() {
+        final ChecklistItem item = item(true);
+
+        when(itemRepository.findByChecklistIdOrderByPositionAscIdAsc(CHECKLIST_ID)).thenReturn(List.of(item));
+        when(texts.texts(anyCollection())).thenReturn(Map.of(7L, GuideVersionView.Text.plain("Lokalen ska bokas.", "The venue must be booked.")));
+        when(texts.pinnedVersion(REVIVAL_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.get(CHECKLIST_ID, Locale.ENGLISH).items()).singleElement()
+                .satisfies(dto -> assertThat(dto.text().en()).isEqualTo("The venue must be booked."));
     }
 
     @Nested
@@ -356,18 +368,6 @@ class ChecklistServiceTest {
         }
     }
 
-    @Test
-    void requiredItemTextsComeFromTheGuide() {
-        final ChecklistItem item = item(true);
-
-        when(itemRepository.findByChecklistIdOrderByPositionAscIdAsc(CHECKLIST_ID)).thenReturn(List.of(item));
-        when(texts.texts(anyCollection())).thenReturn(Map.of(7L, GuideVersionView.Text.plain("Lokalen ska bokas.", "The venue must be booked.")));
-        when(texts.pinnedVersion(REVIVAL_ID)).thenReturn(Optional.empty());
-
-        assertThat(service.get(CHECKLIST_ID, Locale.ENGLISH).items()).singleElement()
-                .satisfies(dto -> assertThat(dto.text().en()).isEqualTo("The venue must be booked."));
-    }
-
     @Nested
     class EventChecklists {
 
@@ -380,6 +380,20 @@ class ChecklistServiceTest {
         private ChecklistTemplate template;
         private ChecklistTemplateItem venue;
         private ChecklistTemplateItem keys;
+
+        private static ChecklistTemplateItem templateItem(final long id, final String sv, final String en, final RelativeDeadline deadline,
+                                                          final String capability) {
+            final ChecklistTemplateItem item = new ChecklistTemplateItem();
+
+            item.setId(id);
+            item.setTemplateId(5L);
+            item.setTextSv(sv);
+            item.setTextEn(en);
+            item.setGuideItemKey(id == 51L ? "tips-lokal" : null);
+            item.setDeadline(deadline);
+            item.setDefaultCapability(capability);
+            return item;
+        }
 
         @BeforeEach
         void setUp() {
@@ -417,20 +431,6 @@ class ChecklistServiceTest {
             lenient().when(templateRepository.findById(5L)).thenReturn(Optional.of(template));
             lenient().when(templateItemRepository.findByTemplateIdAndRetiredAtIsNullOrderByPositionAscIdAsc(5L)).thenReturn(List.of(venue, keys));
             lenient().when(templateItemRepository.findAllById(any())).thenReturn(List.of(venue, keys));
-        }
-
-        private static ChecklistTemplateItem templateItem(final long id, final String sv, final String en, final RelativeDeadline deadline,
-                                                          final String capability) {
-            final ChecklistTemplateItem item = new ChecklistTemplateItem();
-
-            item.setId(id);
-            item.setTemplateId(5L);
-            item.setTextSv(sv);
-            item.setTextEn(en);
-            item.setGuideItemKey(id == 51L ? "tips-lokal" : null);
-            item.setDeadline(deadline);
-            item.setDefaultCapability(capability);
-            return item;
         }
 
         private void member(final long personId, final RevivalRole role, final String... capabilities) {

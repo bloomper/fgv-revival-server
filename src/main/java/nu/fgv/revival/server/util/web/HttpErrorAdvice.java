@@ -54,9 +54,6 @@ public class HttpErrorAdvice {
         this.messageSource = messageSource;
     }
 
-    public record Error(String code, String message) {
-    }
-
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Error> badRequest(final BadRequestException e, final Locale locale) {
         return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", e.getDetailMessageCode(), e.getDetailMessageArguments(), locale);
@@ -113,5 +110,8 @@ public class HttpErrorAdvice {
         final String message = messageSource.getMessage(key, arguments, key, Locales.supported(locale));
 
         return ResponseEntity.status(status).body(new Error(code, message == null ? key : message));
+    }
+
+    public record Error(String code, String message) {
     }
 }

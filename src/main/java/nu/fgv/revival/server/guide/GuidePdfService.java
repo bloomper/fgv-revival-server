@@ -35,7 +35,7 @@ import org.openpdf.text.pdf.PdfWriter;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
-import java.awt.Color;
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -68,6 +68,10 @@ public class GuidePdfService {
         this.markdown = markdown;
         this.messageSource = messageSource;
         this.typeRepository = typeRepository;
+    }
+
+    private static String text(final GuideVersionView.Text text, final boolean english) {
+        return english && text.en() != null ? text.en() : text.sv();
     }
 
     public byte[] render(final GuideVersionView version, final Locale locale, final @Nullable String revivalTitle) {
@@ -202,10 +206,6 @@ public class GuidePdfService {
         if (english && !text.translated()) {
             document.add(new Paragraph(message("guide.pdf.notTranslated", locale), noteFont));
         }
-    }
-
-    private static String text(final GuideVersionView.Text text, final boolean english) {
-        return english && text.en() != null ? text.en() : text.sv();
     }
 
     private String message(final String code, final Locale locale, final Object... arguments) {

@@ -46,7 +46,7 @@ import org.openpdf.text.Paragraph;
 import org.openpdf.text.Phrase;
 import org.springframework.stereotype.Component;
 
-import java.awt.Color;
+import java.awt.*;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
@@ -64,7 +64,51 @@ import java.util.regex.Pattern;
 public class GuideMarkdown {
 
 
+    private static final Pattern SAFE_LINK = Pattern.compile("(?i)^(https?://|mailto:)\\S+$");
+    private static final Charset WIN_ANSI = Charset.forName("windows-1252");
     private final Parser parser = Parser.builder().build();
+
+    /**
+     * Escapes text for HTML content and attribute values.
+     */
+    public static String escapeHtml(final String text) {
+        final StringBuilder escaped = new StringBuilder(text.length());
+
+        for (int index = 0; index < text.length(); index++) {
+            final char character = text.charAt(index);
+
+            switch (character) {
+                case '&' -> escaped.append("&amp;");
+                case '<' -> escaped.append("&lt;");
+                case '>' -> escaped.append("&gt;");
+                case '"' -> escaped.append("&quot;");
+                case '\'' -> escaped.append("&#39;");
+                default -> escaped.append(character);
+            }
+        }
+        return escaped.toString();
+    }
+
+    /**
+     * Replaces characters the standard fonts cannot show with {@code ?}, so nothing silently disappears.
+     */
+    static String pdfSafe(final String text) {
+        final CharsetEncoder encoder = WIN_ANSI.newEncoder();
+        final StringBuilder safe = new StringBuilder(text.length());
+
+        text.codePoints().forEach(codePoint -> {
+            final String character = new String(Character.toChars(codePoint));
+
+            safe.append(encoder.canEncode(character) ? character : "?");
+        });
+        return safe.toString();
+    }
+
+    private static void newLine(final StringBuilder text) {
+        if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
+            text.append('\n');
+        }
+    }
 
     public Node parse(final String markdown) {
         return parser.parse(markdown);
@@ -138,29 +182,6 @@ public class GuideMarkdown {
     }
 
     /**
-     * The fonts the PDF uses: the standard Helvetica set, which covers Swedish (research R7).
-     */
-    public record PdfFonts(Font normal, Font bold, Font italic,
-                           Font boldItalic, Font link) {
-
-        public static PdfFonts helvetica(final float size) {
-            return new PdfFonts(
-                    FontFactory.getFont(FontFactory.HELVETICA, size),
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, size),
-                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, size),
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLDOBLIQUE, size),
-                    FontFactory.getFont(FontFactory.HELVETICA, size, Font.UNDERLINE, new Color(0, 70, 160)));
-        }
-
-        Font of(final boolean strong, final boolean emphasis) {
-            if (strong && emphasis) {
-                return boldItalic;
-            }
-            return strong ? bold : emphasis ? italic : normal;
-        }
-    }
-
-    /**
      * Guide Markdown as PDF elements: paragraphs, nested bullet and numbered lists, bold, italics and links. Everything
      * else is its plain text, and images are dropped, so building a PDF never fetches a URL (FR-010).
      */
@@ -227,7 +248,8 @@ public class GuideMarkdown {
             switch (node) {
                 case final Text text -> target.add(new Chunk(pdfSafe(text.getLiteral()), fonts.of(strong, emphasis)));
                 case final Code code -> target.add(new Chunk(pdfSafe(code.getLiteral()), fonts.of(strong, emphasis)));
-                case final HtmlInline html -> target.add(new Chunk(pdfSafe(html.getLiteral()), fonts.of(strong, emphasis)));
+                case final HtmlInline html ->
+                        target.add(new Chunk(pdfSafe(html.getLiteral()), fonts.of(strong, emphasis)));
                 case final StrongEmphasis _ -> inline(node, target, fonts, true, emphasis);
                 case final Emphasis _ -> inline(node, target, fonts, strong, true);
                 case final Link link -> {
@@ -246,8 +268,6 @@ public class GuideMarkdown {
             }
         }
     }
-
-    private static final Pattern SAFE_LINK = Pattern.compile("(?i)^(https?://|mailto:)\\S+$");
 
     /**
      * Guide Markdown as HTML for an email (M6B-FR-9), with only the elements the web renders guide text with (FR-010):
@@ -343,46 +363,25 @@ public class GuideMarkdown {
     }
 
     /**
-     * Escapes text for HTML content and attribute values.
+     * The fonts the PDF uses: the standard Helvetica set, which covers Swedish (research R7).
      */
-    public static String escapeHtml(final String text) {
-        final StringBuilder escaped = new StringBuilder(text.length());
+    public record PdfFonts(Font normal, Font bold, Font italic,
+                           Font boldItalic, Font link) {
 
-        for (int index = 0; index < text.length(); index++) {
-            final char character = text.charAt(index);
-
-            switch (character) {
-                case '&' -> escaped.append("&amp;");
-                case '<' -> escaped.append("&lt;");
-                case '>' -> escaped.append("&gt;");
-                case '"' -> escaped.append("&quot;");
-                case '\'' -> escaped.append("&#39;");
-                default -> escaped.append(character);
-            }
+        public static PdfFonts helvetica(final float size) {
+            return new PdfFonts(
+                    FontFactory.getFont(FontFactory.HELVETICA, size),
+                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, size),
+                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, size),
+                    FontFactory.getFont(FontFactory.HELVETICA_BOLDOBLIQUE, size),
+                    FontFactory.getFont(FontFactory.HELVETICA, size, Font.UNDERLINE, new Color(0, 70, 160)));
         }
-        return escaped.toString();
-    }
 
-    private static final Charset WIN_ANSI = Charset.forName("windows-1252");
-
-    /**
-     * Replaces characters the standard fonts cannot show with {@code ?}, so nothing silently disappears.
-     */
-    static String pdfSafe(final String text) {
-        final CharsetEncoder encoder = WIN_ANSI.newEncoder();
-        final StringBuilder safe = new StringBuilder(text.length());
-
-        text.codePoints().forEach(codePoint -> {
-            final String character = new String(Character.toChars(codePoint));
-
-            safe.append(encoder.canEncode(character) ? character : "?");
-        });
-        return safe.toString();
-    }
-
-    private static void newLine(final StringBuilder text) {
-        if (!text.isEmpty() && text.charAt(text.length() - 1) != '\n') {
-            text.append('\n');
+        Font of(final boolean strong, final boolean emphasis) {
+            if (strong && emphasis) {
+                return boldItalic;
+            }
+            return strong ? bold : emphasis ? italic : normal;
         }
     }
 }

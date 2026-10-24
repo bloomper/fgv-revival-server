@@ -115,8 +115,8 @@ class SampleMaterials {
     }
 
     private InventoryItem item(final long revivalId, final String name, final InventoryKind kind, final int quantity, final InventoryStatus status,
-                      final @Nullable InventoryLocation location, final @Nullable String locationNote, final @Nullable Owner owner,
-                      final @Nullable Long materialId) {
+                               final @Nullable InventoryLocation location, final @Nullable String locationNote, final @Nullable Owner owner,
+                               final @Nullable Long materialId) {
         final InventoryItem item = new InventoryItem();
 
         item.setRevivalId(revivalId);

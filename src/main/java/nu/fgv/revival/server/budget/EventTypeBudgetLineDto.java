@@ -28,7 +28,8 @@ import java.util.Locale;
  * @since 0.6
  */
 public record EventTypeBudgetLineDto(Long id, Long eventTypeId, String categoryId, GuideVersionView.Text description,
-                                     BudgetLineQuantity quantityRule, @Nullable Double quantity, BigDecimal unitAmount, Long version) {
+                                     BudgetLineQuantity quantityRule, @Nullable Double quantity, BigDecimal unitAmount,
+                                     Long version) {
 
     static EventTypeBudgetLineDto of(final EventTypeBudgetLine line) {
         return new EventTypeBudgetLineDto(line.getId(), line.getEventTypeId(), line.getCategoryId(),

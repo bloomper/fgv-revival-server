@@ -122,6 +122,10 @@ class ParticipationServiceTest {
     private Participant participant;
     private PendingPerson person;
 
+    private static ParticipationService.Response answer(final ParticipantResponse response, final Boolean terms, final Boolean consent) {
+        return new ParticipationService.Response(REVIVAL_ID, response, null, null, terms, consent);
+    }
+
     @BeforeEach
     void setUp() {
         final AccessPolicy accessPolicy = new AccessPolicy();
@@ -165,10 +169,6 @@ class ParticipationServiceTest {
         when(ownerResolver.activeMembers(REVIVAL_ID)).thenReturn(Map.of(20L, "Stina Styrgrupp"));
         when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("ROLE", "Roll", "Ensemble", true)));
         when(mailer.confirmation(any(), any(), anyString(), any())).thenReturn(new org.springframework.mail.SimpleMailMessage());
-    }
-
-    private static ParticipationService.Response answer(final ParticipantResponse response, final Boolean terms, final Boolean consent) {
-        return new ParticipationService.Response(REVIVAL_ID, response, null, null, terms, consent);
     }
 
     private SpexregisterClient.Spexare spexare(final SpexregisterClient.Consent consent) {

@@ -105,6 +105,21 @@ public final class CustomScalars {
             .name("Amount")
             .description("Swedish kronor with at most two decimals")
             .coercing(new Coercing<BigDecimal, String>() {
+                private static @Nullable BigDecimal amount(final Object input) {
+                    return switch (input) {
+                        case final String text -> Amounts.parse(text);
+                        case final BigDecimal number -> Amounts.exact(number);
+                        case final BigInteger number -> Amounts.exact(new BigDecimal(number));
+                        case final Integer number -> Amounts.exact(BigDecimal.valueOf(number));
+                        case final Long number -> Amounts.exact(BigDecimal.valueOf(number));
+                        case final Double number when Double.isFinite(number) ->
+                                Amounts.exact(BigDecimal.valueOf(number));
+                        case final Float number when Float.isFinite(number) ->
+                                Amounts.exact(new BigDecimal(number.toString()));
+                        default -> null;
+                    };
+                }
+
                 @Override
                 public String serialize(final Object dataFetcherResult, final GraphQLContext graphQLContext, final Locale locale) {
                     if (dataFetcherResult instanceof final BigDecimal amount) {
@@ -136,19 +151,6 @@ public final class CustomScalars {
                         throw new CoercingParseLiteralException("Expected an amount with at most two decimals");
                     }
                     return amount;
-                }
-
-                private static @Nullable BigDecimal amount(final Object input) {
-                    return switch (input) {
-                        case final String text -> Amounts.parse(text);
-                        case final BigDecimal number -> Amounts.exact(number);
-                        case final BigInteger number -> Amounts.exact(new BigDecimal(number));
-                        case final Integer number -> Amounts.exact(BigDecimal.valueOf(number));
-                        case final Long number -> Amounts.exact(BigDecimal.valueOf(number));
-                        case final Double number when Double.isFinite(number) -> Amounts.exact(BigDecimal.valueOf(number));
-                        case final Float number when Float.isFinite(number) -> Amounts.exact(new BigDecimal(number.toString()));
-                        default -> null;
-                    };
                 }
             })
             .build();

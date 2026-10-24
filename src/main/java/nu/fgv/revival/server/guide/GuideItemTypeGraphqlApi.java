@@ -47,12 +47,6 @@ public class GuideItemTypeGraphqlApi {
         this.service = service;
     }
 
-    public record GuideItemTypeCreateInput(GuideItemKind kind, LocalizedTextInput name) {
-    }
-
-    public record GuideItemTypeUpdateInput(String id, Long version, LocalizedTextInput name) {
-    }
-
     private static CatalogService.Names names(final LocalizedTextInput input) {
         return new CatalogService.Names(input.sv() == null ? "" : input.sv(), input.en());
     }
@@ -131,5 +125,11 @@ public class GuideItemTypeGraphqlApi {
             }
         });
         return result;
+    }
+
+    public record GuideItemTypeCreateInput(GuideItemKind kind, LocalizedTextInput name) {
+    }
+
+    public record GuideItemTypeUpdateInput(String id, Long version, LocalizedTextInput name) {
     }
 }

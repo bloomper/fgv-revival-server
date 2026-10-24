@@ -36,6 +36,30 @@ public class ScenarioParametersConverter implements AttributeConverter<ScenarioP
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
+    private static void put(final ObjectNode node, final String name, final @Nullable Integer value) {
+        if (value != null) {
+            node.put(name, value.intValue());
+        }
+    }
+
+    private static void put(final ObjectNode node, final String name, final @Nullable BigDecimal value) {
+        if (value != null) {
+            node.put(name, Amounts.format(value));
+        }
+    }
+
+    private static @Nullable Integer integer(final JsonNode node, final String name) {
+        final JsonNode value = node.get(name);
+
+        return value == null || value.isNull() ? null : value.asInt();
+    }
+
+    private static @Nullable BigDecimal amount(final JsonNode node, final String name) {
+        final JsonNode value = node.get(name);
+
+        return value == null || value.isNull() ? null : Amounts.parse(value.asString());
+    }
+
     @Override
     public String convertToDatabaseColumn(final @Nullable ScenarioParameters parameters) {
         final ScenarioParameters value = parameters == null ? ScenarioParameters.none() : parameters;
@@ -63,29 +87,5 @@ public class ScenarioParametersConverter implements AttributeConverter<ScenarioP
         return new ScenarioParameters(integer(node, "participants"), amount(node, "participationFee"), amount(node, "showTicketPrice"),
                 integer(node, "showTickets"), amount(node, "partyTicketPrice"), integer(node, "partyTickets"), amount(node, "venueCost"),
                 amount(node, "partyCost"));
-    }
-
-    private static void put(final ObjectNode node, final String name, final @Nullable Integer value) {
-        if (value != null) {
-            node.put(name, value.intValue());
-        }
-    }
-
-    private static void put(final ObjectNode node, final String name, final @Nullable BigDecimal value) {
-        if (value != null) {
-            node.put(name, Amounts.format(value));
-        }
-    }
-
-    private static @Nullable Integer integer(final JsonNode node, final String name) {
-        final JsonNode value = node.get(name);
-
-        return value == null || value.isNull() ? null : value.asInt();
-    }
-
-    private static @Nullable BigDecimal amount(final JsonNode node, final String name) {
-        final JsonNode value = node.get(name);
-
-        return value == null || value.isNull() ? null : Amounts.parse(value.asString());
     }
 }

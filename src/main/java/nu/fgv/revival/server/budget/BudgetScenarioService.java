@@ -61,6 +61,48 @@ public class BudgetScenarioService {
         this.clock = clock;
     }
 
+    private static ScenarioResultDto calculate(final BudgetService.Baseline baseline, final ScenarioParameters parameters) {
+        return ScenarioCalculator.calculate(baseline.lines(), baseline.participantsPlanned(), baseline.participationFee(), parameters);
+    }
+
+    private static Scenario of(final BudgetScenario scenario, final BudgetService.Baseline baseline) {
+        return new Scenario(scenario.getId(), scenario.getRevivalId(), scenario.getName(), scenario.getParameters(),
+                calculate(baseline, scenario.getParameters()), scenario.getVersion() == null ? 0L : scenario.getVersion());
+    }
+
+    private static String validName(final @Nullable String name) {
+        final String trimmed = name == null ? "" : name.strip();
+
+        if (trimmed.isEmpty() || trimmed.length() > BudgetScenario.NAME_MAX_LENGTH) {
+            throw new BadRequestException("error.scenario.name", BudgetScenario.NAME_MAX_LENGTH);
+        }
+        return trimmed;
+    }
+
+    /**
+     * Participants 0–2000, tickets 0–100000 and amounts 0–10000000 kronor.
+     */
+    static ScenarioParameters valid(final ScenarioParameters parameters) {
+        count(parameters.participants(), BudgetSettings.MAX_PARTICIPANTS);
+        count(parameters.showTickets(), MAX_TICKETS);
+        count(parameters.partyTickets(), MAX_TICKETS);
+        return new ScenarioParameters(parameters.participants(), amount(parameters.participationFee()), amount(parameters.showTicketPrice()),
+                parameters.showTickets(), amount(parameters.partyTicketPrice()), parameters.partyTickets(), amount(parameters.venueCost()),
+                amount(parameters.partyCost()));
+    }
+
+    private static void count(final @Nullable Integer count, final int max) {
+        if (count != null && (count < 0 || count > max)) {
+            throw new BadRequestException("error.scenario.count", max);
+        }
+    }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
+    private static @Nullable BigDecimal amount(final @Nullable BigDecimal amount) {
+        return BudgetService.validAmount(amount, BigDecimal.ZERO);
+    }
+
     @Transactional(readOnly = true)
     public ScenarioResultDto calculate(final Long revivalId, final ScenarioParameters input) {
         access.readable(callerService.current(), revivalId);
@@ -120,17 +162,6 @@ public class BudgetScenarioService {
         repository.saveAndFlush(scenario);
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
-    private static ScenarioResultDto calculate(final BudgetService.Baseline baseline, final ScenarioParameters parameters) {
-        return ScenarioCalculator.calculate(baseline.lines(), baseline.participantsPlanned(), baseline.participationFee(), parameters);
-    }
-
-    private static Scenario of(final BudgetScenario scenario, final BudgetService.Baseline baseline) {
-        return new Scenario(scenario.getId(), scenario.getRevivalId(), scenario.getName(), scenario.getParameters(),
-                calculate(baseline, scenario.getParameters()), scenario.getVersion() == null ? 0L : scenario.getVersion());
-    }
-
     private BudgetScenario changeable(final Caller caller, final Long id, final Long version) {
         final BudgetScenario scenario = repository.findById(id).filter(candidate -> !candidate.isRemoved())
                 .orElseThrow(() -> new ResourceNotFoundException(BudgetScenario.class, id));
@@ -143,36 +174,5 @@ public class BudgetScenarioService {
             throw new ConflictException("error.conflict");
         }
         return scenario;
-    }
-
-    private static String validName(final @Nullable String name) {
-        final String trimmed = name == null ? "" : name.strip();
-
-        if (trimmed.isEmpty() || trimmed.length() > BudgetScenario.NAME_MAX_LENGTH) {
-            throw new BadRequestException("error.scenario.name", BudgetScenario.NAME_MAX_LENGTH);
-        }
-        return trimmed;
-    }
-
-    /**
-     * Participants 0–2000, tickets 0–100000 and amounts 0–10000000 kronor.
-     */
-    static ScenarioParameters valid(final ScenarioParameters parameters) {
-        count(parameters.participants(), BudgetSettings.MAX_PARTICIPANTS);
-        count(parameters.showTickets(), MAX_TICKETS);
-        count(parameters.partyTickets(), MAX_TICKETS);
-        return new ScenarioParameters(parameters.participants(), amount(parameters.participationFee()), amount(parameters.showTicketPrice()),
-                parameters.showTickets(), amount(parameters.partyTicketPrice()), parameters.partyTickets(), amount(parameters.venueCost()),
-                amount(parameters.partyCost()));
-    }
-
-    private static void count(final @Nullable Integer count, final int max) {
-        if (count != null && (count < 0 || count > max)) {
-            throw new BadRequestException("error.scenario.count", max);
-        }
-    }
-
-    private static @Nullable BigDecimal amount(final @Nullable BigDecimal amount) {
-        return BudgetService.validAmount(amount, BigDecimal.ZERO);
     }
 }

@@ -18,9 +18,9 @@ package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.guide.GuideMapper;
 import nu.fgv.revival.server.guide.GuideVersion;
-import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.guide.GuideVersionRepository;
 import nu.fgv.revival.server.guide.GuideVersionStatus;
+import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.person.Caller;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;

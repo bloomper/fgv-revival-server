@@ -44,12 +44,6 @@ class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
 
     private long id;
 
-    @BeforeEach
-    void setUp() {
-        id = organisingRevival();
-        MAIL.reset();
-    }
-
     private static List<String> recipients(final String subjectPart) {
         return Arrays.stream(MAIL.getReceivedMessages())
                 .filter(message -> subject(message).contains(subjectPart))
@@ -71,6 +65,20 @@ class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
+    private static String recipientsOf(final MimeMessage message) {
+        try {
+            return message.getAllRecipients()[0].toString();
+        } catch (final Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @BeforeEach
+    void setUp() {
+        id = organisingRevival();
+        MAIL.reset();
+    }
+
     @Test
     void candidatesComeFromTheRealmWithWhetherTheyCanLogIn() {
         execute(DIRECTEUR, MEMBER_CANDIDATES, Map.of("revivalId", id, "query", " Ulla "))
@@ -90,7 +98,7 @@ class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
         final String email = "inbjuden-" + UUID.randomUUID() + DOMAIN;
 
         execute(DIRECTEUR, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", email, "role", "STEERING_GROUP",
-                        "firstName", " Ines ", "lastName", "Inbjuden")))
+                "firstName", " Ines ", "lastName", "Inbjuden")))
                 .path("revivalMemberAdd.state").entity(String.class).isEqualTo("WAITING")
                 .path("revivalMemberAdd.invitedAt").hasValue();
 
@@ -141,13 +149,5 @@ class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
                 .path("revivalMemberAdd.invitedAt").valueIsNull();
 
         assertThat(MAIL.getReceivedMessages()).isEmpty();
-    }
-
-    private static String recipientsOf(final MimeMessage message) {
-        try {
-            return message.getAllRecipients()[0].toString();
-        } catch (final Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

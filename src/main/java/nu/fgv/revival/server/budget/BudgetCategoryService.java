@@ -50,6 +50,12 @@ public class BudgetCategoryService extends CatalogService<BudgetCategory> {
         this.repository = repository;
     }
 
+    private static void requireKind(final BudgetCategoryKind kind, final @Nullable BudgetCategoryRole role) {
+        if (role != null && role.kind() != kind) {
+            throw new BadRequestException("error.budgetCategory.role.kind", role.name());
+        }
+    }
+
     @Override
     protected Set<String> used() {
         return Set.copyOf(repository.findUsedIds());
@@ -163,12 +169,6 @@ public class BudgetCategoryService extends CatalogService<BudgetCategory> {
         if (role != null && repository.findAllByOrderByPositionAscIdAsc().stream()
                 .anyMatch(other -> !other.getId().equals(id) && !other.isRetired() && other.getRole() == role)) {
             throw new BadRequestException("error.budgetCategory.role.taken", role.name());
-        }
-    }
-
-    private static void requireKind(final BudgetCategoryKind kind, final @Nullable BudgetCategoryRole role) {
-        if (role != null && role.kind() != kind) {
-            throw new BadRequestException("error.budgetCategory.role.kind", role.name());
         }
     }
 }

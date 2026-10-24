@@ -69,13 +69,6 @@ public class EventTypeBudgetLineService {
     }
 
     /**
-     * What the super admin sets on a line. The type is given only on create.
-     */
-    public record Definition(@Nullable Long eventTypeId, String categoryId, @Nullable String descriptionSv, @Nullable String descriptionEn,
-                             BudgetLineQuantity quantityRule, @Nullable BigDecimal quantity, BigDecimal unitAmount) {
-    }
-
-    /**
      * The types' lines in their order, by type id. No caller check: everyone signed in reads the types.
      */
     @Transactional(readOnly = true)
@@ -144,11 +137,11 @@ public class EventTypeBudgetLineService {
         return typeService.get(typeId);
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private void manageable() {
         accessPolicy.requireManageEventTypes(callerService.current());
     }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private EventTypeBudgetLine changeable(final Long id, final Long version) {
         final EventTypeBudgetLine line = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(EventTypeBudgetLine.class, id));
@@ -175,5 +168,13 @@ public class EventTypeBudgetLineService {
             line.setQuantity(null);
         }
         line.setUnitAmount(Objects.requireNonNull(BudgetService.validAmount(definition.unitAmount(), BigDecimal.ZERO)));
+    }
+
+    /**
+     * What the super admin sets on a line. The type is given only on create.
+     */
+    public record Definition(@Nullable Long eventTypeId, String categoryId, @Nullable String descriptionSv,
+                             @Nullable String descriptionEn,
+                             BudgetLineQuantity quantityRule, @Nullable BigDecimal quantity, BigDecimal unitAmount) {
     }
 }

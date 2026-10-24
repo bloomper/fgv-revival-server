@@ -50,6 +50,22 @@ public class LinkServiceCatalog extends CatalogService<LinkService> {
         this.repository = repository;
     }
 
+    private static Set<String> validHosts(final @Nullable List<String> hosts) {
+        final Set<String> valid = new LinkedHashSet<>();
+
+        if (hosts != null) {
+            hosts.forEach(host -> valid.add(Links.validHost(host)));
+        }
+        if (valid.size() > LinkService.MAX_HOSTS) {
+            throw new BadRequestException("error.linkService.hosts.tooMany", LinkService.MAX_HOSTS);
+        }
+        return valid;
+    }
+
+    private static @Nullable String validHomeUrl(final @Nullable String homeUrl) {
+        return homeUrl == null || homeUrl.isBlank() ? null : Links.requireHttps(homeUrl, LinkService.HOME_URL_MAX_LENGTH);
+    }
+
     @Override
     protected Set<String> used() {
         return Set.copyOf(repository.findUsedIds());
@@ -133,21 +149,5 @@ public class LinkServiceCatalog extends CatalogService<LinkService> {
                 }
             }
         }
-    }
-
-    private static Set<String> validHosts(final @Nullable List<String> hosts) {
-        final Set<String> valid = new LinkedHashSet<>();
-
-        if (hosts != null) {
-            hosts.forEach(host -> valid.add(Links.validHost(host)));
-        }
-        if (valid.size() > LinkService.MAX_HOSTS) {
-            throw new BadRequestException("error.linkService.hosts.tooMany", LinkService.MAX_HOSTS);
-        }
-        return valid;
-    }
-
-    private static @Nullable String validHomeUrl(final @Nullable String homeUrl) {
-        return homeUrl == null || homeUrl.isBlank() ? null : Links.requireHttps(homeUrl, LinkService.HOME_URL_MAX_LENGTH);
     }
 }

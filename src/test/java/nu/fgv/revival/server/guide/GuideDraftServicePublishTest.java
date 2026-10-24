@@ -53,7 +53,7 @@ import static org.mockito.Mockito.when;
 class GuideDraftServicePublishTest {
 
     private static final long DRAFT_ID = 7L;
-
+    private final GuideDraftService.DraftDiscardListener listener = mock(GuideDraftService.DraftDiscardListener.class);
     @Mock
     private GuideVersionRepository versionRepository;
     @Mock
@@ -70,8 +70,6 @@ class GuideDraftServicePublishTest {
     private CallerService callerService;
     @Mock
     private ApplicationEventPublisher events;
-
-    private final GuideDraftService.DraftDiscardListener listener = mock(GuideDraftService.DraftDiscardListener.class);
     private GuideDraftService service;
     private GuideVersion draft;
 

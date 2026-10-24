@@ -76,20 +76,6 @@ class SyncPlannerTest {
     private SyncPlanner planner;
     private Revival revival;
 
-    @BeforeEach
-    void setUp() {
-        planner = new SyncPlanner(participantRepository, stepRepository, client, directory);
-        revival = new Revival();
-        revival.setId(1L);
-        revival.setSpexId(10L);
-        revival.setYear(2028);
-        revival.setMembershipYear(2028);
-        when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("ROLE", "Roll", "Ensemble", true),
-                new SpexareDirectory.Position("TRUMPET", "Trumpet", "Orkester", false)));
-        when(directory.vocalPartsOrEmpty()).thenReturn(Map.of("B1", new SpexareDirectory.VocalPart("B1", "Bas 1")));
-        when(stepRepository.membershipsRecorded(anyCollection(), anyString(), anyCollection())).thenReturn(List.of());
-    }
-
     private static Participant participant(final long id, final @Nullable Long spexareId, final ParticipantKind kind, final ParticipantResponse response,
                                            final @Nullable String position, final @Nullable String role, final boolean membership) {
         final Participant participant = new Participant();
@@ -104,6 +90,20 @@ class SyncPlannerTest {
         participant.setVocalPartId(role == null ? null : "B1");
         participant.setMembershipPaid(membership);
         return participant;
+    }
+
+    @BeforeEach
+    void setUp() {
+        planner = new SyncPlanner(participantRepository, stepRepository, client, directory);
+        revival = new Revival();
+        revival.setId(1L);
+        revival.setSpexId(10L);
+        revival.setYear(2028);
+        revival.setMembershipYear(2028);
+        when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("ROLE", "Roll", "Ensemble", true),
+                new SpexareDirectory.Position("TRUMPET", "Trumpet", "Orkester", false)));
+        when(directory.vocalPartsOrEmpty()).thenReturn(Map.of("B1", new SpexareDirectory.VocalPart("B1", "Bas 1")));
+        when(stepRepository.membershipsRecorded(anyCollection(), anyString(), anyCollection())).thenReturn(List.of());
     }
 
     private void participants(final Participant... participants) {

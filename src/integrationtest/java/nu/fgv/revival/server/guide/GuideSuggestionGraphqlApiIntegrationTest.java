@@ -129,8 +129,8 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(SUPER_ADMIN, ACCEPT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id)))).errors().verify();
 
         assertThat(jdbcClient.sql("""
-                SELECT c.`key` FROM guide_item i JOIN guide_chapter c ON c.id = i.chapter_id
-                WHERE i.version_id = ? AND i.text_sv = 'Förrådet ska inventeras innan första rephelgen.'""")
+                        SELECT c.`key` FROM guide_item i JOIN guide_chapter c ON c.id = i.chapter_id
+                        WHERE i.version_id = ? AND i.text_sv = 'Förrådet ska inventeras innan första rephelgen.'""")
                 .param(draftId()).query(String.class).single()).isEqualTo("E");
     }
 

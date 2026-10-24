@@ -59,33 +59,15 @@ class EventTypeServiceTest {
 
     private static final long EVENT_TEMPLATE = 40L;
     private static final long CHAPTER_TEMPLATE = 41L;
-
+    private final List<EventType> types = new ArrayList<>();
     @Mock
     private EventTypeRepository repository;
     @Mock
     private ChecklistTemplateRepository templateRepository;
     @Mock
     private CallerService callerService;
-
     private EventTypeService service;
-    private final List<EventType> types = new ArrayList<>();
     private ChecklistTemplate eventTemplate;
-
-    @BeforeEach
-    void setUp() {
-        service = new EventTypeService(repository, templateRepository, callerService, new AccessPolicy(), TestClocks.at(LocalDate.of(2026, 10, 23)));
-        types.add(type(1L, "AW", 0));
-        types.add(type(2L, "Kickoff", 1));
-        types.add(type(3L, "Rephelg 1", 2));
-        eventTemplate = template(EVENT_TEMPLATE, ChecklistKind.EVENT);
-        lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
-        lenient().when(repository.findAllByOrderByPositionAscIdAsc()).thenAnswer(invocation -> List.copyOf(types));
-        lenient().when(repository.findById(any())).thenAnswer(invocation ->
-                types.stream().filter(type -> type.getId().equals(invocation.getArgument(0))).findFirst());
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(templateRepository.findById(EVENT_TEMPLATE)).thenReturn(Optional.of(eventTemplate));
-        lenient().when(templateRepository.findById(CHAPTER_TEMPLATE)).thenReturn(Optional.of(template(CHAPTER_TEMPLATE, ChecklistKind.CHAPTER)));
-    }
 
     private static EventType type(final long id, final String name, final int position) {
         final EventType type = new EventType();
@@ -109,6 +91,22 @@ class EventTypeServiceTest {
                                                           final @Nullable Long templateId) {
         return new EventTypeService.Definition(new EventTypeService.Text(name, null), new EventTypeService.Text(" Öl och mat. ", "Beer and food."),
                 new EventTypeService.Text(" ", "Rooms"), null, min, max, days, true, templateId);
+    }
+
+    @BeforeEach
+    void setUp() {
+        service = new EventTypeService(repository, templateRepository, callerService, new AccessPolicy(), TestClocks.at(LocalDate.of(2026, 10, 23)));
+        types.add(type(1L, "AW", 0));
+        types.add(type(2L, "Kickoff", 1));
+        types.add(type(3L, "Rephelg 1", 2));
+        eventTemplate = template(EVENT_TEMPLATE, ChecklistKind.EVENT);
+        lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
+        lenient().when(repository.findAllByOrderByPositionAscIdAsc()).thenAnswer(invocation -> List.copyOf(types));
+        lenient().when(repository.findById(any())).thenAnswer(invocation ->
+                types.stream().filter(type -> type.getId().equals(invocation.getArgument(0))).findFirst());
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(templateRepository.findById(EVENT_TEMPLATE)).thenReturn(Optional.of(eventTemplate));
+        lenient().when(templateRepository.findById(CHAPTER_TEMPLATE)).thenReturn(Optional.of(template(CHAPTER_TEMPLATE, ChecklistKind.CHAPTER)));
     }
 
     @Test

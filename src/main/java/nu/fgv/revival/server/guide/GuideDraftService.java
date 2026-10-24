@@ -87,14 +87,6 @@ public class GuideDraftService {
     }
 
     /**
-     * Told before a draft is deleted, so that what refers to it can let go (suggestions accepted into it reopen).
-     */
-    public interface DraftDiscardListener {
-
-        void draftDiscarded(Long draftId);
-    }
-
-    /**
      * Refuses any change to a published version.
      */
     public static GuideVersion requireDraft(final GuideVersion version) {
@@ -102,6 +94,32 @@ public class GuideDraftService {
             throw new BadRequestException("error.guide.published");
         }
         return version;
+    }
+
+    static void requireVersion(final nu.fgv.revival.server.util.AbstractAuditable entity, final @Nullable Long expected) {
+        if (!Objects.equals(entity.getVersion(), expected)) {
+            throw new ConflictException("error.conflict");
+        }
+    }
+
+    private static int insertAt(final @Nullable Integer position, final int size) {
+        if (position == null) {
+            return size;
+        }
+        if (position < 0 || position > size) {
+            throw new BadRequestException("error.guide.position");
+        }
+        return position;
+    }
+
+    private static @Nullable String validNote(final @Nullable String note) {
+        if (!hasText(note)) {
+            return null;
+        }
+        if (note.strip().length() > GuideRules.MAX_NOTE) {
+            throw new BadRequestException("error.guide.note.tooLong", GuideRules.MAX_NOTE);
+        }
+        return note.strip();
     }
 
     private Caller manager() {
@@ -114,6 +132,8 @@ public class GuideDraftService {
     private GuideVersion version(final Long id) {
         return versionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(GuideVersion.class, id));
     }
+
+    // --- Editing the draft (FR-013) -----------------------------------------------------------------------------------
 
     /**
      * Starts the draft: a copy of the latest published version with the same keys (research R3), or an empty draft
@@ -190,8 +210,6 @@ public class GuideDraftService {
         itemRepository.flush();
     }
 
-    // --- Editing the draft (FR-013) -----------------------------------------------------------------------------------
-
     private GuideVersion draftOf(final Long versionId) {
         return requireDraft(version(versionId));
     }
@@ -206,22 +224,6 @@ public class GuideDraftService {
 
     private GuideItem item(final Long id) {
         return itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(GuideItem.class, id));
-    }
-
-    static void requireVersion(final nu.fgv.revival.server.util.AbstractAuditable entity, final @Nullable Long expected) {
-        if (!Objects.equals(entity.getVersion(), expected)) {
-            throw new ConflictException("error.conflict");
-        }
-    }
-
-    private static int insertAt(final @Nullable Integer position, final int size) {
-        if (position == null) {
-            return size;
-        }
-        if (position < 0 || position > size) {
-            throw new BadRequestException("error.guide.position");
-        }
-        return position;
     }
 
     private void renumberChapters(final List<GuideChapter> chapters) {
@@ -511,7 +513,7 @@ public class GuideDraftService {
      * have been checked.
      */
     public GuideItem addItem(final GuideChapter chapter, final @Nullable Long sectionId, final @Nullable Integer position,
-                      final String type, final String sv, final @Nullable String en) {
+                             final String type, final String sv, final @Nullable String en) {
         final List<GuideItem> items = itemsIn(chapter.getId(), sectionId);
         final GuideItem item = new GuideItem();
 
@@ -690,16 +692,6 @@ public class GuideDraftService {
         return "v" + (highest + 1);
     }
 
-    private static @Nullable String validNote(final @Nullable String note) {
-        if (!hasText(note)) {
-            return null;
-        }
-        if (note.strip().length() > GuideRules.MAX_NOTE) {
-            throw new BadRequestException("error.guide.note.tooLong", GuideRules.MAX_NOTE);
-        }
-        return note.strip();
-    }
-
     private void requireComplete(final GuideVersion draft) {
         final List<GuideChapter> chapters = chapterRepository.findByVersionIdOrderByPosition(draft.getId());
         final boolean blank = chapters.isEmpty()
@@ -710,5 +702,13 @@ public class GuideDraftService {
         if (blank) {
             throw new BadRequestException("error.guide.incomplete");
         }
+    }
+
+    /**
+     * Told before a draft is deleted, so that what refers to it can let go (suggestions accepted into it reopen).
+     */
+    public interface DraftDiscardListener {
+
+        void draftDiscarded(Long draftId);
     }
 }

@@ -26,7 +26,8 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 0.9
  */
-public record LinkServiceDto(String id, GuideVersionView.Text name, List<String> hosts, @Nullable String homeUrl, int position, boolean retired,
+public record LinkServiceDto(String id, GuideVersionView.Text name, List<String> hosts, @Nullable String homeUrl,
+                             int position, boolean retired,
                              Long version) {
 
     public static LinkServiceDto of(final LinkService service) {

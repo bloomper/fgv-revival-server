@@ -62,6 +62,11 @@ public class LogMcpTools {
         this.support = support;
     }
 
+    private static LogEntry toMcp(final LogEntryDto row) {
+        return new LogEntry(row.number(), row.date(), row.type(), row.status(), row.overdue(), row.text(), McpOwner.of(row.owner()), row.deadline(),
+                row.comment(), row.tags(), row.meetingId());
+    }
+
     @McpTool(name = "list_log_entries",
             description = "List rows of a revival's decision log. Filters combine: mine, open (open or waiting), overdue, types, meeting, tag and text.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
@@ -134,27 +139,26 @@ public class LogMcpTools {
             return new ResolvedOwner(null, Resolution.NONE);
         }
         return switch (ownerResolver.resolve(revivalId, owner, callerService.current())) {
-            case OwnerResolver.Resolution.Member member -> new ResolvedOwner(new OwnerInputDto(member.personId(), null), Resolution.MEMBER);
-            case OwnerResolver.Resolution.FreeText name -> new ResolvedOwner(new OwnerInputDto(null, name.name()), Resolution.FREE_TEXT);
+            case OwnerResolver.Resolution.Member member ->
+                    new ResolvedOwner(new OwnerInputDto(member.personId(), null), Resolution.MEMBER);
+            case OwnerResolver.Resolution.FreeText name ->
+                    new ResolvedOwner(new OwnerInputDto(null, name.name()), Resolution.FREE_TEXT);
             case OwnerResolver.Resolution.Ambiguous ambiguous ->
                     throw new BadRequestException("error.owner.ambiguous", owner.strip(), String.join(", ", ambiguous.candidates()));
         };
-    }
-
-    private static LogEntry toMcp(final LogEntryDto row) {
-        return new LogEntry(row.number(), row.date(), row.type(), row.status(), row.overdue(), row.text(), McpOwner.of(row.owner()), row.deadline(),
-                row.comment(), row.tags(), row.meetingId());
-    }
-
-    private record ResolvedOwner(@Nullable OwnerInputDto input, Resolution resolution) {
     }
 
     public enum Resolution {
         MEMBER, FREE_TEXT, NONE
     }
 
-    public record LogEntry(int number, LocalDate date, LogEntryType type, LogEntryStatus status, boolean overdue, String text,
-                           @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment, List<String> tags,
+    private record ResolvedOwner(@Nullable OwnerInputDto input, Resolution resolution) {
+    }
+
+    public record LogEntry(int number, LocalDate date, LogEntryType type, LogEntryStatus status, boolean overdue,
+                           String text,
+                           @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment,
+                           List<String> tags,
                            @Nullable Long meeting) {
     }
 
@@ -165,8 +169,10 @@ public class LogMcpTools {
      * A row as list_log_entries returns it, plus how the owner's name was read, so the assistant can say when it was not
      * a member (FR-045).
      */
-    public record LogEntryWritten(int number, LocalDate date, LogEntryType type, LogEntryStatus status, boolean overdue, String text,
-                                  @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment, List<String> tags,
+    public record LogEntryWritten(int number, LocalDate date, LogEntryType type, LogEntryStatus status, boolean overdue,
+                                  String text,
+                                  @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment,
+                                  List<String> tags,
                                   @Nullable Long meeting, Resolution ownerResolution) {
 
         static LogEntryWritten of(final LogEntryDto row, final Resolution resolution) {

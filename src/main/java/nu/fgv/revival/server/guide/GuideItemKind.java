@@ -24,12 +24,20 @@ package nu.fgv.revival.server.guide;
  */
 public enum GuideItemKind {
 
-    /** Shown beside the chapter's checklist. */
+    /**
+     * Shown beside the chapter's checklist.
+     */
     TIP,
-    /** Becomes a required checklist item for every revival following the version. */
+    /**
+     * Becomes a required checklist item for every revival following the version.
+     */
     REQUIREMENT,
-    /** Becomes a question in every revival's decision log. */
+    /**
+     * Becomes a question in every revival's decision log.
+     */
     QUESTION,
-    /** Body text, shown without a type label. */
+    /**
+     * Body text, shown without a type label.
+     */
     TEXT
 }

@@ -111,8 +111,8 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
                 .path("checklist.items[0].stateChangedBy").valueIsNull();
         assertThat(count(revival, "required = 1")).isEqualTo(4);
         assertThat(jdbcClient.sql("""
-                        SELECT DISTINCT r.operation FROM checklist_item_audit a JOIN revinfo r ON r.id = a.rev
-                        WHERE a.revival_id = ? AND a.required = 1 AND a.revtype = 0""").param(revival).query(String.class).list())
+                SELECT DISTINCT r.operation FROM checklist_item_audit a JOIN revinfo r ON r.id = a.rev
+                WHERE a.revival_id = ? AND a.required = 1 AND a.revtype = 0""").param(revival).query(String.class).list())
                 .contains("revivalGuideVersionChange");
     }
 

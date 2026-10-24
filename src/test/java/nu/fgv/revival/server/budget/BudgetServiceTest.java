@@ -39,7 +39,6 @@ import nu.fgv.revival.server.revival.RevivalCreated;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.staffing.HelperCompensation;
-import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.jspecify.annotations.Nullable;
@@ -83,7 +82,9 @@ class BudgetServiceTest {
     private static final LocalDate TODAY = LocalDate.of(2027, 11, 1);
     private static final long OTHER_REVIVAL = 2L;
     private static final long REHEARSAL_TYPE = 30L;
-
+    private final List<BudgetCategory> categories = new ArrayList<>(TestBudgetCategories.seeded());
+    private final List<BudgetLine> lines = new ArrayList<>();
+    private final List<BudgetTransaction> transactions = new ArrayList<>();
     @Mock
     private BudgetSettingsRepository settingsRepository;
     @Mock
@@ -108,14 +109,29 @@ class BudgetServiceTest {
     private CallerService callerService;
     @Mock
     private HelperCompensation helperCompensation;
-
     private BudgetService service;
     private BigDecimal helpers = BigDecimal.ZERO;
-    private final List<BudgetCategory> categories = new ArrayList<>(TestBudgetCategories.seeded());
-    private final List<BudgetLine> lines = new ArrayList<>();
-    private final List<BudgetTransaction> transactions = new ArrayList<>();
     private BudgetSettings settings;
     private Revival revival;
+
+    private static Caller steeringGroupWithout() {
+        return new Caller(TestCallers.steeringGroup().person(), Set.of(),
+                Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of("CATERING"))));
+    }
+
+    private static BigDecimal kr(final String amount) {
+        return new BigDecimal(amount).setScale(2);
+    }
+
+    private static BudgetService.NewLine newLine(final String category, final @Nullable Long eventId, final @Nullable Long logEntryId,
+                                                 final @Nullable Long typeLineId) {
+        return new BudgetService.NewLine(REVIVAL_ID, category, "  Mat  ", null, kr("120"), eventId, logEntryId, " ", typeLineId);
+    }
+
+    private static EventDto eventDto(final long id, final @Nullable Long typeId) {
+        return new EventDto(id, REVIVAL_ID, typeId, "Rephelg 1", LocalDate.of(2027, 12, 11), LocalDate.of(2027, 12, 12), null, null, null, null,
+                true, -61, false, 0L);
+    }
 
     @BeforeEach
     void setUp() {
@@ -160,15 +176,6 @@ class BudgetServiceTest {
         lenient().when(referenceService.all()).thenReturn(List.of());
     }
 
-    private static Caller steeringGroupWithout() {
-        return new Caller(TestCallers.steeringGroup().person(), Set.of(),
-                Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of("CATERING"))));
-    }
-
-    private static BigDecimal kr(final String amount) {
-        return new BigDecimal(amount).setScale(2);
-    }
-
     private BudgetLine line(final String category, final String quantity, final String unitAmount) {
         final BudgetLine line = new BudgetLine();
 
@@ -198,11 +205,6 @@ class BudgetServiceTest {
         return transaction;
     }
 
-    private static BudgetService.NewLine newLine(final String category, final @Nullable Long eventId, final @Nullable Long logEntryId,
-                                                 final @Nullable Long typeLineId) {
-        return new BudgetService.NewLine(REVIVAL_ID, category, "  Mat  ", null, kr("120"), eventId, logEntryId, " ", typeLineId);
-    }
-
     private Event event(final long id, final long revivalId, final @Nullable Long typeId) {
         final Event event = new Event();
 
@@ -226,11 +228,6 @@ class BudgetServiceTest {
         line.setUnitAmount(kr(unitAmount));
         line.setVersion(0L);
         return line;
-    }
-
-    private static EventDto eventDto(final long id, final @Nullable Long typeId) {
-        return new EventDto(id, REVIVAL_ID, typeId, "Rephelg 1", LocalDate.of(2027, 12, 11), LocalDate.of(2027, 12, 12), null, null, null, null,
-                true, -61, false, 0L);
     }
 
     // --- Access -----------------------------------------------------------------------------------------------------

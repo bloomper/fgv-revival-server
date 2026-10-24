@@ -43,7 +43,8 @@ public final class BudgetDtos {
     public record Budget(Long revivalId) {
     }
 
-    public record Settings(@Nullable Integer participantsPlanned, @Nullable BigDecimal participationFee, @Nullable BigDecimal loanAmount,
+    public record Settings(@Nullable Integer participantsPlanned, @Nullable BigDecimal participationFee,
+                           @Nullable BigDecimal loanAmount,
                            @Nullable LocalDate loanReceivedOn, @Nullable LocalDate loanRepaidOn, Long version) {
 
         static Settings of(final @Nullable BudgetSettings settings) {
@@ -53,8 +54,10 @@ public final class BudgetDtos {
         }
     }
 
-    public record Line(Long id, Long revivalId, String categoryId, String description, double quantity, BigDecimal unitAmount, BigDecimal amount,
-                       @Nullable Long eventId, @Nullable Long logEntryId, @Nullable Long eventTypeLineId, @Nullable String comment, boolean removed,
+    public record Line(Long id, Long revivalId, String categoryId, String description, double quantity,
+                       BigDecimal unitAmount, BigDecimal amount,
+                       @Nullable Long eventId, @Nullable Long logEntryId, @Nullable Long eventTypeLineId,
+                       @Nullable String comment, boolean removed,
                        Long version) {
 
         static Line of(final BudgetLine line) {
@@ -67,8 +70,10 @@ public final class BudgetDtos {
     /**
      * GraphQL's {@code Transaction}. {@code payer} is resolved to {@code paidBy}.
      */
-    public record Transaction(Long id, Long revivalId, LocalDate date, BigDecimal amount, String categoryId, String description,
-                              @Nullable Long budgetLineId, Owner payer, boolean reimbursed, @Nullable Instant reimbursedAt,
+    public record Transaction(Long id, Long revivalId, LocalDate date, BigDecimal amount, String categoryId,
+                              String description,
+                              @Nullable Long budgetLineId, Owner payer, boolean reimbursed,
+                              @Nullable Instant reimbursedAt,
                               @Nullable Receipt receipt, boolean cancelled, Long version) {
 
         static Transaction of(final BudgetTransaction transaction) {
@@ -92,21 +97,27 @@ public final class BudgetDtos {
         }
     }
 
-    public record Totals(BigDecimal budgetedIncome, BigDecimal budgetedCost, BigDecimal budgetedResult, BigDecimal actualIncome,
-                         BigDecimal actualCost, BigDecimal actualResult, BigDecimal unreimbursed, int unreimbursedCount, int missingReceipts) {
+    public record Totals(BigDecimal budgetedIncome, BigDecimal budgetedCost, BigDecimal budgetedResult,
+                         BigDecimal actualIncome,
+                         BigDecimal actualCost, BigDecimal actualResult, BigDecimal unreimbursed, int unreimbursedCount,
+                         int missingReceipts) {
     }
 
-    public record CategorySummary(BudgetCategoryDto category, BigDecimal budgeted, BigDecimal actual, List<ReferenceFigureView> references) {
+    public record CategorySummary(BudgetCategoryDto category, BigDecimal budgeted, BigDecimal actual,
+                                  List<ReferenceFigureView> references) {
     }
 
-    public record ReferenceFigureView(String label, Integer year, @Nullable Integer participants, @Nullable BigDecimal budgeted,
+    public record ReferenceFigureView(String label, Integer year, @Nullable Integer participants,
+                                      @Nullable BigDecimal budgeted,
                                       @Nullable BigDecimal actual, @Nullable BigDecimal budgetedPerParticipant,
                                       @Nullable BigDecimal actualPerParticipant) {
     }
 
-    public record Proposal(EventDto event, EventTypeBudgetLineDto line, @Nullable Double quantity, @Nullable BigDecimal amount) {
+    public record Proposal(EventDto event, EventTypeBudgetLineDto line, @Nullable Double quantity,
+                           @Nullable BigDecimal amount) {
     }
 
-    public record Scenario(Long id, Long revivalId, String name, ScenarioParameters parameters, ScenarioResultDto result, Long version) {
+    public record Scenario(Long id, Long revivalId, String name, ScenarioParameters parameters,
+                           ScenarioResultDto result, Long version) {
     }
 }

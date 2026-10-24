@@ -57,24 +57,6 @@ public class SpexareDirectory {
         this.cacheManager = cacheManager;
     }
 
-    /**
-     * A task from Spexregister as a planned position; {@code hasRole} when its category has actors, i.e. the ensemble
-     * (Spexregister's {@code TaskCategory.actorPresent}).
-     */
-    public record Position(String id, String name, @Nullable String category, boolean hasRole) {
-    }
-
-    public record VocalPart(String id, String name) {
-    }
-
-    private Cache people() {
-        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.SPEXARE));
-    }
-
-    private Cache reference() {
-        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.SPEXREGISTER_REFERENCE));
-    }
-
     private static <T> T unavailableOnFailure(final Supplier<T> supplier) {
         try {
             return supplier.get();
@@ -83,6 +65,14 @@ public class SpexareDirectory {
         } catch (final SpexregisterClient.SpexregisterCallException e) {
             throw new SpexregisterUnavailableException(e);
         }
+    }
+
+    private Cache people() {
+        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.SPEXARE));
+    }
+
+    private Cache reference() {
+        return Objects.requireNonNull(cacheManager.getCache(CacheConfig.SPEXREGISTER_REFERENCE));
     }
 
     /**
@@ -213,5 +203,15 @@ public class SpexareDirectory {
         } finally {
             people().evict(spexareId);
         }
+    }
+
+    /**
+     * A task from Spexregister as a planned position; {@code hasRole} when its category has actors, i.e. the ensemble
+     * (Spexregister's {@code TaskCategory.actorPresent}).
+     */
+    public record Position(String id, String name, @Nullable String category, boolean hasRole) {
+    }
+
+    public record VocalPart(String id, String name) {
     }
 }

@@ -73,6 +73,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChecklistTemplateServiceTest {
 
+    private final List<ChecklistTemplateItem> items = new ArrayList<>();
     @Mock
     private ChecklistTemplateRepository templateRepository;
     @Mock
@@ -85,9 +86,15 @@ class ChecklistTemplateServiceTest {
     private GuideAccess guideAccess;
     @Mock
     private CallerService callerService;
-
     private ChecklistTemplateService service;
-    private final List<ChecklistTemplateItem> items = new ArrayList<>();
+
+    private static ChecklistTemplateService.NewItem newItem(final String text, final RelativeDeadline deadline) {
+        return new ChecklistTemplateService.NewItem(5L, null, new ChecklistTemplateService.Texts(text, null), null, null, deadline);
+    }
+
+    static Stream<Caller> notSuperAdmins() {
+        return Stream.of(TestCallers.observer(), TestCallers.directeur(), TestCallers.steeringGroup(), TestCallers.nobody());
+    }
 
     @BeforeEach
     void setUp() {
@@ -147,8 +154,36 @@ class ChecklistTemplateServiceTest {
         return item;
     }
 
-    private static ChecklistTemplateService.NewItem newItem(final String text, final RelativeDeadline deadline) {
-        return new ChecklistTemplateService.NewItem(5L, null, new ChecklistTemplateService.Texts(text, null), null, null, deadline);
+    @ParameterizedTest
+    @MethodSource("notSuperAdmins")
+    void everyMutationIsRefusedForAnyoneButASuperAdmin(final Caller caller) {
+        template(ChecklistKind.EVENT);
+        item(1L, 0);
+        as(caller);
+
+        assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, "A", null)))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.update(5L, 0L, null)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.retire(5L, 0L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.createItem(newItem("x", null))).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.updateItem(new ChecklistTemplateService.ItemChange(1L, 0L, null, null, false, null, false, null, false)))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.moveItem(1L, 0L, 0)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.retireItem(1L, 0L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.restore(5L, 0L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.restoreItem(1L, 0L)).isInstanceOf(AccessDeniedException.class);
+        verify(templateRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void readingFollowsTheGuide() {
+        as(TestCallers.nobody());
+
+        assertThatThrownBy(() -> service.list(false)).isInstanceOf(AccessDeniedException.class);
+
+        as(TestCallers.observer());
+        when(itemRepository.findByTemplateIdIn(anyCollection())).thenReturn(List.of());
+        assertThat(service.list(false)).isEmpty();
     }
 
     @Nested
@@ -401,41 +436,5 @@ class ChecklistTemplateServiceTest {
 
             assertThatThrownBy(() -> service.retireItem(1L, 2L)).isInstanceOf(ConflictException.class);
         }
-    }
-
-    static Stream<Caller> notSuperAdmins() {
-        return Stream.of(TestCallers.observer(), TestCallers.directeur(), TestCallers.steeringGroup(), TestCallers.nobody());
-    }
-
-    @ParameterizedTest
-    @MethodSource("notSuperAdmins")
-    void everyMutationIsRefusedForAnyoneButASuperAdmin(final Caller caller) {
-        template(ChecklistKind.EVENT);
-        item(1L, 0);
-        as(caller);
-
-        assertThatThrownBy(() -> service.create(new ChecklistTemplateService.NewTemplate(ChecklistKind.CHAPTER, "A", null)))
-                .isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.update(5L, 0L, null)).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.retire(5L, 0L)).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.createItem(newItem("x", null))).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.updateItem(new ChecklistTemplateService.ItemChange(1L, 0L, null, null, false, null, false, null, false)))
-                .isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.moveItem(1L, 0L, 0)).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.retireItem(1L, 0L)).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.restore(5L, 0L)).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.restoreItem(1L, 0L)).isInstanceOf(AccessDeniedException.class);
-        verify(templateRepository, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void readingFollowsTheGuide() {
-        as(TestCallers.nobody());
-
-        assertThatThrownBy(() -> service.list(false)).isInstanceOf(AccessDeniedException.class);
-
-        as(TestCallers.observer());
-        when(itemRepository.findByTemplateIdIn(anyCollection())).thenReturn(List.of());
-        assertThat(service.list(false)).isEmpty();
     }
 }

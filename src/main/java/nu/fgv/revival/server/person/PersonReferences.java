@@ -50,12 +50,12 @@ import java.util.stream.Collectors;
 public class PersonReferences {
 
     /**
-     * A column holding a person id. {@code revivalOf} is the SQL giving the revival of row {@code t}, or null for a
-     * global reference; {@code foreignKey} whether the database declares it.
+     * Records that are not revival data, whose {@code created_by} and {@code last_modified_by} keep a person. Reference
+     * revivals are left out: the automatic ones are made by whoever deletes or anonymizes a revival.
      */
-    public record Reference(String table, String column, @Nullable String revivalOf, boolean foreignKey) {
-    }
-
+    static final List<String> GLOBAL_SUBJECT_TABLES = List.of("guide_version", "guide_chapter", "guide_section", "guide_item",
+            "checklist_template", "checklist_template_item", "mailing_template", "event_type", "event_type_budget_line", "budget_category",
+            "capability", "guide_item_type", "link_service", "spex_calendar_date");
     private static final String OWN = "t.revival_id";
     private static final String VIA_MEETING = "(SELECT m.revival_id FROM meeting m WHERE m.id = t.meeting_id)";
 
@@ -97,15 +97,6 @@ public class PersonReferences {
             // Global: the super admin's guide work
             new Reference("guide_version", "published_by", null, true),
             new Reference("guide_suggestion", "decided_by", null, true));
-
-    /**
-     * Records that are not revival data, whose {@code created_by} and {@code last_modified_by} keep a person. Reference
-     * revivals are left out: the automatic ones are made by whoever deletes or anonymizes a revival.
-     */
-    static final List<String> GLOBAL_SUBJECT_TABLES = List.of("guide_version", "guide_chapter", "guide_section", "guide_item",
-            "checklist_template", "checklist_template_item", "mailing_template", "event_type", "event_type_budget_line", "budget_category",
-            "capability", "guide_item_type", "link_service", "spex_calendar_date");
-
     private final EntityManager entityManager;
 
     public PersonReferences(final EntityManager entityManager) {
@@ -187,5 +178,12 @@ public class PersonReferences {
         return ((List<Object>) query.getResultList()).stream()
                 .map(value -> ((Number) value).longValue())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    /**
+     * A column holding a person id. {@code revivalOf} is the SQL giving the revival of row {@code t}, or null for a
+     * global reference; {@code foreignKey} whether the database declares it.
+     */
+    public record Reference(String table, String column, @Nullable String revivalOf, boolean foreignKey) {
     }
 }

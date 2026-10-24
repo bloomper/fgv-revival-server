@@ -103,6 +103,71 @@ public class RevivalService {
         this.clock = clock;
     }
 
+    /**
+     * Within 1948–2100 and not before the original spex.
+     */
+    private static Integer validYear(final @Nullable Integer year, final SpexDto spex) {
+        if (year == null || year < MIN_YEAR || year > MAX_YEAR) {
+            throw new BadRequestException("error.revival.year", MIN_YEAR, MAX_YEAR);
+        }
+        if (spex.year() != null && year < spex.year()) {
+            throw new BadRequestException("error.revival.year.beforeOriginal", spex.year());
+        }
+        return year;
+    }
+
+    /**
+     * At most {@value #MAX_SHOWS}, times as {@code HH:mm} and venues trimmed with blank as not decided, and no date, time
+     * and venue twice.
+     */
+    private static List<RevivalShowDto> validShows(final List<RevivalShowDto> shows) {
+        if (shows.size() > MAX_SHOWS) {
+            throw new BadRequestException("error.revival.shows.tooMany", MAX_SHOWS);
+        }
+
+        final List<RevivalShowDto> valid = shows.stream()
+                .map(show -> new RevivalShowDto(show.date(), validTime(show.time()), hasText(show.venue()) ? show.venue().trim() : null))
+                .toList();
+
+        if (valid.stream().anyMatch(show -> show.venue() != null && show.venue().length() > RevivalShow.VENUE_MAX_LENGTH)) {
+            throw new BadRequestException("error.revival.shows.venueTooLong", RevivalShow.VENUE_MAX_LENGTH);
+        }
+        if (new HashSet<>(valid).size() != valid.size()) {
+            throw new BadRequestException("error.revival.shows.duplicate");
+        }
+        return valid;
+    }
+
+    /**
+     * {@code HH:mm} from 00:00 to 23:59, trimmed, or null when blank.
+     */
+    private static @Nullable String validTime(final @Nullable String time) {
+        if (!hasText(time)) {
+            return null;
+        }
+
+        final String trimmed = time.trim();
+
+        if (!SHOW_TIME.matcher(trimmed).matches()) {
+            throw new BadRequestException("error.revival.shows.timeInvalid");
+        }
+        return trimmed;
+    }
+
+    private static void validateDates(final Revival revival) {
+        final LocalDate premiere = revival.getPremiereDate();
+
+        if (premiere != null && premiere.getYear() != revival.getYear()) {
+            throw new BadRequestException("error.revival.premiereDate.year", revival.getYear());
+        }
+        if (!revival.getShows().isEmpty() && premiere == null) {
+            throw new BadRequestException("error.revival.shows.withoutPremiere");
+        }
+        if (premiere != null && revival.getShows().stream().anyMatch(show -> show.getDate().isBefore(premiere))) {
+            throw new BadRequestException("error.revival.shows.beforePremiere");
+        }
+    }
+
     private RevivalDto toDto(final Caller caller, final Revival revival, final SpexDto spex, final List<GuideVersionSummaryDto> published) {
         return REVIVAL_MAPPER.toDto(revival, spex, accessPolicy.permissions(caller, revival, published));
     }
@@ -354,62 +419,10 @@ public class RevivalService {
         return toDto(caller, saved);
     }
 
-    /**
-     * Within 1948–2100 and not before the original spex.
-     */
-    private static Integer validYear(final @Nullable Integer year, final SpexDto spex) {
-        if (year == null || year < MIN_YEAR || year > MAX_YEAR) {
-            throw new BadRequestException("error.revival.year", MIN_YEAR, MAX_YEAR);
-        }
-        if (spex.year() != null && year < spex.year()) {
-            throw new BadRequestException("error.revival.year.beforeOriginal", spex.year());
-        }
-        return year;
-    }
-
     private void requireUnique(final Long spexId, final Integer year, final @Nullable Long id) {
         if (repository.existsBySpexIdAndYearAndIdNot(spexId, year, id == null ? -1L : id)) {
             throw new BadRequestException("error.revival.duplicate", year);
         }
-    }
-
-
-    /**
-     * At most {@value #MAX_SHOWS}, times as {@code HH:mm} and venues trimmed with blank as not decided, and no date, time
-     * and venue twice.
-     */
-    private static List<RevivalShowDto> validShows(final List<RevivalShowDto> shows) {
-        if (shows.size() > MAX_SHOWS) {
-            throw new BadRequestException("error.revival.shows.tooMany", MAX_SHOWS);
-        }
-
-        final List<RevivalShowDto> valid = shows.stream()
-                .map(show -> new RevivalShowDto(show.date(), validTime(show.time()), hasText(show.venue()) ? show.venue().trim() : null))
-                .toList();
-
-        if (valid.stream().anyMatch(show -> show.venue() != null && show.venue().length() > RevivalShow.VENUE_MAX_LENGTH)) {
-            throw new BadRequestException("error.revival.shows.venueTooLong", RevivalShow.VENUE_MAX_LENGTH);
-        }
-        if (new HashSet<>(valid).size() != valid.size()) {
-            throw new BadRequestException("error.revival.shows.duplicate");
-        }
-        return valid;
-    }
-
-    /**
-     * {@code HH:mm} from 00:00 to 23:59, trimmed, or null when blank.
-     */
-    private static @Nullable String validTime(final @Nullable String time) {
-        if (!hasText(time)) {
-            return null;
-        }
-
-        final String trimmed = time.trim();
-
-        if (!SHOW_TIME.matcher(trimmed).matches()) {
-            throw new BadRequestException("error.revival.shows.timeInvalid");
-        }
-        return trimmed;
     }
 
     /**
@@ -427,20 +440,6 @@ public class RevivalService {
                         show.time() == null ? null : LocalTime.parse(show.time(), RevivalShow.TIME_FORMAT), show.venue())));
         if (removed || !wanted.isEmpty()) {
             revival.setLastModifiedAt(Instant.now(clock));
-        }
-    }
-
-    private static void validateDates(final Revival revival) {
-        final LocalDate premiere = revival.getPremiereDate();
-
-        if (premiere != null && premiere.getYear() != revival.getYear()) {
-            throw new BadRequestException("error.revival.premiereDate.year", revival.getYear());
-        }
-        if (!revival.getShows().isEmpty() && premiere == null) {
-            throw new BadRequestException("error.revival.shows.withoutPremiere");
-        }
-        if (premiere != null && revival.getShows().stream().anyMatch(show -> show.getDate().isBefore(premiere))) {
-            throw new BadRequestException("error.revival.shows.beforePremiere");
         }
     }
 }

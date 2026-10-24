@@ -76,6 +76,13 @@ public class RevivalGuideSync implements ApplicationRunner {
         this.transactions = transactions;
     }
 
+    private static Map<String, String> questions(final GuideVersionView version) {
+        final Map<String, String> questions = new LinkedHashMap<>();
+
+        version.items().filter(item -> item.kind() == GuideItemKind.QUESTION).forEach(item -> questions.put(item.key(), item.text().plainSv()));
+        return questions;
+    }
+
     @EventListener
     public void revivalCreated(final RevivalCreated event) {
         sync(event.revivalId());
@@ -117,12 +124,5 @@ public class RevivalGuideSync implements ApplicationRunner {
             logEntryService.createGuideQuestions(revivalId, questions(version));
             checklistService.addChapterTemplateItems(created);
         });
-    }
-
-    private static Map<String, String> questions(final GuideVersionView version) {
-        final Map<String, String> questions = new LinkedHashMap<>();
-
-        version.items().filter(item -> item.kind() == GuideItemKind.QUESTION).forEach(item -> questions.put(item.key(), item.text().plainSv()));
-        return questions;
     }
 }

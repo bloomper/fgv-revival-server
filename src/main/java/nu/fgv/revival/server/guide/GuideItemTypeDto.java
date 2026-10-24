@@ -21,7 +21,8 @@ package nu.fgv.revival.server.guide;
  * @author Anders Jacobsson
  * @since 0.4
  */
-public record GuideItemTypeDto(String id, GuideItemKind kind, GuideVersionView.Text name, int position, boolean retired, Long version) {
+public record GuideItemTypeDto(String id, GuideItemKind kind, GuideVersionView.Text name, int position, boolean retired,
+                               Long version) {
 
     public static GuideItemTypeDto of(final GuideItemType type) {
         return new GuideItemTypeDto(type.getId(), type.getKind(), GuideVersionView.Text.plain(type.getNameSv(), type.getNameEn()),

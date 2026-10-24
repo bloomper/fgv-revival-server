@@ -17,10 +17,10 @@
 package nu.fgv.revival.server;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.icegreen.greenmail.configuration.GreenMailConfiguration;
 import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.ServerSetup;
-import com.github.tomakehurst.wiremock.client.WireMock;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import jakarta.ws.rs.core.Response;
 import org.jspecify.annotations.Nullable;
@@ -68,13 +68,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static org.assertj.core.api.Assertions.assertThat;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * MySQL and Keycloak in Testcontainers, with the committed copy of {@code fgv-keycloak}'s realm plus fictitious users,
@@ -111,6 +111,7 @@ public abstract class AbstractIntegrationTest {
     protected static final long SNORRE = 3L;
     protected static final long SPEX_REVIVAL = 99L;
     protected static final String MCP_PATH = "/api/mcp";
+    protected static final WireMockServer SPEXREGISTER = new WireMockServer(options().dynamicPort());
     private static final String SEEDED_BUDGET_CATEGORIES = "'SHOW_TICKETS', 'PARTY_TICKETS', 'FEES', 'SPONSORSHIP', 'OTHER_INCOME', 'VENUE', 'FOOD', "
             + "'PARTY', 'TECHNICAL', 'COSTUMES', 'SCENERY', 'MARKETING', 'PRINTING', 'HELPERS', 'ADMIN', 'OTHER_COST'";
     private static final String SEEDED_BUDGET_CATEGORY_NAMES = "'Biljetter föreställning', 'Biljetter kalas', 'Spexpengar', 'Sponsring', "
@@ -120,25 +121,56 @@ public abstract class AbstractIntegrationTest {
             + "'YOUTUBE', 'ONEDRIVE'";
     private static final String SEEDED_LINK_SERVICE_NAMES = "'Spexflix', 'Manusarkiv', 'Spexipedia', 'Spexify', 'Låtarkiv', 'Google Drive', "
             + "'Dropbox', 'YouTube', 'OneDrive'";
-
     private static final String REALM = "fgv";
     // The secret of fgv-revival in the committed realm copy, not a real secret
     private static final String CLIENT_SECRET = "qxIP941iHaRoiDkyyTFkwmelDstNixz3";
     private static final Duration TOKEN_LIFETIME = Duration.ofMinutes(2);
     private static final Map<String, CachedToken> TOKENS = new ConcurrentHashMap<>();
     private static final JacksonJsonParser JSON = new JacksonJsonParser();
-
     @ServiceConnection
     private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
             .withTmpFs(Map.of("/var/lib/mysql", "rw"))
             .withCommand("mysqld", "--innodb-flush-log-at-trx-commit=0", "--innodb-doublewrite=0", "--skip-log-bin", "--performance-schema=OFF");
     private static final KeycloakContainer KEYCLOAK = new KeycloakContainer("quay.io/keycloak/keycloak:26.8").withRealmImportFile("/realm/fgv.json");
-    protected static final WireMockServer SPEXREGISTER = new WireMockServer(options().dynamicPort());
     // An SMTP server in the test JVM for the minutes email (M3 research R1), also the realm's SMTP server for invitations
     // A fixed free port, so a test can stop and restart it and the application still finds it
     private static final int SMTP_PORT = freePort();
     protected static final GreenMail MAIL = new GreenMail(new ServerSetup(SMTP_PORT, null, ServerSetup.PROTOCOL_SMTP))
             .withConfiguration(GreenMailConfiguration.aConfig().withDisabledAuthentication());
+    /**
+     * Ten fictitious chapters with keys A–J in v5's layout: an introduction, items before the first section, and four
+     * sections (B ×2, D ×1, J ×1) with 6 TIP, 3 REQUIREMENT, 1 QUESTION and 11 TEXT items. Only Swedish text.
+     */
+    private static final List<SeedChapter> V5_LAYOUT = List.of(
+            new SeedChapter("A", "Först: godkännande och tajmning", List.of(
+                    text("Innan något annat görs behöver ni klartecken från JK och FGV."),
+                    tip("Kontakt sker via respektive förenings ordförande."),
+                    tip("Förankra idén **brett** och *tidigt*, se [fgv.nu](https://fgv.example.org)."),
+                    requirement("Nyuppsättningen ska godkännas av JK och FGV innan arbetet startar.")), List.of()),
+            new SeedChapter("B", "Boka lokaler och lägg fast er tidslinje", List.of(), List.of(
+                    new SeedSection("Kalaslokal", List.of(
+                            text("Om kalaset"),
+                            text("250 personer är ett stort kalas."),
+                            text("Ha en plan för vem som ska få gå."),
+                            tip("Kontrollera sprittillstånd i vald lokal.\n\n- Gäller även internkalas."))),
+                    new SeedSection("Tidslinjen", List.of(
+                            text("Exempel på tidplan för nyuppsättning"),
+                            new SeedItem("QUESTION", "Vilka datum har sittande spex?"))))),
+            new SeedChapter("C", "Sätt budgeten", List.of(
+                    tip("Sätt av en buffert för oväntade kostnader."),
+                    requirement("Budget ska upprättas innan ni drar kostnader.")), List.of()),
+            new SeedChapter("D", "Bygg organisationen", List.of(), List.of(
+                    new SeedSection("Andra direktionsmötet", List.of(
+                            text("Checklista för mötet"),
+                            text("Organisation: roller och ansvar."),
+                            tip("Starta en gemensam Drive."))))),
+            new SeedChapter("E", "Ordna tillgångar inför repetitionerna", List.of(tip("Undersök accesser i god tid.")), List.of()),
+            new SeedChapter("F", "Repetitioner", List.of(text("Dokumentera processen löpande, både för minnen och för lärdomar.")), List.of()),
+            new SeedChapter("G", "Marknadsföring och biljetter", List.of(text("Starta marknadsföringen tidigt och var kreativa.")), List.of()),
+            new SeedChapter("H", "Föreställnings- och kalashelgen", List.of(text("Kalaset är en lika stor apparat som föreställningen.")), List.of()),
+            new SeedChapter("I", "Eventuell turné (frivilligt)", List.of(text("Frågan om turné dyker ofta upp under kalaset.")), List.of()),
+            new SeedChapter("J", "Stänga nyuppsättningen", List.of(), List.of(
+                    new SeedSection("Ekonomi", List.of(requirement("Ett eventuellt lån ska återbetalas."))))));
 
     static {
         Testcontainers.exposeHostPorts(SMTP_PORT);
@@ -149,7 +181,6 @@ public abstract class AbstractIntegrationTest {
     }
 
     private final AtomicInteger requestId = new AtomicInteger();
-
     @LocalServerPort
     protected int localPort;
     @Autowired
@@ -258,6 +289,122 @@ public abstract class AbstractIntegrationTest {
         return admin.realm(REALM);
     }
 
+    /**
+     * Spexregister answering with the canned original spex, the revival spex {@value #SPEX_REVIVAL}, and not found for
+     * anything else.
+     */
+    protected static void spexregisterUp() {
+        SPEXREGISTER.resetAll();
+        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
+                .withRequestBody(containing("OriginalSpex"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("originalSpex.json"))));
+        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
+                .withRequestBody(containing("SpexById"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("spexNotFound.json"))));
+        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
+                .withRequestBody(containing("SpexById"))
+                .withRequestBody(matchingJsonPath("$.variables.id", equalTo(String.valueOf(SPEX_REVIVAL))))
+                .atPriority(1)
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("spexRevival.json"))));
+    }
+
+    protected static int spexregisterCalls() {
+        return SPEXREGISTER.countRequestsMatching(WireMock.postRequestedFor(urlEqualTo("/api/graphql")).build()).getCount();
+    }
+
+    private static String resource(final String name) {
+        try (var stream = AbstractIntegrationTest.class.getResourceAsStream("/spexregister/" + name)) {
+            return new String(Objects.requireNonNull(stream).readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (final java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    protected static String token(final String user) {
+        return token(user, CLIENT_ID);
+    }
+
+    // --- Tokens -----------------------------------------------------------------------------------------------------
+
+    protected static String mcpToken(final String user) {
+        return token(user, MCP_CLIENT_ID);
+    }
+
+    protected static String token(final String user, final String clientId) {
+        final String key = clientId + ":" + user;
+        final CachedToken cached = TOKENS.get(key);
+
+        if (cached != null && cached.expires().isAfter(Instant.now())) {
+            return cached.value();
+        }
+
+        final String value = freshToken(user, clientId);
+
+        TOKENS.put(key, new CachedToken(value, Instant.now().plus(TOKEN_LIFETIME)));
+        return value;
+    }
+
+    /**
+     * A token by password grant, bypassing the cache.
+     */
+    protected static String freshToken(final String user, final String clientId) {
+        final MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+
+        form.add("grant_type", "password");
+        form.add("client_id", clientId);
+        if (CLIENT_ID.equals(clientId)) {
+            form.add("client_secret", CLIENT_SECRET);
+        }
+        form.add("username", user);
+        form.add("password", PASSWORD);
+        form.add("scope", "openid");
+
+        final String response = WebClient.create()
+                .post()
+                .uri(KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM + "/protocol/openid-connect/token")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(BodyInserters.fromFormData(form))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+        return "Bearer " + JSON.parseMap(response).get("access_token");
+    }
+
+    protected static void forgetTokens() {
+        TOKENS.clear();
+    }
+
+    /**
+     * Asserts that the response has an error with the given {@code extensions.classification}, e.g. {@code FORBIDDEN}.
+     */
+    protected static void expectError(final GraphQlTester.Response response, final String code) {
+        response.errors().satisfy(errors -> assertThat(errors)
+                .as("errors")
+                .anySatisfy(error -> assertThat(String.valueOf(error.getErrorType())).isEqualTo(code)));
+    }
+
+    // --- GraphQL ----------------------------------------------------------------------------------------------------
+
+    private static SeedItem tip(final String text) {
+        return new SeedItem("TIP", text);
+    }
+
+    private static SeedItem requirement(final String text) {
+        return new SeedItem("REQUIREMENT", text);
+    }
+
+    private static SeedItem text(final String text) {
+        return new SeedItem("TEXT", text);
+    }
+
+    private static long insert(final JdbcClient.StatementSpec statement) {
+        final org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+
+        statement.update(keyHolder);
+        return Objects.requireNonNull(keyHolder.getKey()).longValue();
+    }
+
     @BeforeEach
     void resetState() {
         jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
@@ -342,25 +489,6 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
-     * Spexregister answering with the canned original spex, the revival spex {@value #SPEX_REVIVAL}, and not found for
-     * anything else.
-     */
-    protected static void spexregisterUp() {
-        SPEXREGISTER.resetAll();
-        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
-                .withRequestBody(containing("OriginalSpex"))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("originalSpex.json"))));
-        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
-                .withRequestBody(containing("SpexById"))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("spexNotFound.json"))));
-        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
-                .withRequestBody(containing("SpexById"))
-                .withRequestBody(matchingJsonPath("$.variables.id", equalTo(String.valueOf(SPEX_REVIVAL))))
-                .atPriority(1)
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("spexRevival.json"))));
-    }
-
-    /**
      * Spexregister failing, as when it is down or slow.
      */
     protected void spexregisterDown(final boolean timeout) {
@@ -369,75 +497,6 @@ public abstract class AbstractIntegrationTest {
                 .willReturn(timeout ? aResponse().withFixedDelay(5_000).withStatus(200) : aResponse().withStatus(503)));
         cacheManager.getCacheNames().forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
     }
-
-    protected static int spexregisterCalls() {
-        return SPEXREGISTER.countRequestsMatching(WireMock.postRequestedFor(urlEqualTo("/api/graphql")).build()).getCount();
-    }
-
-    private static String resource(final String name) {
-        try (var stream = AbstractIntegrationTest.class.getResourceAsStream("/spexregister/" + name)) {
-            return new String(Objects.requireNonNull(stream).readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (final java.io.IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    // --- Tokens -----------------------------------------------------------------------------------------------------
-
-    protected static String token(final String user) {
-        return token(user, CLIENT_ID);
-    }
-
-    protected static String mcpToken(final String user) {
-        return token(user, MCP_CLIENT_ID);
-    }
-
-    protected static String token(final String user, final String clientId) {
-        final String key = clientId + ":" + user;
-        final CachedToken cached = TOKENS.get(key);
-
-        if (cached != null && cached.expires().isAfter(Instant.now())) {
-            return cached.value();
-        }
-
-        final String value = freshToken(user, clientId);
-
-        TOKENS.put(key, new CachedToken(value, Instant.now().plus(TOKEN_LIFETIME)));
-        return value;
-    }
-
-    /**
-     * A token by password grant, bypassing the cache.
-     */
-    protected static String freshToken(final String user, final String clientId) {
-        final MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-
-        form.add("grant_type", "password");
-        form.add("client_id", clientId);
-        if (CLIENT_ID.equals(clientId)) {
-            form.add("client_secret", CLIENT_SECRET);
-        }
-        form.add("username", user);
-        form.add("password", PASSWORD);
-        form.add("scope", "openid");
-
-        final String response = WebClient.create()
-                .post()
-                .uri(KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM + "/protocol/openid-connect/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData(form))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-
-        return "Bearer " + JSON.parseMap(response).get("access_token");
-    }
-
-    protected static void forgetTokens() {
-        TOKENS.clear();
-    }
-
-    // --- GraphQL ----------------------------------------------------------------------------------------------------
 
     protected HttpGraphQlTester graphQl(final @Nullable String user) {
         return graphQlWithToken(user == null ? null : token(user));
@@ -454,15 +513,6 @@ public abstract class AbstractIntegrationTest {
                     headers.set(HttpHeaders.ACCEPT_LANGUAGE, "en");
                 })
                 .build());
-    }
-
-    /**
-     * Asserts that the response has an error with the given {@code extensions.classification}, e.g. {@code FORBIDDEN}.
-     */
-    protected static void expectError(final GraphQlTester.Response response, final String code) {
-        response.errors().satisfy(errors -> assertThat(errors)
-                .as("errors")
-                .anySatisfy(error -> assertThat(String.valueOf(error.getErrorType())).isEqualTo(code)));
     }
 
     protected GraphQlTester.Response execute(final String user, final String document, final Map<String, Object> variables) {
@@ -491,6 +541,8 @@ public abstract class AbstractIntegrationTest {
     protected long version(final long revivalId) {
         return jdbcClient.sql("SELECT version FROM revival WHERE id = ?").param(revivalId).query(Long.class).single();
     }
+
+    // --- Guide ------------------------------------------------------------------------------------------------------
 
     /**
      * Moves a revival to a status as super admin.
@@ -550,64 +602,6 @@ public abstract class AbstractIntegrationTest {
         setStatus(revival, "ORGANISING");
         return revival;
     }
-
-    // --- Guide ------------------------------------------------------------------------------------------------------
-
-    private record SeedItem(String type, String text) {
-    }
-
-    private record SeedSection(String title, List<SeedItem> items) {
-    }
-
-    private record SeedChapter(String key, String title, List<SeedItem> items, List<SeedSection> sections) {
-    }
-
-    private static SeedItem tip(final String text) {
-        return new SeedItem("TIP", text);
-    }
-
-    private static SeedItem requirement(final String text) {
-        return new SeedItem("REQUIREMENT", text);
-    }
-
-    private static SeedItem text(final String text) {
-        return new SeedItem("TEXT", text);
-    }
-
-    /**
-     * Ten fictitious chapters with keys A–J in v5's layout: an introduction, items before the first section, and four
-     * sections (B ×2, D ×1, J ×1) with 6 TIP, 3 REQUIREMENT, 1 QUESTION and 11 TEXT items. Only Swedish text.
-     */
-    private static final List<SeedChapter> V5_LAYOUT = List.of(
-            new SeedChapter("A", "Först: godkännande och tajmning", List.of(
-                    text("Innan något annat görs behöver ni klartecken från JK och FGV."),
-                    tip("Kontakt sker via respektive förenings ordförande."),
-                    tip("Förankra idén **brett** och *tidigt*, se [fgv.nu](https://fgv.example.org)."),
-                    requirement("Nyuppsättningen ska godkännas av JK och FGV innan arbetet startar.")), List.of()),
-            new SeedChapter("B", "Boka lokaler och lägg fast er tidslinje", List.of(), List.of(
-                    new SeedSection("Kalaslokal", List.of(
-                            text("Om kalaset"),
-                            text("250 personer är ett stort kalas."),
-                            text("Ha en plan för vem som ska få gå."),
-                            tip("Kontrollera sprittillstånd i vald lokal.\n\n- Gäller även internkalas."))),
-                    new SeedSection("Tidslinjen", List.of(
-                            text("Exempel på tidplan för nyuppsättning"),
-                            new SeedItem("QUESTION", "Vilka datum har sittande spex?"))))),
-            new SeedChapter("C", "Sätt budgeten", List.of(
-                    tip("Sätt av en buffert för oväntade kostnader."),
-                    requirement("Budget ska upprättas innan ni drar kostnader.")), List.of()),
-            new SeedChapter("D", "Bygg organisationen", List.of(), List.of(
-                    new SeedSection("Andra direktionsmötet", List.of(
-                            text("Checklista för mötet"),
-                            text("Organisation: roller och ansvar."),
-                            tip("Starta en gemensam Drive."))))),
-            new SeedChapter("E", "Ordna tillgångar inför repetitionerna", List.of(tip("Undersök accesser i god tid.")), List.of()),
-            new SeedChapter("F", "Repetitioner", List.of(text("Dokumentera processen löpande, både för minnen och för lärdomar.")), List.of()),
-            new SeedChapter("G", "Marknadsföring och biljetter", List.of(text("Starta marknadsföringen tidigt och var kreativa.")), List.of()),
-            new SeedChapter("H", "Föreställnings- och kalashelgen", List.of(text("Kalaset är en lika stor apparat som föreställningen.")), List.of()),
-            new SeedChapter("I", "Eventuell turné (frivilligt)", List.of(text("Frågan om turné dyker ofta upp under kalaset.")), List.of()),
-            new SeedChapter("J", "Stänga nyuppsättningen", List.of(), List.of(
-                    new SeedSection("Ekonomi", List.of(requirement("Ett eventuellt lån ska återbetalas."))))));
 
     /**
      * Writes the fictitious v5-layout guide as the draft, straight to the database, and returns the draft's id. Chapter
@@ -707,13 +701,6 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
-    private static long insert(final JdbcClient.StatementSpec statement) {
-        final org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
-
-        statement.update(keyHolder);
-        return Objects.requireNonNull(keyHolder.getKey()).longValue();
-    }
-
     protected long guideVersion(final long versionId) {
         return jdbcClient.sql("SELECT version FROM guide_version WHERE id = ?").param(versionId).query(Long.class).single();
     }
@@ -738,8 +725,6 @@ public abstract class AbstractIntegrationTest {
         publishGuide(id, "v1");
         return id;
     }
-
-    // --- MCP --------------------------------------------------------------------------------------------------------
 
     protected RestTestClient restTestClient() {
         return RestTestClient.bindToServer().baseUrl("http://localhost:%d".formatted(localPort)).build();
@@ -773,6 +758,17 @@ public abstract class AbstractIntegrationTest {
             throw new AssertionError("Tool error: " + result);
         }
         return objectMapper.readTree(result.get("content").get(0).get("text").asString()).get("items");
+    }
+
+    // --- MCP --------------------------------------------------------------------------------------------------------
+
+    private record SeedItem(String type, String text) {
+    }
+
+    private record SeedSection(String title, List<SeedItem> items) {
+    }
+
+    private record SeedChapter(String key, String title, List<SeedItem> items, List<SeedSection> sections) {
     }
 
     private record CachedToken(String value, Instant expires) {

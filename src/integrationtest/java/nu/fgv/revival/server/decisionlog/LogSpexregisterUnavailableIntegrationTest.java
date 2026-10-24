@@ -84,7 +84,7 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
         execute(STEERING_GROUP, "mutation($input: MinutesEmailSendInput!) { minutesEmailSend(input: $input) { id } }",
                 Map.of("input", Map.of("meetingId", meeting, "language", "sv"))).errors().verify();
         execute(OBSERVER, "query($id: ID!, $meeting: ID!) { meetings(revivalId: $id) { id status } meeting(id: $meeting) { attendees { displayName } "
-                + "minutes { decisions { number owner { name } } recorder { displayName } } emails { recipients { person { displayName } status } } } }",
+                        + "minutes { decisions { number owner { name } } recorder { displayName } } emails { recipients { person { displayName } status } } } }",
                 Map.of("id", revival, "meeting", meeting)).errors().verify();
         assertThat(spexregisterCalls()).isEqualTo(before);
     }

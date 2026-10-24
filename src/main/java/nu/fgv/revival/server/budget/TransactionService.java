@@ -79,25 +79,9 @@ public class TransactionService {
         this.clock = clock;
     }
 
-    public record NewTransaction(Long revivalId, LocalDate date, BigDecimal amount, String categoryId, String description,
-                                 @Nullable Long budgetLineId, @Nullable OwnerInputDto paidBy) {
+    private static BigDecimal validAmount(final BigDecimal amount) {
+        return Objects.requireNonNull(BudgetService.validAmount(amount, MIN_AMOUNT));
     }
-
-    /**
-     * Fields left null are unchanged; the {@code clear*} flags remove a value.
-     */
-    public record TransactionChange(Long id, Long version, @Nullable LocalDate date, @Nullable BigDecimal amount, @Nullable String categoryId,
-                                    @Nullable String description, @Nullable Long budgetLineId, boolean clearBudgetLine,
-                                    @Nullable OwnerInputDto paidBy, boolean clearPaidBy) {
-    }
-
-    /**
-     * A receipt's file to download.
-     */
-    public record ReceiptFile(String filename, String contentType, byte[] content) {
-    }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     /**
      * Newest date first.
@@ -120,7 +104,7 @@ public class TransactionService {
                 .toList();
     }
 
-    // --- Writing ----------------------------------------------------------------------------------------------------
+    // --- Reading ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public Transaction create(final NewTransaction newTransaction) {
@@ -180,6 +164,8 @@ public class TransactionService {
         return Transaction.of(repository.saveAndFlush(transaction));
     }
 
+    // --- Writing ----------------------------------------------------------------------------------------------------
+
     /**
      * The transaction stays readable and stops counting in the totals.
      */
@@ -216,8 +202,6 @@ public class TransactionService {
         return Transaction.of(repository.saveAndFlush(transaction));
     }
 
-    // --- Receipts ---------------------------------------------------------------------------------------------------
-
     /**
      * Stores the file as the transaction's receipt, replacing any earlier one. Its type is read from its content.
      */
@@ -250,6 +234,8 @@ public class TransactionService {
                 content.getContent());
     }
 
+    // --- Receipts ---------------------------------------------------------------------------------------------------
+
     /**
      * Clears the receipt and deletes its file.
      */
@@ -270,8 +256,6 @@ public class TransactionService {
         repository.saveAndFlush(transaction);
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private BudgetTransaction readable(final Caller caller, final Long id) {
         final BudgetTransaction transaction = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(BudgetTransaction.class, id));
 
@@ -290,6 +274,8 @@ public class TransactionService {
         }
         return transaction;
     }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private BudgetTransaction changeable(final Caller caller, final Long id, final Long version) {
         final BudgetTransaction transaction = writableUnversioned(caller, id);
@@ -324,7 +310,23 @@ public class TransactionService {
         return lineId;
     }
 
-    private static BigDecimal validAmount(final BigDecimal amount) {
-        return Objects.requireNonNull(BudgetService.validAmount(amount, MIN_AMOUNT));
+    public record NewTransaction(Long revivalId, LocalDate date, BigDecimal amount, String categoryId,
+                                 String description,
+                                 @Nullable Long budgetLineId, @Nullable OwnerInputDto paidBy) {
+    }
+
+    /**
+     * Fields left null are unchanged; the {@code clear*} flags remove a value.
+     */
+    public record TransactionChange(Long id, Long version, @Nullable LocalDate date, @Nullable BigDecimal amount,
+                                    @Nullable String categoryId,
+                                    @Nullable String description, @Nullable Long budgetLineId, boolean clearBudgetLine,
+                                    @Nullable OwnerInputDto paidBy, boolean clearPaidBy) {
+    }
+
+    /**
+     * A receipt's file to download.
+     */
+    public record ReceiptFile(String filename, String contentType, byte[] content) {
     }
 }

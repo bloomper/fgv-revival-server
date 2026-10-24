@@ -38,11 +38,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventProposalsTest {
 
     private static final LocalDate PREMIERE = LocalDate.of(2028, 2, 10);
-
-    private static EventTypeDto type(final long id, final String name, final @Nullable Integer min, final @Nullable Integer max, final int days) {
-        return new EventTypeDto(id, GuideVersionView.Text.plain(name, null), null, null, null, min, max, days, false, null, (int) id, false, 0L);
-    }
-
     private static final List<EventTypeDto> TIMELINE = List.of(
             type(1, "AW", null, null, 1),
             type(2, "Kickoff", -120, -60, 1),
@@ -51,6 +46,10 @@ class EventProposalsTest {
             type(5, "Rephelg 3", -21, -14, 2),
             type(6, "Föreställningshelg", 0, 0, 3),
             type(7, "Kortafton", 7, 90, 1));
+
+    private static EventTypeDto type(final long id, final String name, final @Nullable Integer min, final @Nullable Integer max, final int days) {
+        return new EventTypeDto(id, GuideVersionView.Text.plain(name, null), null, null, null, min, max, days, false, null, (int) id, false, 0L);
+    }
 
     @Test
     void everyTypeWithOffsetsIsProposedInDateOrder() {

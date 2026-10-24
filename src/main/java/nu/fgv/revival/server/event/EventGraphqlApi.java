@@ -53,17 +53,6 @@ public class EventGraphqlApi {
         this.typeService = typeService;
     }
 
-    public record EventCreateInput(Long revivalId, @Nullable Long typeId, @Nullable String title, LocalDate startDate, @Nullable LocalDate endDate,
-                                   @Nullable String startTime, @Nullable String endTime, @Nullable String location, @Nullable String description,
-                                   @Nullable Boolean revivalPays) {
-    }
-
-    public record EventUpdateInput(Long id, Long version, @Nullable String title, @Nullable LocalDate startDate, @Nullable LocalDate endDate,
-                                   @Nullable String startTime, @Nullable Boolean clearStartTime, @Nullable String endTime,
-                                   @Nullable Boolean clearEndTime, @Nullable String location, @Nullable Boolean clearLocation,
-                                   @Nullable String description, @Nullable Boolean clearDescription, @Nullable Boolean revivalPays) {
-    }
-
     @QueryMapping
     public List<EventDto> events(@Argument final Long revivalId, @Argument final @Nullable Boolean includeCancelled) {
         return service.list(revivalId, Boolean.TRUE.equals(includeCancelled));
@@ -130,5 +119,22 @@ public class EventGraphqlApi {
     @SchemaMapping(typeName = "Checklist", field = "event")
     public @Nullable EventDto checklistEvent(final ChecklistDto checklist) {
         return checklist.eventId() == null ? null : service.get(checklist.eventId());
+    }
+
+    public record EventCreateInput(Long revivalId, @Nullable Long typeId, @Nullable String title, LocalDate startDate,
+                                   @Nullable LocalDate endDate,
+                                   @Nullable String startTime, @Nullable String endTime, @Nullable String location,
+                                   @Nullable String description,
+                                   @Nullable Boolean revivalPays) {
+    }
+
+    public record EventUpdateInput(Long id, Long version, @Nullable String title, @Nullable LocalDate startDate,
+                                   @Nullable LocalDate endDate,
+                                   @Nullable String startTime, @Nullable Boolean clearStartTime,
+                                   @Nullable String endTime,
+                                   @Nullable Boolean clearEndTime, @Nullable String location,
+                                   @Nullable Boolean clearLocation,
+                                   @Nullable String description, @Nullable Boolean clearDescription,
+                                   @Nullable Boolean revivalPays) {
     }
 }

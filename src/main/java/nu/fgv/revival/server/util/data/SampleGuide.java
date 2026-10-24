@@ -41,18 +41,6 @@ import java.util.UUID;
  */
 final class SampleGuide {
 
-    private static final String INTRO_SV = """
-            Ska ni sätta upp ert gamla spex igen? Den här guiden är till för er i direktionen. Den bygger på \
-            erfarenheter från tidigare nyuppsättningar och följer i stort den ordning saker behöver göras i.
-
-            Glöm inte att resan är minst lika viktig som resultatet: rephelgerna och kalasen är det ni minns.""";
-    private static final String INTRO_EN = """
-            Are you reviving your old spex? This guide is for you in the direction. It builds on earlier revivals and \
-            follows roughly the order in which things need to be done.
-
-            Remember that the journey matters as much as the result: the rehearsal weekends and parties are what you \
-            will remember.""";
-
     /**
      * The guide item types the database starts with (migration V3_8), by id.
      */
@@ -60,7 +48,6 @@ final class SampleGuide {
     static final String REQUIREMENT = "REQUIREMENT";
     static final String QUESTION = "QUESTION";
     static final String TEXT = "TEXT";
-
     static final String CHAPTER_A = "chapter-a";
     static final String CHAPTER_B = "chapter-b";
     static final String CHAPTER_C = "chapter-c";
@@ -71,23 +58,21 @@ final class SampleGuide {
     static final String CHAPTER_H = "chapter-h";
     static final String CHAPTER_I = "chapter-i";
     static final String CHAPTER_J = "chapter-j";
-
+    private static final String INTRO_SV = """
+            Ska ni sätta upp ert gamla spex igen? Den här guiden är till för er i direktionen. Den bygger på \
+            erfarenheter från tidigare nyuppsättningar och följer i stort den ordning saker behöver göras i.
+            
+            Glöm inte att resan är minst lika viktig som resultatet: rephelgerna och kalasen är det ni minns.""";
+    private static final String INTRO_EN = """
+            Are you reviving your old spex? This guide is for you in the direction. It builds on earlier revivals and \
+            follows roughly the order in which things need to be done.
+            
+            Remember that the journey matters as much as the result: the rehearsal weekends and parties are what you \
+            will remember.""";
     private static final List<String> CHAPTERS = List.of(CHAPTER_A, CHAPTER_B, CHAPTER_C, CHAPTER_D, CHAPTER_E, CHAPTER_F, CHAPTER_G,
             CHAPTER_H, CHAPTER_I, CHAPTER_J);
 
     private SampleGuide() {
-    }
-
-    record Version(long id, Instant publishedAt) {
-    }
-
-    private record Item(String name, String type, String text) {
-    }
-
-    private record Section(String name, String title, List<Item> items) {
-    }
-
-    private record Chapter(String name, String titleSv, String titleEn, List<Item> items, List<Section> sections) {
     }
 
     /**
@@ -317,5 +302,17 @@ final class SampleGuide {
 
     static String key(final String name) {
         return UUID.nameUUIDFromBytes(("sample-guide/" + name).getBytes(StandardCharsets.UTF_8)).toString();
+    }
+
+    record Version(long id, Instant publishedAt) {
+    }
+
+    private record Item(String name, String type, String text) {
+    }
+
+    private record Section(String name, String title, List<Item> items) {
+    }
+
+    private record Chapter(String name, String titleSv, String titleEn, List<Item> items, List<Section> sections) {
     }
 }

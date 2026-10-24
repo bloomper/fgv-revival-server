@@ -173,15 +173,6 @@ public class MinutesEmailService {
         }
     }
 
-    private record Earlier(Long id, Long meetingId, String language, Set<Long> failed) {
-    }
-
-    private record Prepared(Caller caller, MeetingDto meeting, Revival revival, String language) {
-    }
-
-    private record Recipients(List<Person> people, int waiting) {
-    }
-
     private Prepared prepare(final Long meetingId, final String language) {
         if (!LANGUAGES.contains(language)) {
             throw new BadRequestException("error.mail.language");
@@ -276,5 +267,14 @@ public class MinutesEmailService {
                 email.getSentAt(), email.getRecipients().stream()
                 .map(recipient -> new MinutesEmailDto.Recipient(person.apply(recipient.personId()), recipient.status())).toList(),
                 email.getWaitingLeftOut())).toList();
+    }
+
+    private record Earlier(Long id, Long meetingId, String language, Set<Long> failed) {
+    }
+
+    private record Prepared(Caller caller, MeetingDto meeting, Revival revival, String language) {
+    }
+
+    private record Recipients(List<Person> people, int waiting) {
     }
 }

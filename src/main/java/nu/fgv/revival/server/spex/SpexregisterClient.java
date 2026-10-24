@@ -54,13 +54,10 @@ import java.util.function.Supplier;
 @Component
 public class SpexregisterClient {
 
-    static final int MAX_SPEX = 500;
     /**
      * At most this many spexare per {@code spexareByIds} call, as Spexregister allows.
      */
     public static final int MAX_SPEXARE = 500;
-    static final int MAX_TASKS = 500;
-    static final int MAX_SEARCH = 50;
     /**
      * The address type that holds a person's email and phone.
      */
@@ -69,9 +66,19 @@ public class SpexregisterClient {
      * The consent to being kept in FGV's register (product spec 5.6).
      */
     public static final String REGISTER = "REGISTER";
+    /**
+     * The membership type FGV's memberships are recorded with.
+     */
+    public static final String FGV_MEMBERSHIP = "FGV";
+    /**
+     * The vocal type for an actor whose vocal part is not known.
+     */
+    public static final String UNKNOWN_VOCAL = "UNKNOWN";
+    static final int MAX_SPEX = 500;
+    static final int MAX_TASKS = 500;
+    static final int MAX_SEARCH = 50;
     static final String ACTING_PERSON_HEADER = "X-Acting-Person";
     static final int ACTING_PERSON_MAX_LENGTH = 255;
-
     private static final String SPEXARE_FIELDS = "id firstName lastName nickName graduation deceased";
     private static final String SPEXARE_BY_IDS = """
             query SpexareByIds($ids: [ID!]!) {
@@ -122,7 +129,6 @@ public class SpexregisterClient {
             mutation ConsentUpdate($spexareId: ID!, $typeId: ID!, $input: ConsentUpdate!) {
                 consentUpdate(spexareId: $spexareId, typeId: $typeId, input: $input) { id }
             }""";
-
     // --- The participation sync (M7) ---
     private static final String SPEXARE_ACTIVITIES = """
             query SpexareActivities($ids: [ID!]!) {
@@ -159,15 +165,6 @@ public class SpexregisterClient {
             mutation MembershipCreate($spexareId: ID!, $typeId: ID!, $input: MembershipCreate!) {
                 membershipCreate(spexareId: $spexareId, typeId: $typeId, input: $input) { id }
             }""";
-    /**
-     * The membership type FGV's memberships are recorded with.
-     */
-    public static final String FGV_MEMBERSHIP = "FGV";
-    /**
-     * The vocal type for an actor whose vocal part is not known.
-     */
-    public static final String UNKNOWN_VOCAL = "UNKNOWN";
-
     private static final String ORIGINAL_SPEX = """
             query OriginalSpex($first: Int!) {
                 spexPaged(first: $first, filter: "parent:NULL", sort: ["year"], direction: ASC) {
@@ -197,6 +194,50 @@ public class SpexregisterClient {
         } catch (final NumberFormatException _) {
             return null;
         }
+    }
+
+    /**
+     * The value of {@value #ACTING_PERSON_HEADER}: at most {@value #ACTING_PERSON_MAX_LENGTH} characters, percent-encoded
+     * as UTF-8, which Spexregister decodes.
+     */
+    static String actingPersonHeader(final String actingPerson) {
+        final String trimmed = actingPerson.strip();
+        final String limited = trimmed.length() <= ACTING_PERSON_MAX_LENGTH ? trimmed : trimmed.substring(0, ACTING_PERSON_MAX_LENGTH);
+
+        return UriUtils.encode(limited, StandardCharsets.UTF_8);
+    }
+
+    private static boolean notFound(final ClientGraphQlResponse response) {
+        return !response.getErrors().isEmpty()
+                && response.getErrors().stream().allMatch(error -> ErrorType.NOT_FOUND.equals(error.getErrorType()));
+    }
+
+    private static void requireValid(final ClientGraphQlResponse response) {
+        if (!response.getErrors().isEmpty()) {
+            throw new SpexregisterCallException("Response has errors", classify(response));
+        }
+        if (!response.isValid()) {
+            throw new SpexregisterCallException("Response has no data");
+        }
+    }
+
+    // --- Spexare (M6) -----------------------------------------------------------------------------------------------
+
+    /**
+     * What Spexregister's errors mean for a write: it does not know something, it already has it, or it refused.
+     */
+    private static String classify(final ClientGraphQlResponse response) {
+        final List<String> classifications = response.getErrors().stream()
+                .map(error -> String.valueOf(error.getExtensions().getOrDefault("classification", error.getErrorType())))
+                .toList();
+
+        if (classifications.stream().allMatch(ErrorType.NOT_FOUND.name()::equals)) {
+            return SpexregisterCallException.NOT_FOUND;
+        }
+        if (classifications.contains("CONFLICT")) {
+            return SpexregisterCallException.EXISTS;
+        }
+        return SpexregisterCallException.REFUSED;
     }
 
     /**
@@ -269,19 +310,6 @@ public class SpexregisterClient {
             }
             return Optional.of(new Poster(response.getBody(), contentType.toString()));
         });
-    }
-
-    // --- Spexare (M6) -----------------------------------------------------------------------------------------------
-
-    /**
-     * The value of {@value #ACTING_PERSON_HEADER}: at most {@value #ACTING_PERSON_MAX_LENGTH} characters, percent-encoded
-     * as UTF-8, which Spexregister decodes.
-     */
-    static String actingPersonHeader(final String actingPerson) {
-        final String trimmed = actingPerson.strip();
-        final String limited = trimmed.length() <= ACTING_PERSON_MAX_LENGTH ? trimmed : trimmed.substring(0, ACTING_PERSON_MAX_LENGTH);
-
-        return UriUtils.encode(limited, StandardCharsets.UTF_8);
     }
 
     private HttpSyncGraphQlClient actingFor(final String actingPerson) {
@@ -407,6 +435,8 @@ public class SpexregisterClient {
         });
     }
 
+    // --- The participation sync (M7) -------------------------------------------------------------------------------
+
     /**
      * Creates an unpublished spexare who is not deceased, and returns its id.
      */
@@ -483,8 +513,6 @@ public class SpexregisterClient {
             return null;
         });
     }
-
-    // --- The participation sync (M7) -------------------------------------------------------------------------------
 
     /**
      * The spexare's activities with their spex, tasks and actors, read fresh (never cached): the sync decides from them
@@ -600,37 +628,6 @@ public class SpexregisterClient {
         });
     }
 
-    private static boolean notFound(final ClientGraphQlResponse response) {
-        return !response.getErrors().isEmpty()
-                && response.getErrors().stream().allMatch(error -> ErrorType.NOT_FOUND.equals(error.getErrorType()));
-    }
-
-    private static void requireValid(final ClientGraphQlResponse response) {
-        if (!response.getErrors().isEmpty()) {
-            throw new SpexregisterCallException("Response has errors", classify(response));
-        }
-        if (!response.isValid()) {
-            throw new SpexregisterCallException("Response has no data");
-        }
-    }
-
-    /**
-     * What Spexregister's errors mean for a write: it does not know something, it already has it, or it refused.
-     */
-    private static String classify(final ClientGraphQlResponse response) {
-        final List<String> classifications = response.getErrors().stream()
-                .map(error -> String.valueOf(error.getExtensions().getOrDefault("classification", error.getErrorType())))
-                .toList();
-
-        if (classifications.stream().allMatch(ErrorType.NOT_FOUND.name()::equals)) {
-            return SpexregisterCallException.NOT_FOUND;
-        }
-        if (classifications.contains("CONFLICT")) {
-            return SpexregisterCallException.EXISTS;
-        }
-        return SpexregisterCallException.REFUSED;
-    }
-
     private <T> T call(final Supplier<T> supplier) {
         try {
             return supplier.get();
@@ -660,8 +657,10 @@ public class SpexregisterClient {
     /**
      * A spexare as Spexregister returns it. Addresses, consents and activities only from {@link #spexareByIds}.
      */
-    public record Spexare(String id, String firstName, String lastName, @Nullable String nickName, @Nullable String graduation,
-                          @Nullable Boolean deceased, @Nullable List<Address> addresses, @Nullable List<Consent> consents,
+    public record Spexare(String id, String firstName, String lastName, @Nullable String nickName,
+                          @Nullable String graduation,
+                          @Nullable Boolean deceased, @Nullable List<Address> addresses,
+                          @Nullable List<Consent> consents,
                           @Nullable List<Activity> activities) {
 
         public boolean isDeceased() {
@@ -694,7 +693,8 @@ public class SpexregisterClient {
         }
     }
 
-    public record Address(String id, @Nullable TypeNode type, @Nullable String emailAddress, @Nullable String phone, @Nullable String phoneMobile,
+    public record Address(String id, @Nullable TypeNode type, @Nullable String emailAddress, @Nullable String phone,
+                          @Nullable String phoneMobile,
                           @Nullable String streetAddress, @Nullable String postalCode, @Nullable String city) {
     }
 
@@ -725,7 +725,8 @@ public class SpexregisterClient {
     /**
      * What is written to a {@value #HOME} address.
      */
-    public record AddressInput(@Nullable String email, @Nullable String phone, @Nullable String streetAddress, @Nullable String postalCode,
+    public record AddressInput(@Nullable String email, @Nullable String phone, @Nullable String streetAddress,
+                               @Nullable String postalCode,
                                @Nullable String city) {
     }
 
@@ -760,7 +761,8 @@ public class SpexregisterClient {
         }
     }
 
-    public record ActivityDetail(String id, @Nullable SpexActivityRef spexActivity, @Nullable List<TaskActivity> taskActivities) {
+    public record ActivityDetail(String id, @Nullable SpexActivityRef spexActivity,
+                                 @Nullable List<TaskActivity> taskActivities) {
 
         public @Nullable String spexId() {
             return spexActivity == null || spexActivity.spex() == null ? null : spexActivity.spex().id();

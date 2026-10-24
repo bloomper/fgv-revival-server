@@ -43,6 +43,10 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
     private long revival;
     private long rehearsal;
 
+    private static boolean refused(final JsonNode response) {
+        return response.has("error") || response.path("result").path("isError").asBoolean(false);
+    }
+
     @BeforeEach
     void revivalWithChecklists() {
         publishedGuide();
@@ -72,10 +76,6 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
             throw new AssertionError("Tool error: " + response);
         }
         return objectMapper.readTree(result.get("content").get(0).get("text").asString());
-    }
-
-    private static boolean refused(final JsonNode response) {
-        return response.has("error") || response.path("result").path("isError").asBoolean(false);
     }
 
     private List<Long> ids(final JsonNode list) {

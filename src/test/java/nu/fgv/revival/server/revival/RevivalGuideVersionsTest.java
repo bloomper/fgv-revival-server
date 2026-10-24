@@ -53,16 +53,16 @@ class RevivalGuideVersionsTest {
     @Mock
     private ApplicationEventPublisher events;
 
-    private RevivalGuideVersions guideVersions() {
-        return new RevivalGuideVersions(revivalRepository, changeRepository, versionRepository, events);
-    }
-
     private static Revival revival(final long id, final Long versionId) {
         final Revival revival = TestCallers.revival(RevivalStatus.ORGANISING);
 
         revival.setId(id);
         revival.setGuideVersionId(versionId);
         return revival;
+    }
+
+    private RevivalGuideVersions guideVersions() {
+        return new RevivalGuideVersions(revivalRepository, changeRepository, versionRepository, events);
     }
 
     private void labelled(final long id, final String label) {

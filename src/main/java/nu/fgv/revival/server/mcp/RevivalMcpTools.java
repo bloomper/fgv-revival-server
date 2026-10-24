@@ -73,12 +73,24 @@ public class RevivalMcpTools {
         this.support = support;
     }
 
+    private static McpRevival toMcpRevival(final RevivalDto revival, final Caller caller) {
+        final RevivalRoleAssignment assignment = caller.roleIn(revival.id());
+
+        return new McpRevival(
+                revival.id(),
+                revival.spex().title(),
+                revival.spex().available(),
+                revival.year(),
+                revival.status(),
+                revival.premiereDate(),
+                assignment == null ? null : assignment.role());
+    }
+
     @McpTool(name = "list_revivals",
             description = "List the revivals you can see, with spex, year, status and premiere date. Optionally filter by status.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<McpRevival> listRevivals(
-            @McpToolParam(required = false, description = "Only these statuses: PROPOSED, APPROVED, ORGANISING, OPEN, CLOSING, SETTLING, ARCHIVED or REJECTED")
-            final @Nullable List<RevivalStatus> status) {
+            @McpToolParam(required = false, description = "Only these statuses: PROPOSED, APPROVED, ORGANISING, OPEN, CLOSING, SETTLING, ARCHIVED or REJECTED") final @Nullable List<RevivalStatus> status) {
         return support.call("list_revivals", () -> {
             final List<RevivalDto> revivals = revivalService.findVisible(status);
             final Caller caller = callerService.current();
@@ -143,21 +155,9 @@ public class RevivalMcpTools {
      * Where the revival stands on closing: the latest sync run's status, whether the participation is in Spexregister,
      * memberships paid, whether the surplus is decided, and whether the people have been removed.
      */
-    public record ClosingPosition(@Nullable SyncRunStatus lastSync, boolean synced, int membershipsPaid, boolean surplusDecided,
+    public record ClosingPosition(@Nullable SyncRunStatus lastSync, boolean synced, int membershipsPaid,
+                                  boolean surplusDecided,
                                   boolean anonymized) {
-    }
-
-    private static McpRevival toMcpRevival(final RevivalDto revival, final Caller caller) {
-        final RevivalRoleAssignment assignment = caller.roleIn(revival.id());
-
-        return new McpRevival(
-                revival.id(),
-                revival.spex().title(),
-                revival.spex().available(),
-                revival.year(),
-                revival.status(),
-                revival.premiereDate(),
-                assignment == null ? null : assignment.role());
     }
 
     /**
@@ -190,7 +190,8 @@ public class RevivalMcpTools {
     public record BudgetPosition(String budgetedResult, String actualResult) {
     }
 
-    public record OpenRequirements(String chapterKey, ChecklistMcpTools.@Nullable Text chapterTitle, int open, int total) {
+    public record OpenRequirements(String chapterKey, ChecklistMcpTools.@Nullable Text chapterTitle, int open,
+                                   int total) {
 
         static OpenRequirements of(final RevivalStatusDto.OpenRequirements requirements) {
             return new OpenRequirements(requirements.chapterKey(),
@@ -199,10 +200,12 @@ public class RevivalMcpTools {
         }
     }
 
-    public record OverdueLogEntry(int number, LogEntryType type, String text, @Nullable McpOwner owner, @Nullable LocalDate deadline) {
+    public record OverdueLogEntry(int number, LogEntryType type, String text, @Nullable McpOwner owner,
+                                  @Nullable LocalDate deadline) {
     }
 
-    public record OverdueChecklistItem(Long id, ChecklistMcpTools.ChecklistRef checklist, ChecklistMcpTools.Text text, @Nullable McpOwner owner,
+    public record OverdueChecklistItem(Long id, ChecklistMcpTools.ChecklistRef checklist, ChecklistMcpTools.Text text,
+                                       @Nullable McpOwner owner,
                                        @Nullable LocalDate deadline) {
     }
 }

@@ -39,8 +39,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class SwishQrClientTest {
 
-    private HttpServer stub;
     private final AtomicReference<String> received = new AtomicReference<>();
+    private HttpServer stub;
 
     @BeforeEach
     void setUp() throws IOException {

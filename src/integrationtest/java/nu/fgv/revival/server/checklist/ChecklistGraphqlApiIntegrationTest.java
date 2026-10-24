@@ -38,10 +38,10 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     static final String ITEM_FIELDS = "id required text { sv en } state reason deadline deadlineManual overdue comment version "
             + "owner { name person { displayName } } stateChangedBy { displayName } guideItem { key type { id } } checklist { id chapterKey chapterTitle { sv } } logEntries { number }";
+    static final String SET_STATE = "mutation($input: ChecklistItemSetStateInput!) { checklistItemSetState(input: $input) { " + ITEM_FIELDS + " } }";
     private static final String LIST = "query($id: ID!) { checklists(revivalId: $id) { id kind chapterKey openCount overdueCount totalCount } }";
     private static final String GET = "query($id: ID!) { checklist(id: $id) { id chapterKey chapterTitle { sv } tips { type { id } text { sv } } items { " + ITEM_FIELDS + " } } }";
     private static final String ITEMS = "query($id: ID!, $filter: ChecklistItemFilter) { checklistItems(revivalId: $id, filter: $filter) { id text { sv } } }";
-    static final String SET_STATE = "mutation($input: ChecklistItemSetStateInput!) { checklistItemSetState(input: $input) { " + ITEM_FIELDS + " } }";
     private static final String CREATE = "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { " + ITEM_FIELDS + " } }";
     private static final String UPDATE = "mutation($input: ChecklistItemUpdateInput!) { checklistItemUpdate(input: $input) { " + ITEM_FIELDS + " } }";
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));

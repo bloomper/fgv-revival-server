@@ -104,6 +104,21 @@ public class RevivalAnonymization {
     }
 
     /**
+     * The minutes with their decisions, to-dos and questions, and without anyone: owners, attendees, others present and
+     * the recorder.
+     */
+    static Minutes scrub(final Minutes minutes) {
+        return new Minutes(scrub(minutes.decisions()), scrub(minutes.todos()), scrub(minutes.questions()), scrub(minutes.closed()),
+                minutes.agendaPoints(), List.of(), null, null);
+    }
+
+    private static List<Minutes.Row> scrub(final List<Minutes.Row> rows) {
+        return rows.stream()
+                .map(row -> new Minutes.Row(row.entryId(), row.number(), row.type(), row.text(), null, null, row.deadline(), row.status()))
+                .toList();
+    }
+
+    /**
      * Anonymizes the revival, by the person or, when null, automatically. No caller check: the caller has checked. Runs
      * in the caller's transaction.
      */
@@ -210,8 +225,8 @@ public class RevivalAnonymization {
                 + " OR slot_id IN (SELECT sa.id FROM shift_slot_audit sa WHERE sa.revival_id = :revivalId)", revivalId);
         update("DELETE FROM availability_audit WHERE participant_id IN " + auditedParticipants, revivalId);
         update("""
-                DELETE FROM revival_member_capability_audit WHERE member_id IN
-                (SELECT rma.id FROM revival_member_audit rma WHERE rma.revival_id = :revivalId AND rma.role IN %s)""".formatted(PARTICIPANT_ROLES),
+                        DELETE FROM revival_member_capability_audit WHERE member_id IN
+                        (SELECT rma.id FROM revival_member_audit rma WHERE rma.revival_id = :revivalId AND rma.role IN %s)""".formatted(PARTICIPANT_ROLES),
                 revivalId);
         update("""
                 DELETE FROM revival_member_audit WHERE id IN (SELECT x.id FROM
@@ -220,21 +235,6 @@ public class RevivalAnonymization {
         update("DELETE FROM participant_audit WHERE revival_id = :revivalId", revivalId);
         // Rows the entity manager may hold are gone; nothing below may use them
         entityManager.clear();
-    }
-
-    /**
-     * The minutes with their decisions, to-dos and questions, and without anyone: owners, attendees, others present and
-     * the recorder.
-     */
-    static Minutes scrub(final Minutes minutes) {
-        return new Minutes(scrub(minutes.decisions()), scrub(minutes.todos()), scrub(minutes.questions()), scrub(minutes.closed()),
-                minutes.agendaPoints(), List.of(), null, null);
-    }
-
-    private static List<Minutes.Row> scrub(final List<Minutes.Row> rows) {
-        return rows.stream()
-                .map(row -> new Minutes.Row(row.entryId(), row.number(), row.type(), row.text(), null, null, row.deadline(), row.status()))
-                .toList();
     }
 
     /**
