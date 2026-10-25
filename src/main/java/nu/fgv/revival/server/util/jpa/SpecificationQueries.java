@@ -57,17 +57,4 @@ public class SpecificationQueries {
         query.select(root).orderBy(QueryUtils.toOrders(sort, root, cb));
         return entityManager.createQuery(query).getResultList();
     }
-
-    public <T> long count(final Class<T> type, final Specification<T> specification) {
-        final CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        final CriteriaQuery<Long> query = cb.createQuery(Long.class);
-        final Root<T> root = query.from(type);
-        final Predicate predicate = specification.toPredicate(root, query, cb);
-
-        if (predicate != null) {
-            query.where(predicate);
-        }
-        query.select(cb.count(root));
-        return entityManager.createQuery(query).getSingleResult();
-    }
 }

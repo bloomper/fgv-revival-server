@@ -331,7 +331,7 @@ public class SpexregisterClient {
                     .executeSync();
 
             requireValid(response);
-            return Objects.requireNonNullElse(response.field("spexareByIds").toEntityList(Spexare.class), List.<Spexare>of());
+            return Objects.requireNonNullElse(response.field("spexareByIds").toEntityList(Spexare.class), List.of());
         });
     }
 
@@ -349,7 +349,7 @@ public class SpexregisterClient {
                 return List.of();
             }
             requireValid(response);
-            return Objects.requireNonNullElse(response.field("spexareBySpex").toEntityList(Spexare.class), List.<Spexare>of());
+            return Objects.requireNonNullElse(response.field("spexareBySpex").toEntityList(Spexare.class), List.of());
         });
     }
 
@@ -429,7 +429,7 @@ public class SpexregisterClient {
             final ClientGraphQlResponse response = graphQlClient.document(VOCAL_PARTS).executeSync();
 
             requireValid(response);
-            return Objects.requireNonNullElse(response.field("typesOfType").toEntityList(TypeNode.class), List.<TypeNode>of());
+            return Objects.requireNonNullElse(response.field("typesOfType").toEntityList(TypeNode.class), List.of());
         });
     }
 
@@ -528,7 +528,7 @@ public class SpexregisterClient {
                     .executeSync();
 
             requireValid(response);
-            return Objects.requireNonNullElse(response.field("spexareByIds").toEntityList(SpexareActivities.class), List.<SpexareActivities>of());
+            return Objects.requireNonNullElse(response.field("spexareByIds").toEntityList(SpexareActivities.class), List.of());
         });
     }
 
@@ -625,7 +625,7 @@ public class SpexregisterClient {
         });
     }
 
-    private <T> T call(final Supplier<T> supplier) {
+    private <T extends @Nullable Object> T call(final Supplier<T> supplier) {
         try {
             return supplier.get();
         } catch (final RuntimeException e) {

@@ -94,9 +94,7 @@ public class ChecklistMcpTools {
     public ChecklistItem completeChecklistItem(
             @McpToolParam(description = "The item's id") final Long itemId,
             @McpToolParam(required = false, description = "Replaces the comment") final @Nullable String comment) {
-        return support.call("complete_checklist_item", () -> {
-            return toMcp(checklistService.complete(itemId, comment, Locale.ENGLISH));
-        });
+        return support.call("complete_checklist_item", () -> toMcp(checklistService.complete(itemId, comment, Locale.ENGLISH)));
     }
 
     public record ChecklistRef(ChecklistKind kind, @Nullable String name, @Nullable String chapterKey,

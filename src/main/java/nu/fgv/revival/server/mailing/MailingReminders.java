@@ -34,6 +34,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StringUtils;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -42,8 +43,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static org.springframework.util.StringUtils.hasText;
 
 /**
  * Reminds a revival's owners of its mailing plan: once per plan entry, its directeurs
@@ -170,6 +169,6 @@ public class MailingReminders {
                 .distinct()
                 .toList();
 
-        return personRepository.findAllById(ids).stream().map(Person::getEmail).filter(email -> hasText(email)).distinct().toList();
+        return personRepository.findAllById(ids).stream().map(Person::getEmail).filter(StringUtils::hasText).distinct().toList();
     }
 }

@@ -29,6 +29,7 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.util.List;
@@ -77,7 +78,7 @@ public class UserDirectory {
     }
 
     private static @Nullable String displayName(final @Nullable String firstName, final @Nullable String lastName) {
-        final String name = Stream.of(firstName, lastName).filter(part -> hasText(part)).map(String::trim).collect(Collectors.joining(" "));
+        final String name = Stream.of(firstName, lastName).filter(StringUtils::hasText).map(String::trim).collect(Collectors.joining(" "));
 
         return name.isEmpty() ? null : name;
     }
@@ -91,7 +92,7 @@ public class UserDirectory {
     /**
      * Runs an admin API call; unreachable, refused and unexpected answers all mean the directory is unavailable.
      */
-    private static <T> T call(final Supplier<T> action) {
+    private static <T extends @Nullable Object> T call(final Supplier<T> action) {
         try {
             return action.get();
         } catch (final ProcessingException | WebApplicationException | IllegalStateException e) {

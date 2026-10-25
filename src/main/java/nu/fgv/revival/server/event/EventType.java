@@ -104,11 +104,4 @@ public class EventType extends AbstractAuditable {
     public boolean isRetired() {
         return retiredAt != null;
     }
-
-    /**
-     * Whether the type has offsets, so it can be proposed from the premiere.
-     */
-    public boolean hasOffsets() {
-        return offsetMinDays != null && offsetMaxDays != null;
-    }
 }

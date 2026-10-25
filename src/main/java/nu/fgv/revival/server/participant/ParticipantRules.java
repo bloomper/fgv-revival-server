@@ -38,7 +38,6 @@ final class ParticipantRules {
     static final int ADDRESS_MAX_LENGTH = 255;
     static final int POSTAL_CODE_MAX_LENGTH = 20;
     static final int CITY_MAX_LENGTH = 100;
-    static final String WHATSAPP_PREFIX = "https://chat.whatsapp.com/";
 
     private static final Pattern EMAIL = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
     private static final Pattern PHONE = Pattern.compile("\\+?[0-9 ()-]+");

@@ -34,8 +34,6 @@ public interface RevivalMemberRepository extends JpaRepository<RevivalMember, Lo
 
     List<RevivalMember> findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(Long revivalId);
 
-    List<RevivalMember> findByRevivalIdInAndRoleAndRemovedAtIsNull(Collection<Long> revivalIds, RevivalRole role);
-
     List<RevivalMember> findByPendingEmailAndRemovedAtIsNull(String pendingEmail);
 
     boolean existsByRevivalIdAndPersonIdAndRemovedAtIsNull(Long revivalId, Long personId);

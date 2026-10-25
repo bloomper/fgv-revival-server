@@ -55,6 +55,7 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.sql.Connection;
@@ -80,8 +81,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import static org.springframework.util.StringUtils.hasText;
 
 /**
  * Replaces all data with sample revivals built on Spexregister's sample data. The spex come from Spexregister's API.
@@ -177,7 +176,7 @@ public class SampleDataImporter {
     private static SamplePerson insertPerson(final JdbcClient jdbcClient, final UserRepresentation user) {
         final KeyHolder keyHolder = new GeneratedKeyHolder();
         final String displayName = Stream.of(user.getFirstName(), user.getLastName())
-                .filter(part -> hasText(part))
+                .filter(StringUtils::hasText)
                 .collect(Collectors.joining(" "));
 
         jdbcClient
@@ -414,7 +413,7 @@ public class SampleDataImporter {
         });
     }
 
-    private <T> T timedResult(final String step, final Supplier<T> action) {
+    private <T extends @Nullable Object> T timedResult(final String step, final Supplier<T> action) {
         final long started = System.nanoTime();
         final T result = action.get();
 

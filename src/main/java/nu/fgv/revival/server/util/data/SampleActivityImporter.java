@@ -333,15 +333,11 @@ public class SampleActivityImporter {
     }
 
     private Set<String> capabilities(final long memberId) {
-        final Set<String> capabilities = new HashSet<>();
-
-        jdbcClient
+        return new HashSet<>(jdbcClient
                 .sql("SELECT capability FROM revival_member_capability WHERE member_id = ?")
                 .param(memberId)
                 .query(String.class)
-                .list()
-                .forEach(capabilities::add);
-        return capabilities;
+                .list());
     }
 
     private void importActivity(final SampleRevival revival, final SamplePositions positions) {

@@ -76,6 +76,7 @@ public class OwnerViews {
         return result;
     }
 
+    @Transactional(readOnly = true)
     public @Nullable OwnerDto toDto(final Long revivalId, final Owner owner, final Locale locale) {
         final Ref ref = new Ref(revivalId, owner);
 

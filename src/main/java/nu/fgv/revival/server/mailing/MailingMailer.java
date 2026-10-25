@@ -20,6 +20,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.guide.GuideMarkdown;
+import nu.fgv.revival.server.util.MailSubjects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -119,7 +120,7 @@ public class MailingMailer {
             if (hasText(content.replyTo())) {
                 helper.setReplyTo(content.replyTo());
             }
-            helper.setSubject(content.subject());
+            helper.setSubject(MailSubjects.oneLine(content.subject()));
             helper.setText(plainText(content), html(content));
             sender.send(message);
             return true;
@@ -156,7 +157,7 @@ public class MailingMailer {
 
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject(text("mailing.reminder.subject", Locale.of("sv"), revivalTitle));
+        message.setSubject(MailSubjects.oneLine(text("mailing.reminder.subject", Locale.of("sv"), revivalTitle)));
         message.setText(text.toString());
         try {
             sender.send(message);

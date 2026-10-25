@@ -19,10 +19,9 @@ package nu.fgv.revival.server.util.security;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.util.StringUtils;
 
 import java.util.Optional;
-
-import static org.springframework.util.StringUtils.hasText;
 
 /**
  * Reads the current access token.
@@ -59,7 +58,7 @@ public final class SecurityUtil {
     public static String currentSubjectOrSystem() {
         return currentJwt()
                 .map(Jwt::getSubject)
-                .filter(sub -> hasText(sub))
+                .filter(StringUtils::hasText)
                 .orElse(SYSTEM);
     }
 }

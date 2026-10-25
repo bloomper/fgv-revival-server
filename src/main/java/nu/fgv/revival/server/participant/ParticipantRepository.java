@@ -45,8 +45,6 @@ public interface ParticipantRepository extends Repository<Participant, Long> {
 
     Optional<Participant> findByMemberIdAndRemovedAtIsNull(Long memberId);
 
-    List<Participant> findByMemberIdIn(Collection<Long> memberIds);
-
     boolean existsByRevivalIdAndSpexareIdAndRemovedAtIsNull(Long revivalId, Long spexareId);
 
     /**

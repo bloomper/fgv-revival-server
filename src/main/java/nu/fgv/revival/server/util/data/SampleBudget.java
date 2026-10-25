@@ -47,6 +47,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -103,8 +104,8 @@ class SampleBudget {
     private static void figure(final ReferenceRevival reference, final String category, final String budgeted, final String actual) {
         final ReferenceFigure figure = new ReferenceFigure(reference, category);
 
-        figure.setBudgeted(new BigDecimal(budgeted).setScale(2));
-        figure.setActual(new BigDecimal(actual).setScale(2));
+        figure.setBudgeted(new BigDecimal(budgeted).setScale(2, RoundingMode.UNNECESSARY));
+        figure.setActual(new BigDecimal(actual).setScale(2, RoundingMode.UNNECESSARY));
         reference.getFigures().add(figure);
     }
 
@@ -254,8 +255,8 @@ class SampleBudget {
         line.setRevivalId(revivalId);
         line.setCategoryId(category);
         line.setDescription(description);
-        line.setQuantity(new BigDecimal(quantity).setScale(2));
-        line.setUnitAmount(new BigDecimal(unitAmount).setScale(2));
+        line.setQuantity(new BigDecimal(quantity).setScale(2, RoundingMode.UNNECESSARY));
+        line.setUnitAmount(new BigDecimal(unitAmount).setScale(2, RoundingMode.UNNECESSARY));
         line.setEventId(eventId);
         line.setLogEntryId(logEntryId);
         line.setEventTypeLineId(eventTypeLineId);

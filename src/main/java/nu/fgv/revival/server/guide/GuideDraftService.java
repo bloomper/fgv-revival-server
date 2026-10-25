@@ -144,7 +144,9 @@ public class GuideDraftService {
             throw new ConflictException("error.guide.draftExists");
         }
         // Keeps the operation of a caller that starts the draft as part of its own, e.g. accepting a suggestion
-        if (AuditContext.current() == null || AuditContext.current().operation() == null) {
+        final AuditContext.@Nullable Origin audit = AuditContext.current();
+
+        if (audit == null || audit.operation() == null) {
             AuditContext.operation("guideDraftStart");
         }
 

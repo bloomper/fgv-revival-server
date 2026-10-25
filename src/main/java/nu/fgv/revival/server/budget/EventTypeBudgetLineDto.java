@@ -19,7 +19,6 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
-import java.util.Locale;
 
 /**
  * GraphQL's {@code EventTypeBudgetLine}; its category is resolved from the id.
@@ -36,12 +35,5 @@ public record EventTypeBudgetLineDto(Long id, Long eventTypeId, String categoryI
                 GuideVersionView.Text.plain(line.getDescriptionSv(), line.getDescriptionEn()), line.getQuantityRule(),
                 line.getQuantity() == null ? null : line.getQuantity().doubleValue(), line.getUnitAmount(),
                 line.getVersion() == null ? 0L : line.getVersion());
-    }
-
-    /**
-     * The description in the language, Swedish when there is no English one.
-     */
-    public String description(final Locale locale) {
-        return "en".equals(locale.getLanguage()) && description.en() != null ? description.en() : description.sv();
     }
 }

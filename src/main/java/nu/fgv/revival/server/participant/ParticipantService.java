@@ -747,18 +747,6 @@ public class ParticipantService {
     }
 
     /**
-     * Whether the caller reads participants of the revival, for resolvers that leave others out.
-     */
-    @Transactional(readOnly = true)
-    public boolean canRead(final Long revivalId) {
-        final Caller caller = callerService.current();
-
-        return revivalRepository.findById(revivalId)
-                .filter(revival -> accessPolicy.canSee(caller, revival) && accessPolicy.canReadParticipants(caller, revival))
-                .isPresent();
-    }
-
-    /**
      * A new participant: a spexare, or a pending person by name with email or phone.
      */
     public record NewParticipant(Long revivalId, ParticipantKind kind, @Nullable Long spexareId,

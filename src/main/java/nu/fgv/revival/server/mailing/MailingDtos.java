@@ -26,7 +26,6 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * The GraphQL types of mailings and the mailing plan (mailing.graphqls). Recipients by name only, never an address.
@@ -73,13 +72,6 @@ public final class MailingDtos {
                     new GuideVersionView.Text(template.getBodySv(), template.getBodyEn(), template.getBodySv(), template.getBodyEn()),
                     template.getAudienceKind(), template.getEventTypeId(), template.getDue(), template.getPosition(), template.isRetired(),
                     template.getVersion() == null ? 0L : template.getVersion());
-        }
-
-        /**
-         * The name in the language, Swedish when there is no English one.
-         */
-        public String name(final Locale locale) {
-            return "en".equals(locale.getLanguage()) && name.en() != null ? name.en() : name.sv();
         }
     }
 

@@ -38,7 +38,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Keeps a revival's chapter checklists, required items and guide question rows in line with the guide version it is
@@ -95,10 +94,10 @@ public class RevivalGuideSync implements ApplicationRunner {
 
     @Override
     public void run(final ApplicationArguments arguments) {
-        final List<Long> revivals = Optional.ofNullable(transactions.execute(status -> revivalRepository.findAll().stream()
+        final List<Long> revivals = transactions.execute(status -> revivalRepository.findAll().stream()
                 .filter(revival -> revival.getStatus() != RevivalStatus.ARCHIVED)
                 .map(Revival::getId)
-                .toList())).orElse(List.of());
+                .toList());
 
         for (final Long revivalId : revivals) {
             transactions.executeWithoutResult(status -> {

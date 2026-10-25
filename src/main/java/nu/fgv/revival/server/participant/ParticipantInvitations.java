@@ -41,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -126,7 +127,7 @@ public class ParticipantInvitations {
             return person.getEmail();
         }
         if (spexare != null) {
-            final String home = spexare.home().map(SpexregisterClient.Address::emailAddress).filter(email -> hasText(email)).orElse(null);
+            final String home = spexare.home().map(SpexregisterClient.Address::emailAddress).filter(StringUtils::hasText).orElse(null);
 
             if (home != null) {
                 try {

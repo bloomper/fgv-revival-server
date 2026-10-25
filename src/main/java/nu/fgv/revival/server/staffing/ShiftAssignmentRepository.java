@@ -42,7 +42,5 @@ public interface ShiftAssignmentRepository extends Repository<ShiftAssignment, L
 
     List<ShiftAssignment> findByParticipantId(Long participantId);
 
-    List<ShiftAssignment> findByParticipantIdIn(Collection<Long> participantIds);
-
     boolean existsBySlotId(Long slotId);
 }

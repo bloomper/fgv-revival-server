@@ -107,16 +107,6 @@ public class BudgetCategoryService extends CatalogService<BudgetCategory> {
     }
 
     /**
-     * The active category with the role, if any.
-     */
-    @Transactional(readOnly = true)
-    public Optional<BudgetCategory> withRole(final BudgetCategoryRole role) {
-        return repository.findAllByOrderByPositionAscIdAsc().stream()
-                .filter(category -> !category.isRetired() && category.getRole() == role)
-                .findFirst();
-    }
-
-    /**
      * Every category, retired ones too, in list order. No caller check: for showing what rows hold.
      */
     @Transactional(readOnly = true)

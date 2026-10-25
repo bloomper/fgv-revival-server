@@ -118,7 +118,7 @@ public class MeetingGraphqlApi {
 
     @SchemaMapping(typeName = "Meeting", field = "canEmailMinutes")
     public boolean canEmailMinutes(final MeetingDto meeting) {
-        return emailService.canEmail(meeting.id(), meeting.revivalId(), meeting.status());
+        return emailService.canEmail(meeting.revivalId(), meeting.status());
     }
 
     @SchemaMapping(typeName = "Meeting", field = "blockingEntries")

@@ -21,6 +21,7 @@ import nu.fgv.revival.server.person.UserDirectory;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.Locales;
+import nu.fgv.revival.server.util.MailSubjects;
 import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -164,7 +165,7 @@ public class AccessRequestMailer {
 
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject(text("member.awaitingAccess.batch.mail.subject", locale, event.members().size(), revival));
+        message.setSubject(MailSubjects.oneLine(text("member.awaitingAccess.batch.mail.subject", locale, event.members().size(), revival)));
         message.setText(String.join("\n", lines));
         return message;
     }
@@ -193,7 +194,7 @@ public class AccessRequestMailer {
 
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject(text("member.awaitingAccess.mail.subject", locale, who));
+        message.setSubject(MailSubjects.oneLine(text("member.awaitingAccess.mail.subject", locale, who)));
         message.setText(String.join("\n", lines));
         return message;
     }

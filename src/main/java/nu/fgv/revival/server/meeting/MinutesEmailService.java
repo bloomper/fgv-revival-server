@@ -112,7 +112,7 @@ public class MinutesEmailService {
      * configured.
      */
     @Transactional(readOnly = true)
-    public boolean canEmail(final Long meetingId, final Long revivalId, final MeetingStatus status) {
+    public boolean canEmail(final Long revivalId, final MeetingStatus status) {
         final Caller caller = callerService.current();
 
         return status == MeetingStatus.CLOSED && mailer.available()

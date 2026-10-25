@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalShow;
 import nu.fgv.revival.server.util.Amounts;
+import nu.fgv.revival.server.util.MailSubjects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -135,7 +136,7 @@ public class ParticipantMailer {
 
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject(subject);
+        message.setSubject(MailSubjects.oneLine(subject));
         message.setText(String.join("\n", lines));
         return message;
     }

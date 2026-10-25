@@ -32,7 +32,6 @@ public final class GuideRules {
     public static final int MAX_ITEM_TEXT = 5_000;
     public static final int MAX_TITLE = 255;
     public static final int MAX_INTRODUCTION = 20_000;
-    public static final int MAX_LABEL = 32;
     public static final int MAX_NOTE = 2_000;
 
     private GuideRules() {

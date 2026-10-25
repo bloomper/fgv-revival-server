@@ -47,8 +47,6 @@ public interface LogEntryRepository extends Repository<LogEntry, Long> {
 
     List<LogEntry> findByAnswersEntryIdIn(Collection<Long> answersEntryIds);
 
-    boolean existsByRevivalIdAndOriginIn(Long revivalId, Collection<LogEntryOrigin> origins);
-
     List<LogEntry> findByRevivalIdAndOriginOrderByNumberAsc(Long revivalId, LogEntryOrigin origin);
 
     List<LogEntry> findByRevivalIdOrderByNumberAsc(Long revivalId);
@@ -58,8 +56,6 @@ public interface LogEntryRepository extends Repository<LogEntry, Long> {
     List<LogEntry> findByChecklistItemIdIn(Collection<Long> checklistItemIds);
 
     long countByChecklistItemIdIn(Collection<Long> checklistItemIds);
-
-    List<LogEntry> findByMeetingIdOrderByNumberAsc(Long meetingId);
 
     @Query("SELECT DISTINCT t FROM LogEntry e JOIN e.tags t WHERE e.revivalId = :revivalId ORDER BY t")
     List<String> findDistinctTags(Long revivalId);

@@ -241,14 +241,6 @@ public class GuideService {
         return Optional.ofNullable(revival.getGuideVersionId()).map(this::load);
     }
 
-    /**
-     * A revival the caller can see, for the PDF title page.
-     */
-    @Transactional(readOnly = true)
-    public Revival visibleRevival(final Long revivalId) {
-        return visibleRevival(callerService.current(), revivalId);
-    }
-
     private Revival visibleRevival(final Caller caller, final Long revivalId) {
         final Revival revival = accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
 

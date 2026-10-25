@@ -175,10 +175,10 @@ public class ParticipationService {
     public Participation mine(final Long revivalId, final Locale locale) {
         final Caller caller = callerService.current();
 
-        return participation(caller, access.own(caller, revivalId), locale);
+        return participation(access.own(caller, revivalId), locale);
     }
 
-    private Participation participation(final Caller caller, final ParticipantAccess.Own own, final Locale locale) {
+    private Participation participation(final ParticipantAccess.Own own, final Locale locale) {
         final Participant participant = own.participant();
         final Revival revival = own.revival();
         final ParticipationSettings settings = settingsRepository.findByRevivalId(revival.getId()).orElse(null);
@@ -296,7 +296,7 @@ public class ParticipationService {
                     ActingPerson.participantOf(own.revival().getId()), locale)), revivalService.findById(own.revival().getId()),
                     Settings.of(null), List.of(), null, null, null, null, List.of());
         }
-        return participation(caller, own, locale);
+        return participation(own, locale);
     }
 
     /**
@@ -351,7 +351,7 @@ public class ParticipationService {
             return;
         }
 
-        final Participation participation = participation(caller, own, locale);
+        final Participation participation = participation(own, locale);
         final Locale language = nu.fgv.revival.server.util.Locales.supported(locale);
         final ParticipantMailer.Confirmation confirmation = new ParticipantMailer.Confirmation(titles.ofCached(own.revival(), language),
                 participation.participant().fee(),
@@ -408,7 +408,7 @@ public class ParticipationService {
             directory.saveHomeAddress(participant.getSpexareId(), spexare.home().map(SpexregisterClient.Address::id).orElse(null),
                     new SpexregisterClient.AddressInput(email, phone, street, postalCode, city), acting);
         }
-        return participation(caller, own, locale);
+        return participation(own, locale);
     }
 
     /**
@@ -431,7 +431,7 @@ public class ParticipationService {
             need.setUpdatedAt(Instant.now(clock));
             dietaryRepository.saveAndFlush(need);
         }
-        return participation(caller, own, locale);
+        return participation(own, locale);
     }
 
     /**
@@ -474,7 +474,7 @@ public class ParticipationService {
     @Transactional(readOnly = true)
     public byte[] swishQr(final Long revivalId, final Locale locale) {
         final Caller caller = callerService.current();
-        final Participation participation = participation(caller, access.own(caller, revivalId), locale);
+        final Participation participation = participation(access.own(caller, revivalId), locale);
         final SwishPayment payment = participation.swish();
 
         if (payment == null) {

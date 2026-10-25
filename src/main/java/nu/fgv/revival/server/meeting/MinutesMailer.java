@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.decisionlog.LogEntryStatus;
 import nu.fgv.revival.server.member.OwnerDto;
 import nu.fgv.revival.server.member.PersonRefDto;
+import nu.fgv.revival.server.util.MailSubjects;
 import nu.fgv.revival.server.util.error.MailUnavailableException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
@@ -92,8 +93,8 @@ public class MinutesMailer {
 
         message.setFrom(from);
         message.setTo(to);
-        message.setSubject(text("minutes.mail.subject", locale, context.revivalTitle(),
-                meeting.title() != null ? meeting.title() : meeting.date().toString()));
+        message.setSubject(MailSubjects.oneLine(text("minutes.mail.subject", locale, context.revivalTitle(),
+                meeting.title() != null ? meeting.title() : meeting.date().toString())));
         message.setText(body(meeting, context, locale, heading));
         return message;
     }

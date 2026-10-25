@@ -192,7 +192,7 @@ public class GuidePdfService {
             type.setSpacingBefore(6);
             target.add(type);
         }
-        markdown.toPdfElements(text(item.text(), english), body).forEach(target::add);
+        target.addAll(markdown.toPdfElements(text(item.text(), english), body));
         if (english && !item.text().translated()) {
             target.add(new Paragraph(message("guide.pdf.notTranslated", locale), noteFont));
         }

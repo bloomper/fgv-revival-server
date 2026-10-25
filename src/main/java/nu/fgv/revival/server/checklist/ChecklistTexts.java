@@ -97,6 +97,7 @@ public class ChecklistTexts {
         return summaries(itemRepository.findAllById(itemIds));
     }
 
+    @Transactional(readOnly = true)
     public Map<Long, ChecklistItemSummaryDto> summaries(final Collection<ChecklistItem> items) {
         final Map<Long, GuideVersionView.Text> texts = texts(items);
         final Map<Long, ChecklistItemSummaryDto> summaries = new HashMap<>();

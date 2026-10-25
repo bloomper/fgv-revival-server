@@ -92,9 +92,7 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
             case final DirectoryUnavailableException e ->
                     localized(CustomErrorType.DIRECTORY_UNAVAILABLE, e, environment);
             case final MailUnavailableException e -> localized(CustomErrorType.MAIL_UNAVAILABLE, e, environment);
-            case final OptimisticLockingFailureException _ ->
-                    localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
-            case final OptimisticLockException _ ->
+            case final OptimisticLockingFailureException _, final OptimisticLockException _ ->
                     localized(CustomErrorType.CONFLICT, "error.conflict", null, environment);
             default -> null;
         };

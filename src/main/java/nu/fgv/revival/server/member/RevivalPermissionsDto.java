@@ -57,11 +57,4 @@ public record RevivalPermissionsDto(@Nullable Long revivalId,
                                     boolean canAnonymize,
                                     boolean canSetMembership,
                                     boolean canReadMaterials) {
-
-    public RevivalPermissionsDto withGuideVersionsAllowed(final List<GuideVersionSummaryDto> versions) {
-        return new RevivalPermissionsDto(revivalId, canEditCore, canEditDetails, allowedStatuses, canManageDirecteurs, canManageSteeringGroup,
-                canSuggestGuideChange, List.copyOf(versions), canWriteLog, canWaiveRequirement, canDelete, canSubscribeCalendar, canReadBudget,
-                canWriteBudget, canReadParticipants, canWriteParticipants, canReadDietary, isParticipant, canReadWork, canReadStaffing,
-                canWriteStaffing, canReadMailings, canDraftMailings, canSendMailings, canWriteMaterials, canSync, canAnonymize, canSetMembership, canReadMaterials);
-    }
 }

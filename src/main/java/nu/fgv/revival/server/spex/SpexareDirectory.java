@@ -57,7 +57,7 @@ public class SpexareDirectory {
         this.cacheManager = cacheManager;
     }
 
-    private static <T> T unavailableOnFailure(final Supplier<T> supplier) {
+    private static <T extends @Nullable Object> T unavailableOnFailure(final Supplier<T> supplier) {
         try {
             return supplier.get();
         } catch (final Cache.ValueRetrievalException e) {
@@ -123,12 +123,10 @@ public class SpexareDirectory {
     /**
      * The ids of a spex and its revivals in Spexregister.
      */
-    @SuppressWarnings("unchecked")
     public Set<Long> family(final Long spexId) {
         return Set.copyOf(unavailableOnFailure(() -> Objects.requireNonNull(reference().get(FAMILY + spexId, () -> client.spexFamily(spexId)))));
     }
 
-    @SuppressWarnings("unchecked")
     public List<Position> positions() {
         return unavailableOnFailure(() -> Objects.requireNonNull(reference().get(POSITIONS, () -> client.tasks().stream()
                 .map(task -> new Position(task.id(), task.name(), task.category() == null ? null : task.category().name(),
@@ -136,7 +134,6 @@ public class SpexareDirectory {
                 .toList())));
     }
 
-    @SuppressWarnings("unchecked")
     public List<VocalPart> vocalParts() {
         return unavailableOnFailure(() -> Objects.requireNonNull(reference().get(VOCAL_PARTS, () -> client.vocalParts().stream()
                 .map(type -> new VocalPart(type.id(), type.label() == null ? type.id() : type.label()))
