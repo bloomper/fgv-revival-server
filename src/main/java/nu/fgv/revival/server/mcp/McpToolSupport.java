@@ -19,6 +19,10 @@ package nu.fgv.revival.server.mcp;
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.audit.AuditSource;
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.member.OwnerInputDto;
+import nu.fgv.revival.server.member.OwnerResolver;
+import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
@@ -30,6 +34,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -47,9 +52,76 @@ import java.util.function.Supplier;
 public class McpToolSupport {
 
     private final MessageSource messageSource;
+    private final OwnerResolver ownerResolver;
+    private final CallerService callerService;
 
-    public McpToolSupport(final MessageSource messageSource) {
+    public McpToolSupport(final MessageSource messageSource, final OwnerResolver ownerResolver, final CallerService callerService) {
         this.messageSource = messageSource;
+        this.ownerResolver = ownerResolver;
+        this.callerService = callerService;
+    }
+
+    /**
+     * An amount from a tool argument, in kronor with at most two decimals, or null when blank.
+     */
+    static @Nullable BigDecimal amount(final @Nullable String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        final BigDecimal parsed = Amounts.parse(value);
+
+        if (parsed == null) {
+            throw new BadRequestException("error.budget.amount", "0", "10000000");
+        }
+        return parsed;
+    }
+
+    /**
+     * The one item of a list with this id, or NOT_FOUND as the API says for it.
+     */
+    static <T> T byId(final List<T> items, final java.util.function.Function<T, ?> id, final Object wanted, final Class<?> type) {
+        return items.stream()
+                .filter(item -> String.valueOf(id.apply(item)).equals(String.valueOf(wanted)))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(type, wanted));
+    }
+
+    /**
+     * An owner from a tool argument: a display name or "me". A unique member match is that member, none a free-text
+     * name; several are refused with the candidates. Blank is no owner.
+     */
+    @Nullable OwnerInputDto owner(final Long revivalId, final @Nullable String owner) {
+        if (owner == null || owner.isBlank()) {
+            return null;
+        }
+        return switch (ownerResolver.resolve(revivalId, owner, callerService.current())) {
+            case OwnerResolver.Resolution.Member member -> new OwnerInputDto(member.personId(), null);
+            case OwnerResolver.Resolution.FreeText name -> new OwnerInputDto(null, name.name());
+            case OwnerResolver.Resolution.Ambiguous ambiguous ->
+                    throw new BadRequestException("error.owner.ambiguous", owner.strip(), String.join(", ", ambiguous.candidates()));
+        };
+    }
+
+    /**
+     * Directeurs and steering group members by display name or "me", e.g. a meeting's attendees. Someone outside the
+     * steering group is refused: they go in the free text of who else was there.
+     */
+    @Nullable List<Long> members(final Long revivalId, final @Nullable List<String> names) {
+        if (names == null) {
+            return null;
+        }
+        return names.stream()
+                .map(name -> {
+                    final OwnerInputDto resolved = owner(revivalId, name);
+
+                    if (resolved == null || resolved.personId() == null) {
+                        throw new BadRequestException("error.mcp.notMember", name.strip());
+                    }
+                    return resolved.personId();
+                })
+                .distinct()
+                .toList();
     }
 
     /**

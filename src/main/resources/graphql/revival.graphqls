@@ -4,6 +4,11 @@ extend type Query {
 
     "A revival the caller can see. Not visible and not found both return null with NOT_FOUND."
     revival(id: ID!): Revival
+    """
+    Everyone with access: the revivals being organised or open whose premiere is set and whose last show has not
+    passed, soonest first. Only what a revival announces anyway: proposed, approved and rejected ones are left out.
+    """
+    upcomingRevivals: [UpcomingRevival!]!
 }
 
 extend type Mutation {
@@ -174,4 +179,15 @@ type RevivalWorkSummary {
 
 extend type Revival {
     workSummary: RevivalWorkSummary!
+}
+
+"A revival coming up, as it is announced: no people, no work."
+type UpcomingRevival {
+    id: ID!
+    "The spex's title and the year, e.g. \"Ali Baba 2028\"."
+    title: String!
+    year: Int!
+    premiereDate: Date!
+    "By date and time."
+    shows: [RevivalShow!]!
 }

@@ -216,11 +216,11 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void mcpToolsRefuseParticipantsAndNeverShowContactDetails() {
+    void mcpToolsRefuseParticipantsAndListNoParticipants() {
         invite(addPending("PARTICIPANT", PARTICIPANT));
         login(PARTICIPANT);
 
-        for (final String tool : List.of("list_participants", "get_revival_status", "list_events", "list_log_entries", "list_checklist_items",
+        for (final String tool : List.of("get_revival_status", "list_events", "list_log_entries", "list_checklist_items",
                 "get_budget_summary")) {
             final JsonNode response = mcpRpc(mcpToken(PARTICIPANT), "tools/call", Map.of("name", tool, "arguments", Map.of("revivalId", revival)));
 
@@ -228,10 +228,13 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         }
         assertThat(listRevivals(mcpToken(PARTICIPANT), Map.of())).hasSize(1);
 
+        // Participants are personal data: no tool lists them, and the status gives counts only
         final JsonNode listed = mcpRpc(mcpToken(STEERING_GROUP), "tools/call", Map.of("name", "list_participants", "arguments", Map.of("revivalId", revival)));
+        final JsonNode status = mcpRpc(mcpToken(STEERING_GROUP), "tools/call", Map.of("name", "get_revival_status", "arguments", Map.of("revivalId", revival)));
 
-        assertThat(listed.path("result").path("isError").asBoolean(false)).isFalse();
-        assertThat(listed.toString()).contains("Pia Deltagare").doesNotContain(PARTICIPANT).doesNotContain("@");
+        assertThat(listed.has("error") || listed.path("result").path("isError").asBoolean(false)).isTrue();
+        assertThat(status.path("result").path("isError").asBoolean(false)).isFalse();
+        assertThat(status.toString()).contains("participantResponses").doesNotContain("Pia Deltagare").doesNotContain(PARTICIPANT);
     }
 
     @Test

@@ -16,10 +16,13 @@
 
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.guide.GuideChanges;
 import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideSearch;
 import nu.fgv.revival.server.guide.GuideService;
+import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionDto;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionKind;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionService;
@@ -128,6 +131,59 @@ public class GuideMcpTools {
 
             return new SuggestionResult(created.id(), created.status(), created.kind(), new Version(version.id(), version.label(), version.publishedAt()));
         });
+    }
+
+    @McpTool(name = "list_guide_versions",
+            description = "List the guide's published versions, newest first, with their labels and notes.",
+            annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
+    public McpToolSupport.ListResult<GuideVersionSummaryDto> listGuideVersions() {
+        return support.call("list_guide_versions", () -> new McpToolSupport.ListResult<>(guideService.findPublished()));
+    }
+
+    @McpTool(name = "get_guide_changes",
+            description = "What changed in the guide between two versions: chapters, sections and items added, changed, moved or removed.",
+            annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
+    public GuideChanges.Result getGuideChanges(
+            @McpToolParam(description = "The older version, by id from list_guide_versions") final Long fromVersionId,
+            @McpToolParam(description = "The newer version, by id") final Long toVersionId) {
+        return support.call("get_guide_changes", () -> guideService.changes(fromVersionId, toVersionId));
+    }
+
+    @McpTool(name = "list_guide_suggestions",
+            description = "List suggested changes to the guide you can see: a revival's own, or as a super admin all of them. Status OPEN, ACCEPTED, REJECTED or WITHDRAWN.",
+            annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
+    public McpToolSupport.ListResult<Suggestion> listGuideSuggestions(
+            @McpToolParam(required = false, description = "Only this revival's") final @Nullable Long revivalId,
+            @McpToolParam(required = false, description = "Only these statuses") final @Nullable List<GuideSuggestionStatus> status) {
+        return support.call("list_guide_suggestions", () -> new McpToolSupport.ListResult<>(suggestionService.findVisible(status, revivalId).stream()
+                .map(Suggestion::of).toList()));
+    }
+
+    @McpTool(name = "withdraw_guide_suggestion",
+            description = "Withdraw an open suggestion you made.",
+            annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
+    public Suggestion withdrawGuideSuggestion(@McpToolParam(description = "The suggestion, by id") final Long suggestionId) {
+        return support.call("withdraw_guide_suggestion", () -> Suggestion.of(suggestionService.withdraw(suggestionId, suggestion(suggestionId).version())));
+    }
+
+    GuideSuggestionDto suggestion(final Long suggestionId) {
+        return McpToolSupport.byId(suggestionService.findVisible(null, null), GuideSuggestionDto::id, suggestionId, GuideSuggestion.class);
+    }
+
+    /**
+     * A suggestion as list_guide_suggestions returns it: no people.
+     */
+    public record Suggestion(Long id, GuideSuggestionKind kind, GuideSuggestionStatus status, Long revivalId, boolean mine, @Nullable String madeOn,
+                             String chapterKey, @Nullable String sectionKey, @Nullable String itemKey, @Nullable String proposedType,
+                             @Nullable Text proposedText, @Nullable String reason, @Nullable Instant decidedAt, @Nullable String decisionReason,
+                             Instant createdAt) {
+
+        static Suggestion of(final GuideSuggestionDto suggestion) {
+            return new Suggestion(suggestion.id(), suggestion.kind(), suggestion.status(), suggestion.revival().id(), suggestion.mine(),
+                    suggestion.madeOn().label(), suggestion.chapterKey(), suggestion.sectionKey(), suggestion.itemKey(), suggestion.proposedType(),
+                    suggestion.proposedText() == null ? null : new Text(suggestion.proposedText().sv(), suggestion.proposedText().en()),
+                    suggestion.reason(), suggestion.decidedAt(), suggestion.decisionReason(), suggestion.createdAt());
+        }
     }
 
     public record Text(String sv, @Nullable String en) {

@@ -258,19 +258,19 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void mcpListsTheStaffingByNameAndTheRevivalCanStillBeDeleted() {
+    void mcpListsTheSlotsWithoutNamesAndTheRevivalCanStillBeDeleted() {
         final long tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
 
         answerYes(PARTICIPANT);
         execute(PARTICIPANT, SIGN_UP, Map.of("slot", tickets));
         execute(PARTICIPANT, AVAILABILITY_SET, Map.of("input", Map.of("revivalId", revival, "eventId", weekend, "date", "2028-05-05", "answer", "YES")));
 
-        final JsonNode staffing = mcpRpc(mcpToken(STEERING_GROUP), "tools/call", Map.of("name", "get_staffing", "arguments", Map.of("revivalId", revival)));
+        final JsonNode staffing = mcpRpc(mcpToken(STEERING_GROUP), "tools/call", Map.of("name", "list_shift_slots", "arguments", Map.of("revivalId", revival)));
 
         assertThat(staffing.path("result").path("isError").asBoolean(false)).isFalse();
-        assertThat(staffing.toString()).contains("Biljettkontroll").contains("Pia Deltagare").doesNotContain("@");
+        assertThat(staffing.toString()).contains("Biljettkontroll").contains("\\\"held\\\":1").doesNotContain("Pia Deltagare").doesNotContain("@");
 
-        final JsonNode refused = mcpRpc(mcpToken(PARTICIPANT), "tools/call", Map.of("name", "get_staffing", "arguments", Map.of("revivalId", revival)));
+        final JsonNode refused = mcpRpc(mcpToken(PARTICIPANT), "tools/call", Map.of("name", "list_shift_slots", "arguments", Map.of("revivalId", revival)));
 
         assertThat(refused.has("error") || refused.path("result").path("isError").asBoolean(false)).isTrue();
 

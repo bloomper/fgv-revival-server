@@ -182,9 +182,14 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
         final JsonNode tools = mcpRpc(mcpToken(STEERING_GROUP), "tools/list", Map.of()).at("/result/tools");
         final List<String> offered = new ArrayList<>();
 
-        tools.forEach(tool -> offered.add(tool.get("name").asString() + " " + tool.get("description").asString()
-                .replace("never deleted", "").replace("No tool deletes", "")));
-        assertThat(offered).hasSizeGreaterThanOrEqualTo(6).noneMatch(text -> text.toLowerCase().matches(".*\\b(delete|remove)\\w*.*"));
+        tools.forEach(tool -> offered.add(tool.get("name").asString() + " " + tool.get("description").asString()));
+        // Deleting is mentioned only to say it does not happen
+        assertThat(offered).hasSizeGreaterThanOrEqualTo(6)
+                .noneMatch(text -> text.toLowerCase().replace("never deleted", "").replace("nothing is deleted", "").matches(".*\\bdelet\\w*.*"));
+        // Removing is marking, as in the web: the tools that do it say nothing is deleted
+        assertThat(offered).filteredOn(text -> text.split(" ")[0].contains("remove"))
+                .isNotEmpty()
+                .allMatch(text -> text.toLowerCase().contains("nothing is deleted"));
     }
 
     @Test

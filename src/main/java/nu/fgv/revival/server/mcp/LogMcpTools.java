@@ -64,7 +64,7 @@ public class LogMcpTools {
 
     private static LogEntry toMcp(final LogEntryDto row) {
         return new LogEntry(row.number(), row.date(), row.type(), row.status(), row.overdue(), row.text(), McpOwner.of(row.owner()), row.deadline(),
-                row.comment(), row.tags(), row.meetingId());
+                row.comment(), row.tags(), row.meetingId(), row.id());
     }
 
     @McpTool(name = "list_log_entries",
@@ -134,6 +134,33 @@ public class LogMcpTools {
         });
     }
 
+    @McpTool(name = "list_log_tags",
+            description = "List the tags used in a revival's decision log, to filter by or to reuse.",
+            annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
+    public McpToolSupport.ListResult<String> listLogTags(@McpToolParam(description = "A revival you can see") final Long revivalId) {
+        return support.call("list_log_tags", () -> new McpToolSupport.ListResult<>(logEntryService.tags(revivalId)));
+    }
+
+    @McpTool(name = "answer_log_question",
+            description = "Answer an open QUESTION in a revival's decision log, by its number: the answer becomes a new DECISION row that points back at the question, and the question is marked DONE.",
+            annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
+    public Answered answerLogQuestion(
+            @McpToolParam(description = "A revival you can work in") final Long revivalId,
+            @McpToolParam(description = "The question's number") final Integer number,
+            @McpToolParam(description = "The answer, at most 5,000 characters") final String text,
+            @McpToolParam(required = false, description = "The decision's owner, as in create_log_entry") final @Nullable String owner,
+            @McpToolParam(required = false, description = "yyyy-MM-dd") final @Nullable String deadline,
+            @McpToolParam(required = false, description = "A comment") final @Nullable String comment) {
+        return support.call("answer_log_question", () -> {
+            final LogEntryDto question = logEntryService.getByNumber(revivalId, number, Locale.ENGLISH);
+            final ResolvedOwner resolved = resolve(revivalId, owner);
+            final LogEntryService.Answered answered = logEntryService.answer(new LogEntryService.Answer(question.id(), question.version(), null, text,
+                    resolved.input(), McpToolSupport.date(deadline), comment), Locale.ENGLISH);
+
+            return new Answered(LogEntryWritten.of(answered.question(), Resolution.NONE), LogEntryWritten.of(answered.decision(), resolved.resolution()));
+        });
+    }
+
     private ResolvedOwner resolve(final Long revivalId, final @Nullable String owner) {
         if (owner == null || owner.isBlank()) {
             return new ResolvedOwner(null, Resolution.NONE);
@@ -159,10 +186,16 @@ public class LogMcpTools {
                            String text,
                            @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment,
                            List<String> tags,
-                           @Nullable Long meeting) {
+                           @Nullable Long meeting, Long id) {
     }
 
     public record LogEntries(List<LogEntry> items, int total) {
+    }
+
+    /**
+     * The question, now done, and the decision that answers it.
+     */
+    public record Answered(LogEntryWritten question, LogEntryWritten decision) {
     }
 
     /**
@@ -173,11 +206,11 @@ public class LogMcpTools {
                                   String text,
                                   @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment,
                                   List<String> tags,
-                                  @Nullable Long meeting, Resolution ownerResolution) {
+                                  @Nullable Long meeting, Resolution ownerResolution, Long id) {
 
         static LogEntryWritten of(final LogEntryDto row, final Resolution resolution) {
             return new LogEntryWritten(row.number(), row.date(), row.type(), row.status(), row.overdue(), row.text(), McpOwner.of(row.owner()),
-                    row.deadline(), row.comment(), row.tags(), row.meetingId(), resolution);
+                    row.deadline(), row.comment(), row.tags(), row.meetingId(), resolution, row.id());
         }
     }
 }
