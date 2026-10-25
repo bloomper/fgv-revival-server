@@ -34,12 +34,12 @@ import static nu.fgv.revival.server.member.AccessPolicyTest.revival;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The M6b rows of the permission matrix (product spec 3, "Staffing" and "Mailings"): who reads and writes staffing, who
+ * The staffing and mailing rules in {@link AccessPolicy}: who reads and writes staffing, who
  * reads, drafts and sends mailings, and the mailing plan's templates. Participants and helpers, and observers, are
  * refused everything of the steering group's.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 class AccessPolicyStaffingMailingTest {
 

@@ -25,11 +25,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * A revival's state at a glance for MCP's get_revival_status (research R15). M4–M6 add events, the current phase,
- * responses and the budget.
+ * A revival's state at a glance for MCP's get_revival_status.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record RevivalStatusDto(Summary revival,
                                List<LogEntryDto> overdueLogEntries,

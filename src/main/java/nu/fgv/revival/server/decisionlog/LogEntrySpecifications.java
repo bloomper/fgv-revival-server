@@ -29,11 +29,11 @@ import java.util.Set;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * The log's filters as query predicates, combined with AND (FR-012, research R6). Text matching relies on the
+ * The log's filters as query predicates, combined with AND. Text matching relies on the
  * columns' {@code utf8mb4_0900_ai_ci} collation, which ignores case and diacritics.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 final class LogEntrySpecifications {
 
@@ -83,7 +83,7 @@ final class LogEntrySpecifications {
     }
 
     /**
-     * Open or waiting, with a deadline before today (FR-011).
+     * Open or waiting, with a deadline before today.
      */
     static Specification<LogEntry> overdue(final LocalDate today) {
         return (root, query, cb) -> cb.and(root.get("status").in(OPEN), cb.lessThan(root.get("deadline"), today));

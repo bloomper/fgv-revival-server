@@ -36,7 +36,7 @@ import java.math.BigDecimal;
  * A reference revival's budgeted and actual amount for one category; at least one of them is set.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "reference_figure")

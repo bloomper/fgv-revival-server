@@ -30,7 +30,7 @@ import java.util.List;
  * never with contact details.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public final class StaffingDtos {
 

@@ -32,7 +32,7 @@ import java.io.IOException;
  * there would hold one connection while waiting for another, which exhausts the pool under concurrent requests.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class CallerFilter extends OncePerRequestFilter {

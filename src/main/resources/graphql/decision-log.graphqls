@@ -1,14 +1,13 @@
-# M3: a revival's decision log. Rules per operation are in specs/004-m3-log/contracts/README.md; they are enforced in
-# the service layer. There is no delete mutation (FR-010).
+# A revival's decision log. There is no delete mutation.
 
 extend type Query {
-    "The revival's rows matching every given filter, by number (FR-012). Readers of the revival."
+    "The revival's rows matching every given filter, by number. Readers of the revival."
     logEntries(revivalId: ID!, filter: LogEntryFilter): [LogEntry!]!
 
     "NOT_FOUND unless the caller can read the row's revival."
     logEntry(id: ID!): LogEntry
 
-    "Distinct tags in the revival's log, for reuse (FR-014)."
+    "Distinct tags in the revival's log, for reuse."
     logTags(revivalId: ID!): [String!]!
 }
 
@@ -16,10 +15,10 @@ extend type Mutation {
     "Directeur or steering group, revival visible and not ARCHIVED. With meetingId, the row belongs to that meeting."
     logEntryCreate(input: LogEntryCreateInput!): LogEntry!
 
-    "As logEntryCreate. Any field but the number (FR-010)."
+    "As logEntryCreate. Any field but the number."
     logEntryUpdate(input: LogEntryUpdateInput!): LogEntry!
 
-    "Creates a DECISION answering an open QUESTION, and sets the question to DONE (FR-013)."
+    "Creates a DECISION answering an open QUESTION, and sets the question to DONE."
     logEntryAnswer(input: LogEntryAnswerInput!): LogEntryAnswerPayload!
 }
 
@@ -52,7 +51,7 @@ type LogEntry {
     status: LogEntryStatus!
     owner: Owner
     deadline: Date
-    "OPEN or WAITING with a deadline before today, Europe/Stockholm (FR-011)."
+    "OPEN or WAITING with a deadline before today, Europe/Stockholm."
     overdue: Boolean!
     comment: String
     tags: [String!]!
@@ -99,7 +98,7 @@ input LogEntryFilter {
 
 input LogEntryCreateInput {
     revivalId: ID!
-    "A meeting IN_PROGRESS in the same revival (FR-018)."
+    "A meeting IN_PROGRESS in the same revival."
     meetingId: ID
     "Defaults to today."
     date: Date

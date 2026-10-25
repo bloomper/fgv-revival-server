@@ -54,11 +54,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Guide text is CommonMark (FR-010). This turns it into plain text for search and renders it for the PDF and for
+ * Guide text is CommonMark. This turns it into plain text for search and renders it for the PDF and for
  * emails. Images are always dropped and raw HTML is always literal text.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Component
 public class GuideMarkdown {
@@ -157,7 +157,7 @@ public class GuideMarkdown {
 
             @Override
             public void visit(final Image node) {
-                // Dropped, never shown or loaded (FR-010)
+                // Dropped, never shown or loaded
             }
 
             @Override
@@ -183,7 +183,7 @@ public class GuideMarkdown {
 
     /**
      * Guide Markdown as PDF elements: paragraphs, nested bullet and numbered lists, bold, italics and links. Everything
-     * else is its plain text, and images are dropped, so building a PDF never fetches a URL (FR-010).
+     * else is its plain text, and images are dropped, so building a PDF never fetches a URL.
      */
     public List<Element> toPdfElements(final String markdown, final PdfFonts fonts) {
         final List<Element> elements = new ArrayList<>();
@@ -260,7 +260,7 @@ public class GuideMarkdown {
                     target.add(anchor);
                 }
                 case final Image _ -> {
-                    // Dropped: the server never fetches an image URL (FR-010)
+                    // Dropped: the server never fetches an image URL
                 }
                 case final SoftLineBreak _ -> target.add(new Chunk(" ", fonts.normal()));
                 case final HardLineBreak _ -> target.add(Chunk.NEWLINE);
@@ -270,9 +270,9 @@ public class GuideMarkdown {
     }
 
     /**
-     * Guide Markdown as HTML for an email (M6B-FR-9), with only the elements the web renders guide text with (FR-010):
-     * paragraphs, bullet and numbered lists, bold, italics, line breaks and http(s) or mailto links. Every other element
-     * becomes its text, raw HTML is escaped and shown literally, and images are dropped, so nothing is ever loaded.
+     * Guide Markdown as HTML for an email, with only the elements the web renders guide text with: paragraphs, bullet
+     * and numbered lists, bold, italics, line breaks and http(s) or mailto links. Every other element becomes its text,
+     * raw HTML is escaped and shown literally, and images are dropped, so nothing is ever loaded.
      */
     public String toHtml(final String markdown) {
         final StringBuilder html = new StringBuilder();
@@ -353,7 +353,7 @@ public class GuideMarkdown {
                     }
                 }
                 case final Image _ -> {
-                    // Dropped: an email never loads an image (FR-010)
+                    // Dropped: an email never loads an image
                 }
                 case final SoftLineBreak _ -> html.append(' ');
                 case final HardLineBreak _ -> html.append("<br>");
@@ -363,7 +363,7 @@ public class GuideMarkdown {
     }
 
     /**
-     * The fonts the PDF uses: the standard Helvetica set, which covers Swedish (research R7).
+     * The fonts the PDF uses: the standard Helvetica set, which covers Swedish.
      */
     public record PdfFonts(Font normal, Font bold, Font italic,
                            Font boldItalic, Font link) {

@@ -38,10 +38,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Participants over GraphQL (participant.graphqls). A thin adapter: every rule is in the services.
+ * Participants over GraphQL (participant.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Controller
 public class ParticipantGraphqlApi {
@@ -92,8 +92,6 @@ public class ParticipantGraphqlApi {
                 input.lastName(), input.email(), input.phone(), input.positionId(), input.roleName(), input.vocalPartId(),
                 input.compensationPerShift()), locale);
     }
-
-    // --- Steering group ---------------------------------------------------------------------------------------------
 
     @MutationMapping
     public List<ParticipantDto> participantsAddSpexare(@Argument final Long revivalId, @Argument final List<Long> spexareIds, final Locale locale) {
@@ -205,8 +203,6 @@ public class ParticipantGraphqlApi {
                                          @Nullable String email, @Nullable Boolean clearEmail, @Nullable String phone,
                                          @Nullable Boolean clearPhone) {
     }
-
-    // --- The participant's own --------------------------------------------------------------------------------------
 
     public record ParticipantsInviteInput(Long revivalId, List<Long> participantIds, @Nullable String email,
                                           String language) {

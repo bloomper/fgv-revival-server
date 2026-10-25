@@ -51,10 +51,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A revival's budget over GraphQL (budget.graphqls). A thin adapter: every rule is in the services.
+ * A revival's budget over GraphQL (budget.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Controller
 public class BudgetGraphqlApi {
@@ -124,8 +124,6 @@ public class BudgetGraphqlApi {
         return budgetService.proposals(budget.revivalId());
     }
 
-    // --- Budget -----------------------------------------------------------------------------------------------------
-
     @SchemaMapping(typeName = "Budget", field = "scenarios")
     public List<Scenario> scenarios(final Budget budget) {
         return scenarioService.list(budget.revivalId());
@@ -194,8 +192,6 @@ public class BudgetGraphqlApi {
                 input.description(), input.budgetLineId(), input.paidBy()));
     }
 
-    // --- Lines ------------------------------------------------------------------------------------------------------
-
     @MutationMapping
     public Transaction transactionUpdate(@Argument final TransactionUpdateInput input) {
         return transactionService.update(new TransactionService.TransactionChange(input.id(), input.version(), input.date(), input.amount(),
@@ -236,8 +232,6 @@ public class BudgetGraphqlApi {
         return scenarioService.save(input.revivalId(), input.name(), input.parameters());
     }
 
-    // --- Transactions -----------------------------------------------------------------------------------------------
-
     @MutationMapping
     public Scenario budgetScenarioUpdate(@Argument final Long id, @Argument final Long version, @Argument final BudgetScenarioSaveInput input) {
         return scenarioService.update(id, version, input.name(), input.parameters());
@@ -270,8 +264,6 @@ public class BudgetGraphqlApi {
         return typeLineService.remove(id, version);
     }
 
-    // --- Scenarios --------------------------------------------------------------------------------------------------
-
     public record BudgetSettingsInput(Long revivalId, Long version, @Nullable Integer participantsPlanned,
                                       @Nullable BigDecimal participationFee,
                                       @Nullable BigDecimal loanAmount, @Nullable LocalDate loanReceivedOn,
@@ -292,8 +284,6 @@ public class BudgetGraphqlApi {
                                         @Nullable String comment,
                                         @Nullable Boolean clearComment) {
     }
-
-    // --- Event type lines -------------------------------------------------------------------------------------------
 
     public record TransactionCreateInput(Long revivalId, LocalDate date, BigDecimal amount, String categoryId,
                                          String description,

@@ -32,12 +32,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Participants by name, and their email addresses at send time, for staffing and mailings (M6b). Names come from
+ * Participants by name, and their email addresses at send time, for staffing and mailings. Names come from
  * Spexregister or the pending person and are never stored elsewhere; addresses are read when a mailing is sent and
- * never stored or logged (product spec 5.8 and section 7).
+ * never stored or logged.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 public class ParticipantDirectory {
@@ -58,8 +58,8 @@ public class ParticipantDirectory {
     }
 
     /**
-     * Names, kinds and positions by participant id. A spexare is shown as an unknown person while Spexregister cannot be
-     * read, rather than failing the whole list.
+     * Names, kinds and positions by participant id. A spexare is shown as an unknown person while Spexregister cannot
+     * be read, rather than failing the whole list.
      */
     public Map<Long, Named> named(final Collection<Participant> participants, final String actingPerson, final Locale locale) {
         if (participants.isEmpty()) {

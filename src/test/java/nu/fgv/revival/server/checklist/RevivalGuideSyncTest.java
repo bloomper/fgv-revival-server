@@ -42,11 +42,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * A revival's chapter checklists and required items follow its guide version (FR-022, FR-034, SC-004), on versions
+ * A revival's chapter checklists and required items follow its guide version, on versions
  * built in the test and repositories kept in memory.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class RevivalGuideSyncTest {
 

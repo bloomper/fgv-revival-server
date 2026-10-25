@@ -19,7 +19,7 @@ package nu.fgv.revival.server.guide;
  * GraphQL's {@code GuideItemType}.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public record GuideItemTypeDto(String id, GuideItemKind kind, GuideVersionView.Text name, int position, boolean retired,
                                Long version) {

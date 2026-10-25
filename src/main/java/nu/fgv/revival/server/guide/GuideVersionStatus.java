@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.guide;
 
 /**
- * A version is the draft until it is published, and never changes afterwards (FR-014).
+ * A version is the draft until it is published, and never changes afterwards.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public enum GuideVersionStatus {
 

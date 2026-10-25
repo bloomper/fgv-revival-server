@@ -25,7 +25,7 @@ import static org.springframework.util.StringUtils.hasText;
  * participant changing their own data, only the revival, so their name is not sent along with it.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 final class ActingPerson {
 

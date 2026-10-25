@@ -43,11 +43,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The budget categories the super admin keeps (M5-FR-1): the kind is fixed, and at most one active category holds a
+ * The budget categories the super admin keeps: the kind is fixed, and at most one active category holds a
  * role.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class BudgetCategoryServiceTest {

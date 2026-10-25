@@ -15,7 +15,7 @@
  */
 
 /**
- * Availability per participant and event day, and staffing with shift slots (product spec 5.7, M6b): participants say
+ * Availability per participant and event day, and staffing with shift slots: participants say
  * which event days they can come and sign up for slots; directeurs and steering group members with {@code STAFFING}
  * plan slots and assign people. A helper's paid shifts are a budgeted cost of the budget's helper category.
  */

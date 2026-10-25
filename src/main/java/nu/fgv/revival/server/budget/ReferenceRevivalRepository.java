@@ -24,7 +24,7 @@ import java.util.Optional;
  * Reference figures are not revival data, so they can be deleted.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public interface ReferenceRevivalRepository extends Repository<ReferenceRevival, Long> {
 

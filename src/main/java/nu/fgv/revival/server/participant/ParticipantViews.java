@@ -42,10 +42,10 @@ import static org.springframework.util.StringUtils.hasText;
 
 /**
  * Turns participants into what the caller sees, reading names and contact details from Spexregister in one call per
- * 500 spexare (product spec section 7) and nothing from the database that the caller may not see.
+ * 500 spexare and nothing from the database that the caller may not see.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Component
 class ParticipantViews {
@@ -218,8 +218,8 @@ class ParticipantViews {
     }
 
     /**
-     * First, last and nick name: from Spexregister, the pending person, or a placeholder once a pending person's name is
-     * deleted or while the spexare cannot be read.
+     * First, last and nick name: from Spexregister, the pending person, or a placeholder once a pending person's name
+     * is deleted or while the spexare cannot be read.
      */
     @Nullable String[] name(final Participant participant, final SpexregisterClient.@Nullable Spexare spexare, final @Nullable PendingPerson person,
                             final Locale locale) {

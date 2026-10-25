@@ -47,12 +47,12 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
- * Executes a run of the participation sync in the background (M7-FR-4): the revival first, then per participant the
+ * Executes a run of the participation sync in the background: the revival first, then per participant the
  * participation, the task, the actor and the membership. Before each write it reads the spexare's activities again, so
  * what is already there is recorded as {@link SyncStepStatus#EXISTED} instead of written twice. A failed step is
  * recorded with a short code and the run carries on with the other participants; a participant's steps that depend on a
- * failed one are left {@link SyncStepStatus#PENDING} for the next run. Every step is saved in its own short transaction,
- * never across a call to Spexregister.
+ * failed one are left {@link SyncStepStatus#PENDING} for the next run. Every step is saved in its own short
+ * transaction, never across a call to Spexregister.
  * <p>
  * The work runs on a virtual thread (virtual threads are on for the application, and the work is almost all waiting on
  * Spexregister), one per run; a run is bounded by the revival's participants and at most one runs per revival, so no

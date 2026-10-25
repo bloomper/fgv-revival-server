@@ -36,12 +36,12 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A planned mailing in the super admin's mailing plan (product spec 5.8, M6B-FR-10): due relative to each event of a
+ * A planned mailing in the super admin's mailing plan: due relative to each event of a
  * type, or to the premiere, e.g. "Monday the week before rehearsal weekend 2: remind about allergies". Ordered and
  * retired like event types, never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "mailing_template")

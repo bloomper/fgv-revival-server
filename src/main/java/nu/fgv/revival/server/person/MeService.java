@@ -34,7 +34,7 @@ import static nu.fgv.revival.server.person.MeMapper.ME_MAPPER;
 
 /**
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Service
 public class MeService {

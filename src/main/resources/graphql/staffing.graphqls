@@ -1,4 +1,4 @@
-# M6: availability per event day and staffing with shift slots (product spec 5.7).
+# Availability per event day and staffing with shift slots.
 
 enum AvailabilityAnswer {
     YES

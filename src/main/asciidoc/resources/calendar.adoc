@@ -1,0 +1,21 @@
+= Calendar
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 4
+:operation-http-request-title: Example request
+:operation-http-response-title: Example response
+
+xref:../api-guide.adoc[Back to API guide]
+
+[[feed]]
+== Feed
+
+A revival's events as an iCalendar feed, behind a secret link created with the GraphQL mutation `calendarFeedCreate`.
+Calendar apps have no access token, so the link is the credential.
+`404 Not Found` for a malformed, unknown or revoked link, and when the person it belongs to may no longer see the revival.
+
+operation::calendar-feed-get[snippets='security,path-parameters,query-parameters,http-request,response-headers']
+
+xref:../api-guide.adoc[Back to API guide]

@@ -26,10 +26,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Dietary needs are deleted outright: when cleared, and the day after the last show (product spec section 7).
+ * Dietary needs are deleted outright: when cleared, and the day after the last show.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public interface DietaryNeedRepository extends JpaRepository<DietaryNeed, Long> {
 

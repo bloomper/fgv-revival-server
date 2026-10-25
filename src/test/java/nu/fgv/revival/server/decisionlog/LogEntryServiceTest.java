@@ -69,11 +69,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The decision log's rules (FR-008–FR-015, FR-018): numbering, validation, statuses, answering, overdue and who may
+ * The decision log's rules: numbering, validation, statuses, answering, overdue and who may
  * write.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class LogEntryServiceTest {

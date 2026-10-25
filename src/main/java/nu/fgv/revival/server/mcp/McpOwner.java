@@ -21,11 +21,10 @@ import nu.fgv.revival.server.member.OwnerDto;
 import org.jspecify.annotations.Nullable;
 
 /**
- * An owner as the M3 tools return it: a display name and whether it is a member, never an email address
- * (contracts/mcp.md).
+ * An owner as the tools return it: a display name and whether it is a member, never an email address.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record McpOwner(@Nullable String name, boolean member, @Nullable Boolean active) {
 

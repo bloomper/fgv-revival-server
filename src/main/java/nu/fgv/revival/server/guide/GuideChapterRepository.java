@@ -23,7 +23,7 @@ import java.util.Optional;
 
 /**
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public interface GuideChapterRepository extends JpaRepository<GuideChapter, Long> {
 

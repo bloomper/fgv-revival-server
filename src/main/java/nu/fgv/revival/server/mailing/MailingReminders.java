@@ -46,14 +46,14 @@ import java.util.stream.Collectors;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Reminds a revival's owners of its mailing plan (product spec 5.8, M6B-FR-11): once per plan entry, its directeurs
+ * Reminds a revival's owners of its mailing plan: once per plan entry, its directeurs
  * and the steering group members with {@code COMMS} get an email when the entry is due within
  * {@value #DAYS_AHEAD} days or overdue by at most {@value #DAYS_OVERDUE} days and nothing has been sent for it. Only
  * revivals that are {@code ORGANISING} or {@code OPEN}. Runs daily at 07:30 Swedish time as the system, on the
- * scheduler M6a's daily job uses; nothing is sent to participants. Logs counts only.
+ * scheduler the participants' daily job uses; nothing is sent to participants. Logs counts only.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 @Slf4j

@@ -24,7 +24,7 @@ import java.util.Optional;
 
 /**
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public interface PersonRepository extends JpaRepository<Person, Long> {
 

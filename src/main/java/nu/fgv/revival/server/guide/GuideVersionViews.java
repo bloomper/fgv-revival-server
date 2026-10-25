@@ -31,10 +31,10 @@ import java.util.stream.Collectors;
 
 /**
  * Loads a version into a {@link GuideVersionView}. Published versions are cached without expiry because they never
- * change; the draft is read from the database every time (research R4). No access checks: callers check first.
+ * change; the draft is read from the database every time. No access checks: callers check first.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Component
 public class GuideVersionViews {

@@ -28,7 +28,7 @@ import static org.springframework.util.StringUtils.hasText;
  * Reads the current access token.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public final class SecurityUtil {
 
@@ -54,7 +54,7 @@ public final class SecurityUtil {
     }
 
     /**
-     * The Keycloak subject of the caller, or {@value #SYSTEM} when there is none. Never an email address (FR-028).
+     * The Keycloak subject of the caller, or {@value #SYSTEM} when there is none. Never an email address.
      */
     public static String currentSubjectOrSystem() {
         return currentJwt()

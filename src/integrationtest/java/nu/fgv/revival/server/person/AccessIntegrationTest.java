@@ -31,10 +31,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Only people with {@code USER} on {@code fgv-revival} get in (FR-001), whatever their Spexregister roles.
+ * Only people with {@code USER} on {@code fgv-revival} get in, whatever their Spexregister roles.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class AccessIntegrationTest extends AbstractIntegrationTest {
 

@@ -28,7 +28,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Checklist templates over GraphQL: the super admin edits them, other roles only read (M3 FR-003, FR-030–FR-032).
+ * Checklist templates over GraphQL: the super admin edits them, other roles only read.
  *
  * @author Anders Jacobsson
  */

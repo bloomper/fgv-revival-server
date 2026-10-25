@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.decisionlog;
 
 /**
- * A row's status. Any status may follow any other (data-model.md, Log entry).
+ * A row's status. Any status may follow any other.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum LogEntryStatus {
 
@@ -31,7 +31,7 @@ public enum LogEntryStatus {
     CANCELLED;
 
     /**
-     * Unfinished: open or waiting on someone. Used by the "open" filter, overdue and FR-019.
+     * Unfinished: open or waiting on someone. Used by the "open" filter, overdue, and closing a meeting.
      */
     public boolean isOpen() {
         return this == OPEN || this == WAITING;

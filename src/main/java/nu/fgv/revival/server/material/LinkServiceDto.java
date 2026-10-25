@@ -24,7 +24,7 @@ import java.util.List;
  * GraphQL's {@code LinkService}. Hosts in alphabetical order.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public record LinkServiceDto(String id, GuideVersionView.Text name, List<String> hosts, @Nullable String homeUrl,
                              int position, boolean retired,

@@ -16,11 +16,11 @@
 package nu.fgv.revival.server.budget;
 
 /**
- * What a category stands for in scenarios (product spec 5.10). At most one active category holds each role, and only
+ * What a category stands for in scenarios. At most one active category holds each role, and only
  * a category of the role's kind can hold it.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public enum BudgetCategoryRole {
     SHOW_TICKETS(BudgetCategoryKind.INCOME),

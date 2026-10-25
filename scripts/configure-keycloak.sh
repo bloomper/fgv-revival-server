@@ -9,7 +9,7 @@ set +a
 # Keycloak runs in fgv-infra-deploy's local stack
 infra_local=${INFRA_DEPLOY:-../fgv-infra-deploy}/local
 admin=$(sed -n 's/^KEYCLOAK_ADMIN=//p' "$infra_local/.env")
-web_url=${WEB_URL:-http://localhost:3000}
+web_url=${WEB_URL:-http://localhost:3001}
 
 kcadm() { docker compose -f "$infra_local/compose.yaml" exec -T keycloak-server /opt/keycloak/bin/kcadm.sh "$@"; }
 client_uuid() { kcadm get clients -r "$API_KEYCLOAK_REALM" -q clientId="$1" --fields id --format csv --noquotes | tr -d '\r'; }

@@ -32,11 +32,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * A revival's budget settings: planned participants and fee, and the loan from FGV/JK (product spec 5.10). One per
+ * A revival's budget settings: planned participants and fee, and the loan from FGV/JK. One per
  * revival, made when the revival is created.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "budget_settings")

@@ -37,10 +37,10 @@ import java.util.Optional;
 
 /**
  * Item texts as shown: a required item's text is its guide item's in the revival's pinned version, read from the cached
- * view, so a reworded requirement shows the new text without an update (FR-025, FR-035, research R10).
+ * view, so a reworded requirement shows the new text without an update.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class ChecklistTexts {
@@ -107,7 +107,7 @@ public class ChecklistTexts {
     }
 
     /**
-     * The text of a requirement no longer in the pinned version, from the newest published version that has it (FR-034).
+     * The text of a requirement no longer in the pinned version, from the newest published version that has it.
      */
     private GuideVersionView.Text lastText(final String key) {
         final List<GuideVersion> published = versionRepository.findByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED);

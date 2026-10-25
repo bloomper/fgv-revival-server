@@ -41,7 +41,7 @@ import java.util.function.Supplier;
  * record.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Component
 public class McpToolSupport {
@@ -83,7 +83,7 @@ public class McpToolSupport {
     }
 
     /**
-     * Runs a tool with its audit stamp. A refusal becomes a tool error with the code from contracts/README.md and the
+     * Runs a tool with its audit stamp. A refusal becomes a tool error with the API's error code and the
      * same English message the web shows, e.g. "BAD_REQUEST: Several members match ...".
      */
     <T> T call(final String tool, final Supplier<T> body) {
@@ -114,7 +114,7 @@ public class McpToolSupport {
     }
 
     /**
-     * Records {@link AuditSource#MCP} for anything the tool changes (research R10).
+     * Records {@link AuditSource#MCP} for anything the tool changes.
      */
     void audit(final String tool) {
         AuditContext.stamp(AuditContext.currentOrSystem()

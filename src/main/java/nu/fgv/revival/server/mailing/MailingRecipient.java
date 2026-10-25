@@ -33,10 +33,10 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One recipient of a sent mailing: a participant or helper, or a person of the steering group, and how sending went.
- * Never an address (product spec 5.8).
+ * Never an address.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "mailing_recipient")

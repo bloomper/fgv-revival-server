@@ -30,10 +30,10 @@ import static nu.fgv.revival.server.Documents.REVIVAL;
 import static nu.fgv.revival.server.Documents.REVIVALS;
 
 /**
- * Roles given by email wait until a person with that verified email logs in (FR-019b, FR-020).
+ * Roles given by email wait until a person with that verified email logs in.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class WaitingMemberIntegrationTest extends AbstractIntegrationTest {
 

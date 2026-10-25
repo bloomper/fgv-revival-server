@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * have one purpose each and are created by the import.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
 
@@ -188,14 +188,14 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
         assertThat(count("checklist WHERE event_id IS NOT NULL")).isPositive();
         assertThat(count("event_type WHERE checklist_template_id IS NOT NULL")).isEqualTo(4);
         assertThat(count("event WHERE id NOT IN (SELECT id FROM event_audit)")).isZero();
-        // M6b: the mailing plan, and for open revivals participants, shifts and a draft mailing
+        // The mailing plan, and for open revivals participants, shifts and a draft mailing
         assertThat(count("mailing_template WHERE event_type_id IS NOT NULL")).isEqualTo(2);
         assertThat(count("participant WHERE kind = 'HELPER'")).isPositive();
         assertThat(count("shift_slot")).isPositive();
         assertThat(count("shift_assignment WHERE self_signed_up = 1")).isPositive();
         assertThat(count("mailing WHERE status = 'DRAFT'")).isPositive();
         assertThat(count("shift_slot WHERE id NOT IN (SELECT id FROM shift_slot_audit)")).isZero();
-        // M8: materials in FGV's applications and other services, and inventory items with owners
+        // Materials in FGV's applications and other services, and inventory items with owners
         assertThat(count("material WHERE service_id = 'SPEXFLIX'")).isPositive();
         assertThat(count("material WHERE service_id = 'GOOGLE_DRIVE'")).isPositive();
         assertThat(count("inventory_item WHERE owner_person_id IS NOT NULL")).isPositive();

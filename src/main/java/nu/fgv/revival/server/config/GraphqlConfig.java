@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
  * Scalars and query limits.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Configuration
 public class GraphqlConfig {

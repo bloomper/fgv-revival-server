@@ -25,11 +25,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * A meeting's minutes, as produced when it closed and never changed afterwards (FR-020, research R8). Language-neutral:
+ * A meeting's minutes, as produced when it closed and never changed afterwards. Language-neutral:
  * people are ids, rendered by display name when read.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record Minutes(List<Row> decisions, List<Row> todos, List<Row> questions, List<Row> closed,
                       List<String> agendaPoints, List<Long> attendeeIds, @Nullable String othersPresent,

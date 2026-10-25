@@ -37,11 +37,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The decision log over MCP (contracts/mcp.md, FR-043–FR-045). The same service methods as GraphQL, with the token's
+ * The decision log over MCP. The same service methods as GraphQL, with the token's
  * person as the actor; owners are given as names and resolved by {@link OwnerResolver}.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class LogMcpTools {
@@ -166,8 +166,8 @@ public class LogMcpTools {
     }
 
     /**
-     * A row as list_log_entries returns it, plus how the owner's name was read, so the assistant can say when it was not
-     * a member (FR-045).
+     * A row as list_log_entries returns it, plus how the owner's name was read, so the assistant can say when it was
+     * not a member.
      */
     public record LogEntryWritten(int number, LocalDate date, LogEntryType type, LogEntryStatus status, boolean overdue,
                                   String text,

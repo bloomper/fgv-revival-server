@@ -17,7 +17,7 @@ type Me {
     revivalRoles: [RevivalRoleAssignment!]!
 }
 
-"The caller's role in one revival. Named so it is not confused with FGV membership, which M1 never handles."
+"The caller's role in one revival. Named so it is not confused with FGV membership."
 type RevivalRoleAssignment {
     revival: Revival!
     role: RevivalRole!

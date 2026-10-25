@@ -34,10 +34,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Availability and staffing over GraphQL (staffing.graphqls). A thin adapter: every rule is in {@link StaffingService}.
+ * Availability and staffing over GraphQL (staffing.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Controller
 public class StaffingGraphqlApi {
@@ -111,8 +111,6 @@ public class StaffingGraphqlApi {
     public List<AvailabilityDay> availability(final Participation source) {
         return service.availabilityOf(source.participant().id());
     }
-
-    // --- Participation ----------------------------------------------------------------------------------------------
 
     @SchemaMapping(typeName = "Participation", field = "shifts")
     public List<ShiftSlotDto> shifts(final Participation source, final Locale locale) {

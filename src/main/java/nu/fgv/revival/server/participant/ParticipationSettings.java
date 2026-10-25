@@ -30,11 +30,11 @@ import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 /**
- * What a revival tells its participants besides the fee (product spec 5.6): its Swish number, WhatsApp group and extra
+ * What a revival tells its participants besides the fee: its Swish number, WhatsApp group and extra
  * terms. One per revival, made the first time it is saved.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Entity
 @Table(name = "participation_settings")

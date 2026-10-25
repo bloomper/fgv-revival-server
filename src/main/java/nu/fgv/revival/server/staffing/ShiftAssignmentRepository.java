@@ -26,7 +26,7 @@ import java.util.Optional;
  * Who holds which slot.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface ShiftAssignmentRepository extends Repository<ShiftAssignment, Long> {
 

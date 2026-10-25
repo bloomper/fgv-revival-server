@@ -23,7 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
  * Invalid input, with a message code from {@code messages_{sv,en}.properties}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class BadRequestException extends ResponseStatusException {
 

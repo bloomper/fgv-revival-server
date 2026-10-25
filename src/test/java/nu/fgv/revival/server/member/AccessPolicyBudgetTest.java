@@ -36,11 +36,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The M5 rules in {@link AccessPolicy}: who reads and writes a revival's budget (product spec 5.10's permission
- * matrix, M5-FR-6), who keeps the reference figures, and who reads the Chalmersspex dates.
+ * The budget rules in {@link AccessPolicy}: who reads and writes a revival's budget, who keeps the reference figures,
+ * and who reads the Chalmersspex dates.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class AccessPolicyBudgetTest {
 

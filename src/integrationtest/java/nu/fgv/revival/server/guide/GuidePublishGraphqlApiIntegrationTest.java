@@ -25,11 +25,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Publishing and discarding the draft, and pinning revivals at the first publication (FR-014, FR-015, FR-017, FR-018,
- * SC-006).
+ * Publishing and discarding the draft, and pinning revivals at the first publication.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

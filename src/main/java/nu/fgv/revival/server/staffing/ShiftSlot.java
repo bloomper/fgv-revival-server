@@ -33,11 +33,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * A time block on an event day that needs people for a task, e.g. ticket check or punch guard (product spec 5.7,
- * M6B-FR-2). Times are Swedish time. Removed only while nobody holds it, as it is then an empty planning row.
+ * A time block on an event day that needs people for a task, e.g. ticket check or punch guard. Times are Swedish time.
+ * Removed only while nobody holds it, as it is then an empty planning row.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "shift_slot")

@@ -40,10 +40,10 @@ import static org.springframework.util.StringUtils.hasText;
 
 /**
  * The draft: starting, editing, publishing and discarding it. Every editing method goes through {@link #requireDraft},
- * the single check that a published version never changes (research R3, SC-003).
+ * the single check that a published version never changes.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Service
 public class GuideDraftService {
@@ -133,11 +133,9 @@ public class GuideDraftService {
         return versionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(GuideVersion.class, id));
     }
 
-    // --- Editing the draft (FR-013) -----------------------------------------------------------------------------------
-
     /**
-     * Starts the draft: a copy of the latest published version with the same keys (research R3), or an empty draft
-     * before the first version is published (FR-012).
+     * Starts the draft: a copy of the latest published version with the same keys, or an empty draft
+     * before the first version is published.
      */
     @Transactional
     public Long start() {
@@ -550,7 +548,7 @@ public class GuideDraftService {
     }
 
     /**
-     * Moves an item within its section, to another section, or to another chapter. Its key stays (FR-011).
+     * Moves an item within its section, to another section, or to another chapter. Its key stays.
      */
     @Transactional
     public Long moveItem(final Long id, final Long expectedVersion, final Long chapterId, final @Nullable Long sectionId, final int position) {
@@ -625,8 +623,8 @@ public class GuideDraftService {
     }
 
     /**
-     * Publishes the draft as the next version, "v" and one more than the highest number in use (FR-014), and pins every
-     * revival without a version to it (FR-018). The draft's id becomes the version's id.
+     * Publishes the draft as the next version, "v" and one more than the highest number in use, and pins every
+     * revival without a version to it. The draft's id becomes the version's id.
      */
     @Transactional
     public GuideVersionView publish(final Long id, final Long expectedVersion, final @Nullable String note) {
@@ -652,7 +650,7 @@ public class GuideDraftService {
     }
 
     /**
-     * Deletes the draft and everything in it. A draft is not revival data, so it may be deleted (constitution IV); Envers
+     * Deletes the draft and everything in it. A draft is not revival data, so it may be deleted; Envers
      * keeps the record of it.
      */
     @Transactional

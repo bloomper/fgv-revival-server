@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
  * GraphQL's {@code ChecklistTemplateSummary}.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistTemplateSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
                                           GuideVersionView.@Nullable Text name,

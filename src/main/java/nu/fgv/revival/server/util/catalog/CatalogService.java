@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  *
  * @param <E> the entry
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public abstract class CatalogService<E extends CatalogEntry> {
 
@@ -86,8 +86,6 @@ public abstract class CatalogService<E extends CatalogEntry> {
         return trimmed;
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     /**
      * The ids that rows refer to. Only these entries cannot be deleted.
      */
@@ -116,8 +114,6 @@ public abstract class CatalogService<E extends CatalogEntry> {
 
         return ids.stream().distinct().collect(Collectors.toMap(Function.identity(), used::contains));
     }
-
-    // --- Changing ---------------------------------------------------------------------------------------------------
 
     /**
      * Refuses ids that do not exist, and retired ones unless the row already {@code held} them.
@@ -208,8 +204,6 @@ public abstract class CatalogService<E extends CatalogEntry> {
         entry.setRetiredAt(null);
         return repository.saveAndFlush(entry);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     /**
      * Deletes an entry nothing uses, such as one created by mistake. One in use is refused: retire it instead.

@@ -44,10 +44,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * A deleted revival's budget kept as reference figures (M5-FR-14): totals per category, no people, no descriptions.
+ * A deleted revival's budget kept as reference figures: totals per category, no people, no descriptions.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class BudgetSnapshotTest {

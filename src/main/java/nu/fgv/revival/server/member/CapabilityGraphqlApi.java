@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
  * The areas of responsibility, and every field that shows one: rows store the id, GraphQL returns the entry.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Controller
 public class CapabilityGraphqlApi {

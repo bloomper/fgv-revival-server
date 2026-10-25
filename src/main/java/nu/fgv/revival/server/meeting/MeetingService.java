@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package nu.fgv.revival.server.meeting;
 
 import nu.fgv.revival.server.audit.AuditContext;
@@ -56,11 +55,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Steering group meetings run from the decision log (FR-016–FR-020): planned, started by whoever records, closed once
+ * Steering group meetings run from the decision log: planned, started by whoever records, closed once
  * every open or waiting to-do has an owner, producing minutes that never change. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Service
 public class MeetingService {
@@ -154,7 +153,7 @@ public class MeetingService {
     }
 
     /**
-     * The open or waiting to-dos without an owner, which block closing while the meeting is in progress (FR-019).
+     * The open or waiting to-dos without an owner, which block closing while the meeting is in progress.
      */
     @Transactional(readOnly = true)
     public List<LogEntrySummaryDto> blocking(final Long meetingId) {
@@ -257,8 +256,6 @@ public class MeetingService {
         meeting.setClosedBy(caller.person().getId());
         return toDto(repository.saveAndFlush(meeting), locale);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public MeetingDto cancel(final Long id, final Long version, final Locale locale) {

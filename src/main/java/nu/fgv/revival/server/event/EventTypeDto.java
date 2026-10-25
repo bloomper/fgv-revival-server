@@ -26,7 +26,7 @@ import java.util.Locale;
  * GraphQL's {@code EventType}. The checklist template is resolved from its id.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public record EventTypeDto(Long id,
                            GuideVersionView.Text name,

@@ -34,13 +34,13 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Spexare from Spexregister, for participants (M6). Names and contact details are kept in memory only, for at most five
- * minutes by spexare id, and never written to the database, logs or files (product spec section 7); the task list,
+ * Spexare from Spexregister, for participants. Names and contact details are kept in memory only, for at most five
+ * minutes by spexare id, and never written to the database, logs or files; the task list,
  * vocal parts and spex families for an hour. Every failure is a {@link SpexregisterUnavailableException}. No caller
  * check here: the participant services check first.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Service
 public class SpexareDirectory {

@@ -15,7 +15,7 @@
  */
 
 /**
- * Shared support for the plain HTTP endpoints (constitution II).
+ * Shared support for the plain HTTP endpoints.
  */
 @NullMarked
 package nu.fgv.revival.server.util.web;

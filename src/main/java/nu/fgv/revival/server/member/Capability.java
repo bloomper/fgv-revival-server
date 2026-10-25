@@ -22,11 +22,11 @@ import nu.fgv.revival.server.util.catalog.CatalogEntry;
 import org.hibernate.envers.Audited;
 
 /**
- * An area of responsibility a steering group member can hold (FR-003), from the list the super admin keeps. A
+ * An area of responsibility a steering group member can hold, from the list the super admin keeps. A
  * directeur holds all of them. Checklist items name one as a hint for who should own them.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Entity
 @Table(name = "capability")

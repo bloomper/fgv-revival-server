@@ -26,7 +26,7 @@ import java.util.Comparator;
  * {@code HH:mm} in Swedish time (Europe/Stockholm) and a venue.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public record RevivalShowDto(LocalDate date, @Nullable String time, @Nullable String venue) {
 

@@ -21,10 +21,10 @@ import org.springframework.data.domain.AuditorAware;
 import java.util.Optional;
 
 /**
- * Records the caller's Keycloak subject in {@code created_by} and {@code last_modified_by}, never the email (FR-028).
+ * Records the caller's Keycloak subject in {@code created_by} and {@code last_modified_by}, never the email.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class JwtAuditorAwareImpl implements AuditorAware<String> {
 

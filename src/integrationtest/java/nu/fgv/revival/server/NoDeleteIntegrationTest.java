@@ -40,8 +40,8 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Nothing in the decision log, meetings, checklists, events, budgets, materials or inventory can be deleted, by any route
- * (M3 SC-005, M4-FR-3, M5, M8, constitution IV).
+ * Nothing in the decision log, meetings, checklists, events, budgets, materials or inventory can be deleted, by any
+ * route.
  *
  * @author Anders Jacobsson
  */
@@ -51,7 +51,7 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
             "calendarFeed");
     private static final List<String> M3_PACKAGES = List.of("decisionlog", "meeting", "checklist", "event", "calendar");
     /**
-     * The lines event types propose are the super admin's, not revival data: removing one deletes it (M5-FR-3).
+     * The lines event types propose are the super admin's, not revival data: removing one deletes it.
      */
     private static final String EVENT_TYPE_BUDGET_LINES = "eventTypeBudgetLine";
     private static final List<String> BUDGET_PREFIXES = List.of("budgetSettings", "budgetLine", "transaction", "budgetScenario");
@@ -108,8 +108,8 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * M6: participants and their settings are removed by closing them; only data whose home is this application and
-     * that must leave no trace (pending people, dietary needs, handled referrals) is deleted (product spec 7).
+     * Participants and their settings are removed by closing them; only data whose home is this application and
+     * that must leave no trace (pending people, dietary needs, handled referrals) is deleted.
      */
     @Test
     void participantsAndTheirSettingsCannotBeDeleted() throws ClassNotFoundException {
@@ -130,7 +130,7 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * M6b: mailings are cancelled and their recipients kept, never deleted; the mailing plan's templates are retired. A
+     * Mailings are cancelled and their recipients kept, never deleted; the mailing plan's templates are retired. A
      * shift slot is removed only while nobody holds it, as an empty planning row, which the staffing tests show.
      */
     @Test
@@ -153,7 +153,7 @@ class NoDeleteIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * M8: materials and inventory items are removed by marking them; the link services are the super admin's list, and
+     * Materials and inventory items are removed by marking them; the link services are the super admin's list, and
      * only one nothing holds is deleted.
      */
     @Test

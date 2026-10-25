@@ -17,59 +17,95 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.spex.SpexregisterClient;
+import nu.fgv.revival.server.util.AbstractApiTest;
+import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
-@ExtendWith(MockitoExtension.class)
-class RevivalHttpApiTest {
+@WebMvcTest(RevivalHttpApi.class)
+class RevivalHttpApiTest extends AbstractApiTest {
 
-    @Mock
+    @MockitoBean
     private RevivalService revivalService;
 
-    @InjectMocks
-    private RevivalHttpApi api;
-
     @Test
-    void servesThePosterSandboxed() {
+    void servesThePosterSandboxed() throws Exception {
         when(revivalService.poster(1L)).thenReturn(Optional.of(new SpexregisterClient.Poster(new byte[]{1, 2}, "image/svg+xml;charset=UTF-8")));
 
-        final ResponseEntity<byte[]> response = api.poster(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).containsExactly(1, 2);
-        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.parseMediaType("image/svg+xml;charset=UTF-8"));
-        assertThat(response.getHeaders().getFirst("Content-Security-Policy")).contains("sandbox");
-        assertThat(response.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        mockMvc
+                .perform(get("/api/revivals/{id}/poster", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(new byte[]{1, 2}))
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/svg+xml;charset=UTF-8"))
+                .andExpect(header().string("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andDo(document(
+                        "revival-poster-get",
+                        pathParameters(parameterWithName("id").description("The id of the revival")),
+                        secureRequestHeaders,
+                        responseHeaders(
+                                headerWithName(HttpHeaders.CONTENT_TYPE).description("The poster's image type"),
+                                headerWithName(HttpHeaders.CACHE_CONTROL).description("Private, for an hour"),
+                                headerWithName("Content-Security-Policy").description("Sandboxes the image, since an SVG opened on its own could otherwise run script"),
+                                headerWithName("X-Content-Type-Options").description("`nosniff`")
+                        ),
+                        security(List.of("USER"))
+                ));
     }
 
     @Test
-    void noPosterIsNoContent() {
+    void noPosterIsNoContent() throws Exception {
         when(revivalService.poster(1L)).thenReturn(Optional.empty());
 
-        assertThat(api.poster(1L).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        mockMvc
+                .perform(get("/api/revivals/{id}/poster", 1L))
+                .andExpect(status().isNoContent());
     }
 
     @Test
-    void anythingButAnImageIsNoPoster() {
+    void anythingButAnImageIsNoPoster() throws Exception {
         when(revivalService.poster(1L)).thenReturn(Optional.of(new SpexregisterClient.Poster(new byte[]{1}, "text/html")));
         when(revivalService.poster(2L)).thenReturn(Optional.of(new SpexregisterClient.Poster(new byte[]{1}, "not a type")));
 
-        assertThat(api.poster(1L).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(api.poster(2L).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        mockMvc.perform(get("/api/revivals/{id}/poster", 1L)).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/revivals/{id}/poster", 2L)).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void aRevivalTheCallerMayNotSeeIsNotFound() throws Exception {
+        when(revivalService.poster(1L)).thenThrow(new ResourceNotFoundException(Revival.class, 1L));
+
+        mockMvc
+                .perform(get("/api/revivals/{id}/poster", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andDo(document(
+                        "error",
+                        preprocessResponse(prettyPrint()),
+                        errorResponseFields
+                ));
     }
 }

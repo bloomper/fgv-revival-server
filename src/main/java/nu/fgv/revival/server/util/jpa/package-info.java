@@ -16,7 +16,7 @@
 
 
 /**
- * Repository helpers that keep delete methods out of the repositories of revival data (constitution IV).
+ * Repository helpers that keep delete methods out of the repositories of revival data.
  */
 @NullMarked
 package nu.fgv.revival.server.util.jpa;

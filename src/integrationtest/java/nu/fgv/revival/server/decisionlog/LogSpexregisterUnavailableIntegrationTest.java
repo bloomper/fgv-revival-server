@@ -27,10 +27,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The decision log, meetings and checklists work while Spexregister is down, and never call it (FR-007, SC-008).
+ * The decision log, meetings and checklists work while Spexregister is down, and never call it.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 

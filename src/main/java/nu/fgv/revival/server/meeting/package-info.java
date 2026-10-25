@@ -16,7 +16,7 @@
 
 
 /**
- * Steering group meetings run from the decision log, their minutes, and emailing the minutes (M3 research R8, R9).
+ * Steering group meetings run from the decision log, their minutes, and emailing the minutes.
  */
 @NullMarked
 package nu.fgv.revival.server.meeting;

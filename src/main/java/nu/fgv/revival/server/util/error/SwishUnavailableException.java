@@ -21,11 +21,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Swish's QR code service could not be reached or refused the request (M6-FR-19). The payment details are shown as
+ * Swish's QR code service could not be reached or refused the request. The payment details are shown as
  * text all the same.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public class SwishUnavailableException extends ResponseStatusException {
 

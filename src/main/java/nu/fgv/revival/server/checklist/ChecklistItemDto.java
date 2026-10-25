@@ -27,10 +27,10 @@ import java.time.LocalDate;
 
 /**
  * A checklist item as GraphQL's {@code ChecklistItem}. A required item's text is the guide's, in the revival's pinned
- * version (FR-025, FR-035); {@code reason} is rendered in the reader's language.
+ * version; {@code reason} is rendered in the reader's language.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistItemDto(Long id,
                                ChecklistSummaryDto checklist,

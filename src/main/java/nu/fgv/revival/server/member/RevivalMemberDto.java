@@ -22,10 +22,10 @@ import java.time.Instant;
 import java.util.Set;
 
 /**
- * A member as GraphQL's {@code RevivalMember}. {@code email} is filled only for callers who may see it (FR-019c).
+ * A member as GraphQL's {@code RevivalMember}. {@code email} is filled only for callers who may see it.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalMemberDto(Long id,
                                RevivalRole role,

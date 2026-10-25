@@ -32,11 +32,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A saved what-if over a revival's budget (product spec 5.10, M5-FR-10). Its result is computed when it is read, from
+ * A saved what-if over a revival's budget. Its result is computed when it is read, from
  * the budget as it is then. Removed rather than deleted.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "budget_scenario")

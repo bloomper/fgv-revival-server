@@ -28,7 +28,7 @@ import java.util.Locale;
  * unavailable.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class RevivalTitles {

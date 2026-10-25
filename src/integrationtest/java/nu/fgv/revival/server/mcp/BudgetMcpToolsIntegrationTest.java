@@ -27,11 +27,11 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The budget's MCP tools against MySQL and Keycloak (M5-FR-13): its position for readers without payers' names, and
+ * The budget's MCP tools against MySQL and Keycloak: its position for readers without payers' names, and
  * recording a transaction for writers.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class BudgetMcpToolsIntegrationTest extends AbstractIntegrationTest {
 

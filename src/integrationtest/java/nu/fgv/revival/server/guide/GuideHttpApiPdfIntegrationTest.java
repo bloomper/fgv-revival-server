@@ -31,10 +31,10 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The PDF endpoints (contracts/http.md, FR-028–FR-030, SC-006, SC-008).
+ * The PDF endpoints.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
 

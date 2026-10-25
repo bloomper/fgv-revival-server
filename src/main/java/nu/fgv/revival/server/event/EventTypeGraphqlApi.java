@@ -29,10 +29,10 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 
 /**
- * Event types over GraphQL (event.graphqls). A thin adapter: every rule is in {@link EventTypeService}.
+ * Event types over GraphQL (event.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Controller
 public class EventTypeGraphqlApi {

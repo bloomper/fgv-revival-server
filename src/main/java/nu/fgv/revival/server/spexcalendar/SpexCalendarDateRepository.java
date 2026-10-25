@@ -24,7 +24,7 @@ import java.util.Optional;
  * The dates are not revival data, so they can be deleted.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public interface SpexCalendarDateRepository extends Repository<SpexCalendarDate, Long> {
 

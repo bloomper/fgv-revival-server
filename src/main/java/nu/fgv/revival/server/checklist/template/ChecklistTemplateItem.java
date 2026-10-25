@@ -35,11 +35,10 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * An item of a checklist template (FR-031). Retired, never deleted, so checklist items made from it keep their link
- * (FR-032a).
+ * An item of a checklist template. Retired, never deleted, so checklist items made from it keep their link.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "checklist_template_item")

@@ -32,10 +32,10 @@ import static nu.fgv.revival.server.Documents.REVIVALS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Every role × status combination of the visibility table, through GraphQL and MCP (SC-002): 5 roles × 8 statuses.
+ * Every role × status combination of the visibility table, through GraphQL and MCP: 5 roles × 8 statuses.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class RevivalVisibilityIntegrationTest extends AbstractIntegrationTest {
 

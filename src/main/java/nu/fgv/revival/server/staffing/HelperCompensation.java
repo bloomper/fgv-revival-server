@@ -33,7 +33,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * What the revival's helpers are paid for the shifts they hold (M6B-FR-5, the M5 seam): the sum, over every shift a
+ * What the revival's helpers are paid for the shifts they hold: the sum, over every shift a
  * helper who is not removed holds in an event that is not cancelled, of that helper's compensation per shift.
  * <p>
  * The budget treats this as a budgeted cost of the category with the {@code HELPERS} role. It is computed whenever the
@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
  * has checked that the caller reads it.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 public class HelperCompensation {

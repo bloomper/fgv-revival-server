@@ -35,11 +35,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * An event in a revival's timeline: of a type from the guide's example timeline, or added freely (M4-FR-3). Times are
+ * An event in a revival's timeline: of a type from the guide's example timeline, or added freely. Times are
  * Swedish time. Never deleted; an event can be cancelled and restored.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Entity
 @Table(name = "event")

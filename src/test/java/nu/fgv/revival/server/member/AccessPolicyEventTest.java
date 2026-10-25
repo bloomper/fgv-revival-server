@@ -31,11 +31,11 @@ import static nu.fgv.revival.server.member.AccessPolicyTest.revival;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The M4 rules in {@link AccessPolicy}: events follow the rules of the revival's other work, the super admin keeps the
- * event types, and a calendar link needs a role in a revival the caller can see.
+ * The event rules in {@link AccessPolicy}: events follow the rules of the revival's other work, the super admin keeps
+ * the event types, and a calendar link needs a role in a revival the caller can see.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 class AccessPolicyEventTest {
 

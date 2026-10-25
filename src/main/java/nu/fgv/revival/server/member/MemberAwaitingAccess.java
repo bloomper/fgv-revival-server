@@ -20,13 +20,13 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A member was added who has a Keycloak user but not {@code fgv-revival}'s {@code USER}, so a super admin has to grant
- * it (product spec, section 3). Published inside the transaction that adds the member; handled after it commits.
+ * it. Published inside the transaction that adds the member; handled after it commits.
  *
  * @param keycloakUserId the member's user in the FGV realm
  * @param invited        whether this application created the user and Keycloak emailed them
  * @param addedBy        display name of the caller who added the member
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public record MemberAwaitingAccess(Long revivalId,
                                    String email,

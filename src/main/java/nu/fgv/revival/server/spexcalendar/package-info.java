@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * The current Chalmersspex's show dates (product spec 5.1), kept by the super admin so that the cross-revival
+ * The current Chalmersspex's show dates, kept by the super admin so that the cross-revival
  * timeline can flag revivals whose shows clash with them. Not revival data.
  */
 @NullMarked

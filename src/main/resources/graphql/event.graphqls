@@ -1,5 +1,5 @@
-# M4: event types (SUPER_ADMIN), a revival's events and timeline, and calendar feeds (product spec 5.3). Events are
-# cancelled, never deleted (constitution IV). Event types are retired, never deleted.
+# Event types (SUPER_ADMIN), a revival's events and timeline, and calendar feeds. Events are
+# cancelled, never deleted. Event types are retired, never deleted.
 
 extend type Query {
     "Every signed-in caller. Retired types only with includeRetired. In the super admin's order."
@@ -36,14 +36,14 @@ extend type Mutation {
 
     """
     A new secret calendar link for the caller in this revival; the previous one stops working. Anyone holding a revival
-    role in a revival they can see (FR-M4-ICS). The token is shown only here.
+    role in a revival they can see. The token is shown only here.
     """
     calendarFeedCreate(revivalId: ID!): CalendarFeedLink!
     "Turns the caller's calendar link for this revival off."
     calendarFeedRevoke(revivalId: ID!): Void
 }
 
-"A kind of event from the guide's example timeline (product spec 5.3)."
+"A kind of event from the guide's example timeline."
 type EventType {
     id: ID!
     name: LocalizedText!
@@ -109,7 +109,7 @@ type Event {
     version: Int!
 }
 
-"An event with a type that the revival has no event of yet, proposed from the premiere date (product spec 5.3)."
+"An event with a type that the revival has no event of yet, proposed from the premiere date."
 type EventProposal {
     type: EventType!
     startDate: Date!

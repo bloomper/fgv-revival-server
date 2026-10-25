@@ -1,0 +1,42 @@
+= Budget
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 4
+:operation-http-request-title: Example request
+:operation-http-response-title: Example response
+
+xref:../api-guide.adoc[Back to API guide]
+
+Only those who may read the revival's budget may export it and download receipts, and only those who may write it may upload and remove receipts.
+
+[[export]]
+== Export
+
+The budget as an Excel workbook.
+
+operation::revival-budget-export-get[snippets='security,path-parameters,query-parameters,request-headers,http-request,response-headers']
+
+[[receipt]]
+== Receipt
+
+A transaction has at most one receipt.
+Uploading one replaces the one before.
+
+[[receipt_upload]]
+=== Upload
+
+operation::transaction-receipt-upload[snippets='security,path-parameters,request-parts,request-headers,http-request,response-fields,http-response']
+
+[[receipt_get]]
+=== Get
+
+operation::transaction-receipt-get[snippets='security,path-parameters,request-headers,http-request,response-headers']
+
+[[receipt_delete]]
+=== Delete
+
+operation::transaction-receipt-delete[snippets='security,path-parameters,request-headers,http-request,http-response']
+
+xref:../api-guide.adoc[Back to API guide]

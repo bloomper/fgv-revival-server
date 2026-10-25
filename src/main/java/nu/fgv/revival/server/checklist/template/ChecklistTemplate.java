@@ -37,11 +37,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A super admin's checklist template for a guide chapter or an event kind (FR-030). Retired, never deleted, so checklist items
+ * A super admin's checklist template for a guide chapter or an event kind. Retired, never deleted, so checklist items
  * can refer to its items.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "checklist_template")

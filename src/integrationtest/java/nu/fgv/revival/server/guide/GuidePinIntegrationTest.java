@@ -26,10 +26,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Moving a revival to another version, the newer-version banner and the changes view (FR-016, FR-019, FR-020).
+ * Moving a revival to another version, the newer-version banner and the changes view.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuidePinIntegrationTest extends AbstractIntegrationTest {
 

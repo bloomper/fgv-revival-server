@@ -22,11 +22,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Email cannot be sent: no mail server is configured, or it refused every recipient (M3 FR-021). Nothing is recorded
+ * Email cannot be sent: no mail server is configured, or it refused every recipient. Nothing is recorded
  * as sent.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public class MailUnavailableException extends ResponseStatusException {
 

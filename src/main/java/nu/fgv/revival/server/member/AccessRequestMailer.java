@@ -38,14 +38,14 @@ import java.util.Locale;
 
 /**
  * Tells the super admins, by email, that a member is waiting for access, so that one of them grants
- * {@code fgv-revival}'s {@code USER} in Keycloak (product spec, section 3). {@code fgv-keycloak}'s
+ * {@code fgv-revival}'s {@code USER} in Keycloak. {@code fgv-keycloak}'s
  * {@code fgv-admin-notification} only reports users who register themselves, not users created through the admin API,
  * so the application sends this itself, through the same mail server as the minutes. One plain text message per super
  * admin, in their Keycloak language. Runs after the member is committed and never fails the add; addresses and names
  * are never logged.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Component
 @Slf4j
@@ -107,7 +107,7 @@ public class AccessRequestMailer {
     }
 
     /**
-     * One message per super admin about everyone in the batch, e.g. a round of participant invitations (M6-FR-5).
+     * One message per super admin about everyone in the batch, e.g. a round of participant invitations.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void membersAwaitingAccess(final MembersAwaitingAccess event) {

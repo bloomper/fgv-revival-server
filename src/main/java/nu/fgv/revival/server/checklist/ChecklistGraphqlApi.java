@@ -42,10 +42,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Checklists over GraphQL (contracts/schema.graphqls). A thin adapter: every rule is in {@link ChecklistService}.
+ * Checklists over GraphQL.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Controller
 public class ChecklistGraphqlApi {

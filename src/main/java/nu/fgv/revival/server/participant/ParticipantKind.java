@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.participant;
 
 /**
- * Whether someone takes part in the revival or helps with it (product spec 5.6).
+ * Whether someone takes part in the revival or helps with it.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public enum ParticipantKind {
 

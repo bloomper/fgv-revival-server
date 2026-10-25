@@ -28,15 +28,15 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * Five caches: Spexregister's original spex, kept in memory for 5 minutes as the product spec allows (M1 research R5),
- * published guide versions, which are immutable and so never expire (M2 research R4), spex posters, kept for 5
- * minutes like the spex (constitution V) and bounded by their size, so a list of revivals does not ask Spexregister
+ * Five caches: Spexregister's original spex, kept in memory for 5 minutes,
+ * published guide versions, which are immutable and so never expire, spex posters, kept for 5
+ * minutes like the spex and bounded by their size, so a list of revivals does not ask Spexregister
  * for every poster on every view, spexare by id with their names and contact details, kept in memory only and for at
- * most 5 minutes (product spec section 7, M6), and Spexregister's task list, vocal parts and spex families, kept for an
+ * most 5 minutes, and Spexregister's task list, vocal parts and spex families, kept for an
  * hour.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Configuration
 @EnableCaching

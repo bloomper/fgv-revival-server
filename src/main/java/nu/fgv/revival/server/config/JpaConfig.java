@@ -27,7 +27,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  * JPA auditing with the caller's Keycloak subject, and Envers repositories.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Configuration
 @EnableJpaAuditing

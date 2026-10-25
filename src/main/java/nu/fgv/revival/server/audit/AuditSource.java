@@ -20,7 +20,7 @@ package nu.fgv.revival.server.audit;
  * Where a change came from, recorded on each revision.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public enum AuditSource {
 

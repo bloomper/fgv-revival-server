@@ -20,7 +20,7 @@ package nu.fgv.revival.server.staffing;
  * Whether a participant can come on an event day.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public enum AvailabilityAnswer {
 

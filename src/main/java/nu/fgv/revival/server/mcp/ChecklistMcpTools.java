@@ -36,10 +36,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Checklists over MCP (contracts/mcp.md, FR-043, FR-044). Marking items not applicable is not offered here.
+ * Checklists over MCP. Marking items not applicable is not offered here.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class ChecklistMcpTools {

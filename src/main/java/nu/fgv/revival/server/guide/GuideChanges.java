@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * What changed between two versions, compared by key (research R5, FR-016). An item that moves within its section is
+ * What changed between two versions, compared by key. An item that moves within its section is
  * not reported on its own; its section is reported as reordered, so an insertion does not mark every later item as
  * moved.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public final class GuideChanges {
 

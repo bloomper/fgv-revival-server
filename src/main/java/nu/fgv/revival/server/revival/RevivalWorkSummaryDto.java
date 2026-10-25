@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
  * resolves its upcoming events.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record RevivalWorkSummaryDto(Long revivalId, int openEntries, int overdueEntries, int overdueChecklistItems,
                                     int openRequiredItems,

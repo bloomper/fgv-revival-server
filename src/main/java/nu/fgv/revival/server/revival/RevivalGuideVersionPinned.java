@@ -21,10 +21,10 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A revival was pinned to a guide version: when created, at the first publication, or by a change of version.
- * Published in the pinning transaction, so its checklists and question rows follow in the same one (M3 research R10).
+ * Published in the pinning transaction, so its checklists and question rows follow in the same one.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record RevivalGuideVersionPinned(Long revivalId, @Nullable Long fromVersionId, Long toVersionId) {
 }

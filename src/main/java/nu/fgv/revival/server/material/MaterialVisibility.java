@@ -16,10 +16,10 @@
 package nu.fgv.revival.server.material;
 
 /**
- * Who sees a material besides those who read them all (M8-FR-5).
+ * Who sees a material besides those who read them all.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public enum MaterialVisibility {
     /**

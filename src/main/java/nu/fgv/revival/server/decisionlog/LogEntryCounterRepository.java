@@ -26,15 +26,14 @@ import java.util.Optional;
 
 /**
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public interface LogEntryCounterRepository extends Repository<LogEntryCounter, Long> {
 
     LogEntryCounter save(LogEntryCounter counter);
 
     /**
-     * The counter, locked until the transaction ends, so rows created at the same time get consecutive numbers
-     * (research R3).
+     * The counter, locked until the transaction ends, so rows created at the same time get consecutive numbers.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM LogEntryCounter c WHERE c.revivalId = :revivalId")

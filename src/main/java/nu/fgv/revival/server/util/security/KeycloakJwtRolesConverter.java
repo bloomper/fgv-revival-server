@@ -31,7 +31,7 @@ import java.util.Map;
  * Turns Keycloak realm and client roles into authorities, e.g. {@code ROLE_fgv-revival_USER}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class KeycloakJwtRolesConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
     public static final String PREFIX_REALM_ROLE = "ROLE_realm_";

@@ -22,7 +22,7 @@ import java.util.List;
  * GraphQL's {@code RevivalRoleAssignment}. The revival is resolved by its id.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalRoleAssignmentDto(Long revivalId, RevivalRole role, List<String> capabilities) {
 }

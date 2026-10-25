@@ -31,11 +31,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A person's secret calendar link for a revival (M4-FR-5). Only the SHA-256 of the token is kept. A credential, like
+ * A person's secret calendar link for a revival. Only the SHA-256 of the token is kept. A credential, like
  * {@code person}, so not audited; at most one link per person and revival is active.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Entity
 @Table(name = "calendar_feed")

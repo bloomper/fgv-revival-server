@@ -65,13 +65,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A revival's mailings (product spec 5.8, M6B-FR-8–10, M6B-FR-12): the steering group drafts, a directeur or a member
+ * A revival's mailings: the steering group drafts, a directeur or a member
  * with {@code COMMS} sends, each recipient getting their own message, and sends again to those it failed for. The
  * audience is resolved when the mailing is sent, and addresses are read then and never stored. Also the revival's
- * mailing plan from the super admin's templates. Nothing is sent without a person confirming (constitution IV).
+ * mailing plan from the super admin's templates. Nothing is sent without a person confirming.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Service
 @Slf4j
@@ -155,8 +155,6 @@ public class MailingService {
                 mailings.stream().anyMatch(mailing -> mailing.getStatus() == MailingStatus.SENT));
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     static String key(final Long templateId, final @Nullable Long eventId) {
         return templateId + "/" + (eventId == null ? "premiere" : eventId);
     }
@@ -175,8 +173,6 @@ public class MailingService {
 
         return toDtos(repository.findByRevivalIdOrderByCreatedAtDescIdDesc(revivalId), revival, caller, locale);
     }
-
-    // --- Drafting ---------------------------------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public MailingDto get(final Long id, final Locale locale) {
@@ -201,7 +197,7 @@ public class MailingService {
     }
 
     /**
-     * A new draft (M6B-FR-12). From a plan entry, its template and event are kept so the plan shows it; the web fills in
+     * A new draft. From a plan entry, its template and event are kept so the plan shows it; the web fills in
      * the template's text.
      */
     @Transactional
@@ -222,8 +218,6 @@ public class MailingService {
         mailing.setCreatedByPerson(caller.person().getId());
         return toDto(repository.saveAndFlush(mailing), revival, caller, locale);
     }
-
-    // --- Sending ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public MailingDto update(final Long id, final Long version, final Input input, final Locale locale) {
@@ -251,7 +245,7 @@ public class MailingService {
     }
 
     /**
-     * Sends a draft to its audience as it is now, one message per recipient (M6B-FR-9). The messages go out outside any
+     * Sends a draft to its audience as it is now, one message per recipient. The messages go out outside any
      * transaction; then the mailing and each recipient's result are saved together. When every recipient with an
      * address fails, nothing is saved and the draft stays a draft.
      */
@@ -377,7 +371,7 @@ public class MailingService {
     }
 
     /**
-     * The revival's plan for readers of mailings, by due date; empty for others (M6B-FR-10).
+     * The revival's plan for readers of mailings, by due date; empty for others.
      */
     @Transactional(readOnly = true)
     public List<MailingPlanEntry> plan(final Long revivalId, final Locale locale) {
@@ -397,8 +391,6 @@ public class MailingService {
                 item.event() == null ? null : EventDto.of(item.event(), revival.getPremiereDate()), item.dueDate(),
                 item.mailing() == null ? null : mailings.get(item.mailing().getId()), item.due(today))).toList();
     }
-
-    // --- The plan ---------------------------------------------------------------------------------------------------
 
     /**
      * The plan entry a mailing was drafted from, as the plan shows it; null when it was not, or the entry is gone.
@@ -501,8 +493,6 @@ public class MailingService {
         return mailing;
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private void define(final Mailing mailing, final Revival revival, final Input input) {
         final MailingAudiences.Audience audience = audience(revival, input.audience());
         final String subject = input.subject() == null ? "" : input.subject().strip();
@@ -522,8 +512,8 @@ public class MailingService {
     }
 
     /**
-     * The audience with only what its kind uses: a position that Spexregister knows, when it can be read, or an event of
-     * the revival that is not cancelled.
+     * The audience with only what its kind uses: a position that Spexregister knows, when it can be read, or an event
+     * of the revival that is not cancelled.
      */
     private MailingAudiences.Audience audience(final Revival revival, final AudienceInput input) {
         return switch (input.kind()) {

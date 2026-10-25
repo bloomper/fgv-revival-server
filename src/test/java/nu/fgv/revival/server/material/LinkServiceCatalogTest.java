@@ -42,7 +42,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The link services the super admin keeps (M8-FR-1): hosts are lower-case host names, at most ten, and a host belongs to
+ * The link services the super admin keeps: hosts are lower-case host names, at most ten, and a host belongs to
  * at most one active service; the home page is https.
  *
  * @author Anders Jacobsson

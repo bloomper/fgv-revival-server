@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package nu.fgv.revival.server.event;
 
 import nu.fgv.revival.server.audit.AuditContext;
@@ -48,18 +47,18 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * A revival's events (M4-FR-3–FR-8): its directeurs and steering group create, change, cancel and restore them, and
+ * A revival's events: its directeurs and steering group create, change, cancel and restore them, and
  * everyone who reads the revival's work reads them. An event of a type with a checklist template gets an EVENT
- * checklist that follows its title, start date and cancellation (M4-FR-4). Never deleted.
+ * checklist that follows its title, start date and cancellation. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Service
 public class EventService {
 
     /**
-     * How many events the revival page shows as upcoming (M4-FR-8).
+     * How many events the revival page shows as upcoming.
      */
     static final int UPCOMING = 3;
 
@@ -111,8 +110,6 @@ public class EventService {
         }
         return trimmed;
     }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     /**
      * {@code HH:mm} from 00:00 to 23:59, trimmed, or null when blank, as a show's time.
@@ -198,8 +195,6 @@ public class EventService {
         return list(revivalId, includeCancelled);
     }
 
-    // --- Writing ----------------------------------------------------------------------------------------------------
-
     @Transactional(readOnly = true)
     public EventDto get(final Long id) {
         final Event event = readable(callerService.current(), id);
@@ -208,7 +203,7 @@ public class EventService {
     }
 
     /**
-     * The next events that are not cancelled and have not ended, soonest first (M4-FR-8).
+     * The next events that are not cancelled and have not ended, soonest first.
      */
     @Transactional(readOnly = true)
     public List<EventDto> upcoming(final Long revivalId) {
@@ -218,7 +213,7 @@ public class EventService {
     }
 
     /**
-     * Dates for the active types the revival has no event of that is not cancelled (M4-FR-7).
+     * Dates for the active types the revival has no event of that is not cancelled.
      */
     @Transactional(readOnly = true)
     public List<EventProposalDto> proposals(final Long revivalId) {
@@ -234,7 +229,7 @@ public class EventService {
 
     /**
      * The events' checklists, by event id, for those whose revival's work the caller reads: participants read events,
-     * not their checklists (M6-FR-1). Callers have read the events.
+     * not their checklists. Callers have read the events.
      */
     @Transactional(readOnly = true)
     public Map<Long, ChecklistSummaryDto> checklists(final Collection<Long> eventIds) {
@@ -248,8 +243,6 @@ public class EventService {
 
         return readable.isEmpty() ? Map.of() : checklistService.summariesByEvent(readable);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public EventDto create(final NewEvent newEvent, final Locale locale) {
@@ -287,7 +280,7 @@ public class EventService {
     }
 
     /**
-     * A new title renames the event's checklist, and a new start date re-dates it (M4-FR-4).
+     * A new title renames the event's checklist, and a new start date re-dates it.
      */
     @Transactional
     public EventDto update(final Change change) {
@@ -390,7 +383,7 @@ public class EventService {
     }
 
     /**
-     * A revival whose events the caller reads: its work readers, and its participants (M6-FR-1).
+     * A revival whose events the caller reads: its work readers, and its participants.
      */
     private Revival eventsReadable(final Caller caller, final Long revivalId) {
         final Revival revival = accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);

@@ -23,7 +23,7 @@ import org.hibernate.envers.RevisionListener;
  * Fills in who made the revision and where it came from.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class AuditRevisionListener implements RevisionListener {
 

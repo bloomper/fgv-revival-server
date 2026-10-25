@@ -41,10 +41,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Mailings and the mailing plan over GraphQL (mailing.graphqls). A thin adapter: every rule is in the services.
+ * Mailings and the mailing plan over GraphQL (mailing.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Controller
 public class MailingGraphqlApi {
@@ -74,8 +74,6 @@ public class MailingGraphqlApi {
                                                                 final Locale locale) {
         return service.preview(revivalId, audience.toInput(), locale);
     }
-
-    // --- Mailings ---------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public MailingDto mailingCreate(@Argument final MailingInput input, final Locale locale) {
@@ -126,8 +124,6 @@ public class MailingGraphqlApi {
     public MailingTemplateDto mailingTemplateUpdate(@Argument final Long id, @Argument final Long version, @Argument final MailingTemplateInput input) {
         return templateService.update(id, version, input.toDefinition());
     }
-
-    // --- The plan's templates ---------------------------------------------------------------------------------------
 
     @MutationMapping
     public List<MailingTemplateDto> mailingTemplateMove(@Argument final Long id, @Argument final Long version, @Argument final int position) {

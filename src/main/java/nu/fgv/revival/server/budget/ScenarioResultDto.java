@@ -23,7 +23,7 @@ import java.math.BigDecimal;
  * GraphQL's {@code BudgetScenarioResult}.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public record ScenarioResultDto(ScenarioParameters baseline,
                                 ScenarioParameters used,

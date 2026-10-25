@@ -25,10 +25,10 @@ import java.time.Clock;
 import java.time.ZoneId;
 
 /**
- * "Today" for deadlines and overdue rows is today in Sweden, whatever the container's zone (M3 research R5).
+ * "Today" for deadlines and overdue rows is today in Sweden, whatever the container's zone.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Configuration(proxyBeanMethods = false)
 public class TimeConfig {

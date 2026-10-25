@@ -18,10 +18,10 @@ package nu.fgv.revival.server.guide.suggestion;
 
 /**
  * Open until the super admin decides or the author withdraws it. A suggestion accepted into a draft that is discarded
- * opens again (FR-015).
+ * opens again.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public enum GuideSuggestionStatus {
 

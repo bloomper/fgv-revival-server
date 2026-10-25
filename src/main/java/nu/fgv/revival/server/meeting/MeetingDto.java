@@ -31,7 +31,7 @@ import java.util.List;
  * A meeting as GraphQL's {@code Meeting}, with people as display names and the minutes ready to show.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record MeetingDto(Long id,
                          Long revivalId,

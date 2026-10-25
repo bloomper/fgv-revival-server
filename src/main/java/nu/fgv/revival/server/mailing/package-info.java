@@ -15,8 +15,8 @@
  */
 
 /**
- * Mailings to a revival's participants, helpers or steering group, the super admin's mailing plan and its reminders
- * (product spec 5.8, M6b). Nothing is sent without a person confirming. Recipients are references to participants or
+ * Mailings to a revival's participants, helpers or steering group, the super admin's mailing plan and its reminders.
+ * Nothing is sent without a person confirming. Recipients are references to participants or
  * people; email addresses are read when a mailing is sent and never stored or logged.
  */
 @NullMarked

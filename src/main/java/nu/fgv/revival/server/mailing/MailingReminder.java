@@ -30,11 +30,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.LocalDate;
 
 /**
- * That the owners of a revival were reminded of one plan entry, so they are reminded once (M6B-FR-11). Not audited:
+ * That the owners of a revival were reminded of one plan entry, so they are reminded once. Not audited:
  * it is a technical record.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "mailing_reminder")

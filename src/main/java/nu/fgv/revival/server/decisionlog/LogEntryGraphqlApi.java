@@ -40,10 +40,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * The decision log over GraphQL (contracts/schema.graphqls). A thin adapter: every rule is in {@link LogEntryService}.
+ * The decision log over GraphQL.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Controller
 public class LogEntryGraphqlApi {

@@ -23,10 +23,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * GraphQL's {@code MinutesEmail}: one sending, recipients by display name, never by address (FR-021).
+ * GraphQL's {@code MinutesEmail}: one sending, recipients by display name, never by address.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record MinutesEmailDto(Long id, String language, PersonRefDto sentBy, Instant sentAt, List<Recipient> recipients,
                               int waitingLeftOut) {

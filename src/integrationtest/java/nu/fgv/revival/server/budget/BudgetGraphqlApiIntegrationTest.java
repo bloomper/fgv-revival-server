@@ -29,11 +29,11 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A revival's budget over GraphQL against MySQL and Keycloak (M5): categories, reference figures, event type lines,
+ * A revival's budget over GraphQL against MySQL and Keycloak: categories, reference figures, event type lines,
  * settings, lines, transactions, scenarios, who may do what, and the reference kept when a revival is deleted.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

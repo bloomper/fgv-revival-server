@@ -90,7 +90,7 @@ import static org.springframework.util.StringUtils.hasText;
  * deletes them along with all other users.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Slf4j
 @Component

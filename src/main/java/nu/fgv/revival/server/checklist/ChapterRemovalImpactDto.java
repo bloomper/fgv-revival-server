@@ -20,7 +20,7 @@ package nu.fgv.revival.server.checklist;
  * for the chapter and the items in them.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChapterRemovalImpactDto(String chapterKey, int revivalCount, int itemCount, int doneCount) {
 }

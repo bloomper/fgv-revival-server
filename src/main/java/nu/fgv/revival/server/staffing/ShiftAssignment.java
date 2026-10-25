@@ -30,11 +30,11 @@ import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A participant or helper holding a shift slot: signed up themselves, or assigned by a writer of staffing
- * (M6B-FR-3, M6B-FR-4). Unassigning deletes the row; Envers keeps that it was held.
+ * A participant or helper holding a shift slot: signed up themselves, or assigned by a writer of staffing.
+ * Unassigning deletes the row; Envers keeps that it was held.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "shift_assignment")

@@ -20,7 +20,7 @@ import java.util.Set;
 
 /**
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalMemberCapabilitiesDto(Long id, Long version, Set<String> capabilities) {
 }

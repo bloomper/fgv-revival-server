@@ -37,7 +37,7 @@ import java.util.UUID;
  * a requirement. Keys are derived from fixed names, so they stay the same across versions.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 final class SampleGuide {
 

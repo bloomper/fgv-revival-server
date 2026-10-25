@@ -24,7 +24,7 @@ import java.math.RoundingMode;
  * Amounts of money: Swedish kronor with at most two decimals (öre), as GraphQL's {@code Amount} carries them.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public final class Amounts {
 

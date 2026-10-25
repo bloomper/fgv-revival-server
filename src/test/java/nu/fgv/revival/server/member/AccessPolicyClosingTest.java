@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The M7 rows of the permission matrix (product spec 5.11): the sync and membership marks for directeurs while closing
+ * The closing rules in {@link AccessPolicy}: the sync and membership marks for directeurs while closing
  * or settling and super admins from organising on, the preview for the steering group too, anonymization for directeurs
  * while settling and super admins while settling, archived or rejected, and never twice.
  *

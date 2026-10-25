@@ -25,7 +25,7 @@ import java.util.List;
  * Omitted fields are left unchanged. Lists replace the whole list.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalUpdateDto(Long id,
                                Long version,

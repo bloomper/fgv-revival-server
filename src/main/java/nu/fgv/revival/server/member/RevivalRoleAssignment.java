@@ -23,7 +23,7 @@ import java.util.Set;
  * capability implicitly, which {@link #holdsAll()} tells.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalRoleAssignment(RevivalRole role, Set<String> capabilities) {
 

@@ -1,19 +1,19 @@
 extend type Query {
-    "Suggestions the caller can see (FR-035), newest first."
+    "Suggestions the caller can see, newest first."
     guideSuggestions(status: [GuideSuggestionStatus!], revivalId: ID): [GuideSuggestion!]!
 }
 
 extend type Mutation {
-    "Directeur or steering group of a visible revival, not ARCHIVED (FR-031)."
+    "Directeur or steering group of a visible revival, not ARCHIVED."
     guideSuggestionCreate(input: GuideSuggestionCreateInput!): GuideSuggestion!
 
-    "SUPER_ADMIN. CONFLICT when the draft's item differs and no resolution is given (FR-033)."
+    "SUPER_ADMIN. CONFLICT when the draft's item differs and no resolution is given."
     guideSuggestionAccept(input: GuideSuggestionAcceptInput!): GuideSuggestion!
 
     "SUPER_ADMIN."
     guideSuggestionReject(input: GuideSuggestionRejectInput!): GuideSuggestion!
 
-    "The author only (FR-034)."
+    "The author only."
     guideSuggestionWithdraw(id: ID!, version: Int!): GuideSuggestion!
 }
 

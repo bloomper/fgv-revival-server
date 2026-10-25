@@ -36,11 +36,10 @@ import static nu.fgv.revival.server.guide.GuideMapper.GUIDE_MAPPER;
 
 /**
  * Reading the guide: published versions, the draft for super admins, and a revival's pinned version. Every method asks
- * {@link AccessPolicy} first, through {@link GuideAccess} (constitution III). The guide never calls Spexregister
- * (FR-006).
+ * {@link AccessPolicy} first, through {@link GuideAccess}. The guide never calls Spexregister.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Service
 public class GuideService {
@@ -76,7 +75,7 @@ public class GuideService {
     }
 
     /**
-     * {@code nyuppsattningsguide-<name>-<lang>.pdf}, ASCII-folded and slugged (contracts/http.md).
+     * {@code nyuppsattningsguide-<name>-<lang>.pdf}, ASCII-folded and slugged.
      */
     static String fileName(final @Nullable String name, final Locale locale) {
         final String slug = GuideSearch.fold(name == null ? "" : name.toLowerCase(Locale.ROOT))
@@ -149,8 +148,8 @@ public class GuideService {
     }
 
     /**
-     * Searches a version the caller may read, the latest published one when none is given (FR-021). GraphQL and
-     * {@code search_guide} both call this, so they cannot disagree (SC-007).
+     * Searches a version the caller may read, the latest published one when none is given. GraphQL and
+     * {@code search_guide} both call this, so they cannot disagree.
      */
     @Transactional(readOnly = true)
     public SearchResult search(final @Nullable Long versionId, final @Nullable String query, final int first) {
@@ -162,7 +161,7 @@ public class GuideService {
     }
 
     /**
-     * A version the caller may read, as a PDF (FR-028).
+     * A version the caller may read, as a PDF.
      */
     @Transactional(readOnly = true)
     public Pdf versionPdf(final Long versionId, final Locale locale) {
@@ -190,7 +189,7 @@ public class GuideService {
     }
 
     /**
-     * What changed between two versions the caller may read (FR-016). Only super admins can compare with the draft.
+     * What changed between two versions the caller may read. Only super admins can compare with the draft.
      */
     @Transactional(readOnly = true)
     public GuideChanges.Result changes(final Long fromId, final Long toId) {

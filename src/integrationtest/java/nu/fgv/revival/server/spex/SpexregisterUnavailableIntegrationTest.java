@@ -28,10 +28,10 @@ import static nu.fgv.revival.server.Documents.SPEX_SEARCH;
 import static nu.fgv.revival.server.Documents.UPDATE;
 
 /**
- * Revivals keep working while Spexregister is down; only picking a spex is blocked (FR-008a, SC-001b).
+ * Revivals keep working while Spexregister is down; only picking a spex is blocked.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 

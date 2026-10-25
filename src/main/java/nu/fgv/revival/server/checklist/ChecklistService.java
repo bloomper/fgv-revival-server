@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.audit.AuditContext;
@@ -68,11 +67,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A revival's checklists and their items (FR-022–FR-029). Items are never deleted: they are done, reopened or marked
- * not applicable, and only directeurs waive a guide requirement (FR-025).
+ * A revival's checklists and their items. Items are never deleted: they are done, reopened or marked
+ * not applicable, and only directeurs waive a guide requirement.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Service
 public class ChecklistService {
@@ -173,8 +172,6 @@ public class ChecklistService {
         return trimmed;
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     static @Nullable String validComment(final @Nullable String comment) {
         if (comment == null || comment.isBlank()) {
             return null;
@@ -240,8 +237,6 @@ public class ChecklistService {
         return items(revivalId, filter, null, null, locale);
     }
 
-    // --- Writing ----------------------------------------------------------------------------------------------------
-
     /**
      * As {@link #items(Long, ChecklistItemFilterDto, Locale)}, also limited to one chapter's checklist or to event
      * checklists whose name has every given word, ignoring case (MCP's list_checklist_items).
@@ -286,7 +281,7 @@ public class ChecklistService {
     }
 
     /**
-     * The templates the caller may add items from (FR-032a): a chapter checklist's chapter template, or any event template.
+     * The templates the caller may add items from: a chapter checklist's chapter template, or any event template.
      * None for those who cannot write, or on a cancelled checklist.
      */
     @Transactional(readOnly = true)
@@ -329,8 +324,8 @@ public class ChecklistService {
     }
 
     /**
-     * A changed date recomputes the deadlines that came from the template and were not set by hand; no date clears them
-     * (FR-023, research R11).
+     * A changed date recomputes the deadlines that came from the template and were not set by hand; no date clears
+     * them.
      */
     @Transactional
     public ChecklistDto updateEventChecklist(final EventChecklistChange change, final Locale locale) {
@@ -368,8 +363,8 @@ public class ChecklistService {
     }
 
     /**
-     * Adds the template's items the checklist does not have yet, whatever their state; existing items are left alone
-     * (FR-032a). A chapter checklist uses its chapter's template unless one is named.
+     * Adds the template's items the checklist does not have yet, whatever their state; existing items are left alone.
+     * A chapter checklist uses its chapter's template unless one is named.
      */
     @Transactional
     public ChecklistDto addFromTemplate(final Long checklistId, final Long version, final @Nullable Long templateId, final Locale locale) {
@@ -419,8 +414,6 @@ public class ChecklistService {
         item.setGuideItemKey(newItem.guideItemKey());
         return toDtos(List.of(itemRepository.saveAndFlush(item)), locale).getFirst();
     }
-
-    // --- Internal, for the guide sync and templates (research R10); callers have checked access -----------------------
 
     @Transactional
     public ChecklistItemDto updateItem(final ItemChange change, final Locale locale) {
@@ -501,7 +494,7 @@ public class ChecklistService {
     }
 
     /**
-     * Adds a chapter template's items to chapter checklists the sync has just created (User Story 5, scenario 8).
+     * Adds a chapter template's items to chapter checklists the sync has just created.
      */
     @Transactional
     public void addChapterTemplateItems(final List<Checklist> created) {
@@ -512,9 +505,9 @@ public class ChecklistService {
     }
 
     /**
-     * Copies the template items the checklist lacks, by {@code template_item_id}: text in the given language with Swedish
-     * as fallback, deadlines from the checklist's date, and the one steering group member holding the item's capability
-     * as owner (research R11). Returns the number added.
+     * Copies the template items the checklist lacks, by {@code template_item_id}: text in the given language with
+     * Swedish as fallback, deadlines from the checklist's date, and the one steering group member holding the item's
+     * capability as owner. Returns the number added.
      */
     int addTemplateItems(final Checklist checklist, final ChecklistTemplate template, final Locale locale) {
         final List<ChecklistItem> existing = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklist.getId());
@@ -626,12 +619,10 @@ public class ChecklistService {
         return removals;
     }
 
-    // --- Internal, for events (M4-FR-4); the event service has checked access ----------------------------------------
-
     /**
      * What removing the chapter from the guide would delete, over every revival that is not archived: their checklists
-     * for it and the items in them. An upper bound, since required items follow their requirement if it moves to another
-     * chapter first. Super admins only.
+     * for it and the items in them. An upper bound, since required items follow their requirement if it moves to
+     * another chapter first. Super admins only.
      */
     @Transactional(readOnly = true)
     public ChapterRemovalImpactDto chapterRemovalImpact(final String chapterKey) {
@@ -649,8 +640,8 @@ public class ChecklistService {
 
     /**
      * Makes the revival's required items match the requirements of a guide version: one item per requirement in its
-     * chapter's checklist, required items first in guide order, and open items for requirements no longer in the version
-     * marked not applicable (FR-034).
+     * chapter's checklist, required items first in guide order, and open items for requirements no longer in the
+     * version marked not applicable.
      */
     @Transactional
     public void syncRequiredItems(final Long revivalId, final GuideVersionView version) {
@@ -693,7 +684,7 @@ public class ChecklistService {
     }
 
     /**
-     * Required items first in guide order, then the others in the order they were added (FR-022).
+     * Required items first in guide order, then the others in the order they were added.
      */
     private void renumber(final Long checklistId, final Map<String, Integer> guideOrder) {
         final List<ChecklistItem> items = itemRepository.findByChecklistIdOrderByPositionAscIdAsc(checklistId).stream()
@@ -738,8 +729,6 @@ public class ChecklistService {
         addTemplateItems(saved, template.get(), locale);
         return Optional.of(saved.getId());
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     /**
      * Names and dates the event's checklist as the event, recomputing the deadlines not set by hand when the date moves
@@ -956,8 +945,8 @@ public class ChecklistService {
     }
 
     /**
-     * Fields left null are unchanged; the {@code clear*} flags remove a value. Setting or clearing the deadline marks it
-     * as set by hand.
+     * Fields left null are unchanged; the {@code clear*} flags remove a value. Setting or clearing the deadline marks
+     * it as set by hand.
      */
     public record ItemChange(Long id, Long version, @Nullable String text, @Nullable OwnerInputDto owner,
                              boolean clearOwner,

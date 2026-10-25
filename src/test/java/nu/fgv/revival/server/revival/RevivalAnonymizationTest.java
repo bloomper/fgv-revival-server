@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 /**
- * Anonymization's pure parts (M7-FR-10, M7-FR-12): the minutes keep what was decided but no people, and the automatic
+ * Anonymization's pure parts: the minutes keep what was decided but no people, and the automatic
  * date is 36 months after the latest change into archived or rejected, with a fixed clock.
  *
  * @author Anders Jacobsson

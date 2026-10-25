@@ -39,7 +39,7 @@ import static nu.fgv.revival.server.util.data.SeededCapability.STAFFING;
  * and show weekends.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 final class SampleChecklistTemplates {
 

@@ -1,5 +1,5 @@
-# M5: budget and finance (product spec 5.10). Budget categories and reference figures are lists SUPER_ADMIN keeps.
-# A revival's budget lines, transactions and scenarios are removed or cancelled, never deleted (constitution IV).
+# Budget and finance. Budget categories and reference figures are lists SUPER_ADMIN keeps.
+# A revival's budget lines, transactions and scenarios are removed or cancelled, never deleted.
 
 "Swedish kronor with at most two decimals, as a string, e.g. \"1200\" or \"-35.50\"."
 scalar Amount

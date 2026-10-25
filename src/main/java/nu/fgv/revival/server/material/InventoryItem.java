@@ -35,12 +35,12 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * Something a revival has, needs or borrows (M8-FR-4): a script, props, a costume. Its owner is a member of the steering
- * group or a free-text name, as for decision log rows; it may point at a material of the same revival that describes it.
+ * Something a revival has, needs or borrows: a script, props, a costume. Its owner is a member of the steering group or
+ * a free-text name, as for decision log rows; it may point at a material of the same revival that describes it.
  * Removed, never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Entity
 @Table(name = "inventory_item")

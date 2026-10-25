@@ -36,10 +36,10 @@ import java.util.concurrent.Future;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The decision log over GraphQL against MySQL and Keycloak (US1, FR-001–FR-015, SC-002, SC-006).
+ * The decision log over GraphQL against MySQL and Keycloak.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

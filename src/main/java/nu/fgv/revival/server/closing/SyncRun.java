@@ -35,7 +35,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * One run of the participation sync to Spexregister (M7-FR-4): who started it, from which preview, and how it ended.
+ * One run of the participation sync to Spexregister: who started it, from which preview, and how it ended.
  * At most one is {@code RUNNING} per revival, which the database enforces.
  *
  * @author Anders Jacobsson

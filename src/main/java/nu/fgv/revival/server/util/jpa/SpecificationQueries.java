@@ -31,10 +31,10 @@ import java.util.List;
 
 /**
  * Specification queries for revival data, without the {@code delete(Specification)} that
- * {@code JpaSpecificationExecutor} would give its repositories (constitution IV, M3 research R6).
+ * {@code JpaSpecificationExecutor} would give its repositories.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class SpecificationQueries {

@@ -54,12 +54,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Emails a closed meeting's minutes to the revival's directeurs and steering group members who can log in and see it
- * (FR-021, contracts/email.md). The mail goes out first, outside any transaction; then the send and each recipient's
+ * Emails a closed meeting's minutes to the revival's directeurs and steering group members who can log in and see it.
+ * The mail goes out first, outside any transaction; then the send and each recipient's
  * result are saved together. When every recipient fails, nothing is saved.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Service
 @Slf4j

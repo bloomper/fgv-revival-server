@@ -20,10 +20,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Turns on scheduled jobs: the daily deletion of participants' data that is no longer needed (M6-FR-20).
+ * Turns on scheduled jobs: the daily deletion of participants' data that is no longer needed.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling

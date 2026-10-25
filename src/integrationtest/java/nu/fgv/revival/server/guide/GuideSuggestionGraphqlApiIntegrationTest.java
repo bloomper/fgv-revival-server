@@ -28,10 +28,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Suggestions over GraphQL: who may create, decide, withdraw and see them, accepting into the draft with and without a
- * conflict, reopening on discard, and the audit trail (FR-031–FR-035, FR-015, FR-039, SC-006).
+ * conflict, reopening on discard, and the audit trail.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

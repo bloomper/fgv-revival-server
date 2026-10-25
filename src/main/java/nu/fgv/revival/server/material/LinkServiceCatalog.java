@@ -33,11 +33,11 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The link services the super admin keeps (M8-FR-1), with their hosts and home pages. A host belongs to at most one
- * active service, so a link is recognised unambiguously (M8-FR-2). A service a material holds is retired, not deleted.
+ * The link services the super admin keeps, with their hosts and home pages. A host belongs to at most one
+ * active service, so a link is recognised unambiguously. A service a material holds is retired, not deleted.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Service
 public class LinkServiceCatalog extends CatalogService<LinkService> {
@@ -131,7 +131,7 @@ public class LinkServiceCatalog extends CatalogService<LinkService> {
     }
 
     /**
-     * The active service a link's host belongs to, if any (M8-FR-2).
+     * The active service a link's host belongs to, if any.
      */
     @Transactional(readOnly = true)
     public Optional<LinkService> recognise(final String host) {

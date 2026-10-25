@@ -25,7 +25,7 @@ import java.util.Optional;
  * Declares only what the mailing plan needs, so it has no delete method: templates are retired.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface MailingTemplateRepository extends Repository<MailingTemplate, Long> {
 

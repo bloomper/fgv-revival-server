@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
  * with it and the log rows linked to them, which stay but lose the link.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistRemovalDto(Long checklistId,
                                   String chapterKey,

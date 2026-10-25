@@ -22,12 +22,12 @@ import java.util.List;
 
 /**
  * Several revival roles were given at once, e.g. in one round of participant invitations, to Keycloak users without
- * {@code fgv-revival}'s {@code USER}: the super admins are told once about all of them (product spec 5.6). Published
+ * {@code fgv-revival}'s {@code USER}: the super admins are told once about all of them. Published
  * inside the transaction that gives the roles; handled after it commits.
  *
  * @param addedBy display name of the caller who gave the roles
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public record MembersAwaitingAccess(Long revivalId, List<Waiting> members, @Nullable String addedBy) {
 

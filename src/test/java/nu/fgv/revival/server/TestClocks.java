@@ -25,7 +25,7 @@ import java.time.ZoneId;
  * Fixed clocks for tests of deadlines and overdue rows.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public final class TestClocks {
 

@@ -39,10 +39,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Owners by display name for MCP and the import, and owner validation (FR-009, FR-019, FR-045, research R4).
+ * Owners by display name for MCP and the import, and owner validation.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class OwnerResolverTest {
 

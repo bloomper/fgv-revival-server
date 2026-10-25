@@ -30,11 +30,11 @@ import static nu.fgv.revival.server.member.AccessPolicyTest.revival;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The M8 row of the permission matrix (product spec 3, "Materials, inventory"; M8-FR-5): super admins read, directeurs
- * and steering group write, participants read what is meant for them, observers and helpers nothing.
+ * The material rules in {@link AccessPolicy}: super admins read, directeurs and steering group
+ * write, participants read what is meant for them, observers and helpers nothing.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 class AccessPolicyMaterialTest {
 

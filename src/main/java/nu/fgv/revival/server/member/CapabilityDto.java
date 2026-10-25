@@ -21,7 +21,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
  * GraphQL's {@code Capability}.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public record CapabilityDto(String id, GuideVersionView.Text name, int position, boolean retired, Long version) {
 

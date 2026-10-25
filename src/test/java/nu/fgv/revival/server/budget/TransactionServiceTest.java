@@ -55,10 +55,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * A revival's transactions and receipts (M5-FR-5): who paid, reimbursement, cancellation and the receipt's file.
+ * A revival's transactions and receipts: who paid, reimbursement, cancellation and the receipt's file.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -246,8 +246,6 @@ class TransactionServiceTest {
         assertThat(service.list(REVIVAL_ID, false)).isEmpty();
         assertThatThrownBy(() -> create("FOOD", null)).isInstanceOf(AccessDeniedException.class);
     }
-
-    // --- Receipts ---------------------------------------------------------------------------------------------------
 
     @Test
     void aReceiptIsStoredWithItsSniffedTypeAndReplacedByTheNext() {

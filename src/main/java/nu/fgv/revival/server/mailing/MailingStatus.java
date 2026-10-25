@@ -20,7 +20,7 @@ package nu.fgv.revival.server.mailing;
  * A mailing is drafted, then sent or cancelled. Neither is ever deleted.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public enum MailingStatus {
 

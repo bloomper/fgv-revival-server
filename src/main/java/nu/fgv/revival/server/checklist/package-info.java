@@ -16,7 +16,8 @@
 
 
 /**
- * Chapter and event checklists, and keeping a revival's required items and guide questions in line with its guide version (M3 research R10).
+ * Chapter and event checklists, and keeping a revival's required items and guide questions in line with its guide
+ * version.
  */
 @NullMarked
 package nu.fgv.revival.server.checklist;

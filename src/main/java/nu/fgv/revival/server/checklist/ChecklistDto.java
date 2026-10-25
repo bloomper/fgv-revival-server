@@ -24,11 +24,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * A checklist as GraphQL's {@code Checklist}. A chapter checklist's title and tips come from the pinned guide version
- * (FR-029).
+ * A checklist as GraphQL's {@code Checklist}. A chapter checklist's title and tips come from the pinned guide version.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistDto(Long id,
                            Long revivalId,

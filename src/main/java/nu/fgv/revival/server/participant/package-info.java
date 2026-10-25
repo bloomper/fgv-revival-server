@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * Participants and helpers of a revival (product spec 5.6, M6): who is asked, invitations, their responses, fees and
+ * Participants and helpers of a revival: who is asked, invitations, their responses, fees and
  * referrals, and each participant's own page. Names and contact details of spexare live in Spexregister; a pending
  * person's live here until they become a spexare, decline or the revival leaves {@code OPEN}. Dietary needs are deleted
  * the day after the last show.

@@ -47,13 +47,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * A revival's materials (M8-FR-2, M8-FR-3, M8-FR-5, M8-FR-6): its directeurs and steering group add, change, remove and
+ * A revival's materials: its directeurs and steering group add, change, remove and
  * restore them while it is not archived; super admins and they read them all; a participant reads those for every
  * participant and those for their position. A link's service is the one chosen, or else recognised from its host when
  * it is saved. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Service
 public class MaterialService {
@@ -97,8 +97,6 @@ public class MaterialService {
         return trimmed;
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     private static @Nullable String validComment(final @Nullable String comment) {
         if (comment == null || comment.isBlank()) {
             return null;
@@ -135,7 +133,7 @@ public class MaterialService {
     }
 
     /**
-     * The materials the caller may see as a participant of the revival; none for a helper (M8-FR-6).
+     * The materials the caller may see as a participant of the revival; none for a helper.
      */
     @Transactional(readOnly = true)
     public List<MaterialDto> forParticipation(final Long revivalId) {
@@ -175,8 +173,6 @@ public class MaterialService {
         }
         return result;
     }
-
-    // --- Writing ----------------------------------------------------------------------------------------------------
 
     /**
      * Each material's positions as Spexregister names them; by id alone while it is unavailable. No caller check:
@@ -235,8 +231,6 @@ public class MaterialService {
         material.setRemovedBy(caller.person().getId());
         return MaterialDto.of(repository.saveAndFlush(material));
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public MaterialDto restore(final Long id, final Long version) {

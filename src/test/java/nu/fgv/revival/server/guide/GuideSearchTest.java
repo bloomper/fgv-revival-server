@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideSearchTest {
 

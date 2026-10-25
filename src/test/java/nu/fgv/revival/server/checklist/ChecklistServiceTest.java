@@ -74,11 +74,11 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * The rules for checklist items (FR-024–FR-028): text limits, the deadline set by hand, states, and the directeur-only
+ * The rules for checklist items: text limits, the deadline set by hand, states, and the directeur-only
  * waiver of a guide requirement.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class ChecklistServiceTest {

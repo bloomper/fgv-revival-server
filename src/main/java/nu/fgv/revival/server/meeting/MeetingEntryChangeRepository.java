@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public interface MeetingEntryChangeRepository extends Repository<MeetingEntryChange, Long> {
 

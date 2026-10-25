@@ -22,11 +22,11 @@ import nu.fgv.revival.server.revival.RevivalRepository;
 import org.springframework.stereotype.Component;
 
 /**
- * The checks every budget operation starts with: the revival is visible, and the caller reads or writes its budget
- * (M5-FR-6). A revival the caller cannot see is reported as missing.
+ * The checks every budget operation starts with: the revival is visible, and the caller reads or writes its budget.
+ * A revival the caller cannot see is reported as missing.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Component
 class BudgetAccess {

@@ -33,7 +33,7 @@ import java.time.LocalDate;
  * A day the current Chalmersspex plays, e.g. its premiere.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "spex_calendar_date")

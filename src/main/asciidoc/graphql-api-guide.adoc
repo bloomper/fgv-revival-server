@@ -1,0 +1,131 @@
+= Nyuppsättning Server GraphQL API Guide
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 4
+
+xref:index.adoc[Back to start page]
+
+[[schema]]
+== Schema
+
+The endpoint is ``/api/graphql``.
+If running locally, the corresponding URL is https://api.revival.fgv.local.nu:8443/api/graphql.
+
+Every operation requires an access token from the Keycloak client ``fgv-revival`` with that client's role ``USER``.
+
+Introspection is enabled only with the Spring profile ``local``.
+The schema can otherwise be downloaded, with an access token, from ``/api/graphql/schema``.
+Its source is in ``src/main/resources/graphql``, one file per area.
+
+[[errors]]
+== Errors
+
+The GraphQL API provides the error code in ``extensions.classification`` and a message in the request's language in ``message``:
+
+|===
+|Classification|Meaning
+
+|``UNAUTHORIZED``|The request has no valid access token.
+|``FORBIDDEN``|The user lacks the role the operation requires.
+|``NOT_FOUND``|The resource does not exist. Also returned for a revival the user may not see.
+|``BAD_REQUEST``|The input breaks a rule, e.g. a status change that is not allowed.
+|``CONFLICT``|Someone else changed the resource since the user read it. Ask them to reload.
+|``SPEXREGISTER_UNAVAILABLE``|Spexregister cannot be reached. Everything that does not need it keeps working.
+|``DIRECTORY_UNAVAILABLE``|The FGV realm's users cannot be searched in Keycloak.
+|``MAIL_UNAVAILABLE``|Email cannot be sent at the moment.
+
+|===
+
+For example, changing a revival that someone else has just changed produces an error:
+
+[source,json,options="nowrap"]
+----
+{
+    "errors": [
+        {
+            "message": "Someone else has changed this. Reload the page and try again.",
+            "locations": [
+                {
+                    "line": 2,
+                    "column": 5
+                }
+            ],
+            "path": [
+                "revivalUpdate"
+            ],
+            "extensions": {
+                "classification": "CONFLICT"
+            }
+        }
+    ],
+    "data": null
+}
+----
+
+Note that invalid input according to the schema will be detected and reported as validation errors by the client which means that the structure is different from described above.
+
+[[versions]]
+== Versions
+
+Mutations that change a resource take the ``version`` the user saw, and a revival's status change the status it changes ``from``.
+If the resource has changed since, the mutation fails with ``CONFLICT`` and nothing is changed.
+
+Nothing that a revival's steering group writes is ever deleted: log rows are cancelled, checklist items marked not applicable, budget lines removed and transactions cancelled, templates retired.
+The exception is a revival's checklist for a guide chapter, which is deleted with its items when the revival moves to a guide version without that chapter.
+``guideChapterRemovalImpact`` and ``Revival.guideVersionChangeImpact`` say what would be deleted.
+
+[[roles]]
+== Roles
+
+Nyuppsättning Server uses the following global roles, which are client roles on ``fgv-revival`` in Keycloak:
+
+|===
+|Role|Description
+
+|USER|May use the application at all; every operation requires it
+|SUPER_ADMIN|Approves revivals, appoints directeurs and keeps the guide and the reference lists
+|OBSERVER|Reads every revival, writes nothing
+
+|===
+
+Revival roles (``DIRECTEUR``, ``STEERING_GROUP``, ``PARTICIPANT`` and ``HELPER``) are stored by Nyuppsättning Server, per revival, and apply on the next request.
+Steering group members also have areas of responsibility, such as ``FINANCE`` or ``COMMS``, which give them more rights in that area.
+
+Every service method resolves the caller and asks the access policy before it acts; anything it does not permit is refused.
+GraphQL operations and MCP tools hold no rules of their own.
+Each ``Revival`` carries ``permissions``, e.g. ``canEditCore``, ``allowedStatuses`` or ``canWriteBudget``, which say what the caller may do with it.
+Clients should show or hide controls from them rather than compute the rules themselves.
+
+[[members]]
+=== Members
+
+Directeurs, steering group members, participants and helpers are picked among the FGV realm's users (``revivalMemberCandidates``) or added by email address.
+Someone who has not logged in yet waits, and is matched on their first login with that verified address.
+An address without an account gets one, enabled and without any role, and Keycloak emails a link to verify it and choose a password, valid for 7 days.
+
+Access is never granted by the application: when the member's account lacks ``USER``, the super admins (users holding ``SUPER_ADMIN`` directly) are emailed a link to the user in Keycloak's admin console.
+While Keycloak cannot be reached, the member is added all the same, without an account or email.
+
+[[audit]]
+== Audit
+
+Every change is recorded with who made it and from where: the web, an MCP tool or the system.
+The web may send a reason for a change in the HTTP header ``X-Audit-Reason``, percent-encoded (UTF-8).
+
+[[spexregister]]
+== Spexregister
+
+Spex, their posters, and the names and contact details of participants are read from Spexregister, which Nyuppsättning Server calls as the service account ``fgv-revival-service`` with Spexregister's ``REVIVAL`` role.
+While Spexregister is down, revivals still work, and only what needs it fails with ``SPEXREGISTER_UNAVAILABLE``.
+
+When a revival is settled, it is synced to Spexregister: ``syncPreview`` shows what would be written, and ``syncStart`` starts the sync with the preview's ``hash``.
+A failed sync is resumed by starting it again, which writes only what is missing.
+
+[[file_handling]]
+== File handling
+
+As GraphQL does not have any native support for uploading/downloading files, those operations are done via the xref:api-guide.adoc[HTTP API]: the guide as PDF, posters, the budget's export and receipts, the Swish QR code and calendar feeds.
+
+xref:index.adoc[Back to start page]

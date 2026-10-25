@@ -21,10 +21,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Declares only what transactions need, so it has no delete method (constitution IV).
+ * Declares only what transactions need, so it has no delete method.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public interface BudgetTransactionRepository extends Repository<BudgetTransaction, Long> {
 

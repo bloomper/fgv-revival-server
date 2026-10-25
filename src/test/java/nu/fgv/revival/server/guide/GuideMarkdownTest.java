@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideMarkdownTest {
 
@@ -57,8 +57,6 @@ class GuideMarkdownTest {
         assertThat(markdown.plainText("Huvudpunkt\n\n- underpunkt ett\n- underpunkt två"))
                 .isEqualTo("Huvudpunkt\nunderpunkt ett\nunderpunkt två");
     }
-
-    // --- HTML for mailings (M6B-FR-9) ---------------------------------------------------------------------------------
 
     @Test
     void toHtmlRendersTheGuidesElements() {

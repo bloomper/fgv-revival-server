@@ -37,10 +37,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A revival's events over GraphQL (event.graphqls). A thin adapter: every rule is in {@link EventService}.
+ * A revival's events over GraphQL (event.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Controller
 public class EventGraphqlApi {

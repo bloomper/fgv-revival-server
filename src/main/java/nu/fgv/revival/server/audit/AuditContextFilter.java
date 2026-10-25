@@ -35,7 +35,7 @@ import java.nio.charset.StandardCharsets;
  * {@code X-Audit-Reason}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Component
 public class AuditContextFilter extends OncePerRequestFilter {

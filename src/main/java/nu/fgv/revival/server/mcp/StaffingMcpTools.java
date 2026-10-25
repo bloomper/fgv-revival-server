@@ -29,11 +29,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * A revival's staffing over MCP (M6B-FR-14), read only, for readers of staffing: shift slots with their task, time,
+ * A revival's staffing over MCP, read only, for readers of staffing: shift slots with their task, time,
  * how many are needed, who holds them by name and how many places are open. Never contact details.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 public class StaffingMcpTools {

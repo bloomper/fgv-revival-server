@@ -47,7 +47,7 @@ import java.util.Set;
  * One Envers revision: when, by whom (Keycloak subject, never an email), from where and through which operation.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Entity
 @Table(name = "revinfo")

@@ -32,11 +32,11 @@ import lombok.Setter;
 import java.time.Instant;
 
 /**
- * What was done to a row in a meeting (FR-018, research R8). Append-only, and itself a record of changes, so not
+ * What was done to a row in a meeting. Append-only, and itself a record of changes, so not
  * audited.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "meeting_entry_change")

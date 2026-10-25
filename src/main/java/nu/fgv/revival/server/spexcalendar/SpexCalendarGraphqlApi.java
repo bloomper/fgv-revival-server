@@ -25,11 +25,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * The current Chalmersspex's show dates over GraphQL (spex-calendar.graphqls). A thin adapter: every rule is in
- * {@link SpexCalendarService}.
+ * The current Chalmersspex's show dates over GraphQL (spex-calendar.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Controller
 public class SpexCalendarGraphqlApi {

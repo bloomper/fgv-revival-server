@@ -35,11 +35,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.LocalDate;
 
 /**
- * A participant's answer for one day of an event (M6B-FR-1). Clearing the answer deletes the row: it is the person's
+ * A participant's answer for one day of an event. Clearing the answer deletes the row: it is the person's
  * own answer, not the revival's history. The comment is the person's free text and is not audited.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "availability")

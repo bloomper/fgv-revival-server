@@ -31,7 +31,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Materials, the inventory and the link services end to end (M8): links recognised by host, refused unless https,
+ * Materials, the inventory and the link services end to end: links recognised by host, refused unless https,
  * visibility per position for participants, nothing for observers and helpers, the inventory with owners, the super
  * admin's list of services, and deletion of the revival taking everything. Participants are pending people.
  *

@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public interface GuideItemTypeRepository extends CatalogRepository<GuideItemType> {
 

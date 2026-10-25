@@ -33,12 +33,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A place materials are kept, from the list the super admin keeps (M8-FR-1): one of FGV's applications, such as
+ * A place materials are kept, from the list the super admin keeps: one of FGV's applications, such as
  * Spexflix, or a service such as Google Drive. A link belongs to it when the link's host is one of its hosts or a
  * subdomain of one; a host belongs to at most one active service.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Entity
 @Table(name = "link_service")

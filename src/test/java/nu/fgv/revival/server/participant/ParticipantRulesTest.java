@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * What people may type for participants.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 class ParticipantRulesTest {
 

@@ -34,11 +34,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A revival's events over MCP (M4-FR-10), read only: readers of the revival's work, as GraphQL's {@code events} except
- * that participants, who read events in the web, get no MCP tools (M6).
+ * A revival's events over MCP, read only: readers of the revival's work, as GraphQL's {@code events} except
+ * that participants, who read events in the web, get no MCP tools.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Component
 public class EventMcpTools {

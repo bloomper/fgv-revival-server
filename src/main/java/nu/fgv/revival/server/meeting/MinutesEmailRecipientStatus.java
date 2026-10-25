@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.meeting;
 
 /**
- * Whether the mail server accepted the minutes for a recipient (FR-021).
+ * Whether the mail server accepted the minutes for a recipient.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum MinutesEmailRecipientStatus {
 

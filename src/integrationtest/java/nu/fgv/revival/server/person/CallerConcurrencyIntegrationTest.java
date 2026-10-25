@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * there once held a connection while waiting for another and exhausted the pool.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class CallerConcurrencyIntegrationTest extends AbstractIntegrationTest {
 

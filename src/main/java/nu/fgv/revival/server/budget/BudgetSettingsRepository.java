@@ -20,10 +20,10 @@ import org.springframework.data.repository.Repository;
 import java.util.Optional;
 
 /**
- * Declares only what the settings need, so it has no delete method (constitution IV).
+ * Declares only what the settings need, so it has no delete method.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public interface BudgetSettingsRepository extends Repository<BudgetSettings, Long> {
 

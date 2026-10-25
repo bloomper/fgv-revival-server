@@ -42,10 +42,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Maps exceptions to the error codes in contracts/README.md, with messages in the request's language.
+ * Maps exceptions to the API's error codes, with messages in the request's language.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Component
 public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter {

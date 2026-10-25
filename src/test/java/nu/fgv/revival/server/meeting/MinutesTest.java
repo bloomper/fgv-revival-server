@@ -37,10 +37,10 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The minutes list exactly what was done in the meeting (FR-020, SC-003).
+ * The minutes list exactly what was done in the meeting.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class MinutesTest {
 

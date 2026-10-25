@@ -1,8 +1,8 @@
 extend type Query {
-    "Whether the caller reads the guide (FR-001–FR-003). Every signed-in caller; the web shows the guide's menu entry from it."
+    "Whether the caller reads the guide. Every signed-in caller; the web shows the guide's menu entry from it."
     guideReadable: Boolean!
 
-    "Published versions, newest first. Readers of the guide (FR-001–FR-003)."
+    "Published versions, newest first. Readers of the guide."
     guideVersions: [GuideVersionSummary!]!
 
     "A published version, or the draft for SUPER_ADMIN. Anything else is NOT_FOUND."
@@ -11,13 +11,13 @@ extend type Query {
     "The latest published version, or null before the first is published."
     guideLatestVersion: GuideVersion
 
-    "Search one version (FR-021). Defaults to the latest published version."
+    "Search one version. Defaults to the latest published version."
     guideSearch(versionId: ID, query: String!, first: Int = 50): [GuideSearchHit!]!
 
     "The draft, or null when there is none. SUPER_ADMIN."
     guideDraft: GuideDraft
 
-    "What changed between two versions the caller can read (FR-016)."
+    "What changed between two versions the caller can read."
     guideChanges(fromId: ID!, toId: ID!): GuideChanges!
 
     "Every signed-in caller. Retired types only with includeRetired."
@@ -25,13 +25,13 @@ extend type Query {
 }
 
 extend type Mutation {
-    "SUPER_ADMIN. Publishes the draft as the next version, labelled v1, v2, … (FR-014), and pins revivals without a version (FR-018)."
+    "SUPER_ADMIN. Publishes the draft as the next version, labelled v1, v2, …, and pins revivals without a version."
     guideDraftPublish(input: GuideDraftPublishInput!): GuideVersion!
 
     "SUPER_ADMIN. Deletes a published version. One that is not deletable is refused: see GuideVersionSummary.deletable."
     guideVersionDelete(id: ID!, version: Int!): Void
 
-    "SUPER_ADMIN. Deletes the draft and reopens suggestions accepted into it (FR-015)."
+    "SUPER_ADMIN. Deletes the draft and reopens suggestions accepted into it."
     guideDraftDiscard(id: ID!, version: Int!): Void
 
     "SUPER_ADMIN. Copies the latest published version, or creates an empty draft, without chapters, before the first is published."
@@ -78,7 +78,7 @@ enum GuideVersionStatus {
 }
 
 """
-What the application does with an item of a type (product spec 5.2). Each kind drives behaviour, so the kinds are
+What the application does with an item of a type. Each kind drives behaviour, so the kinds are
 fixed while the types are not.
 """
 enum GuideItemKind {
@@ -119,7 +119,7 @@ input GuideItemTypeUpdateInput {
     name: LocalizedTextInput!
 }
 
-"Swedish text, and English when there is one (FR-009a). The client picks by language."
+"Swedish text, and English when there is one. The client picks by language."
 type LocalizedText {
     sv: String!
     en: String
@@ -192,7 +192,7 @@ type GuideDraft {
     draft: GuideVersion!
     "Suggestions accepted into this draft; they reopen if it is discarded."
     acceptedSuggestionCount: Int!
-    "Introduction, titles and items without English text (FR-009a)."
+    "Introduction, titles and items without English text."
     untranslatedCount: Int!
 }
 

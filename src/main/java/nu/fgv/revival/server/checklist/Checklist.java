@@ -36,11 +36,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * A revival's checklist: one per chapter of its pinned guide version, or an event checklist with a name and an optional date (FR-022, FR-023).
- * An event checklist may belong to an event, which then names and dates it (M4-FR-4). Never deleted; an event checklist can be cancelled.
+ * A revival's checklist: one per chapter of its pinned guide version, or an event checklist with a name and an optional
+ * date. An event checklist may belong to an event, which then names and dates it. Never deleted; an event checklist can
+ * be cancelled.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "checklist")

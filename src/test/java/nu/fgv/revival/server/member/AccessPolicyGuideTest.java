@@ -35,11 +35,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Table-driven tests of the guide rules in {@link AccessPolicy}, one per row of the operation rules in
- * specs/003-m2-guide/contracts/README.md (constitution III, SC-006).
+ * Table-driven tests of the guide rules in {@link AccessPolicy}, one per rule.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class AccessPolicyGuideTest {
 

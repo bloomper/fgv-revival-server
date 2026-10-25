@@ -25,10 +25,10 @@ import java.time.Instant;
 
 /**
  * GraphQL's {@code GuideSuggestion}. {@code authorId} and {@code decidedById} are person ids; GraphQL resolves them to
- * display names, never to email addresses (FR-042).
+ * display names, never to email addresses.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public record GuideSuggestionDto(Long id,
                                  GuideSuggestionKind kind,

@@ -21,10 +21,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * The lifecycle of a revival (product spec, section 4).
+ * The lifecycle of a revival.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public enum RevivalStatus {
 
@@ -38,7 +38,7 @@ public enum RevivalStatus {
     REJECTED;
 
     /**
-     * The steps a directeur may take, one at a time (FR-014).
+     * The steps a directeur may take, one at a time.
      */
     private static final List<RevivalStatus> DIRECTEUR_STEPS = List.of(APPROVED, ORGANISING, OPEN, CLOSING, SETTLING);
 

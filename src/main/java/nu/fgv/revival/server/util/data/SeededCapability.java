@@ -19,7 +19,7 @@ package nu.fgv.revival.server.util.data;
  * The areas of responsibility the database starts with (migration V3_8). The sample data names them by these ids.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 enum SeededCapability {
 

@@ -30,10 +30,10 @@ import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A titled part of a chapter. Its key stays the same from version to version (research R3).
+ * A titled part of a chapter. Its key stays the same from version to version.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "guide_section")

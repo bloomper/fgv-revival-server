@@ -41,10 +41,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * The minutes email's text in both languages (contracts/email.md).
+ * The minutes email's text in both languages.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class MinutesMailerTest {
 

@@ -31,11 +31,11 @@ import java.time.Duration;
 import java.util.Locale;
 
 /**
- * The calendar feed behind a secret link (M4-FR-6), for calendar apps through the web, which proxies it. No token: the
- * link is the credential. A thin adapter: {@link CalendarFeedService} decides.
+ * The calendar feed behind a secret link, for calendar apps through the web, which proxies it. No token: the
+ * link is the credential.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @RestController
 public class CalendarHttpApi {

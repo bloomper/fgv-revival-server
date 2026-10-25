@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.decisionlog;
 
 /**
- * Where a row came from. Never changes. Only {@link #GUIDE} rows let the log be imported into (FR-036).
+ * Where a row came from. Never changes. Only {@link #GUIDE} rows let the log be imported into.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum LogEntryOrigin {
 

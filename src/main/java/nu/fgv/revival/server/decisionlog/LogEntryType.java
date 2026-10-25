@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.decisionlog;
 
 /**
- * What a decision log row records (FR-008).
+ * What a decision log row records.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum LogEntryType {
 

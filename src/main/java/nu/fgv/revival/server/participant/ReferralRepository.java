@@ -21,10 +21,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 /**
- * Referrals are deleted once handled (product spec section 7).
+ * Referrals are deleted once handled.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public interface ReferralRepository extends JpaRepository<Referral, Long> {
 

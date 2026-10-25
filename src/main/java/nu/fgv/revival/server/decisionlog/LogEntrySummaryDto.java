@@ -21,7 +21,7 @@ package nu.fgv.revival.server.decisionlog;
  * GraphQL's {@code LogEntrySummary}: a row referred to from elsewhere.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record LogEntrySummaryDto(Long id, int number, LogEntryType type, LogEntryStatus status) {
 

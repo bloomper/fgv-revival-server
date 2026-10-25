@@ -56,11 +56,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Creating, withdrawing and reopening suggestions (FR-031, FR-032, FR-034, FR-015). Accepting against a real draft is in
+ * Creating, withdrawing and reopening suggestions. Accepting against a real draft is in
  * {@code GuideSuggestionGraphqlApiIntegrationTest}.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class GuideSuggestionServiceTest {

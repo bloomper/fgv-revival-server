@@ -1,22 +1,22 @@
 extend type Query {
-    "Revivals the caller can see (FR-015), newest premiere first, then year descending."
+    "Revivals the caller can see, newest premiere first, then year descending."
     revivals(status: [RevivalStatus!]): [Revival!]!
 
-    "A revival the caller can see. Not visible and not found both return null with NOT_FOUND (FR-017)."
+    "A revival the caller can see. Not visible and not found both return null with NOT_FOUND."
     revival(id: ID!): Revival
 }
 
 extend type Mutation {
-    "SUPER_ADMIN. Creates a revival in PROPOSED (FR-006)."
+    "SUPER_ADMIN. Creates a revival in PROPOSED."
     revivalCreate(input: RevivalCreateInput!): Revival!
 
-    "SUPER_ADMIN: every field. Directeur: premiereDate and shows (FR-009). Refused while ARCHIVED."
+    "SUPER_ADMIN: every field. Directeur: premiereDate and shows. Refused while ARCHIVED."
     revivalUpdate(input: RevivalUpdateInput!): Revival!
 
-    "Changes status. SUPER_ADMIN: any. Directeur: next step only (FR-013, FR-014)."
+    "Changes status. SUPER_ADMIN: any. Directeur: next step only."
     revivalStatusChange(input: RevivalStatusChangeInput!): Revival!
 
-    "SUPER_ADMIN. Removes the revival with everything that belongs to it (constitution IV). Returns its id."
+    "SUPER_ADMIN. Removes the revival with everything that belongs to it. Returns its id."
     revivalDelete(id: ID!, version: Int!): ID!
 }
 
@@ -41,9 +41,9 @@ type Revival {
     "Ordered by date, then time, then venue, undecided last."
     shows: [RevivalShow!]!
     status: RevivalStatus!
-    "The pinned guide version. Null only before the first version is published (FR-017)."
+    "The pinned guide version. Null only before the first version is published."
     guideVersion: GuideVersionSummary
-    "The latest published version when it is newer than guideVersion, otherwise null (FR-019)."
+    "The latest published version when it is newer than guideVersion, otherwise null."
     newerGuideVersion: GuideVersionSummary
     "Newest first."
     guideVersionHistory: [RevivalGuideVersionChange!]!
@@ -77,15 +77,15 @@ type RevivalPermissions {
     allowedStatuses: [RevivalStatus!]!
     canManageDirecteurs: Boolean!
     canManageSteeringGroup: Boolean!
-    "Directeur or steering group of the revival, visible, not ARCHIVED (FR-031)."
+    "Directeur or steering group of the revival, visible, not ARCHIVED."
     canSuggestGuideChange: Boolean!
-    "Published versions the caller may pin this revival to (FR-020). Empty when they may not change it."
+    "Published versions the caller may pin this revival to. Empty when they may not change it."
     guideVersionsAllowed: [GuideVersionSummary!]!
-    "Directeur or steering group, visible, not ARCHIVED (M3 FR-001)."
+    "Directeur or steering group, visible, not ARCHIVED."
     canWriteLog: Boolean!
-    "Directeur, visible, not ARCHIVED (M3 FR-025)."
+    "Directeur, visible, not ARCHIVED."
     canWaiveRequirement: Boolean!
-    "SUPER_ADMIN (constitution IV)."
+    "SUPER_ADMIN."
     canDelete: Boolean!
 }
 
@@ -137,7 +137,7 @@ input RevivalStatusChangeInput {
 }
 
 extend type Mutation {
-    "SUPER_ADMIN: any published version. Directeur: a newer one (FR-020). Refused while ARCHIVED."
+    "SUPER_ADMIN: any published version. Directeur: a newer one. Refused while ARCHIVED."
     revivalGuideVersionChange(input: RevivalGuideVersionChangeInput!): Revival!
 }
 
@@ -161,7 +161,7 @@ input RevivalGuideVersionChangeInput {
     toVersionId: ID!
 }
 
-"Counts for the revival page (M3)."
+"Counts for the revival page."
 type RevivalWorkSummary {
     "Rows OPEN or WAITING."
     openEntries: Int!

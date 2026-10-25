@@ -30,12 +30,12 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Keeps a revival's budget as an anonymous reference before the revival is deleted or anonymized (product spec 5.10,
- * section 7, M5-FR-14): its title and year, planned participants, and per category the budgeted and actual totals, the
- * helpers' compensation from the staffing in the helper category (M6B-FR-5). No people and no descriptions.
+ * Keeps a revival's budget as an anonymous reference before the revival is deleted or anonymized: its title and year,
+ * planned participants, and per category the budgeted and actual totals, the helpers' compensation from the staffing in
+ * the helper category. No people and no descriptions.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Component
 public class BudgetSnapshot {
@@ -74,8 +74,7 @@ public class BudgetSnapshot {
     }
 
     /**
-     * As {@link #keep(Revival)}, with the number of participants the revival actually had, as anonymization knows it
-     * (M7-FR-10).
+     * As {@link #keep(Revival)}, with the number of participants the revival actually had, as anonymization knows it.
      */
     @Transactional
     public Optional<ReferenceRevival> keep(final Revival revival, final @Nullable Integer participants) {

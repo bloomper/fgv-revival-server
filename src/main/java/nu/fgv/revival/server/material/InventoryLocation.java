@@ -19,7 +19,7 @@ package nu.fgv.revival.server.material;
  * Where an inventory item is kept: FGV's stores, RunAn, someone's home, or elsewhere as its location note says.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public enum InventoryLocation {
     KEMIFORRADET,

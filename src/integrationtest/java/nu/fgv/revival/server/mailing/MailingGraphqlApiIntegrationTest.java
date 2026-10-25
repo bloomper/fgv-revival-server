@@ -40,13 +40,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Mailings end to end (M6B-FR-8–12, M6B-FR-14): audiences resolved per kind, the steering group drafts, a member with
+ * Mailings end to end: audiences resolved per kind, the steering group drafts, a member with
  * COMMS or the directeur sends one multipart message per recipient with replies to the sender, failed recipients are
  * sent again, the mail server being down records nothing, and the mailing plan with its reminders. Participants are
  * pending people; the mail server is GreenMail.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

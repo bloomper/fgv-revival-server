@@ -41,10 +41,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A new production of an old spex. The spex itself lives in Spexregister; only its id is stored (FR-008).
+ * A new production of an old spex. The spex itself lives in Spexregister; only its id is stored.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Entity
 @Table(name = "revival")
@@ -75,13 +75,13 @@ public class Revival extends AbstractAuditable {
     private @Nullable Long guideVersionId;
 
     /**
-     * The year the revival pays FGV membership for its participants (M7-FR-1).
+     * The year the revival pays FGV membership for its participants.
      */
     @Column(name = "membership_year")
     private @Nullable Integer membershipYear;
 
     /**
-     * Spexregister's id for this revival, once the sync has found or created it (M7). Written by the sync without
+     * Spexregister's id for this revival, once the sync has found or created it. Written by the sync without
      * touching the revival's version, so it is not audited.
      */
     @NotAudited
@@ -89,7 +89,7 @@ public class Revival extends AbstractAuditable {
     private @Nullable Long spexregisterRevivalId;
 
     /**
-     * When the people were removed from the revival (product spec section 7); nothing personal is added after.
+     * When the people were removed from the revival; nothing personal is added after.
      */
     @Column(name = "anonymized_at")
     private @Nullable Instant anonymizedAt;

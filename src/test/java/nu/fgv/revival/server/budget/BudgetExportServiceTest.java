@@ -57,11 +57,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 
 /**
- * The budget as an Excel workbook (M5-FR-11): four sheets, labels in the language, amounts with two decimals, receipts
+ * The budget as an Excel workbook: four sheets, labels in the language, amounts with two decimals, receipts
  * per category, and payers by name only.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class BudgetExportServiceTest {

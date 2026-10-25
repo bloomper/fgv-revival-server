@@ -31,11 +31,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Locale;
 
 /**
- * The guide's plain HTTP endpoints, for what GraphQL does not suit (constitution II, contracts/http.md). A thin adapter:
- * the services decide.
+ * The guide's plain HTTP endpoints, for what GraphQL does not suit.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @RestController
 public class GuideHttpApi {

@@ -36,11 +36,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Checklist templates over GraphQL (contracts/schema.graphqls). A thin adapter: every rule is in
- * {@link ChecklistTemplateService}.
+ * Checklist templates over GraphQL.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Controller
 public class ChecklistTemplateGraphqlApi {

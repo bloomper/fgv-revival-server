@@ -33,7 +33,7 @@ import org.jspecify.annotations.Nullable;
  * A chapter of a version. Its key identifies it across versions; position orders it within the version.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "guide_chapter")

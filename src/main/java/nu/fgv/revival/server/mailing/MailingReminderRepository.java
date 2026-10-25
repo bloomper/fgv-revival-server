@@ -24,7 +24,7 @@ import java.util.List;
  * Reminders already sent.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface MailingReminderRepository extends Repository<MailingReminder, Long> {
 

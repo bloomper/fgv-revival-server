@@ -38,10 +38,10 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Receipts and the Excel export over HTTP against MySQL and Keycloak (M5-FR-11, M5-FR-12).
+ * Receipts and the Excel export over HTTP against MySQL and Keycloak.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class BudgetHttpApiIntegrationTest extends AbstractIntegrationTest {
 

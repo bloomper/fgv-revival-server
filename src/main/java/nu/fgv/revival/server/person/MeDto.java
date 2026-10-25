@@ -25,7 +25,7 @@ import java.util.List;
  * The caller as GraphQL's {@code Me}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record MeDto(Long id,
                     @Nullable String displayName,

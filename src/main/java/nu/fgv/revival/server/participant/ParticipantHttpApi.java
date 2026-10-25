@@ -27,11 +27,10 @@ import java.time.Duration;
 import java.util.Locale;
 
 /**
- * The participant's Swish QR code as an image, which GraphQL does not suit (constitution II). A thin adapter: the
- * service decides.
+ * The participant's Swish QR code as an image, which GraphQL does not suit.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @RestController
 public class ParticipantHttpApi {
@@ -45,9 +44,9 @@ public class ParticipantHttpApi {
     }
 
     /**
-     * 200 with the SVG, 404 unless the caller is a participant of the revival, it is {@code OPEN} and has a Swish number,
-     * and they owe an unpaid fee; 503 when Swish is unavailable. Sandboxed like the poster, since an SVG opened on its own
-     * could otherwise run script.
+     * 200 with the SVG, 404 unless the caller is a participant of the revival, it is {@code OPEN} and has a Swish
+     * number, and they owe an unpaid fee; 503 when Swish is unavailable. Sandboxed like the poster, since an SVG opened
+     * on its own could otherwise run script.
      */
     @GetMapping("/api/revivals/{id}/swish-qr")
     public ResponseEntity<byte[]> swishQr(@PathVariable final Long id, final Locale locale) {

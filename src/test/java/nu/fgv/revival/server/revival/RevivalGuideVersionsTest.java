@@ -36,10 +36,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Every pin publishes exactly one {@link RevivalGuideVersionPinned}, which M3's checklists follow (M3 research R10).
+ * Every pin publishes exactly one {@link RevivalGuideVersionPinned}, which the checklists follow.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class RevivalGuideVersionsTest {

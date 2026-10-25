@@ -26,12 +26,12 @@ import lombok.Setter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The name and contact details of a participant who is not in Spexregister (product spec 5.6). Its home is this
+ * The name and contact details of a participant who is not in Spexregister. Its home is this
  * application, so it is not audited: deleting it leaves no trace, as it must when the person declines, becomes a
- * spexare or never answers before the revival leaves {@code OPEN} (product spec section 7).
+ * spexare or never answers before the revival leaves {@code OPEN}.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Entity
 @Table(name = "pending_person")

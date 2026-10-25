@@ -15,7 +15,7 @@
  */
 
 /**
- * The people who log in and the caller of the current request (research R4).
+ * The people who log in and the caller of the current request.
  */
 @NullMarked
 package nu.fgv.revival.server.person;

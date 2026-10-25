@@ -27,10 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * What a receipt file may be (M5-FR-5): its type read from its first bytes, its size, and its name.
+ * What a receipt file may be: its type read from its first bytes, its size, and its name.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class ReceiptsTest {
 

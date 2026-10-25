@@ -1,6 +1,6 @@
-# M8: materials and inventory (product spec 5.9). Materials are links to where files are kept: FGV's applications
+# Materials and inventory. Materials are links to where files are kept: FGV's applications
 # (Spexflix, Manusarkiv, Spexipedia, Spexify, Låtarkiv) or services such as Google Drive. Nothing is stored here.
-# Materials and inventory items are removed, never deleted (constitution IV).
+# Materials and inventory items are removed, never deleted.
 
 enum MaterialCategory {
     SCRIPT

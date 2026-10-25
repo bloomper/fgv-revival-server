@@ -29,10 +29,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Exactly one change of each kind, and nothing else reported (SC-004).
+ * Exactly one change of each kind, and nothing else reported.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideChangesTest {
 

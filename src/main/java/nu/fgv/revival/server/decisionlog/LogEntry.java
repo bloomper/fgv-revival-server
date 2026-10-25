@@ -43,11 +43,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A decision, to-do or question in a revival's decision log (FR-008). Never deleted: closed or cancelled instead
- * (FR-010).
+ * A decision, to-do or question in a revival's decision log. Never deleted: closed or cancelled instead.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "log_entry")

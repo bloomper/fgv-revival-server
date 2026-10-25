@@ -33,7 +33,7 @@ public interface SyncStepRepository extends JpaRepository<SyncStep, Long> {
 
     /**
      * The participants of a revival whose membership for the year an earlier run wrote or found: Spexregister does not
-     * let the application read memberships, so these steps are what tells that one exists (M7-FR-5).
+     * let the application read memberships, so these steps are what tells that one exists.
      */
     @Query("""
             SELECT DISTINCT s.participantId FROM SyncStep s

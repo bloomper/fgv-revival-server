@@ -23,7 +23,7 @@ import java.time.Instant;
  * GraphQL's {@code CalendarFeedLink}: a new link with its secret token, shown only once.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public record CalendarFeedLinkDto(String url, Instant createdAt) {
 }

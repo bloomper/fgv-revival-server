@@ -20,10 +20,10 @@ package nu.fgv.revival.server.member;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A person as GraphQL's {@code PersonRef}: by display name, never by email (FR-048).
+ * A person as GraphQL's {@code PersonRef}: by display name, never by email.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record PersonRefDto(Long id, @Nullable String displayName) {
 }

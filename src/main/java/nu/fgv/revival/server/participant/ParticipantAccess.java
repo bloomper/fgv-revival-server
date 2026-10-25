@@ -28,12 +28,12 @@ import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import org.springframework.stereotype.Component;
 
 /**
- * The checks every participant operation starts with (M6-FR-1). A revival the caller cannot see, and a participation
+ * The checks every participant operation starts with. A revival the caller cannot see, and a participation
  * that is not the caller's, are reported as missing. Staffing uses {@link #own} for the caller's availability and
- * shifts (M6b).
+ * shifts.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Component
 public class ParticipantAccess {
@@ -67,7 +67,7 @@ public class ParticipantAccess {
 
         accessPolicy.requireWriteParticipants(caller, revival);
         if (revival.isAnonymized()) {
-            // Nothing personal is added once the people have been removed (section 7)
+            // Nothing personal is added once the people have been removed
             throw new BadRequestException("error.revival.anonymized");
         }
         return revival;

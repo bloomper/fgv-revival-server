@@ -15,7 +15,7 @@
  */
 
 /**
- * Suggested changes to the guide from running revivals, and the super admin's decisions on them (M2 research R11).
+ * Suggested changes to the guide from running revivals, and the super admin's decisions on them.
  */
 @NullMarked
 package nu.fgv.revival.server.guide.suggestion;

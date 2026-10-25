@@ -22,10 +22,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 /**
- * Who reads the guide, and what they read (FR-001–FR-004, FR-021, SC-006).
+ * Who reads the guide, and what they read.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

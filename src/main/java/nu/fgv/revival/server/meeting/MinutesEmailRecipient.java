@@ -23,10 +23,10 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 
 /**
- * A recipient of a minutes email, by person id. No email address is stored (FR-021).
+ * A recipient of a minutes email, by person id. No email address is stored.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Embeddable
 public record MinutesEmailRecipient(

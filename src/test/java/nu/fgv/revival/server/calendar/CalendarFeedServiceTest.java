@@ -69,10 +69,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Secret calendar links and their feed (M4-FR-5, M4-FR-6).
+ * Secret calendar links and their feed.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class CalendarFeedServiceTest {
@@ -265,8 +265,8 @@ class CalendarFeedServiceTest {
     }
 
     /**
-     * M6-FR-1: participants and helpers have a link while their revival is open; participants read its events, helpers
-     * get only their shifts (M6b), never meetings.
+     * Participants and helpers have a link while their revival is open; participants read its events, helpers
+     * get only their shifts, never meetings.
      */
     @Test
     void participantsGetEventsAndHelpersDoNot() {

@@ -26,12 +26,12 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * The rules for links (M8-FR-2, M8-FR-3): a link is an absolute https URL with a host and without a user name or
+ * The rules for links: a link is an absolute https URL with a host and without a user name or
  * password, and belongs to the first active link service, in list order, whose hosts include its host or a parent
  * domain of it.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public final class Links {
 

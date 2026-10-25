@@ -29,7 +29,7 @@ import java.math.BigDecimal;
  * A scenario's parameters as a JSON object. Amounts are written as strings, so the database keeps them exact.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Converter
 public class ScenarioParametersConverter implements AttributeConverter<ScenarioParameters, String> {

@@ -33,10 +33,10 @@ import java.time.Instant;
 
 /**
  * Who created and last changed a record, and its optimistic-lock version. The {@code *_by} columns hold the Keycloak
- * subject, never an email address (FR-028).
+ * subject, never an email address.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)

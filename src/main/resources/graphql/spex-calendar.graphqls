@@ -1,4 +1,4 @@
-# M4 follow-up (product spec 5.1): the current Chalmersspex's show dates, kept by SUPER_ADMIN, so the cross-revival
+# The current Chalmersspex's show dates, kept by SUPER_ADMIN, so the cross-revival
 # timeline can flag clashes with them.
 
 extend type Query {

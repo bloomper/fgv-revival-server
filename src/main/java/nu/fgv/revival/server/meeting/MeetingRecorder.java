@@ -27,11 +27,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Records what is done to log rows in a meeting in progress (FR-018, research R8). The decision log calls it, so it
+ * Records what is done to log rows in a meeting in progress. The decision log calls it, so it
  * depends on meetings only through this.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class MeetingRecorder {

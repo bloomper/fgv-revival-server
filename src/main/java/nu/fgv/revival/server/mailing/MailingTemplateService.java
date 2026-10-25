@@ -38,12 +38,12 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * The super admin's mailing plan (product spec 5.8, M6B-FR-10): planned mailings with an audience, a text in Swedish
+ * The super admin's mailing plan: planned mailings with an audience, a text in Swedish
  * and optionally English, and when they are due relative to each event of a type or to the premiere. Readers of the
  * guide read it; the super admin creates, changes, moves, retires and restores templates. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Service
 public class MailingTemplateService {
@@ -165,8 +165,6 @@ public class MailingTemplateService {
     private void manageable() {
         accessPolicy.requireManageMailingTemplates(callerService.current());
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private MailingTemplate changeable(final Long id, final Long version) {
         final MailingTemplate template = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(MailingTemplate.class, id));

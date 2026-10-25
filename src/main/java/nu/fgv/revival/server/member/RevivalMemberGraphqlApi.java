@@ -24,10 +24,10 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 
 /**
- * No authorization here: the service decides (constitution II).
+ * No authorization here: the service decides.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Controller
 public class RevivalMemberGraphqlApi {

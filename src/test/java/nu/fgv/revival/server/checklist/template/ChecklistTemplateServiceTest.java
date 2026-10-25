@@ -66,7 +66,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The rules for checklist templates and their items (M3 FR-030–FR-032).
+ * The rules for checklist templates and their items.
  *
  * @author Anders Jacobsson
  */

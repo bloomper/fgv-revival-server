@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 /**
  * Every column that refers to a person, and the rule for scrubbing a person's login data when the revivals they took
- * part in are anonymized (product spec section 7, M7-FR-11). An integration test fails when a foreign key to
+ * part in are anonymized. An integration test fails when a foreign key to
  * {@code person} appears that is not listed here.
  * <p>
  * A reference is either revival data, reached from a revival's id, or global: the super admin's work outside any
@@ -119,7 +119,8 @@ public class PersonReferences {
     }
 
     /**
-     * Scrubs those of the people who are no longer referred to by anything but anonymized revivals, and returns how many.
+     * Scrubs those of the people who are no longer referred to by anything but anonymized revivals, and returns how
+     * many.
      */
     public int scrubUnreferenced(final Collection<Long> candidates) {
         if (candidates.isEmpty()) {

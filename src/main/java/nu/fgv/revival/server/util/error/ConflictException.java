@@ -20,10 +20,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * The record changed since the caller read it: a stale {@code version} or {@code from} status (research R12).
+ * The record changed since the caller read it: a stale {@code version} or {@code from} status.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class ConflictException extends ResponseStatusException {
 

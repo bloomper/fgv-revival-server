@@ -44,11 +44,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Starting a draft and the editing rules (FR-008, FR-009, FR-009a, FR-012, FR-013). Positions and moves against a real
+ * Starting a draft and the editing rules. Positions and moves against a real
  * database are in {@code GuideDraftGraphqlApiIntegrationTest}.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideDraftServiceEditTest {
 

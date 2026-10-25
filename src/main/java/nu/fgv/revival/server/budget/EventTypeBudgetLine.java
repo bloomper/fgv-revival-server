@@ -33,11 +33,11 @@ import org.jspecify.annotations.Nullable;
 import java.math.BigDecimal;
 
 /**
- * A line an event type proposes for the budget of a revival with an event of the type (M5-FR-3), e.g. food per
+ * A line an event type proposes for the budget of a revival with an event of the type, e.g. food per
  * participant for a rehearsal weekend. Kept by the super admin; removing one deletes it.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "event_type_budget_line")

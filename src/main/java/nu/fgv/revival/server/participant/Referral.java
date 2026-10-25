@@ -30,11 +30,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * Someone a participant thinks the steering group is missing (product spec 5.6). Not audited and deleted once the
- * steering group has handled it (product spec section 7).
+ * Someone a participant thinks the steering group is missing. Not audited and deleted once the
+ * steering group has handled it.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Entity
 @Table(name = "referral")

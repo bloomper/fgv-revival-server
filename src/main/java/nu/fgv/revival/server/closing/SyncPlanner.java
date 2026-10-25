@@ -43,10 +43,10 @@ import java.util.function.Supplier;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Works out what the sync would write for a revival (M7-FR-3), from its participants and what Spexregister already has,
- * read fresh. Participants are those who answered yes, are participants (not helpers) and are not removed; only spexare
- * can be written, so pending people are listed as excluded. For each: the participation in Spexregister's revival, the
- * task for their position, the actor for an ensemble role, and the FGV membership when the revival paid it. A membership
+ * Works out what the sync would write for a revival, from its participants and what Spexregister already has, read
+ * fresh. Participants are those who answered yes, are participants (not helpers) and are not removed; only spexare can
+ * be written, so pending people are listed as excluded. For each: the participation in Spexregister's revival, the task
+ * for their position, the actor for an ensemble role, and the FGV membership when the revival paid it. A membership
  * counts as existing when an earlier run wrote or found it, since Spexregister does not let the application read
  * memberships. The hash covers what would be written, in a stable order, so a start can tell whether the preview the
  * caller confirmed is still what would be done.

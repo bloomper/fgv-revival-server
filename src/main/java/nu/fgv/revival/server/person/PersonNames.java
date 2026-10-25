@@ -31,11 +31,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Display names for the people recorded in audit columns and status history, never their email (FR-028). Falls back
- * to the localised "System" and "Unknown person" (data-model.md, Revision).
+ * Display names for the people recorded in audit columns and status history, never their email. Falls back
+ * to the localised "System" and "Unknown person".
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Component
 public class PersonNames {

@@ -59,13 +59,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A revival's budget (product spec 5.10, M5-FR-4, FR-7–FR-9): its settings, budget lines, totals per kind and per
+ * A revival's budget: its settings, budget lines, totals per kind and per
  * category with reference figures, and the lines its events' types propose. Readers are super admins, observers and
  * its directeurs and steering group; writers its directeurs and the steering group members with the finance area.
  * Lines are removed, never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class BudgetService {
@@ -143,8 +143,6 @@ public class BudgetService {
                 : amount.divide(BigDecimal.valueOf(participants), 0, RoundingMode.HALF_UP).setScale(Amounts.SCALE, RoundingMode.UNNECESSARY);
     }
 
-    // --- Budget -----------------------------------------------------------------------------------------------------
-
     static String validDescription(final @Nullable String description) {
         final String trimmed = description == null ? "" : description.strip();
 
@@ -179,8 +177,6 @@ public class BudgetService {
         return exact;
     }
 
-    // --- Settings ---------------------------------------------------------------------------------------------------
-
     private static @Nullable String validComment(final @Nullable String comment) {
         if (comment == null || comment.isBlank()) {
             return null;
@@ -195,7 +191,7 @@ public class BudgetService {
     }
 
     /**
-     * The revival's budget, or null when the caller may not read it: a revival field that does not fail (M5-FR-6).
+     * The revival's budget, or null when the caller may not read it: a revival field that does not fail.
      */
     @Transactional(readOnly = true)
     public BudgetDtos.@Nullable Budget budget(final Long revivalId) {
@@ -209,8 +205,6 @@ public class BudgetService {
     public boolean canRead(final Long revivalId) {
         return access.canRead(callerService.current(), revivalId);
     }
-
-    // --- Lines ------------------------------------------------------------------------------------------------------
 
     /**
      * The decision log rows lines refer to, by id. No caller check: callers have checked the lines.
@@ -290,8 +284,6 @@ public class BudgetService {
         return ids.isEmpty() ? Map.of()
                 : lineRepository.findAllById(Set.copyOf(ids)).stream().collect(Collectors.toMap(BudgetLine::getId, Line::of));
     }
-
-    // --- Overview ---------------------------------------------------------------------------------------------------
 
     @Transactional
     public Line createLine(final NewLine newLine) {
@@ -398,7 +390,7 @@ public class BudgetService {
     }
 
     /**
-     * Budgeted from the lines that are not removed, actual from the transactions that are not cancelled (M5-FR-7). The
+     * Budgeted from the lines that are not removed, actual from the transactions that are not cancelled. The
      * loan is neither income nor cost. The helpers' compensation for the shifts they hold is a budgeted cost too, see
      * {@link #helperCompensation(Long)}.
      */
@@ -441,7 +433,7 @@ public class BudgetService {
 
     /**
      * Every category with a line or a transaction, and every active category with a role, in category order, with the
-     * reference figures for it (M5-FR-8).
+     * reference figures for it.
      */
     @Transactional(readOnly = true)
     public List<CategorySummary> categories(final Long revivalId) {
@@ -481,7 +473,7 @@ public class BudgetService {
     }
 
     /**
-     * For each event that is not cancelled, the lines its type proposes that have not been added for it (M5-FR-9).
+     * For each event that is not cancelled, the lines its type proposes that have not been added for it.
      */
     @Transactional(readOnly = true)
     public List<Proposal> proposals(final Long revivalId) {
@@ -514,8 +506,6 @@ public class BudgetService {
         return proposals;
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     /**
      * The lines that are not removed, as the scenario calculator reads them, and the settings it starts from.
      */
@@ -542,7 +532,7 @@ public class BudgetService {
     }
 
     /**
-     * What the revival's helpers are paid for the shifts they hold (M6B-FR-5): a budgeted cost of the category with the
+     * What the revival's helpers are paid for the shifts they hold: a budgeted cost of the category with the
      * {@code HELPERS} role, computed from the staffing whenever the budget is read and never stored as a line. The
      * totals, the category summary, the scenario calculator and the Excel export all add it.
      */

@@ -25,11 +25,11 @@ import java.util.Objects;
 
 /**
  * Who owns a decision log row or a checklist item: a directeur or steering group member of the revival, or a free-text
- * name for someone outside the steering group (FR-009, research R4). At most one of the two is set; neither means no
+ * name for someone outside the steering group. At most one of the two is set; neither means no
  * owner.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Embeddable
 public class Owner {

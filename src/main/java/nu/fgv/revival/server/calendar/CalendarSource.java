@@ -25,10 +25,10 @@ import java.util.Locale;
 
 /**
  * What a revival contributes to a person's calendar feed. Each source decides from the person's access what they get;
- * participants' and helpers' shifts are one of them (M6B-FR-6).
+ * participants' and helpers' shifts are one of them.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public interface CalendarSource {
 

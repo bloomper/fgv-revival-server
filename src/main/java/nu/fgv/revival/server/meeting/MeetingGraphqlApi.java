@@ -33,11 +33,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Meetings over GraphQL (contracts/schema.graphqls). A thin adapter: every rule is in {@link MeetingService} and
- * {@link MinutesEmailService}.
+ * Meetings over GraphQL.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Controller
 public class MeetingGraphqlApi {

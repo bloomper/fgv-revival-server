@@ -18,10 +18,10 @@ package nu.fgv.revival.server.revival;
 
 /**
  * A revival's status changed. Published in the changing transaction, so listeners act within it: participants'
- * pending people go when the revival leaves {@code OPEN} (M6-FR-20).
+ * pending people go when the revival leaves {@code OPEN}.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public record RevivalStatusChanged(Long revivalId, RevivalStatus from, RevivalStatus to) {
 }

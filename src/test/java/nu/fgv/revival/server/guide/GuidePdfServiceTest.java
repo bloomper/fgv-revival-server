@@ -39,10 +39,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The PDF, read back with OpenPDF's own reader (FR-028–FR-030, SC-005, FR-010).
+ * The PDF, read back with OpenPDF's own reader.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuidePdfServiceTest {
 

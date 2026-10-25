@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Dates proposed from the premiere for the types a revival has no event of yet (M4-FR-7). A pure function: the caller
+ * Dates proposed from the premiere for the types a revival has no event of yet. A pure function: the caller
  * passes the active types and the types of the revival's events that are not cancelled.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public final class EventProposals {
 

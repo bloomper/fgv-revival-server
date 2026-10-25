@@ -26,11 +26,11 @@ import static nu.fgv.revival.server.budget.BudgetCategoryKind.INCOME;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The scenario calculator (M5-FR-10): the baseline from the lines, each override path, break-even and the party
+ * The scenario calculator: the baseline from the lines, each override path, break-even and the party
  * subsidy.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class ScenarioCalculatorTest {
 

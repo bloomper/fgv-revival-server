@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package nu.fgv.revival.server.checklist.template;
 
 import nu.fgv.revival.server.audit.AuditContext;
@@ -50,11 +49,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Checklist templates for guide chapters and event kinds (FR-030, FR-031). Only super admins change them; whoever reads the
- * guide reads them. Templates and their items are retired, never deleted, so checklists keep their links (FR-032a).
+ * Checklist templates for guide chapters and event kinds. Only super admins change them; whoever reads the
+ * guide reads them. Templates and their items are retired, never deleted, so checklists keep their links.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Service
 public class ChecklistTemplateService {
@@ -121,8 +120,6 @@ public class ChecklistTemplateService {
         }
         return trimmed;
     }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     private static void setText(final ChecklistTemplateItem item, final Texts text) {
         if (text.sv().isBlank()) {
@@ -213,8 +210,6 @@ public class ChecklistTemplateService {
                 });
     }
 
-    // --- Templates --------------------------------------------------------------------------------------------------
-
     @Transactional(readOnly = true)
     public ChecklistTemplateDto get(final Long id) {
         readable();
@@ -280,8 +275,6 @@ public class ChecklistTemplateService {
         AuditContext.operation("checklistTemplateCreate");
         return toDto(templateRepository.saveAndFlush(template));
     }
-
-    // --- Items ------------------------------------------------------------------------------------------------------
 
     @Transactional
     public ChecklistTemplateDto update(final Long id, final Long version, final @Nullable Texts name) {
@@ -393,8 +386,6 @@ public class ChecklistTemplateService {
         }
         return ChecklistTemplateItemDto.of(itemRepository.saveAndFlush(item));
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public ChecklistTemplateDto moveItem(final Long id, final Long version, final int position) {

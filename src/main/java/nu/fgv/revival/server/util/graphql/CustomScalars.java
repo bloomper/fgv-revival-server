@@ -40,7 +40,7 @@ import java.util.Locale;
  * The {@code Instant} and {@code Void} scalars, as in Spexregister, and {@code Amount} for money.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public final class CustomScalars {
 

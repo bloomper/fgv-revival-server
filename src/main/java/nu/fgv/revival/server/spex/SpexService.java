@@ -39,11 +39,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Spex from Spexregister: one cached list of original spex, searched locally (research R5). Spexregister being
- * unavailable makes titles unavailable and blocks only picking a spex (FR-008a).
+ * Spex from Spexregister: one cached list of original spex, searched locally. Spexregister being
+ * unavailable makes titles unavailable and blocks only picking a spex.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Service
 public class SpexService {
@@ -160,7 +160,7 @@ public class SpexService {
     }
 
     /**
-     * Refuses a spex that does not exist or is a revival recorded in Spexregister (FR-008).
+     * Refuses a spex that does not exist or is a revival recorded in Spexregister.
      *
      * @throws SpexregisterUnavailableException when it cannot be checked
      */

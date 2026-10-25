@@ -20,10 +20,10 @@ package nu.fgv.revival.server.member;
 import org.jspecify.annotations.Nullable;
 
 /**
- * An owner as GraphQL's {@code Owner}: a member by display name, or a free-text name (FR-009). Never an email.
+ * An owner as GraphQL's {@code Owner}: a member by display name, or a free-text name. Never an email.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record OwnerDto(@Nullable OwnerPersonDto person, @Nullable String name) {
 

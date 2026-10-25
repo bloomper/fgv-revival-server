@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class GuideVersionServiceTest {

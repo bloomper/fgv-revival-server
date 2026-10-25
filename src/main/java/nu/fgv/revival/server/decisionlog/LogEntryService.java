@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package nu.fgv.revival.server.decisionlog;
 
 import nu.fgv.revival.server.audit.AuditContext;
@@ -59,11 +58,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * A revival's decision log (FR-008–FR-015). Rows are never deleted; every change is audited and, when made from a
- * meeting in progress, recorded as made in it (FR-018).
+ * A revival's decision log. Rows are never deleted; every change is audited and, when made from a
+ * meeting in progress, recorded as made in it.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Service
 public class LogEntryService {
@@ -162,8 +161,6 @@ public class LogEntryService {
         return valid;
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     static String truncate(final String text, final int max) {
         final String trimmed = text.strip();
 
@@ -224,10 +221,8 @@ public class LogEntryService {
                 .collect(Collectors.toMap(entry -> Objects.requireNonNull(entry.getAnswersEntryId()), Function.identity()));
     }
 
-    // --- Writing ----------------------------------------------------------------------------------------------------
-
     /**
-     * To-dos, open or waiting, without an owner who still counts (FR-019). Callers have checked access.
+     * To-dos, open or waiting, without an owner who still counts. Callers have checked access.
      */
     @Transactional(readOnly = true)
     public List<LogEntry> unownedOpenTodos(final Long revivalId) {
@@ -279,8 +274,6 @@ public class LogEntryService {
         }
         return toDto(saved, locale);
     }
-
-    // --- Internal, for the guide sync (research R10) -------------------------------------------------------------------
 
     @Transactional
     public LogEntryDto update(final Change change, final Locale locale) {
@@ -434,8 +427,6 @@ public class LogEntryService {
         });
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     /**
      * Clears the link to checklist items the guide sync is about to delete. The rows stay: log rows are never deleted.
      * Internal, for the guide sync.
@@ -553,7 +544,7 @@ public class LogEntryService {
     }
 
     /**
-     * The decision answering a question (FR-013).
+     * The decision answering a question.
      */
     public record Answer(Long questionId, Long questionVersion, @Nullable Long meetingId, String text,
                          @Nullable OwnerInputDto owner,

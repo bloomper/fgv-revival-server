@@ -40,11 +40,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * A revival's budget over MCP (M5-FR-13): its position for readers of the budget, never who paid what, and recording a
+ * A revival's budget over MCP: its position for readers of the budget, never who paid what, and recording a
  * transaction for its writers. The same rules as GraphQL.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Component
 public class BudgetMcpTools {

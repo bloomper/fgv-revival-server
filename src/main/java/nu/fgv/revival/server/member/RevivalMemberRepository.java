@@ -26,7 +26,7 @@ import java.util.Optional;
  * Queries leave removed members out unless their name says otherwise.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public interface RevivalMemberRepository extends JpaRepository<RevivalMember, Long> {
 

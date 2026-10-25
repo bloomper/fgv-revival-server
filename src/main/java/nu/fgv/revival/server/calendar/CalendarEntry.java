@@ -26,7 +26,7 @@ import java.time.LocalDate;
  * One VEVENT of a calendar feed: all day over whole dates, or timed between two instants.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public record CalendarEntry(String uid, String summary, @Nullable String location, @Nullable String description,
                             When when, Instant stamp) {

@@ -23,7 +23,7 @@ import java.util.Optional;
  * A receipt's file is deleted when the receipt is replaced or removed, the only deletion in a revival's budget.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public interface ReceiptContentRepository extends Repository<ReceiptContent, Long> {
 

@@ -65,7 +65,7 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match project version $version"
             exit 1
           fi
-      # Lint, unit and integration tests on pull requests and pushes alike (research R9).
+      # Lint, unit and integration tests on pull requests and pushes alike.
       # Only this repository is checked out: the realm is the committed copy in src/integrationtest/resources.
       - name: Build and test
         run: ./gradlew check

@@ -46,11 +46,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Reference figures from earlier revivals (M5-FR-2): the super admin keeps them, readers of the guide read them, and a
+ * Reference figures from earlier revivals: the super admin keeps them, readers of the guide read them, and a
  * deleted revival's budget is kept as one.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class ReferenceRevivalServiceTest {

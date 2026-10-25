@@ -51,11 +51,11 @@ import static nu.fgv.revival.server.revival.RevivalMapper.REVIVAL_MAPPER;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Revivals and their lifecycle. Every method resolves the caller and asks {@link AccessPolicy} before acting
- * (constitution III). GraphQL and MCP both call {@link #findVisible}, so they cannot disagree (FR-025).
+ * Revivals and their lifecycle. Every method resolves the caller and asks {@link AccessPolicy} before acting.
+ * GraphQL and MCP both call {@link #findVisible}, so they cannot disagree.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Service
 public class RevivalService {
@@ -117,8 +117,8 @@ public class RevivalService {
     }
 
     /**
-     * At most {@value #MAX_SHOWS}, times as {@code HH:mm} and venues trimmed with blank as not decided, and no date, time
-     * and venue twice.
+     * At most {@value #MAX_SHOWS}, times as {@code HH:mm} and venues trimmed with blank as not decided, and no date,
+     * time and venue twice.
      */
     private static List<RevivalShowDto> validShows(final List<RevivalShowDto> shows) {
         if (shows.size() > MAX_SHOWS) {
@@ -181,7 +181,7 @@ public class RevivalService {
     }
 
     /**
-     * The revivals the caller can see (FR-015), newest premiere first, then year descending. Spex titles come from one
+     * The revivals the caller can see, newest premiere first, then year descending. Spex titles come from one
      * cached list.
      */
     @Transactional(readOnly = true)
@@ -201,8 +201,8 @@ public class RevivalService {
     }
 
     /**
-     * Moves a revival to another published version (FR-020). The version the caller saw must still be the pinned one,
-     * as with status changes (M1 research R12). A directeur moves only forward; a super admin to any version.
+     * Moves a revival to another published version. The version the caller saw must still be the pinned one,
+     * as with status changes. A directeur moves only forward; a super admin to any version.
      */
     @Transactional
     public RevivalDto changeGuideVersion(final Long id, final @Nullable Long fromVersionId, final Long toVersionId) {
@@ -236,12 +236,12 @@ public class RevivalService {
     public List<RevivalGuideVersionChange> guideVersionHistory(final Long id) {
         final Caller caller = callerService.current();
 
-        // Participants see the revival for their own page only (M6-FR-1)
+        // Participants see the revival for their own page only
         return accessPolicy.canReadRevivalWork(caller, visible(caller, id)) ? guideVersions.history(id) : List.of();
     }
 
     /**
-     * A revival the caller can see. Not visible and missing give the same error (FR-017).
+     * A revival the caller can see. Not visible and missing give the same error.
      */
     @Transactional(readOnly = true)
     public RevivalDto findById(final Long id) {
@@ -259,7 +259,7 @@ public class RevivalService {
     }
 
     /**
-     * Newest first; empty for participants and helpers, who see the revival for their own page only (M6-FR-1).
+     * Newest first; empty for participants and helpers, who see the revival for their own page only.
      */
     @Transactional(readOnly = true)
     public List<RevivalStatusChangeHistoryDto> statusHistory(final Long id) {
@@ -343,7 +343,7 @@ public class RevivalService {
     }
 
     /**
-     * Removes the revival with everything that belongs to it, which only a super admin may do (constitution IV).
+     * Removes the revival with everything that belongs to it, which only a super admin may do.
      */
     @Transactional
     public void delete(final Long id, final Long version) {
@@ -359,7 +359,7 @@ public class RevivalService {
     }
 
     /**
-     * Removes the people from the revival for good (section 7, M7-FR-10): a directeur while it is settling, or a super
+     * Removes the people from the revival for good: a directeur while it is settling, or a super
      * admin while it is settling, archived or rejected; once. The confirmation is the revival's title as the web shows
      * it, e.g. "Ali Baba 2028" (trimmed, any case), or its id while Spexregister is unavailable.
      */
@@ -389,8 +389,8 @@ public class RevivalService {
     }
 
     /**
-     * Changes the status. The {@code from} the caller saw must still be the stored status (research R12); then a super
-     * admin may set any status and a directeur only the next step (FR-013, FR-014). The change is recorded (FR-018).
+     * Changes the status. The {@code from} the caller saw must still be the stored status; then a super
+     * admin may set any status and a directeur only the next step. The change is recorded.
      */
     @Transactional
     public RevivalDto changeStatus(final RevivalStatusChangeDto dto) {

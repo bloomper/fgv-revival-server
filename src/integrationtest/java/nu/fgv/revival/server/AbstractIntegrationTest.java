@@ -78,10 +78,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * MySQL and Keycloak in Testcontainers, with the committed copy of {@code fgv-keycloak}'s realm plus fictitious users,
- * and WireMock standing in for Spexregister's GraphQL API (research R7, R14). Every test starts from empty tables.
+ * and WireMock standing in for Spexregister's GraphQL API. Every test starts from empty tables.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integrationtest")
@@ -132,7 +132,7 @@ public abstract class AbstractIntegrationTest {
             .withTmpFs(Map.of("/var/lib/mysql", "rw"))
             .withCommand("mysqld", "--innodb-flush-log-at-trx-commit=0", "--innodb-doublewrite=0", "--skip-log-bin", "--performance-schema=OFF");
     private static final KeycloakContainer KEYCLOAK = new KeycloakContainer("quay.io/keycloak/keycloak:26.8").withRealmImportFile("/realm/fgv.json");
-    // An SMTP server in the test JVM for the minutes email (M3 research R1), also the realm's SMTP server for invitations
+    // An SMTP server in the test JVM for the minutes email, also the realm's SMTP server for invitations
     // A fixed free port, so a test can stop and restart it and the application still finds it
     private static final int SMTP_PORT = freePort();
     protected static final GreenMail MAIL = new GreenMail(new ServerSetup(SMTP_PORT, null, ServerSetup.PROTOCOL_SMTP))
@@ -324,8 +324,6 @@ public abstract class AbstractIntegrationTest {
         return token(user, CLIENT_ID);
     }
 
-    // --- Tokens -----------------------------------------------------------------------------------------------------
-
     protected static String mcpToken(final String user) {
         return token(user, MCP_CLIENT_ID);
     }
@@ -383,8 +381,6 @@ public abstract class AbstractIntegrationTest {
                 .as("errors")
                 .anySatisfy(error -> assertThat(String.valueOf(error.getErrorType())).isEqualTo(code)));
     }
-
-    // --- GraphQL ----------------------------------------------------------------------------------------------------
 
     private static SeedItem tip(final String text) {
         return new SeedItem("TIP", text);
@@ -541,8 +537,6 @@ public abstract class AbstractIntegrationTest {
     protected long version(final long revivalId) {
         return jdbcClient.sql("SELECT version FROM revival WHERE id = ?").param(revivalId).query(Long.class).single();
     }
-
-    // --- Guide ------------------------------------------------------------------------------------------------------
 
     /**
      * Moves a revival to a status as super admin.
@@ -706,7 +700,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
-     * Publishes the draft as super admin. The server numbers versions itself (FR-014), so {@code label} is not sent.
+     * Publishes the draft as super admin. The server numbers versions itself, so {@code label} is not sent.
      */
     protected void publishGuide(final long draftId, final String label) {
         graphQl(SUPER_ADMIN)
@@ -759,8 +753,6 @@ public abstract class AbstractIntegrationTest {
         }
         return objectMapper.readTree(result.get("content").get(0).get("text").asString()).get("items");
     }
-
-    // --- MCP --------------------------------------------------------------------------------------------------------
 
     private record SeedItem(String type, String text) {
     }

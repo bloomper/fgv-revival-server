@@ -23,7 +23,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
  * GraphQL's {@code ChecklistItemSummary}. A required item's text is the guide's, in the revival's pinned version.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistItemSummaryDto(Long id, Long checklistId, GuideVersionView.Text text, ChecklistItemState state) {
 }

@@ -21,7 +21,7 @@ import java.time.LocalDate;
  * GraphQL's {@code SpexCalendarDate}.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public record SpexCalendarDateDto(Long id, LocalDate date, String label, Long version) {
 

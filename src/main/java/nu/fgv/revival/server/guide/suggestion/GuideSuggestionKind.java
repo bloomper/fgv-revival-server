@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.guide.suggestion;
 
 /**
- * New text or a new type for an item, removing it, or a new item (FR-031).
+ * New text or a new type for an item, removing it, or a new item.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public enum GuideSuggestionKind {
 

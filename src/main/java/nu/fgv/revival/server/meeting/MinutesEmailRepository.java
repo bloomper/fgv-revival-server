@@ -24,7 +24,7 @@ import java.util.Optional;
 
 /**
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public interface MinutesEmailRepository extends Repository<MinutesEmail, Long> {
 

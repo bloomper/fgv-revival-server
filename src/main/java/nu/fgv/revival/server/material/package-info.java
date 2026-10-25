@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * A revival's materials and inventory (product spec 5.9, M8): links to where files are kept, in FGV's applications or
+ * A revival's materials and inventory: links to where files are kept, in FGV's applications or
  * services such as Google Drive, never the files; the link services the super admin keeps; and the things the revival
- * has, needs or borrows. Materials and inventory items are removed, never deleted (constitution IV).
+ * has, needs or borrows. Materials and inventory items are removed, never deleted.
  */
 @NullMarked
 package nu.fgv.revival.server.material;

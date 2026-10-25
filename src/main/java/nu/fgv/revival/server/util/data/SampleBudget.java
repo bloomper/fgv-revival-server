@@ -56,13 +56,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Sample budgets (M5): the rehearsal weekends propose food per participant, one fictitious earlier revival gives
+ * Sample budgets: the rehearsal weekends propose food per participant, one fictitious earlier revival gives
  * reference figures, and each sample revival with a premiere gets settings, a dozen lines (one removed), a few
  * transactions (one cost paid by a member and not yet reimbursed, one with a receipt, one cancelled) and a scenario.
  * Once the revival has settled, its loan is repaid. All amounts are made up.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Component
 class SampleBudget {

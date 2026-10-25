@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
  * GraphQL's {@code OwnerInput}: a member's person id or a free-text name, or neither to clear the owner.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record OwnerInputDto(@Nullable Long personId, @Nullable String name) {
 }

@@ -32,7 +32,7 @@ import java.util.Locale;
  * The GraphQL types of mailings and the mailing plan (mailing.graphqls). Recipients by name only, never an address.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public final class MailingDtos {
 

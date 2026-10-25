@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Amounts of money and the {@code Amount} scalar: at most two decimals, written without exponent.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 class AmountsTest {
 

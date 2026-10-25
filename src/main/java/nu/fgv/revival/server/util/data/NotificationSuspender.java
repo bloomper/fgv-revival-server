@@ -31,7 +31,7 @@ import java.util.function.Supplier;
  * emailed.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Slf4j
 final class NotificationSuspender {

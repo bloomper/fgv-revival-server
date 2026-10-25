@@ -48,12 +48,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * The guide as a PDF, in Swedish or English (FR-028–FR-030, research R7): a title page, a linked table of contents,
+ * The guide as a PDF, in Swedish or English: a title page, a linked table of contents,
  * bookmarks, the introduction and every chapter, section and item with its type. The draft is marked on every page. No
- * access checks here: callers check first. Never calls Spexregister (FR-006).
+ * access checks here: callers check first. Never calls Spexregister.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Service
 public class GuidePdfService {

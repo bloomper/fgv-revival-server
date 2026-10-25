@@ -71,7 +71,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Sample participation, staffing and mailings (M6, M6B-FR-16): the mailing plan's two templates, one per rehearsal
+ * Sample participation, staffing and mailings: the mailing plan's two templates, one per rehearsal
  * weekend, "Monday the week before: remind about allergies"; and for a revival that is or has been open its settings,
  * fictitious participants and a helper (one removed, one with a fee of their own), availability for the first rehearsal
  * weekend, shift slots on the show weekend with some of them assigned, and mailings sent, drafted from the plan and
@@ -82,7 +82,7 @@ import java.util.Locale;
  * the repositories, so the rows are audited as usual.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 public class SampleStaffing {

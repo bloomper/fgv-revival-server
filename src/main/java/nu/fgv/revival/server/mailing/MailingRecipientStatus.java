@@ -20,7 +20,7 @@ package nu.fgv.revival.server.mailing;
  * How sending to one recipient went.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public enum MailingRecipientStatus {
 

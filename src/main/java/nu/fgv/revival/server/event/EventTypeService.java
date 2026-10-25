@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package nu.fgv.revival.server.event;
 
 import nu.fgv.revival.server.audit.AuditContext;
@@ -44,11 +43,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * The event types the super admin keeps (M4-FR-1): everyone signed in reads them, the super admin creates, changes,
+ * The event types the super admin keeps: everyone signed in reads them, the super admin creates, changes,
  * moves, retires and restores them. Never deleted: events keep a retired type.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Service
 public class EventTypeService {
@@ -100,8 +99,6 @@ public class EventTypeService {
         return new Text(sv, en);
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     private static void validOffsets(final @Nullable Integer min, final @Nullable Integer max) {
         if (min == null && max == null) {
             return;
@@ -140,8 +137,6 @@ public class EventTypeService {
         return ids.isEmpty() ? Map.of()
                 : repository.findAllById(Set.copyOf(ids)).stream().map(EventTypeDto::of).collect(Collectors.toMap(EventTypeDto::id, Function.identity()));
     }
-
-    // --- Changing ---------------------------------------------------------------------------------------------------
 
     /**
      * The type's checklist template, retired or not. Template names are readable by everyone who reads the types.
@@ -212,8 +207,6 @@ public class EventTypeService {
         type.setRetiredAt(type.isRetired() ? type.getRetiredAt() : clock.instant());
         return EventTypeDto.of(repository.saveAndFlush(type));
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public EventTypeDto restore(final Long id, final Long version) {

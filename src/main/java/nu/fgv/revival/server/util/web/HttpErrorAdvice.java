@@ -39,11 +39,11 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 import java.util.Locale;
 
 /**
- * Errors of the plain HTTP endpoints as {@code {code, message}} JSON, with the codes and messages GraphQL uses
- * (specs/003-m2-guide/contracts/http.md). GraphQL has its own resolver.
+ * Errors of the plain HTTP endpoints as {@code {code, message}} JSON, with the codes and messages GraphQL uses.
+ * GraphQL has its own resolver.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @RestControllerAdvice
 public class HttpErrorAdvice {

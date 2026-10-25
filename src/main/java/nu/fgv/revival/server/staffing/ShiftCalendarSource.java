@@ -38,12 +38,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A participant's or helper's own shifts in their calendar feed (M6B-FR-6): the task as the summary, from the start to
+ * A participant's or helper's own shifts in their calendar feed: the task as the summary, from the start to
  * the end time on the day, at the event's location. Only shifts in events that are not cancelled. A helper's feed then
  * holds their shifts and the shows, nothing else.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 class ShiftCalendarSource implements CalendarSource {

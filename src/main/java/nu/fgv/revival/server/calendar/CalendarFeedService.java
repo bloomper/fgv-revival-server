@@ -48,12 +48,12 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Secret calendar links (M4-FR-5, M4-FR-6). A link holds 32 random bytes; only their SHA-256 is stored, so the link is
+ * Secret calendar links. A link holds 32 random bytes; only their SHA-256 is stored, so the link is
  * shown once. The feed is built for the link's person from their revival roles as they are now: a link stops working
  * when they lose their role or can no longer see the revival.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Service
 public class CalendarFeedService {

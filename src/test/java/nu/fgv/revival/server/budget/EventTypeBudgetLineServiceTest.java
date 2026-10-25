@@ -46,10 +46,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The lines event types propose for budgets (M5-FR-3): the super admin keeps them; removing one deletes it.
+ * The lines event types propose for budgets: the super admin keeps them; removing one deletes it.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class EventTypeBudgetLineServiceTest {

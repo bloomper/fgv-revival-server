@@ -21,7 +21,7 @@ import java.util.List;
  * The chapter keys the tests use for a guide in the old shape of ten chapters: A–J, in order.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public final class GuideTestChapters {
 

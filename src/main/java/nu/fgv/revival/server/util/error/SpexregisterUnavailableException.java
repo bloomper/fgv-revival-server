@@ -20,10 +20,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Spexregister could not be reached when it was needed (FR-008a).
+ * Spexregister could not be reached when it was needed.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class SpexregisterUnavailableException extends ResponseStatusException {
 

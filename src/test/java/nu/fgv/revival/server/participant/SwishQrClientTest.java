@@ -32,10 +32,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The Swish QR code against a local stub of Swish's API (M6-FR-19), and the message it carries.
+ * The Swish QR code against a local stub of Swish's API, and the message it carries.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 class SwishQrClientTest {
 

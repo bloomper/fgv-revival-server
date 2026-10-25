@@ -6,14 +6,15 @@ buildscript {
 
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.1'
+    id 'org.springframework.boot' version '4.1.2'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.asciidoctor.jvm.convert' version '4.0.5'
     id 'jacoco'
     id 'com.google.cloud.tools.jib' version '3.5.4'
 }
 
 group = 'nu.fgv.revival'
-version = '0.1.0'
+version = '1.0.0'
 
 java {
     toolchain {
@@ -38,6 +39,7 @@ configurations {
     compileOnly.extendsFrom annotationProcessor
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    asciidoctorExtensions
     mockitoAgent {
         transitive = false
         canBeConsumed = false
@@ -56,11 +58,14 @@ repositories {
 
 ext {
     set('springAiVersion', '2.0.1')
+    set('snippetsDir', file('build/generated-snippets'))
 }
 
 dependencies {
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
 
     compileOnly 'org.projectlombok:lombok'
 
@@ -103,6 +108,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
 
     integrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
     integrationTestImplementation 'org.springframework.boot:spring-boot-testcontainers'
@@ -131,12 +137,34 @@ dependencyManagement {
     }
 }
 
-// Lint: compiler warnings fail the build (research R9)
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += ['-Xlint:all,-processing,-serial', '-Werror']
 }
 
+javadoc {
+    source = sourceSets.main.allJava
+    destinationDir = layout.buildDirectory.dir('docs/javadoc').get().asFile
+    title = 'Nyuppsättning Server JavaDoc'
+    classpath = sourceSets.main.compileClasspath + sourceSets.main.runtimeClasspath
+    options {
+        encoding 'UTF-8'
+        charSet 'UTF-8'
+        author true
+        version true
+        failOnError true
+    }
+}
+
+tasks.register('createSnippetsDir') {
+    doLast {
+        project.mkdir snippetsDir
+    }
+}
+
 tasks.named('test') {
+    outputs.dir snippetsDir
+    dependsOn createSnippetsDir
+
     useJUnitPlatform()
     jvmArgs "-javaagent:${configurations.mockitoAgent.singleFile}"
 }
@@ -156,7 +184,6 @@ rootProject.tasks.named("processIntegrationTestResources") {
     duplicatesStrategy = 'include'
 }
 
-// Refreshes the committed realm copy from a sibling fgv-keycloak checkout (research R9)
 tasks.register('syncRealm', Copy) {
     description = 'Copies fgv-keycloak/realm/fgv.json into the integration test resources'
     group = 'build setup'
@@ -179,6 +206,34 @@ jacocoTestReport {
 }
 
 check.dependsOn integrationTest, jacocoTestReport
+
+asciidoctorj {
+    version = '3.0.0'
+}
+
+asciidoctor {
+    dependsOn createSnippetsDir, test
+    configurations 'asciidoctorExtensions'
+    inputs.dir snippetsDir
+    sourceDir 'src/main/asciidoc'
+    forkOptions {
+        jvmArgs '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+                '--enable-native-access=ALL-UNNAMED'
+    }
+    attributes    \
+         'snippets': file('build/generated-snippets')
+}
+
+bootJar {
+    dependsOn asciidoctor, javadoc
+    from("${asciidoctor.outputDir}") {
+        into 'static/docs'
+    }
+    from("${javadoc.destinationDir}") {
+        into 'static/docs/javadoc'
+    }
+}
 
 jib {
     from {
@@ -215,11 +270,24 @@ jib {
             }
         }
     }
+    extraDirectories {
+        paths {
+            path {
+                from = "${asciidoctor.outputDir}"
+                into = "/app/resources/static/docs"
+            }
+            path {
+                from = "${javadoc.destinationDir}"
+                into = "/app/resources/static/docs/javadoc"
+            }
+        }
+    }
 }
 
-develocity {
-    buildScan {
-        termsOfUseUrl = "https://gradle.com/help/legal-terms-of-use"
-        termsOfUseAgree = "yes"
-    }
+tasks.named('jib') {
+    dependsOn asciidoctor, javadoc
+}
+
+jibDockerBuild {
+    dependsOn asciidoctor, javadoc
 }

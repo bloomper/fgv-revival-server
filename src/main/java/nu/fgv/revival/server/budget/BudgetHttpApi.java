@@ -36,11 +36,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
- * A revival's budget over plain HTTP, for what GraphQL does not suit (constitution II): the Excel export, and uploading,
- * downloading and removing receipts (M5-FR-11, M5-FR-12). A thin adapter: the services decide.
+ * A revival's budget over plain HTTP, for what GraphQL does not suit: the Excel export, and uploading,
+ * downloading and removing receipts.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @RestController
 public class BudgetHttpApi {

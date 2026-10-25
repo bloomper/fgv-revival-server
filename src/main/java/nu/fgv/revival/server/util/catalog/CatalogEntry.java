@@ -31,7 +31,7 @@ import java.time.Instant;
  * their constant's name, new ones get a UUID.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @MappedSuperclass
 @Audited

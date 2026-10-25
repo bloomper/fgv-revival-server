@@ -51,7 +51,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The sync's preview (M7-FR-3): who is included, what already exists in Spexregister, and a hash that is stable and
+ * The sync's preview: who is included, what already exists in Spexregister, and a hash that is stable and
  * follows what would be written.
  *
  * @author Anders Jacobsson

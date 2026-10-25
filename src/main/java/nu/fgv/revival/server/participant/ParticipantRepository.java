@@ -26,11 +26,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Declares only what participants need, so it has no delete method: a participant is removed by closing the row
- * (constitution IV).
+ * Declares only what participants need, so it has no delete method: a participant is removed by closing the row.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public interface ParticipantRepository extends Repository<Participant, Long> {
 

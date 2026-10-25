@@ -36,11 +36,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * The composite view of a revival (research R15). Kept apart from {@link RevivalService} so that {@code revival}
+ * The composite view of a revival. Kept apart from {@link RevivalService} so that {@code revival}
  * depends on the decision log and checklists only here; each service checks the caller's access itself.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Service
 public class RevivalStatusService {
@@ -61,7 +61,7 @@ public class RevivalStatusService {
     }
 
     /**
-     * Counts for the revival page; "open" rows are open or waiting, as in the log's filter (FR-019).
+     * Counts for the revival page; "open" rows are open or waiting, as in the log's filter.
      */
     @Transactional(readOnly = true)
     public RevivalWorkSummaryDto workSummary(final Long revivalId, final Locale locale) {

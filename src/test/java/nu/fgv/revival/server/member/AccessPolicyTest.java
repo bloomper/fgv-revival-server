@@ -42,10 +42,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Table-driven tests of every rule in {@link AccessPolicy} (constitution III, SC-002, SC-003).
+ * Table-driven tests of every rule in {@link AccessPolicy}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class AccessPolicyTest {
 
@@ -93,7 +93,7 @@ class AccessPolicyTest {
     }
 
     @Nested
-    @DisplayName("Visibility (FR-015)")
+    @DisplayName("Visibility")
     class Visibility {
 
         @ParameterizedTest(name = "{0} in {1} sees: {2}")
@@ -166,7 +166,7 @@ class AccessPolicyTest {
     }
 
     @Nested
-    @DisplayName("Status changes (FR-013, FR-014)")
+    @DisplayName("Status changes")
     class StatusChanges {
 
         @ParameterizedTest

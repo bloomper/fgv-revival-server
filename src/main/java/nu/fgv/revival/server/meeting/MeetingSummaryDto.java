@@ -25,7 +25,7 @@ import java.time.LocalDate;
  * GraphQL's {@code MeetingSummary}.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record MeetingSummaryDto(Long id, LocalDate date, @Nullable String title, MeetingStatus status) {
 

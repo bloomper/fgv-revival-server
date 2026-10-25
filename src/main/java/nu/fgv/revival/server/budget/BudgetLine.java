@@ -33,11 +33,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * A line in a revival's budget (M5-FR-4): what is planned in a category, optionally for an event or after a decision.
+ * A line in a revival's budget: what is planned in a category, optionally for an event or after a decision.
  * Removed rather than deleted; a removed line stays in the history but not in the totals.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "budget_line")

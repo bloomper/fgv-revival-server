@@ -20,11 +20,11 @@ import org.jspecify.annotations.Nullable;
 import java.math.BigDecimal;
 
 /**
- * The parameters of a scenario (product spec 5.10, M5-FR-10), as GraphQL's {@code BudgetScenarioInput} and
+ * The parameters of a scenario, as GraphQL's {@code BudgetScenarioInput} and
  * {@code BudgetScenarioParameters}. As input, a null parameter keeps the budget's value.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public record ScenarioParameters(@Nullable Integer participants,
                                  @Nullable BigDecimal participationFee,

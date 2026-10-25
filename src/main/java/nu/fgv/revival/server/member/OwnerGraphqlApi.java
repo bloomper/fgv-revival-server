@@ -24,11 +24,11 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 
 /**
- * The people who can own rows and checklist items in a revival, for the owner picker (FR-009). A revival is only
+ * The people who can own rows and checklist items in a revival, for the owner picker. A revival is only
  * returned to callers who can see it, so this needs no check of its own.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Controller
 public class OwnerGraphqlApi {
@@ -40,7 +40,7 @@ public class OwnerGraphqlApi {
     }
 
     /**
-     * Empty for callers who do not read the revival's work, as its permissions say (M6-FR-1).
+     * Empty for callers who do not read the revival's work, as its permissions say.
      */
     @SchemaMapping(typeName = "Revival", field = "ownerCandidates")
     public List<PersonRefDto> ownerCandidates(final RevivalDto revival) {

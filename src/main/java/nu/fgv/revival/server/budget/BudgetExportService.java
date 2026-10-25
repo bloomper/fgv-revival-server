@@ -59,12 +59,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A revival's budget as an Excel workbook (product spec 5.10, M5-FR-11): a summary, the budget per category, the
+ * A revival's budget as an Excel workbook: a summary, the budget per category, the
  * transactions with their receipts per category, and the final report. In Swedish or English; no contact details. The
- * helpers' compensation from the staffing is a line of its own in the helper category, never stored (M6B-FR-5).
+ * helpers' compensation from the staffing is a line of its own in the helper category, never stored.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class BudgetExportService {
@@ -259,8 +259,6 @@ public class BudgetExportService {
             transactions();
             report();
         }
-
-        // --- Helpers ------------------------------------------------------------------------------------------------
 
         private void summary() {
             final Sheet sheet = workbook.createSheet(message("budget.export.sheet.summary"));

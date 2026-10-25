@@ -34,12 +34,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Participants end to end (M6): the steering group adds and invites them, a participant logs in with their FGV account
- * and answers on their own page, and participants and helpers are refused everything of the steering group's
- * (M6-FR-1, constitution III). Spexregister is a stub.
+ * Participants end to end: the steering group adds and invites them, a participant logs in with their FGV account
+ * and answers on their own page, and participants and helpers are refused everything of the steering group's.
+ * Spexregister is a stub.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
@@ -170,7 +170,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * M6-FR-1: a participant and a helper see their open revival for their own page and nothing of the steering group's.
+     * A participant and a helper see their open revival for their own page and nothing of the steering group's.
      */
     @Test
     void participantsAndHelpersAreRefusedTheSteeringGroupsWork() {
@@ -206,7 +206,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             execute(user, "{ me { revivalRoles { role revival { id } } } }", Map.of())
                     .path("me.revivalRoles[0].role").entity(String.class).isEqualTo(user.equals(PARTICIPANT) ? "PARTICIPANT" : "HELPER");
         }
-        // Participants read the events; helpers only get the events they hold shifts in, on their own page (M6B-FR-7)
+        // Participants read the events; helpers only get the events they hold shifts in, on their own page
         execute(PARTICIPANT, "query($id: ID!) { events(revivalId: $id) { id } }", Map.of("id", revival)).path("events").entityList(Object.class).hasSize(0);
         expectError(execute(HELPER, "query($id: ID!) { events(revivalId: $id) { id } }", Map.of("id", revival)), "FORBIDDEN");
 
@@ -249,7 +249,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * M6-FR-20: leaving OPEN deletes pending people who never answered; the revival can still be deleted with them.
+     * Leaving OPEN deletes pending people who never answered; the revival can still be deleted with them.
      */
     @Test
     void leavingOpenDeletesUnansweredPendingPeopleAndDeletionTakesEverything() {
@@ -277,7 +277,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * M6-FR-20: the daily job deletes dietary needs once the revival's last show is past, and only then.
+     * The daily job deletes dietary needs once the revival's last show is past, and only then.
      */
     @Test
     void dietaryNeedsAreDeletedAfterTheLastShow() {

@@ -48,16 +48,16 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Removes a revival with everything that belongs to it (constitution IV), its participants and their data, staffing,
- * mailings, materials with their positions, and the inventory among it. Rows are removed one by one through the
- * entity manager, so that Envers records the removal of every audited row; except the rows that are themselves personal
- * data (participants, availability, shifts, mailing recipients and participant roles), which go with their audit rows
- * through {@link RevivalAnonymization#purgePersonal}, so the history keeps no people either (section 7). Its budget is
- * first kept as an anonymous reference (M5-FR-14), unless anonymizing the revival already kept it. Afterwards, the people it referred to lose their login data when
- * nothing else keeps them ({@link PersonReferences}).
+ * Removes a revival with everything that belongs to it, its participants and their data, staffing, mailings, materials
+ * with their positions, and the inventory among it. Rows are removed one by one through the entity manager, so that
+ * Envers records the removal of every audited row; except the rows that are themselves personal data (participants,
+ * availability, shifts, mailing recipients and participant roles), which go with their audit rows through {@link
+ * RevivalAnonymization#purgePersonal}, so the history keeps no people either. Its budget is first kept as an anonymous
+ * reference, unless anonymizing the revival already kept it. Afterwards, the people it referred to lose their login
+ * data when nothing else keeps them ({@link PersonReferences}).
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 class RevivalDeletion {
@@ -128,7 +128,7 @@ class RevivalDeletion {
         remove(BY_REVIVAL, RevivalMember.class, revivalId);
         entityManager.remove(entityManager.find(Revival.class, revivalId));
         entityManager.flush();
-        // Login data is kept no longer than the revivals that need it (section 7)
+        // Login data is kept no longer than the revivals that need it
         personReferences.scrubUnreferenced(people);
     }
 

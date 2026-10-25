@@ -15,7 +15,7 @@
  */
 
 /**
- * Revival roles, capabilities and the access policy that every service consults (research R3).
+ * Revival roles, capabilities and the access policy that every service consults.
  */
 @NullMarked
 package nu.fgv.revival.server.member;

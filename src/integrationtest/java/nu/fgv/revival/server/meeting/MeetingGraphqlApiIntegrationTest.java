@@ -35,10 +35,10 @@ import java.util.concurrent.Future;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A full meeting over GraphQL against MySQL and Keycloak (US3, FR-016–FR-020, SC-003).
+ * A full meeting over GraphQL against MySQL and Keycloak.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

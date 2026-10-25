@@ -44,11 +44,11 @@ import static org.springframework.util.StringUtils.hasText;
  * The users of the FGV realm, through Keycloak's admin API as {@code fgv-admin}. It needs the {@code realm-management}
  * roles {@code query-users} and {@code view-users} to read users, {@code view-clients} to find {@code fgv-revival}'s
  * roles and {@code manage-users} to create and invite users. It never grants a role: access to Nyuppsättning stays a
- * super admin's decision in Keycloak (product spec, section 3). Every failure, unreachable or refused, is a
+ * super admin's decision in Keycloak. Every failure, unreachable or refused, is a
  * {@link DirectoryUnavailableException}, logged without personal data.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Component
 public class UserDirectory {

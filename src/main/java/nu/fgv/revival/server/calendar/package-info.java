@@ -17,7 +17,7 @@
 
 /**
  * Secret calendar links and the iCalendar feed behind them: a revival's events, shows and, for its steering group,
- * meetings (product spec 5.3, M4-FR-5, M4-FR-6).
+ * meetings.
  */
 @NullMarked
 package nu.fgv.revival.server.calendar;

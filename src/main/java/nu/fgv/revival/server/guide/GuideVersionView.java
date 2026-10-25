@@ -25,10 +25,10 @@ import java.util.stream.Stream;
 
 /**
  * One version of the guide as an immutable tree, the shape every reader, search, the changes view and the PDF work on.
- * Published versions are cached as this (research R4).
+ * Published versions are cached as this.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public record GuideVersionView(Long id,
                                GuideVersionStatus status,

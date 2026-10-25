@@ -37,12 +37,12 @@ import java.util.Locale;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Writes and sends mailings (M6B-FR-9), one message per recipient: plain text with the Markdown as written, and HTML
+ * Writes and sends mailings, one message per recipient: plain text with the Markdown as written, and HTML
  * rendered with the guide's safe Markdown subset in a minimal page with the revival's title and who sent it. Replies go
- * to the sender. Also the plan's reminders to the owners (M6B-FR-11). Never logs addresses or content.
+ * to the sender. Also the plan's reminders to the owners. Never logs addresses or content.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 @Slf4j

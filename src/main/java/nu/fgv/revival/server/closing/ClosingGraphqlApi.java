@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * No authorization here: the services decide (constitution II).
+ * No authorization here: the services decide.
  *
  * @author Anders Jacobsson
  * @since 1.0

@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
  * Imports sample data after the migrations when {@code fgv-revival.data.import-sample-data} is set.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Component
 public class DataSeedingCallback implements Callback {

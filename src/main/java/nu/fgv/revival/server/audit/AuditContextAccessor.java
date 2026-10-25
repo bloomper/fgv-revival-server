@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
  * GraphQL record {@link AuditSource#WEB}. Registered by {@link AuditContextFilter}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class AuditContextAccessor implements ThreadLocalAccessor<AuditContext.Origin> {
 

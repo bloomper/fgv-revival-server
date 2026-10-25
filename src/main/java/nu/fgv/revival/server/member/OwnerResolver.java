@@ -38,11 +38,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Owners of rows and checklist items (FR-009, research R4): validates an {@link OwnerInputDto}, tells whether an owner
- * still counts for FR-019, and matches a display name to a member for MCP and the import.
+ * Owners of rows and checklist items: validates an {@link OwnerInputDto}, tells whether an owner
+ * still counts as an owner, and matches a display name to a member for MCP and the import.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class OwnerResolver {
@@ -138,8 +138,8 @@ public class OwnerResolver {
     }
 
     /**
-     * As {@link #validate}, but an input naming the current owner keeps it, even someone no longer in the steering group:
-     * the row keeps them until a member changes the owner (M3 edge cases).
+     * As {@link #validate}, but an input naming the current owner keeps it, even someone no longer in the steering
+     * group: the row keeps them until a member changes the owner.
      */
     @Transactional(readOnly = true)
     public Owner change(final Long revivalId, final Owner current, final OwnerInputDto input) {
@@ -151,8 +151,8 @@ public class OwnerResolver {
     }
 
     /**
-     * Turns the input into an owner: a member who is an active directeur or steering group member, a trimmed name of 1–100
-     * characters, or none. Both set is refused.
+     * Turns the input into an owner: a member who is an active directeur or steering group member, a trimmed name of
+     * 1–100 characters, or none. Both set is refused.
      */
     @Transactional(readOnly = true)
     public Owner validate(final Long revivalId, final @Nullable OwnerInputDto input) {
@@ -172,7 +172,7 @@ public class OwnerResolver {
     }
 
     /**
-     * Owned for FR-019: a free-text name, or a person who is still an active member.
+     * Owned: a free-text name, or a person who is still an active member.
      */
     @Transactional(readOnly = true)
     public boolean isOwned(final Long revivalId, final Owner owner) {

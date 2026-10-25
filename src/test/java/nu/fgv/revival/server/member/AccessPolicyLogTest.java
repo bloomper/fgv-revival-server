@@ -34,12 +34,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Table-driven tests of the decision log, meeting and checklist rules in {@link AccessPolicy}, one per row of the
- * operation rules in specs/004-m3-log/contracts/README.md (constitution III, FR-006, SC-006). Waiting and removed
- * members hold no role in their {@code Caller}, so they are {@code NONE} here.
+ * Table-driven tests of the decision log, meeting and checklist rules in {@link AccessPolicy}, one per rule. Waiting
+ * and removed members hold no role in their {@code Caller}, so they are {@code NONE} here.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class AccessPolicyLogTest {
 
@@ -57,7 +56,7 @@ class AccessPolicyLogTest {
         @ParameterizedTest
         @EnumSource(RevivalStatus.class)
         void readingFollowsVisibility(final RevivalStatus status) {
-            // Participants and helpers see an open revival only for their own page (M6-FR-1)
+            // Participants and helpers see an open revival only for their own page
             for (final String role : List.of("SUPER_ADMIN", "OBSERVER", "DIRECTEUR", "STEERING_GROUP", "NONE")) {
                 assertThat(policy.canReadRevivalWork(caller(role), revivalIn(status)))
                         .as("%s in %s", role, status)

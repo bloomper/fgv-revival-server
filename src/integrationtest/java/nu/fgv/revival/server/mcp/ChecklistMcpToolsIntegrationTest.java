@@ -32,7 +32,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The checklist MCP tools and get_revival_status (M3 FR-043, FR-044).
+ * The checklist MCP tools and get_revival_status.
  *
  * @author Anders Jacobsson
  */

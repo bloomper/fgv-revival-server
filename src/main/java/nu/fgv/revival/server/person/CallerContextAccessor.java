@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
  * Carries {@link CallerContext} to the threads GraphQL runs its controllers on.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public class CallerContextAccessor implements ThreadLocalAccessor<Caller> {
 

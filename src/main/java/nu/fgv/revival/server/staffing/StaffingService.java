@@ -63,13 +63,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Availability and staffing (product spec 5.7, M6B-FR-1–4, M6B-FR-7). Readers of participants read everyone's
+ * Availability and staffing. Readers of participants read everyone's
  * availability; readers of staffing read the slots; writers of staffing plan slots and assign people. A participant or
  * helper sets their own availability and, as a participant who said yes or maybe, signs up for slots with room and
- * withdraws from those they signed up for. Every method asks {@link AccessPolicy} first (constitution III).
+ * withdraws from those they signed up for. Every method asks {@link AccessPolicy} first.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Service
 public class StaffingService {
@@ -132,8 +132,6 @@ public class StaffingService {
         return LocalTime.parse(trimmed, TIME_FORMAT);
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     private static @Nullable String text(final @Nullable String text, final int maxLength, final String tooLong) {
         if (text == null || text.isBlank()) {
             return null;
@@ -193,8 +191,6 @@ public class StaffingService {
         return toDtos(events.isEmpty() ? List.of() : slotRepository.findByEventIdIn(events.keySet()), revival, events, caller, locale);
     }
 
-    // --- The participant's own --------------------------------------------------------------------------------------
-
     /**
      * The revival's events that are not cancelled, by id; only {@code eventId} when given, which must be one of them.
      */
@@ -211,8 +207,8 @@ public class StaffingService {
     }
 
     /**
-     * The events a participant sees: the revival's that are not cancelled; for a helper only those they hold shifts in
-     * (M6B-FR-7). By start date.
+     * The events a participant sees: the revival's that are not cancelled; for a helper only those they hold shifts in.
+     * By start date.
      */
     @Transactional(readOnly = true)
     public List<EventDto> eventsOf(final Long participantId) {
@@ -301,7 +297,7 @@ public class StaffingService {
     }
 
     /**
-     * The caller's answer for a day of an event they see (M6B-FR-1): revival {@code OPEN}, not after answering no, the
+     * The caller's answer for a day of an event they see: revival {@code OPEN}, not after answering no, the
      * day within the event. Clearing it deletes the answer.
      */
     @Transactional
@@ -344,7 +340,7 @@ public class StaffingService {
     }
 
     /**
-     * The caller, a participant who said yes or maybe, signs up for a slot with room (M6B-FR-4). Revival {@code OPEN}.
+     * The caller, a participant who said yes or maybe, signs up for a slot with room. Revival {@code OPEN}.
      */
     @Transactional
     public ShiftSlotDto signUp(final Long slotId, final Locale locale) {
@@ -372,7 +368,7 @@ public class StaffingService {
     }
 
     /**
-     * The caller withdraws from a slot they signed up for themselves; one they were assigned to stays (M6B-FR-4).
+     * The caller withdraws from a slot they signed up for themselves; one they were assigned to stays.
      */
     @Transactional
     public ShiftSlotDto withdraw(final Long slotId, final Locale locale) {
@@ -390,8 +386,6 @@ public class StaffingService {
         assignmentRepository.flush();
         return toDto(slot, own.revival(), eventRepository.findById(slot.getEventId()).orElseThrow(), caller, locale);
     }
-
-    // --- Writers of staffing ----------------------------------------------------------------------------------------
 
     /**
      * A new slot in an event that is not cancelled; the event's revival is the slot's.
@@ -434,7 +428,7 @@ public class StaffingService {
     }
 
     /**
-     * Removes a slot nobody holds: an empty planning row (M6B-FR-2).
+     * Removes a slot nobody holds: an empty planning row.
      */
     @Transactional
     public void remove(final Long id, final Long version) {
@@ -449,7 +443,7 @@ public class StaffingService {
     }
 
     /**
-     * Assigns a participant who said yes or maybe, or a helper who did not say no, to a slot (M6B-FR-3). Writers may
+     * Assigns a participant who said yes or maybe, or a helper who did not say no, to a slot. Writers may
      * assign beyond the number needed; nobody holds two overlapping slots.
      */
     @Transactional
@@ -493,8 +487,6 @@ public class StaffingService {
         });
         return toDto(slot, revival, eventRepository.findById(slot.getEventId()).orElseThrow(), caller, locale);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private Revival writable(final Caller caller, final Long revivalId) {
         final Revival revival = participantAccess.visible(caller, revivalId);
@@ -575,7 +567,7 @@ public class StaffingService {
 
     /**
      * Refuses a slot that overlaps another the participant already holds on the same day, in any of the revival's
-     * events (M6B-FR-3).
+     * events.
      */
     private void requireNoOverlap(final ShiftSlot slot, final Participant participant) {
         final List<Long> held = assignmentRepository.findByParticipantId(participant.getId()).stream()

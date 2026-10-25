@@ -32,11 +32,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The revival's shows, for everyone with a calendar link (M4-FR-6): two and a half hours from the start time, or all
+ * The revival's shows, for everyone with a calendar link: two and a half hours from the start time, or all
  * day while the time is not decided.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Component
 class ShowCalendarSource implements CalendarSource {

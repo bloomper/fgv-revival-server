@@ -24,7 +24,7 @@ import java.util.Set;
  * {@code firstName} and {@code lastName} are used only when a Keycloak user is created for the address.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalMemberAddDto(Long revivalId,
                                   String email,

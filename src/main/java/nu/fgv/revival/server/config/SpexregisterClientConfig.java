@@ -37,10 +37,10 @@ import static org.springframework.security.oauth2.client.web.client.RequestAttri
 
 /**
  * The GraphQL client for Spexregister: client credentials of {@code fgv-revival-service}, which holds only the
- * {@code REVIVAL} role (constitution VI), with 3-second timeouts (research R5).
+ * {@code REVIVAL} role, with 3-second timeouts.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Configuration
 public class SpexregisterClientConfig {
@@ -61,7 +61,7 @@ public class SpexregisterClientConfig {
 
     /**
      * Spexregister's REST API, rooted at the GraphQL URL's origin, for the one thing GraphQL cannot carry: poster
-     * images (constitution VI).
+     * images.
      */
     @Bean
     public RestClient spexregisterRestClient(@Value("${fgv-revival.spexregister.graphql-url}") final String url,

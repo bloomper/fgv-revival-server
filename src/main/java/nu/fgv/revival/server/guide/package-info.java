@@ -15,7 +15,7 @@
  */
 
 /**
- * JK/FGV's continuity guide: versions, drafts, search, the changes view and the PDF (M2 research R2).
+ * JK/FGV's continuity guide: versions, drafts, search, the changes view and the PDF.
  */
 @NullMarked
 package nu.fgv.revival.server.guide;

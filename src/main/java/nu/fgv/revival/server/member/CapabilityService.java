@@ -32,7 +32,7 @@ import java.util.Set;
  * The areas of responsibility the super admin keeps.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Service
 public class CapabilityService extends CatalogService<Capability> {

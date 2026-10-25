@@ -42,12 +42,12 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A revival's inventory (M8-FR-4, M8-FR-5): read by super admins and its directeurs and steering group, changed by
+ * A revival's inventory: read by super admins and its directeurs and steering group, changed by
  * them while it is not archived. An item's owner is a member of the steering group or a free-text name; its material
  * is one of the same revival. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Service
 public class InventoryService {
@@ -168,8 +168,6 @@ public class InventoryService {
         item.setRemovedBy(caller.person().getId());
         return dto(repository.saveAndFlush(item), locale);
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     @Transactional
     public InventoryItemDto restore(final Long id, final Long version, final Locale locale) {

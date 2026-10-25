@@ -25,10 +25,10 @@ import java.time.LocalTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Overlapping slots (M6B-FR-3): the same day and times that overlap; touching ends do not.
+ * Overlapping slots: the same day and times that overlap; touching ends do not.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 class ShiftSlotTest {
 

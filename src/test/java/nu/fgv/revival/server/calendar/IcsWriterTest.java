@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The hand-written iCalendar (RFC 5545): line endings, folding, escaping and the two kinds of entry.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 class IcsWriterTest {
 

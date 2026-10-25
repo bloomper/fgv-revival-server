@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.meeting;
 
 /**
- * A meeting's lifecycle: planned, then in progress, then closed, or cancelled before it starts (FR-017).
+ * A meeting's lifecycle: planned, then in progress, then closed, or cancelled before it starts.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum MeetingStatus {
 

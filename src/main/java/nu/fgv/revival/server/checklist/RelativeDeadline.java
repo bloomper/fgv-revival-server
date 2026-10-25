@@ -30,11 +30,11 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.Objects;
 
 /**
- * A template item's deadline relative to a checklist's date (FR-031, research R11): days, working days (Monday–Friday;
+ * A template item's deadline relative to a checklist's date: days, working days (Monday–Friday;
  * public holidays are not counted out), or a weekday of the week before.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Embeddable
 public class RelativeDeadline {

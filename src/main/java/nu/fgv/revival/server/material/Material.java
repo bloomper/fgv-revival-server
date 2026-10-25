@@ -39,12 +39,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A link to where a revival's file is kept (M8-FR-3): https only, in the link service chosen or recognised from its
+ * A link to where a revival's file is kept: https only, in the link service chosen or recognised from its
  * host when it was saved. Its positions, Spexregister task ids, matter only for {@link MaterialVisibility#POSITIONS}.
  * Removed, never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Entity
 @Table(name = "material")

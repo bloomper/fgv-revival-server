@@ -1,0 +1,28 @@
+= Revival
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 4
+:operation-http-request-title: Example request
+:operation-http-response-title: Example response
+
+xref:../api-guide.adoc[Back to API guide]
+
+[[poster]]
+== Poster
+
+The poster of the spex the revival revives, read from Spexregister.
+`204 No Content` when the spex has no poster, and `503 Service Unavailable` while Spexregister is down.
+
+operation::revival-poster-get[snippets='security,path-parameters,request-headers,http-request,response-headers']
+
+[[swish_qr]]
+== Swish QR code
+
+The Swish QR code for a participant's unpaid fee, as an SVG.
+`404 Not Found` unless the caller is a participant of the revival, it is `OPEN` and has a Swish number, and they owe an unpaid fee; `503 Service Unavailable` when Swish cannot be reached.
+
+operation::revival-swish-qr-get[snippets='security,path-parameters,request-headers,http-request,response-headers']
+
+xref:../api-guide.adoc[Back to API guide]

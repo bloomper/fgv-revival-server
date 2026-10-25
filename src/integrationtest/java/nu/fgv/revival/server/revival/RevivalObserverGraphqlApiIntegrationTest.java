@@ -35,10 +35,10 @@ import static nu.fgv.revival.server.Documents.UPDATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * User story 3: observers see everything and change nothing (FR-005, FR-015).
+ * Observers see everything and change nothing.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

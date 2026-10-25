@@ -20,10 +20,10 @@ package nu.fgv.revival.server.event;
 import java.time.LocalDate;
 
 /**
- * GraphQL's {@code EventProposal}: the dates proposed for a type, and the range its offsets allow (M4-FR-7).
+ * GraphQL's {@code EventProposal}: the dates proposed for a type, and the range its offsets allow.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public record EventProposalDto(EventTypeDto type, LocalDate startDate, LocalDate endDate, LocalDate earliest,
                                LocalDate latest) {

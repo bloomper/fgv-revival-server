@@ -30,10 +30,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A revival's checklists follow its guide version: at creation, at the first publication, on a version change and at
- * startup (US4, FR-022, FR-033, FR-034, SC-004).
+ * startup.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 

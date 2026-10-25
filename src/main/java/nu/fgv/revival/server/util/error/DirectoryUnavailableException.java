@@ -23,7 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
  * Keycloak's admin API could not be reached, or refused the admin client, when the FGV realm's users were needed.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public class DirectoryUnavailableException extends ResponseStatusException {
 

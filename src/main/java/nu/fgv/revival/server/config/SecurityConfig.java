@@ -51,10 +51,10 @@ import java.util.List;
 /**
  * Two stateless JWT resource-server chains: one for MCP, bound to {@code fgv-revival-mcp} tokens with the MCP URL as
  * audience, and one for GraphQL, bound to {@code fgv-revival} tokens. GraphQL and calendar feeds are open at HTTP level
- * because the services decide access (research R3, M4-FR-6).
+ * because the services decide access.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Configuration
 @EnableWebSecurity
@@ -112,9 +112,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize ->
                         authorize
                                 .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
+                                .requestMatchers(HttpMethod.GET, "/docs/**").permitAll()
                                 .requestMatchers(HttpMethod.POST, graphqlPath).permitAll()
                                 .requestMatchers(HttpMethod.GET, graphqlPath).permitAll()
-                                // A secret calendar link is its own credential; the service decides (M4-FR-6)
+                                // A secret calendar link is its own credential; the service decides
                                 .requestMatchers(HttpMethod.GET, "/api/calendar/*").permitAll()
                                 .anyRequest().authenticated()
                 )

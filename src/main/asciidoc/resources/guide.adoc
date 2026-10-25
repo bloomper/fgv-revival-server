@@ -1,0 +1,28 @@
+= Guide
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 4
+:operation-http-request-title: Example request
+:operation-http-response-title: Example response
+
+xref:../api-guide.adoc[Back to API guide]
+
+The guide as a PDF, in Swedish or English.
+
+[[version_pdf]]
+== Version as PDF
+
+A guide version: a published one, or the draft for those who manage the guide.
+
+operation::guide-version-pdf-get[snippets='security,path-parameters,query-parameters,request-headers,http-request,response-headers']
+
+[[revival_pdf]]
+== Revival's version as PDF
+
+The guide version a revival is pinned to.
+
+operation::revival-guide-pdf-get[snippets='security,path-parameters,query-parameters,request-headers,http-request,response-headers']
+
+xref:../api-guide.adoc[Back to API guide]

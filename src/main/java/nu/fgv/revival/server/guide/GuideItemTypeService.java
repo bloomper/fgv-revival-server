@@ -28,7 +28,7 @@ import java.util.Set;
  * The guide item types the super admin keeps.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Service
 public class GuideItemTypeService extends CatalogService<GuideItemType> {

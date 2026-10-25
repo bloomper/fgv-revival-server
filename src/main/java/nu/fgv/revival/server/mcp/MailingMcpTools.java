@@ -29,11 +29,10 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * Drafting a mailing over MCP (M6B-FR-14). The tool only drafts: a person reviews and sends it in the web
- * (constitution IV, product spec 5.8).
+ * Drafting a mailing over MCP. The tool only drafts: a person reviews and sends it in the web.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 public class MailingMcpTools {

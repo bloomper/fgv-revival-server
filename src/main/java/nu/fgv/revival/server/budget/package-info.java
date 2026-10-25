@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * A revival's budget and finance (product spec 5.10, M5): budget categories and reference figures the super admin
+ * A revival's budget and finance: budget categories and reference figures the super admin
  * keeps, the lines event types propose, and each revival's settings, budget lines, transactions with receipts,
  * scenarios and Excel export. Lines and scenarios are removed and transactions cancelled, never deleted.
  */

@@ -25,7 +25,7 @@ import java.util.List;
  * GraphQL's {@code ReferenceRevival}. Figures are in the order of their categories.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public record ReferenceRevivalDto(Long id, String label, Integer year, @Nullable Integer participants,
                                   @Nullable String comment, boolean automatic,

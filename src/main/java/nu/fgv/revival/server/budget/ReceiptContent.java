@@ -28,10 +28,10 @@ import lombok.Setter;
 
 /**
  * A receipt's file. Not audited: the transaction records every upload and removal, and the file goes when the receipt
- * is replaced or removed (M5-FR-5).
+ * is replaced or removed.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "receipt_content")

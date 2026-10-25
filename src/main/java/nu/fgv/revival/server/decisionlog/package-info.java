@@ -16,7 +16,7 @@
 
 
 /**
- * A revival's decision log: numbered decisions, to-dos and questions, and the one-time Excel import (M3 research R2).
+ * A revival's decision log: numbered decisions, to-dos and questions, and the one-time Excel import.
  */
 @NullMarked
 package nu.fgv.revival.server.decisionlog;

@@ -27,11 +27,11 @@ import lombok.Setter;
 import java.time.Instant;
 
 /**
- * A participant's dietary needs and allergies, readable only with {@code CATERING} (product spec 5.6). Not audited, so
- * the daily deletion after the last show leaves no copy behind (product spec section 7).
+ * A participant's dietary needs and allergies, readable only with {@code CATERING}. Not audited, so
+ * the daily deletion after the last show leaves no copy behind.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Entity
 @Table(name = "dietary_need")

@@ -47,7 +47,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Removes the people from a revival for good (product spec section 7, M7-FR-10..13), in one transaction, and keeps its
+ * Removes the people from a revival for good, in one transaction, and keeps its
  * work: the guide work, log texts, checklists, events, budget and materials.
  * <ol>
  * <li>The budget is kept as an automatic reference revival, with the number of participants who said yes.</li>
@@ -238,8 +238,8 @@ public class RevivalAnonymization {
     }
 
     /**
-     * When the revival will be anonymized automatically: {@value #RETENTION_MONTHS} months after it last got its status, if
-     * archived or rejected and not anonymized yet.
+     * When the revival will be anonymized automatically: {@value #RETENTION_MONTHS} months after it last got its
+     * status, if archived or rejected and not anonymized yet.
      */
     public Optional<LocalDate> automaticOn(final Revival revival) {
         if (revival.isAnonymized() || !FINAL_STATUSES.contains(revival.getStatus())) {
@@ -252,8 +252,9 @@ public class RevivalAnonymization {
     }
 
     /**
-     * Anonymizes, as the system, every revival archived or rejected for {@value #RETENTION_MONTHS} months or more (by the
-     * latest change into its current status) that is not anonymized yet, each in its own transaction. Returns how many.
+     * Anonymizes, as the system, every revival archived or rejected for {@value #RETENTION_MONTHS} months or more (by
+     * the latest change into its current status) that is not anonymized yet, each in its own transaction. Returns how
+     * many.
      */
     public int anonymizeExpired() {
         final Instant cutoff = clock.instant().atZone(clock.getZone()).minus(Period.ofMonths(RETENTION_MONTHS)).toInstant();

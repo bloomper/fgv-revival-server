@@ -22,10 +22,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * GraphQL's {@code LogEntryFilter}: every given filter must match; within types and tags any value may (FR-012).
+ * GraphQL's {@code LogEntryFilter}: every given filter must match; within types and tags any value may.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record LogEntryFilterDto(@Nullable Boolean mine,
                                 @Nullable Boolean open,

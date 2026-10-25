@@ -25,7 +25,7 @@ import org.springframework.boot.security.autoconfigure.actuate.web.servlet.Manag
  * Entry point of the Nyuppsättning server.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 public class RevivalApplication {

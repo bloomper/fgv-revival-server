@@ -1,5 +1,4 @@
-# M3: chapter and event checklists. Rules per operation are in specs/004-m3-log/contracts/README.md. There is no delete
-# mutation (FR-026).
+# Chapter and event checklists. There is no delete mutation.
 
 enum ChecklistItemState {
     OPEN
@@ -19,7 +18,7 @@ extend type Query {
     checklists(revivalId: ID!, includeCancelled: Boolean = false): [ChecklistSummary!]!
     "NOT_FOUND unless the caller can read the checklist's revival."
     checklist(id: ID!): Checklist
-    "Items across the revival's checklists matching every given filter (FR-028)."
+    "Items across the revival's checklists matching every given filter."
     checklistItems(revivalId: ID!, filter: ChecklistItemFilter): [ChecklistItem!]!
     """
     What removing the chapter from the guide would delete, over revivals that are not archived, once they move to a
@@ -58,14 +57,14 @@ type ChecklistRemoval {
 extend type Mutation {
     "Directeur or steering group, revival visible and not ARCHIVED, for every checklist mutation unless noted."
     eventChecklistCreate(input: EventChecklistCreateInput!): Checklist!
-    "Name and date. Changing the date recomputes deadlines that were not set by hand (FR-023)."
+    "Name and date. Changing the date recomputes deadlines that were not set by hand."
     eventChecklistUpdate(input: EventChecklistUpdateInput!): Checklist!
     eventChecklistCancel(id: ID!, version: Int!): Checklist!
-    "Adds the template's items not already in the checklist (FR-032a). Returns the checklist."
+    "Adds the template's items not already in the checklist. Returns the checklist."
     checklistAddFromTemplate(input: ChecklistAddFromTemplateInput!): Checklist!
 
     checklistItemCreate(input: ChecklistItemCreateInput!): ChecklistItem!
-    "Text is refused on required items (FR-025)."
+    "Text is refused on required items."
     checklistItemUpdate(input: ChecklistItemUpdateInput!): ChecklistItem!
     "DONE, OPEN (reopen) or NOT_APPLICABLE. NOT_APPLICABLE on a required item: directeur only, reason required."
     checklistItemSetState(input: ChecklistItemSetStateInput!): ChecklistItem!
@@ -104,9 +103,9 @@ type Checklist {
     template: ChecklistTemplateSummary
     cancelled: Boolean!
     items: [ChecklistItem!]!
-    "CHAPTER: the chapter's TIP items in the pinned version (FR-029)."
+    "CHAPTER: the chapter's TIP items in the pinned version."
     tips: [GuideItem!]!
-    "Templates the caller may add items from (FR-032a)."
+    "Templates the caller may add items from."
     templatesAvailable: [ChecklistTemplateSummary!]!
     version: Int!
 }
@@ -115,7 +114,7 @@ type ChecklistItem {
     id: ID!
     checklist: ChecklistSummary!
     required: Boolean!
-    "Required items: the guide item's text in the pinned version (FR-025, FR-035). Others: the item's text."
+    "Required items: the guide item's text in the pinned version. Others: the item's text."
     text: LocalizedText!
     state: ChecklistItemState!
     stateChangedBy: PersonRef
@@ -125,10 +124,10 @@ type ChecklistItem {
     owner: Owner
     deadline: Date
     deadlineManual: Boolean!
-    "OPEN with a deadline before today (FR-027)."
+    "OPEN with a deadline before today."
     overdue: Boolean!
     comment: String
-    "Linked guide item, in the pinned version, if it is still there (FR-029)."
+    "Linked guide item, in the pinned version, if it is still there."
     guideItem: GuideItem
     guideItemKey: ID
     "A capability hint from the template while the item has no owner."

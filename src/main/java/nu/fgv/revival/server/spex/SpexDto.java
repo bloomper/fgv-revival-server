@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
  * A spex in Spexregister. {@code title} is null and {@code available} false while Spexregister is unavailable.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record SpexDto(Long id, @Nullable String title, @Nullable Integer year, boolean available) {
 

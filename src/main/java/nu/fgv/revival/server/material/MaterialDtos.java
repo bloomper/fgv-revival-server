@@ -25,7 +25,7 @@ import java.util.List;
  * item's material, are resolved by {@link MaterialGraphqlApi}.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public final class MaterialDtos {
 

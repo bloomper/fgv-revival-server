@@ -34,10 +34,10 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A proposed change to a published version, made from one revival (FR-031, FR-032). Never deleted.
+ * A proposed change to a published version, made from one revival. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "guide_suggestion")

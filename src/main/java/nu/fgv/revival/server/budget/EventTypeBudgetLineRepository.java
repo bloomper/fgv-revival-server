@@ -22,10 +22,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * An event type's lines are not revival data: removing one deletes it (M5-FR-3).
+ * An event type's lines are not revival data: removing one deletes it.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public interface EventTypeBudgetLineRepository extends Repository<EventTypeBudgetLine, Long> {
 

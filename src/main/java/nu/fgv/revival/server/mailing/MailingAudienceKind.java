@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.mailing;
 
 /**
- * Whom a mailing reaches, resolved when it is sent (M6B-FR-8).
+ * Whom a mailing reaches, resolved when it is sent.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public enum MailingAudienceKind {
 

@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
  * GraphQL's {@code ChecklistTemplateItem}; its {@code guideItem} is resolved in the latest published version.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistTemplateItemDto(Long id, Long templateId, int position, GuideVersionView.Text text,
                                        @Nullable String guideItemKey,

@@ -23,10 +23,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * What the caller may do with a revival, computed by {@link AccessPolicy} so the web never computes it (research R13).
+ * What the caller may do with a revival, computed by {@link AccessPolicy} so the web never computes it.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalPermissionsDto(@Nullable Long revivalId,
                                     boolean canEditCore,

@@ -29,10 +29,10 @@ import java.util.Optional;
 
 /**
  * Published versions for super admins: how much each is used, and deleting one nothing uses. A published version
- * never changes (SC-003).
+ * never changes.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Service
 public class GuideVersionService {

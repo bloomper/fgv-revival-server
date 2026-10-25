@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.meeting;
 
 /**
- * What was done to a row in a meeting (data-model.md, Meeting entry change).
+ * What was done to a row in a meeting.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum MeetingEntryChangeKind {
 

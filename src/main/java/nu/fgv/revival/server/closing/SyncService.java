@@ -53,8 +53,8 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
- * The participation sync to Spexregister (product spec 5.11, M7-FR-2..8): its preview, starting or resuming it, and its
- * runs. Every method resolves the caller and asks {@link AccessPolicy} first (constitution III). A start checks that the
+ * The participation sync to Spexregister: its preview, starting or resuming it, and its
+ * runs. Every method resolves the caller and asks {@link AccessPolicy} first. A start checks that the
  * preview the caller confirmed is still what would be done, creates the run and its pending steps in one transaction,
  * and hands the run to {@link SyncWorker} once that has committed.
  *

@@ -41,9 +41,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Where a revival stands on closing (product spec 5.11, M7-FR-9): the result and the loan from the budget, the surplus
- * decision from the log, memberships, lessons learned as guide suggestions, the sync, and anonymization. Read by whoever
- * reads the revival's work; null for anyone else.
+ * Where a revival stands on closing: the result and the loan from the budget, the surplus decision from the log,
+ * memberships, lessons learned as guide suggestions, the sync, and anonymization. Read by whoever reads the revival's
+ * work; null for anyone else.
  *
  * @author Anders Jacobsson
  * @since 1.0

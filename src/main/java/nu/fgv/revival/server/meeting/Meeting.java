@@ -47,10 +47,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A steering group meeting in a revival (FR-016, FR-017). Never deleted; a planned meeting can be cancelled.
+ * A steering group meeting in a revival. Never deleted; a planned meeting can be cancelled.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "meeting")

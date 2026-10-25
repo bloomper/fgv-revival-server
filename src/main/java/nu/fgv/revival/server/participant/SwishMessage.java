@@ -21,11 +21,11 @@ import java.util.Set;
 
 /**
  * The message of a Swish payment for a participant's fee, e.g. "Ali Baba 2028 Anna Andersson": it identifies the
- * participant to whoever checks the account (product spec 5.6). Swish allows letters, åäö among them, digits, spaces
+ * participant to whoever checks the account. Swish allows letters, åäö among them, digits, spaces
  * and {@code !?(),.-:;}, at most 50 characters; other letters lose their accents, anything else is left out.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 final class SwishMessage {
 

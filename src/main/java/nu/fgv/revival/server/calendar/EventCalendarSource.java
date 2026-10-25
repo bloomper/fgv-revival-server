@@ -32,12 +32,12 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The revival's events that are not cancelled, for everyone with a calendar link who reads them (M4-FR-6, M6-FR-1):
+ * The revival's events that are not cancelled, for everyone with a calendar link who reads them:
  * helpers get their shifts instead. All day without a start time, otherwise from the start time to the end time, or
  * two hours without one.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Component
 class EventCalendarSource implements CalendarSource {

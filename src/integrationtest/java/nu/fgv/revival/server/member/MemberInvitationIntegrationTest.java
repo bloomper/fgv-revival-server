@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * whose mail goes to GreenMail. Access to Nyuppsättning is never granted here.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
 

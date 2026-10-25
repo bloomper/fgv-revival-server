@@ -25,11 +25,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Reference figures from earlier revivals over GraphQL. A thin adapter: every rule is in
- * {@link ReferenceRevivalService}.
+ * Reference figures from earlier revivals over GraphQL.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Controller
 public class ReferenceRevivalGraphqlApi {

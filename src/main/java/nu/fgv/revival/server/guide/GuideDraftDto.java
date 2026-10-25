@@ -20,7 +20,7 @@ package nu.fgv.revival.server.guide;
  * GraphQL's {@code GuideDraft}.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public record GuideDraftDto(GuideVersionView draft,
                             int acceptedSuggestionCount,

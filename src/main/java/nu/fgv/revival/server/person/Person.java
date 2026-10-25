@@ -28,11 +28,11 @@ import lombok.Setter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Someone who has logged in with access. Only what is needed to match and show revival roles is stored (FR-028). Not
+ * Someone who has logged in with access. Only what is needed to match and show revival roles is stored. Not
  * audited: it holds no revival data.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Entity
 @Table(name = "person")

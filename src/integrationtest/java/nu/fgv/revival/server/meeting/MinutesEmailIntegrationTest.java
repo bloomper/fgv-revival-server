@@ -33,11 +33,11 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Minutes by email with GreenMail (US3, FR-021, SC-011): to every directeur and steering group member who can log in
+ * Minutes by email with GreenMail: to every directeur and steering group member who can log in
  * and see the revival, and nobody else; no address is stored.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
 

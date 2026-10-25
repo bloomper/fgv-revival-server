@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public interface RevivalGuideVersionChangeRepository extends JpaRepository<RevivalGuideVersionChange, Long> {
 

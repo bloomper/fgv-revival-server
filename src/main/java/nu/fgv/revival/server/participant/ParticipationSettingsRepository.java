@@ -21,10 +21,10 @@ import org.springframework.data.repository.Repository;
 import java.util.Optional;
 
 /**
- * Declares only what the settings need, so it has no delete method (constitution IV).
+ * Declares only what the settings need, so it has no delete method.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public interface ParticipationSettingsRepository extends Repository<ParticipationSettings, Long> {
 

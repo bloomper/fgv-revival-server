@@ -30,12 +30,12 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * Builds a meeting's minutes from what was recorded in it and the rows as they are now (FR-020, research R8):
+ * Builds a meeting's minutes from what was recorded in it and the rows as they are now:
  * decisions and questions created in it, to-dos created or assigned in it, and rows closed in it. Changes made to rows
  * outside the meeting are not part of it.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 final class MinutesBuilder {
 

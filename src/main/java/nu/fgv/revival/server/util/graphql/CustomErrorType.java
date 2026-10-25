@@ -22,7 +22,7 @@ import graphql.ErrorClassification;
  * Error codes beyond Spring for GraphQL's {@code ErrorType}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public enum CustomErrorType implements ErrorClassification {
     CONFLICT,

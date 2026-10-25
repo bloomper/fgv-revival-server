@@ -30,10 +30,10 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Dates proposed from the premiere (M4-FR-7), with the seeded timeline and a premiere on Thursday 10 February 2028.
+ * Dates proposed from the premiere, with the seeded timeline and a premiere on Thursday 10 February 2028.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 class EventProposalsTest {
 

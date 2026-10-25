@@ -22,10 +22,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Declares only what mailings need, so it has no delete method: a mailing is cancelled (constitution IV).
+ * Declares only what mailings need, so it has no delete method: a mailing is cancelled.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface MailingRepository extends Repository<Mailing, Long> {
 

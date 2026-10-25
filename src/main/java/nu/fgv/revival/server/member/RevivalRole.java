@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.member;
 
 /**
- * A person's role in one revival (FR-003). Only {@code DIRECTEUR} and {@code STEERING_GROUP} are assignable in M1.
+ * A person's role in one revival.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public enum RevivalRole {
 

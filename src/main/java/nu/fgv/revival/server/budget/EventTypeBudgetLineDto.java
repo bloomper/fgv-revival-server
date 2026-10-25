@@ -25,7 +25,7 @@ import java.util.Locale;
  * GraphQL's {@code EventTypeBudgetLine}; its category is resolved from the id.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public record EventTypeBudgetLineDto(Long id, Long eventTypeId, String categoryId, GuideVersionView.Text description,
                                      BudgetLineQuantity quantityRule, @Nullable Double quantity, BigDecimal unitAmount,

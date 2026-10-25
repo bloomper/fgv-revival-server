@@ -29,7 +29,7 @@ import java.util.List;
  * The GraphQL types of participants (participant.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public final class ParticipantDtos {
 

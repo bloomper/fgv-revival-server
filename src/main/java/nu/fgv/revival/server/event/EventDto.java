@@ -27,7 +27,7 @@ import java.time.temporal.ChronoUnit;
  * An event as GraphQL's {@code Event}, with times as {@code HH:mm}. Its type and checklist are resolved from ids.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public record EventDto(Long id,
                        Long revivalId,

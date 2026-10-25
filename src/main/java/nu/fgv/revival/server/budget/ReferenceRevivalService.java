@@ -40,11 +40,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Reference figures from earlier revivals (product spec 5.10, M5-FR-2): the super admin keeps them; super admins,
+ * Reference figures from earlier revivals: the super admin keeps them; super admins,
  * observers and the directeurs and steering groups of revivals they can see read them.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class ReferenceRevivalService {
@@ -92,8 +92,6 @@ public class ReferenceRevivalService {
         return repository.findAllByOrderByYearDescLabelAscIdAsc().stream().map(reference -> ReferenceRevivalDto.of(reference, order)).toList();
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     @Transactional(readOnly = true)
     public ReferenceRevivalDto get(final Long id) {
         readable();
@@ -124,8 +122,6 @@ public class ReferenceRevivalService {
         return ReferenceRevivalDto.of(repository.saveAndFlush(reference), categoryOrder());
     }
 
-    // --- Changing ---------------------------------------------------------------------------------------------------
-
     @Transactional
     public ReferenceRevivalDto update(final Long id, final Long version, final Definition definition) {
         manageable();
@@ -151,7 +147,7 @@ public class ReferenceRevivalService {
     }
 
     /**
-     * Keeps a revival's figures as an automatic reference, before the revival is deleted or anonymized (M5-FR-14). No
+     * Keeps a revival's figures as an automatic reference, before the revival is deleted or anonymized. No
      * caller check: the deletion has checked. Nothing is kept when the revival has no figures.
      *
      * @param totals the budgeted and actual total per category id
@@ -185,8 +181,6 @@ public class ReferenceRevivalService {
         accessPolicy.requireReadReferenceFigures(caller, guideAccess.callerRevivals(caller));
         return caller;
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private void manageable() {
         accessPolicy.requireManageReferenceFigures(callerService.current());

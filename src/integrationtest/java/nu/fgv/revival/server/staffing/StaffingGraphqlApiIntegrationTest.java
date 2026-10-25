@@ -31,12 +31,12 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Availability and staffing end to end (M6B-FR-1–7, M6B-FR-14): the directeur plans slots, a participant answers for
+ * Availability and staffing end to end: the directeur plans slots, a participant answers for
  * the event's days and signs up, a helper is assigned and sees only their shifts, helpers' compensation reaches the
  * budget, and shifts reach the calendar feed. Participants are pending people, so Spexregister is not needed.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
@@ -233,7 +233,7 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(HELPER, AVAILABILITY_SET, Map.of("input", Map.of("revivalId", revival, "eventId", rehearsal, "date", "2028-03-10",
                 "answer", "YES"))), "BAD_REQUEST");
 
-        // M6B-FR-5: 2 shifts × 350 kr is a budgeted cost of the helper category, never a stored line
+        // 2 shifts × 350 kr is a budgeted cost of the helper category, never a stored line
         final long version = jdbcClient.sql("SELECT version FROM participant WHERE id = ?").param(helper).query(Long.class).single();
 
         execute(STEERING_GROUP, "mutation($input: ParticipantUpdateInput!) { participantUpdate(input: $input) { compensationPerShift } }",
@@ -247,7 +247,7 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(DIRECTEUR, "query($id: ID!) { budgetScenarioCalculate(revivalId: $id, input: {}) { cost } }", Map.of("id", revival))
                 .path("budgetScenarioCalculate.cost").entity(BigDecimal.class).satisfies(cost -> assertThat(cost).isEqualByComparingTo("700"));
 
-        // M6B-FR-6: the helper's calendar holds their shifts at the event's place, and the shows; no events
+        // The helper's calendar holds their shifts at the event's place, and the shows; no events
         final String url = execute(HELPER, "mutation($id: ID!) { calendarFeedCreate(revivalId: $id) { url } }", Map.of("id", revival))
                 .path("calendarFeedCreate.url").entity(String.class).get();
         final String ics = new String(Objects.requireNonNull(restTestClient().get().uri(url.substring(url.indexOf("/api/calendar/"))).exchange()

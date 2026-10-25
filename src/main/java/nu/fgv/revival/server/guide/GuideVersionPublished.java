@@ -20,7 +20,7 @@ package nu.fgv.revival.server.guide;
  * as checklist templates, follows in the same one.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record GuideVersionPublished(Long versionId) {
 }

@@ -38,12 +38,12 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A revival's transactions and their receipts (product spec 5.10, M5-FR-5): who reads the budget reads them, who writes
+ * A revival's transactions and their receipts: who reads the budget reads them, who writes
  * it records them. A cost may name who paid it out of their own pocket, as an owner is named, and be marked reimbursed.
  * Transactions are cancelled, never deleted, and a cancelled one cannot be changed.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class TransactionService {
@@ -104,8 +104,6 @@ public class TransactionService {
                 .toList();
     }
 
-    // --- Reading ----------------------------------------------------------------------------------------------------
-
     @Transactional
     public Transaction create(final NewTransaction newTransaction) {
         access.writable(callerService.current(), newTransaction.revivalId());
@@ -163,8 +161,6 @@ public class TransactionService {
         requirePayerForCost(transaction);
         return Transaction.of(repository.saveAndFlush(transaction));
     }
-
-    // --- Writing ----------------------------------------------------------------------------------------------------
 
     /**
      * The transaction stays readable and stops counting in the totals.
@@ -234,8 +230,6 @@ public class TransactionService {
                 content.getContent());
     }
 
-    // --- Receipts ---------------------------------------------------------------------------------------------------
-
     /**
      * Clears the receipt and deletes its file.
      */
@@ -274,8 +268,6 @@ public class TransactionService {
         }
         return transaction;
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private BudgetTransaction changeable(final Caller caller, final Long id, final Long version) {
         final BudgetTransaction transaction = writableUnversioned(caller, id);

@@ -23,7 +23,7 @@ import org.mapstruct.factory.Mappers;
 
 /**
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Mapper
 public interface RevivalMemberMapper {

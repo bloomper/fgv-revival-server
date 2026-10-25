@@ -23,11 +23,11 @@ import java.util.Arrays;
 import java.util.Set;
 
 /**
- * What a receipt file may be (M5-FR-5): a PDF or a JPEG, PNG, HEIC or WebP image of at most 10 MB. The type is read
+ * What a receipt file may be: a PDF or a JPEG, PNG, HEIC or WebP image of at most 10 MB. The type is read
  * from the file's first bytes, never taken from the client alone.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public final class Receipts {
 

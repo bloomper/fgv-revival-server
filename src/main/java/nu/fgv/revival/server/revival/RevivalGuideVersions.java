@@ -31,11 +31,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Which guide version a revival follows, and the append-only record of every change (FR-017, FR-018, FR-020). The
+ * Which guide version a revival follows, and the append-only record of every change. The
  * callers check access; this only writes.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Component
 public class RevivalGuideVersions {
@@ -56,7 +56,7 @@ public class RevivalGuideVersions {
     }
 
     /**
-     * Pins a new revival to the latest published version, if there is one (FR-017).
+     * Pins a new revival to the latest published version, if there is one.
      */
     public void pinToLatest(final Revival revival, final Caller caller) {
         versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)
@@ -64,7 +64,7 @@ public class RevivalGuideVersions {
     }
 
     /**
-     * Pins every revival without a version to a version just published, the first one (FR-018).
+     * Pins every revival without a version to a version just published, the first one.
      */
     public void pinUnpinned(final GuideVersion version, final Caller caller) {
         final List<Revival> unpinned = revivalRepository.findByGuideVersionIdIsNull();

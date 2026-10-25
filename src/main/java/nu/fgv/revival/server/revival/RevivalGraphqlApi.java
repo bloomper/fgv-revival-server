@@ -34,10 +34,10 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * No authorization here: the services decide (constitution II).
+ * No authorization here: the services decide.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Controller
 public class RevivalGraphqlApi {
@@ -70,7 +70,7 @@ public class RevivalGraphqlApi {
     }
 
     /**
-     * Null for callers who do not read the revival's guide, as its permissions say (M6-FR-1).
+     * Null for callers who do not read the revival's guide, as its permissions say.
      */
     @SchemaMapping(typeName = "Revival", field = "guideVersion")
     public @Nullable GuideVersionSummaryDto guideVersion(final RevivalDto revival) {

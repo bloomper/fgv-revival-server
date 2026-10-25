@@ -19,7 +19,7 @@ package nu.fgv.revival.server.material;
  * Whether the revival has an inventory item, or how it gets it: MISSING, BUY and BUILD need action.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public enum InventoryStatus {
     HAVE,

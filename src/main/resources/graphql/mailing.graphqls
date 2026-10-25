@@ -1,4 +1,4 @@
-# M6: mailings, the mailing plan and its reminders (product spec 5.8). Nothing is sent without a person confirming.
+# Mailings, the mailing plan and its reminders. Nothing is sent without a person confirming.
 # Recipients are references; email addresses are looked up at send time and never stored with the mailing.
 
 enum MailingAudienceKind {

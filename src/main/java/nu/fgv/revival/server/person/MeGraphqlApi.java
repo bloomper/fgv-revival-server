@@ -21,7 +21,7 @@ import org.springframework.stereotype.Controller;
 
 /**
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Controller
 public class MeGraphqlApi {

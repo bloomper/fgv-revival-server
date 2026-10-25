@@ -39,11 +39,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * A thing to do in a checklist (FR-024). Required when it comes from a guide requirement, and then its text is the
- * guide's, read from the pinned version (FR-025). Never deleted.
+ * A thing to do in a checklist. Required when it comes from a guide requirement, and then its text is the
+ * guide's, read from the pinned version. Never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "checklist_item")
@@ -108,7 +108,7 @@ public class ChecklistItem extends AbstractAuditable {
     private boolean deadlineManual;
 
     /**
-     * A copy of the template item's rule, so later template changes leave this checklist alone (FR-032).
+     * A copy of the template item's rule, so later template changes leave this checklist alone.
      */
     @Embedded
     private @Nullable RelativeDeadline relativeDeadline;

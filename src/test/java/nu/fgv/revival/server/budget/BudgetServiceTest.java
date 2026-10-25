@@ -70,11 +70,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * A revival's budget (M5-FR-4, FR-6–FR-9): who reads and writes it, the rules for lines, the totals, the categories
+ * A revival's budget: who reads and writes it, the rules for lines, the totals, the categories
  * with reference figures, and the proposals from events.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class BudgetServiceTest {
@@ -230,8 +230,6 @@ class BudgetServiceTest {
         return line;
     }
 
-    // --- Access -----------------------------------------------------------------------------------------------------
-
     @Test
     void everyRevivalGetsItsSettingsWhenItIsCreated() {
         settings = null;
@@ -278,8 +276,6 @@ class BudgetServiceTest {
         assertThatThrownBy(() -> service.totals(REVIVAL_ID)).isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // --- Settings ---------------------------------------------------------------------------------------------------
-
     @Test
     void theSettingsAreReplacedWithTheVersionTheCallerSaw() {
         final BudgetDtos.Settings updated = service.updateSettings(new BudgetService.SettingsChange(REVIVAL_ID, 0L, 60, kr("500"), kr("10000"),
@@ -310,8 +306,6 @@ class BudgetServiceTest {
         assertThat(service.updateSettings(new BudgetService.SettingsChange(REVIVAL_ID, 0L, 40, null, null, null, null)).participantsPlanned())
                 .isEqualTo(40);
     }
-
-    // --- Lines ------------------------------------------------------------------------------------------------------
 
     @Test
     void aLineIsTrimmedAndCountsOnceByDefault() {
@@ -470,8 +464,6 @@ class BudgetServiceTest {
         assertThat(service.lines(REVIVAL_ID, false)).extracting(Line::categoryId).containsExactly("SHOW_TICKETS", "VENUE", "FOOD");
     }
 
-    // --- Overview ---------------------------------------------------------------------------------------------------
-
     @Test
     void totalsCountLinesNotRemovedAndTransactionsNotCancelled() {
         line("SHOW_TICKETS", "100", "150");
@@ -562,7 +554,7 @@ class BudgetServiceTest {
     }
 
     /**
-     * M6B-FR-5: what helpers are paid for the shifts they hold is computed from the staffing and counted as a budgeted
+     * What helpers are paid for the shifts they hold is computed from the staffing and counted as a budgeted
      * cost of the helper category everywhere the budget is summed, never stored as a line.
      */
     @Test

@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.checklist;
 
 /**
- * A checklist item's state. Marking an item not applicable is how it is cancelled (FR-024, FR-026).
+ * A checklist item's state. Marking an item not applicable is how it is cancelled.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum ChecklistItemState {
 

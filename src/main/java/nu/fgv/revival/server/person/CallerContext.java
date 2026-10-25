@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
  * its controllers on, so that looking it up inside a transaction never needs a second connection.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 final class CallerContext {
 

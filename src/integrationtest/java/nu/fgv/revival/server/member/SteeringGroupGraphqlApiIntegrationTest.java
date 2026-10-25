@@ -33,10 +33,10 @@ import static nu.fgv.revival.server.Documents.UPDATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * User story 4: the directeur builds the steering group (FR-003, FR-019a, FR-019c, FR-020).
+ * The directeur builds the steering group.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

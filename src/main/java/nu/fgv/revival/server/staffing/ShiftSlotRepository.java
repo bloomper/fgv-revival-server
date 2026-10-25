@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Shift slots. A slot is deleted only while nobody holds it (M6B-FR-2).
+ * Shift slots. A slot is deleted only while nobody holds it.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface ShiftSlotRepository extends Repository<ShiftSlot, Long> {
 

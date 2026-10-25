@@ -22,10 +22,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Pending people are deleted outright, which is the point (product spec section 7).
+ * Pending people are deleted outright, which is the point.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public interface PendingPersonRepository extends JpaRepository<PendingPerson, Long> {
 

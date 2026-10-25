@@ -32,10 +32,10 @@ import static nu.fgv.revival.server.Documents.UPDATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * User story 2: the directeur runs their revival through its lifecycle (FR-009, FR-011, FR-014–FR-017).
+ * The directeur runs their revival through its lifecycle.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

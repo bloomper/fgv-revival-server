@@ -15,7 +15,7 @@
  */
 
 /**
- * Closing a revival (product spec 5.11, M7): the participation sync to Spexregister, FGV membership marks and where the
+ * Closing a revival: the participation sync to Spexregister, FGV membership marks and where the
  * revival stands on closing.
  */
 @NullMarked

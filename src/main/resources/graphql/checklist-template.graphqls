@@ -1,8 +1,7 @@
-# M3: checklist templates for guide chapters and event kinds (FR-030–FR-032a). Rules per operation are in
-# specs/004-m3-log/contracts/README.md. Templates and their items are retired, never deleted.
+# Checklist templates for guide chapters and event kinds. Templates and their items are retired, never deleted.
 
 extend type Query {
-    "Readers of the guide (as M2's guideVersions). Retired templates only for SUPER_ADMIN."
+    "Readers of the guide, as guideVersions. Retired templates only for SUPER_ADMIN."
     checklistTemplates(includeRetired: Boolean = false): [ChecklistTemplate!]!
     checklistTemplate(id: ID!): ChecklistTemplate
 }
@@ -11,7 +10,7 @@ extend type Mutation {
     "SUPER_ADMIN, for every template mutation."
     checklistTemplateCreate(input: ChecklistTemplateCreateInput!): ChecklistTemplate!
     checklistTemplateUpdate(input: ChecklistTemplateUpdateInput!): ChecklistTemplate!
-    "Retired templates are not offered for new checklists; checklists made from them are unchanged (FR-030)."
+    "Retired templates are not offered for new checklists; checklists made from them are unchanged."
     checklistTemplateRetire(id: ID!, version: Int!): ChecklistTemplate!
     "CHAPTER: refused if the latest published version lacks the chapter, or another active template has it."
     checklistTemplateRestore(id: ID!, version: Int!): ChecklistTemplate!

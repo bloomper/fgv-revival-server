@@ -40,15 +40,15 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
- * Spexregister's GraphQL API, as its {@code REVIVAL} role allows: spex (contracts/spexregister.md) and a spex's poster
- * from its REST API, which GraphQL cannot carry; and since M6, spexare: reading them by id, by spex and by name, the
+ * Spexregister's GraphQL API, as its {@code REVIVAL} role allows: spex and a spex's poster
+ * from its REST API, which GraphQL cannot carry; and spexare: reading them by id, by spex and by name, the
  * task list and vocal parts, and writing what participants consent to: a new unpublished spexare for a pending
  * person, their {@value #HOME} address (email and phone) and their {@value #REGISTER} consent. Every spexare call says
  * whom the service account acts for in {@value #ACTING_PERSON_HEADER}. Names and contact details pass through to the
  * caller and are never logged. Failures are logged at most once a minute, without the token or the response body.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Slf4j
 @Component
@@ -63,7 +63,7 @@ public class SpexregisterClient {
      */
     public static final String HOME = "HOME";
     /**
-     * The consent to being kept in FGV's register (product spec 5.6).
+     * The consent to being kept in FGV's register.
      */
     public static final String REGISTER = "REGISTER";
     /**
@@ -129,7 +129,7 @@ public class SpexregisterClient {
             mutation ConsentUpdate($spexareId: ID!, $typeId: ID!, $input: ConsentUpdate!) {
                 consentUpdate(spexareId: $spexareId, typeId: $typeId, input: $input) { id }
             }""";
-    // --- The participation sync (M7) ---
+
     private static final String SPEXARE_ACTIVITIES = """
             query SpexareActivities($ids: [ID!]!) {
                 spexareByIds(ids: $ids) {
@@ -197,8 +197,8 @@ public class SpexregisterClient {
     }
 
     /**
-     * The value of {@value #ACTING_PERSON_HEADER}: at most {@value #ACTING_PERSON_MAX_LENGTH} characters, percent-encoded
-     * as UTF-8, which Spexregister decodes.
+     * The value of {@value #ACTING_PERSON_HEADER}: at most {@value #ACTING_PERSON_MAX_LENGTH} characters,
+     * percent-encoded as UTF-8, which Spexregister decodes.
      */
     static String actingPersonHeader(final String actingPerson) {
         final String trimmed = actingPerson.strip();
@@ -220,8 +220,6 @@ public class SpexregisterClient {
             throw new SpexregisterCallException("Response has no data");
         }
     }
-
-    // --- Spexare (M6) -----------------------------------------------------------------------------------------------
 
     /**
      * What Spexregister's errors mean for a write: it does not know something, it already has it, or it refused.
@@ -317,8 +315,8 @@ public class SpexregisterClient {
     }
 
     /**
-     * The spexare with these ids that Spexregister lets the service account read, with their addresses, consents and spex
-     * activities, at most {@value #MAX_SPEXARE}.
+     * The spexare with these ids that Spexregister lets the service account read, with their addresses, consents and
+     * spex activities, at most {@value #MAX_SPEXARE}.
      */
     public List<Spexare> spexareByIds(final Collection<Long> ids, final String actingPerson) {
         if (ids.isEmpty()) {
@@ -435,8 +433,6 @@ public class SpexregisterClient {
         });
     }
 
-    // --- The participation sync (M7) -------------------------------------------------------------------------------
-
     /**
      * Creates an unpublished spexare who is not deceased, and returns its id.
      */
@@ -492,7 +488,8 @@ public class SpexregisterClient {
     }
 
     /**
-     * Records the spexare's {@value #REGISTER} consent: updates the one with {@code consentId}, or creates it when null.
+     * Records the spexare's {@value #REGISTER} consent: updates the one with {@code consentId}, or creates it when
+     * null.
      */
     public void saveRegisterConsent(final Long spexareId, final @Nullable String consentId, final boolean value, final String actingPerson) {
         call(() -> {
@@ -603,8 +600,8 @@ public class SpexregisterClient {
     }
 
     /**
-     * Records the spexare's {@value #FGV_MEMBERSHIP} membership for the year. Spexregister refuses a second one for the same
-     * year with {@link SpexregisterCallException#EXISTS}.
+     * Records the spexare's {@value #FGV_MEMBERSHIP} membership for the year. Spexregister refuses a second one for the
+     * same year with {@link SpexregisterCallException#EXISTS}.
      */
     public Long createMembership(final Long spexareId, final int year, final String actingPerson) {
         return created(actingFor(actingPerson).document(MEMBERSHIP_CREATE)
@@ -752,7 +749,7 @@ public class SpexregisterClient {
     }
 
     /**
-     * A spexare's activities, for the sync (M7).
+     * A spexare's activities, for the sync.
      */
     public record SpexareActivities(String id, @Nullable List<ActivityDetail> activities) {
 

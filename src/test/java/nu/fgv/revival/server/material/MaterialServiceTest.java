@@ -61,7 +61,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * Materials (M8-FR-2, M8-FR-3, M8-FR-5, M8-FR-6): the service is chosen or recognised when saved, positions are
+ * Materials: the service is chosen or recognised when saved, positions are
  * Spexregister task ids, and a participant sees what is for every participant or for their position.
  *
  * @author Anders Jacobsson

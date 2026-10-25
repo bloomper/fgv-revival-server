@@ -33,11 +33,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A kind of event from the guide's example timeline, with its offsets from the premiere (M4-FR-1). Kept by the super
+ * A kind of event from the guide's example timeline, with its offsets from the premiere. Kept by the super
  * admin in order; retired, never deleted.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Entity
 @Table(name = "event_type")

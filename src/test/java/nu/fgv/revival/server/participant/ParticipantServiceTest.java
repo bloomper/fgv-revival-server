@@ -68,10 +68,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The steering group's side of participants (M6-FR-2–4, M6-FR-16–18).
+ * The steering group's side of participants.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

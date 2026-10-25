@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class SpexServiceTest {

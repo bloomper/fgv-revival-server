@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Declares only what event types need, so it has no delete method (constitution IV).
+ * Declares only what event types need, so it has no delete method.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public interface EventTypeRepository extends Repository<EventType, Long> {
 

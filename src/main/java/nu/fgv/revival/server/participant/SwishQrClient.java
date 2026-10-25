@@ -32,11 +32,11 @@ import java.util.Map;
 
 /**
  * Swish's pre-filled QR code API (https://developer.swish.nu/api/qr-codes/v1#pre-filled-qr-code), which needs no
- * agreement: a QR code as SVG for a number, an amount and a message, none of them editable in the app (M6-FR-19). Every
+ * agreement: a QR code as SVG for a number, an amount and a message, none of them editable in the app. Every
  * failure is a {@link SwishUnavailableException}; neither the number nor the message is logged.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Component
 @Slf4j

@@ -35,11 +35,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Materials and the inventory over GraphQL (material.graphqls). A thin adapter: every rule is in
- * {@link MaterialService} and {@link InventoryService}.
+ * Materials and the inventory over GraphQL (material.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Controller
 public class MaterialGraphqlApi {
@@ -61,8 +60,6 @@ public class MaterialGraphqlApi {
     public MaterialDto materialCreate(@Argument final MaterialInput input) {
         return materials.create(input.toInput());
     }
-
-    // --- Materials --------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public MaterialDto materialUpdate(@Argument final Long id, @Argument final Long version, @Argument final MaterialInput input) {
@@ -103,8 +100,6 @@ public class MaterialGraphqlApi {
     public InventoryItemDto inventoryItemCreate(@Argument final InventoryItemInput input, final Locale locale) {
         return inventory.create(input.toInput(), locale);
     }
-
-    // --- Inventory --------------------------------------------------------------------------------------------------
 
     @MutationMapping
     public InventoryItemDto inventoryItemUpdate(@Argument final Long id, @Argument final Long version, @Argument final InventoryItemInput input,

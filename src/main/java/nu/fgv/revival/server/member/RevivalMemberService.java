@@ -50,11 +50,11 @@ import static nu.fgv.revival.server.person.CallerService.normalizedEmail;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Directeurs and steering group members of a revival (FR-019–FR-019c). Members are added by email address and wait
- * for access until a person with that verified email logs in. Removing closes the row (constitution IV).
+ * Directeurs and steering group members of a revival. Members are added by email address and wait
+ * for access until a person with that verified email logs in. Removing closes the row.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Service
 @Slf4j
@@ -128,8 +128,8 @@ public class RevivalMemberService {
 
     /**
      * The directeurs and steering group of a revival the caller can see, without removed members. Whoever reads the
-     * revival's work sees names, roles and capabilities; only super admins and its directeurs see email addresses
-     * (FR-019c). Participants and helpers, who see the revival only for their own page, get an empty list (M6-FR-1), and
+     * revival's work sees names, roles and capabilities; only super admins and its directeurs see email addresses.
+     * Participants and helpers, who see the revival only for their own page, get an empty list, and
      * participant roles are never listed here.
      */
     @Transactional(readOnly = true)
@@ -177,7 +177,7 @@ public class RevivalMemberService {
 
     /**
      * Adds a directeur or steering group member by email address. A person who has logged in with that verified address
-     * becomes the member at once; anyone else waits until they do (FR-019b). For a waiting member the FGV realm is
+     * becomes the member at once; anyone else waits until they do. For a waiting member the FGV realm is
      * asked as well: an address without an account gets one, without any role, and Keycloak emails them an
      * invitation ({@code invitedAt}); an account without {@code fgv-revival}'s {@code USER} makes the super admins
      * hear about it. While Keycloak cannot be reached the member is added all the same.
@@ -214,8 +214,8 @@ public class RevivalMemberService {
     }
 
     /**
-     * Whether the address already holds a role in the revival, as its person or waiting on it: a person holds one role per
-     * revival.
+     * Whether the address already holds a role in the revival, as its person or waiting on it: a person holds one role
+     * per revival.
      */
     @Transactional(readOnly = true)
     public boolean holdsRole(final Long revivalId, final String email) {
@@ -227,8 +227,8 @@ public class RevivalMemberService {
 
     /**
      * Gives the role to the address, without checking the caller: {@link #add} for the steering group, and participant
-     * invitations (M6), which tell the super admins themselves. A person who has logged in with that verified address
-     * becomes the member at once; anyone else waits until they do (FR-019b). For a waiting member the FGV realm is asked
+     * invitations, which tell the super admins themselves. A person who has logged in with that verified address
+     * becomes the member at once; anyone else waits until they do. For a waiting member the FGV realm is asked
      * as well: an address without an account gets one, without any role, and Keycloak emails them an invitation
      * ({@code invitedAt}). While Keycloak cannot be reached the member is added all the same.
      *
@@ -278,7 +278,7 @@ public class RevivalMemberService {
     }
 
     /**
-     * Closes a member without checking the caller, as {@link #remove} does: for removing a participant (M6).
+     * Closes a member without checking the caller, as {@link #remove} does: for removing a participant.
      */
     @Transactional
     public void close(final RevivalMember member, final Long removedBy) {
@@ -339,7 +339,7 @@ public class RevivalMemberService {
     }
 
     /**
-     * Closes the member: sets who removed it and when, and clears its waiting email. Nothing is deleted (FR-026, FR-028).
+     * Closes the member: sets who removed it and when, and clears its waiting email. Nothing is deleted.
      */
     @Transactional
     public void remove(final Long id) {

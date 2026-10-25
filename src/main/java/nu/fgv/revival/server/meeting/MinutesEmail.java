@@ -36,11 +36,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One sending of a meeting's minutes, saved after the mail went out with each recipient's result (FR-021, research
- * R9). Append-only, and itself the record, so not audited.
+ * One sending of a meeting's minutes, saved after the mail went out with each recipient's result. Append-only, and
+ * itself the record, so not audited.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "minutes_email")

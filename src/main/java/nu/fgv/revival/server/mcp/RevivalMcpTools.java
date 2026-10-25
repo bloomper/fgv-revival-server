@@ -44,11 +44,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * MCP tools for revivals. A thin adapter over {@link RevivalService}: the same rules as GraphQL (FR-025). Members,
- * emails and contact details are never returned (constitution V).
+ * MCP tools for revivals. Members,
+ * emails and contact details are never returned.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Component
 public class RevivalMcpTools {
@@ -161,7 +161,7 @@ public class RevivalMcpTools {
     }
 
     /**
-     * A revival as {@code list_revivals} returns it (contracts/mcp.md).
+     * A revival as {@code list_revivals} returns it.
      */
     public record McpRevival(Long id,
                              @Nullable String spexTitle,
@@ -173,7 +173,7 @@ public class RevivalMcpTools {
     }
 
     /**
-     * A revival's status as {@code get_revival_status} returns it (contracts/mcp.md).
+     * A revival's status as {@code get_revival_status} returns it.
      */
     public record McpRevivalStatus(RevivalStatusDto.Summary revival,
                                    List<OverdueLogEntry> overdueLogEntries,

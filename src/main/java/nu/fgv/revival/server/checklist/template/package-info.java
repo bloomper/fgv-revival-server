@@ -16,7 +16,7 @@
 
 
 /**
- * Checklist templates for guide chapters and event kinds, kept by super admins (M3 research R11).
+ * Checklist templates for guide chapters and event kinds, kept by super admins.
  */
 @NullMarked
 package nu.fgv.revival.server.checklist.template;

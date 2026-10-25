@@ -1,4 +1,4 @@
-# M6: participants and helpers, invitations, responses, fees, referrals (product spec 5.6). Participants and helpers
+# Participants and helpers, invitations, responses, fees, referrals. Participants and helpers
 # log in with their FGV account; there are no personal links. People's names and contact details live in Spexregister;
 # a participant refers to a spexare by id, or holds a pending person (name, email, phone) until they become one.
 
@@ -108,7 +108,7 @@ type Participant {
     firstName: String!
     lastName: String!
     nickName: String
-    "Contact details: for the revival's directeurs and steering group only (section 7)."
+    "Contact details: for the revival's directeurs and steering group only."
     email: String
     phone: String
     "A pending person, not in Spexregister."
@@ -138,7 +138,7 @@ type Participant {
     feePaidAt: Instant
     "HELPER: compensation per shift, a cost in the budget."
     compensationPerShift: Amount
-    "M7: the revival paid this participant's FGV membership for the year."
+    "The revival paid this participant's FGV membership for the year."
     membershipPaid: Boolean!
     removed: Boolean!
     version: Int!

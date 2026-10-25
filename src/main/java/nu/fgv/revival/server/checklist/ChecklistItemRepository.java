@@ -24,11 +24,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Declares only what checklist items need, so it has no delete method (constitution IV). Filters run through
+ * Declares only what checklist items need, so it has no delete method. Filters run through
  * {@code SpecificationQueries}.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public interface ChecklistItemRepository extends Repository<ChecklistItem, Long> {
 

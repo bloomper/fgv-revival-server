@@ -38,11 +38,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * The lines event types propose for budgets (product spec 5.10, M5-FR-3): the super admin keeps them, everyone signed
+ * The lines event types propose for budgets: the super admin keeps them, everyone signed
  * in reads them with the types. Removing one deletes it; budget lines made from it keep its id.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class EventTypeBudgetLineService {
@@ -140,8 +140,6 @@ public class EventTypeBudgetLineService {
     private void manageable() {
         accessPolicy.requireManageEventTypes(callerService.current());
     }
-
-    // --- Helpers ----------------------------------------------------------------------------------------------------
 
     private EventTypeBudgetLine changeable(final Long id, final Long version) {
         final EventTypeBudgetLine line = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(EventTypeBudgetLine.class, id));

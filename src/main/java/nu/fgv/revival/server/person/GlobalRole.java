@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.person;
 
 /**
- * Roles that apply to every revival, from client roles on {@code fgv-revival} (FR-002).
+ * Roles that apply to every revival, from client roles on {@code fgv-revival}.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public enum GlobalRole {
 

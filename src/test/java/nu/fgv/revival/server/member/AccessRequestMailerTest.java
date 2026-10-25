@@ -52,7 +52,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class AccessRequestMailerTest {
@@ -123,7 +123,7 @@ class AccessRequestMailerTest {
     }
 
     /**
-     * M6-FR-5: one round of participant invitations makes one message per super admin, listing everyone waiting.
+     * One round of participant invitations makes one message per super admin, listing everyone waiting.
      */
     @Test
     void aRoundOfInvitationsIsOneMessageListingEveryone() {

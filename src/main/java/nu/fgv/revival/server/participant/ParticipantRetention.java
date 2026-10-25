@@ -33,15 +33,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Deletes participants' data once it is no longer needed (product spec 5.6 and section 7, M6-FR-20): dietary needs the
+ * Deletes participants' data once it is no longer needed: dietary needs the
  * day after the revival's last show, and the names and contact details of pending people who declined or never
  * answered once the revival has left {@code OPEN}; those participants are then closed with their roles. Then it
- * anonymizes the revivals archived or rejected {@value RevivalAnonymization#RETENTION_MONTHS} months ago (M7-FR-12). Runs
+ * anonymizes the revivals archived or rejected {@value RevivalAnonymization#RETENTION_MONTHS} months ago. Runs
  * daily at 03:15 Swedish time as the system, and the second part also as soon as a revival leaves {@code OPEN}. Logs
  * counts only.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Component
 @Slf4j
@@ -79,7 +79,7 @@ public class ParticipantRetention {
         } catch (final RuntimeException e) {
             log.warn("The daily deletion of participants' data failed: {}", e.getClass().getSimpleName());
         }
-        // Each revival in its own transaction, so one failing does not stop the others (M7-FR-12)
+        // Each revival in its own transaction, so one failing does not stop the others
         anonymization.anonymizeExpired();
     }
 

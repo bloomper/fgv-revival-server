@@ -24,7 +24,7 @@ import java.util.Locale;
  * GraphQL's {@code BudgetCategory}.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public record BudgetCategoryDto(String id, BudgetCategoryKind kind, @Nullable BudgetCategoryRole role,
                                 GuideVersionView.Text name, int position,

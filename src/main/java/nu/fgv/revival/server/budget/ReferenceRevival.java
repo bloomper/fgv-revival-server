@@ -35,11 +35,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * An earlier revival's budget and outcome per category, kept as reference (product spec 5.10, section 7): entered by
+ * An earlier revival's budget and outcome per category, kept as reference: entered by
  * the super admin, or made automatically from a revival that is deleted or anonymized. Holds no personal data.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "reference_revival")

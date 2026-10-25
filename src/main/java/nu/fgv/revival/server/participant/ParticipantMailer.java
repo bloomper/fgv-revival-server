@@ -39,12 +39,12 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Nyuppsättning's own emails to participants, as plain text like the minutes (M6-FR-5, M6-FR-10): the invitation or a
+ * Nyuppsättning's own emails to participants, as plain text like the minutes: the invitation or a
  * reminder, with the link to their page and how they log in, and the confirmation of a first yes. Sent after the
  * transaction commits and never failing it; addresses and content are never logged.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Component
 @Slf4j

@@ -57,13 +57,13 @@ import java.util.Objects;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * A participant's or helper's own page (product spec 5.6, M6-FR-9–15, M6-FR-19): their response with the terms and the
+ * A participant's or helper's own page: their response with the terms and the
  * consent to FGV's register, contact details, dietary needs, the fee by Swish and referrals. Only the caller's own
  * participation, in a revival they see as its participant, i.e. while it is {@code OPEN}. What they change in
  * Spexregister is recorded as done by "a participant via the revival", not by name.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Service
 @Slf4j
@@ -238,7 +238,7 @@ public class ParticipationService {
     }
 
     /**
-     * The caller's response (M6-FR-10–12). Yes needs the terms accepted; yes and maybe ask for the consent to FGV's
+     * The caller's response. Yes needs the terms accepted; yes and maybe ask for the consent to FGV's
      * register the first time. Consenting writes the consent to Spexregister, and turns a pending person into an
      * unpublished spexare there; a spexare declining is recorded there only when they had consented before. No from a
      * pending person deletes their name and contact details, and their role.
@@ -300,7 +300,7 @@ public class ParticipationService {
     }
 
     /**
-     * Records the consent and what follows from it in Spexregister (product spec 5.6). A pending person who consents
+     * Records the consent and what follows from it in Spexregister. A pending person who consents
      * becomes a spexare: if Spexregister fails part way, the response is refused and they stay pending; a spexare it
      * created before failing is left there, unpublished.
      */
@@ -363,7 +363,7 @@ public class ParticipationService {
     }
 
     /**
-     * The caller's contact details (M6-FR-13). A pending person's are kept here; a spexare's are written to Spexregister
+     * The caller's contact details. A pending person's are kept here; a spexare's are written to Spexregister
      * only with their consent, and refused without it, since they are then stored nowhere.
      */
     @Transactional
@@ -412,7 +412,7 @@ public class ParticipationService {
     }
 
     /**
-     * The caller's dietary needs and allergies, at most 1000 characters; blank deletes them (M6-FR-14).
+     * The caller's dietary needs and allergies, at most 1000 characters; blank deletes them.
      */
     @Transactional
     public Participation setDietary(final Long revivalId, final @Nullable String text, final Locale locale) {
@@ -435,7 +435,7 @@ public class ParticipationService {
     }
 
     /**
-     * Suggests someone the steering group may be missing (M6-FR-15): a participant, at most
+     * Suggests someone the steering group may be missing: a participant, at most
      * {@value #MAX_OPEN_REFERRALS} open suggestions each.
      */
     @Transactional
@@ -468,8 +468,8 @@ public class ParticipationService {
     }
 
     /**
-     * The QR code for the caller's fee as SVG: a participant of an {@code OPEN} revival with a Swish number and an unpaid
-     * fee above nothing; NOT_FOUND otherwise (M6-FR-19).
+     * The QR code for the caller's fee as SVG: a participant of an {@code OPEN} revival with a Swish number and an
+     * unpaid fee above nothing; NOT_FOUND otherwise.
      */
     @Transactional(readOnly = true)
     public byte[] swishQr(final Long revivalId, final Locale locale) {

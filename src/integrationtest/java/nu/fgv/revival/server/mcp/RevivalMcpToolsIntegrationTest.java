@@ -28,10 +28,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * User story 5: {@code list_revivals} through MCP, with the MCP client's own tokens (FR-023–FR-025).
+ * {@code list_revivals} through MCP, with the MCP client's own tokens.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
 

@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
  * The current Chalmersspex's show dates: the super admin keeps them, super admins and observers read them.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class SpexCalendarServiceTest {

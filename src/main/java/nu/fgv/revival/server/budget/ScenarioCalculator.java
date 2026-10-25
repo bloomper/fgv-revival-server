@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * The scenario calculator (product spec 5.10, M5-FR-10): what the result would be with other ticket sales, fee,
+ * The scenario calculator: what the result would be with other ticket sales, fee,
  * venue or party, from a budget's lines and settings. Pure, so every rule is tested on its own.
  * <ul>
  *     <li>The baseline comes from the lines that are not removed: the tickets are the quantity of the ticket lines and
@@ -39,7 +39,7 @@ import java.util.function.Predicate;
  * </ul>
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public final class ScenarioCalculator {
 

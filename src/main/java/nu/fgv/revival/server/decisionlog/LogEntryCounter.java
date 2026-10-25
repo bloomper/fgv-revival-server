@@ -26,11 +26,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * The last row number used in a revival's log, locked while rows are numbered (research R3). A technical counter, not
+ * The last row number used in a revival's log, locked while rows are numbered. A technical counter, not
  * audited.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Entity
 @Table(name = "log_entry_counter")

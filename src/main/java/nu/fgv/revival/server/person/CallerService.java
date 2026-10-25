@@ -46,12 +46,12 @@ import java.util.stream.Collectors;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Resolves the caller once per request (research R4): checks the {@code USER} role, records the person, claims revival
+ * Resolves the caller once per request: checks the {@code USER} role, records the person, claims revival
  * roles waiting on their verified email, and loads their active revival roles from the database so changes apply on
- * the next request (FR-020).
+ * the next request.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Slf4j
 @Service
@@ -98,8 +98,7 @@ public class CallerService {
     }
 
     /**
-     * The current caller. Refuses a caller without a token, or without the {@code USER} role on {@code fgv-revival}
-     * (FR-001).
+     * The current caller. Refuses a caller without a token, or without the {@code USER} role on {@code fgv-revival}.
      */
     public Caller current() {
         final Authentication authentication = SecurityUtil.currentAuthentication()
@@ -173,7 +172,7 @@ public class CallerService {
 
     /**
      * The person as a caller without a token, from their revival roles alone and without global roles: for a secret
-     * calendar link, which must stop working once they lose their role (M4-FR-6). Runs in the caller's transaction.
+     * calendar link, which must stop working once they lose their role. Runs in the caller's transaction.
      */
     public Caller forPerson(final Person person) {
         return new Caller(person, Set.of(), revivalRoles(person));

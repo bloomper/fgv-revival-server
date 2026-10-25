@@ -34,11 +34,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A mailing of a revival (product spec 5.8): its audience, subject and Markdown body. Drafted by the steering group,
+ * A mailing of a revival: its audience, subject and Markdown body. Drafted by the steering group,
  * sent by a directeur or a member with {@code COMMS}, or cancelled; never deleted while the revival exists.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Entity
 @Table(name = "mailing")

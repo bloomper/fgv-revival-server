@@ -56,11 +56,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * A revival's events (M4-FR-3, FR-4, FR-8): defaults from the type, validation, the checklist that follows the event,
+ * A revival's events: defaults from the type, validation, the checklist that follows the event,
  * conflicts and who may write.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {

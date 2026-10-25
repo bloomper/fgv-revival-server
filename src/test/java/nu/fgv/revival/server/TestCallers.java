@@ -32,7 +32,7 @@ import java.util.Set;
  * Fictitious callers and revivals for unit tests.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public final class TestCallers {
 

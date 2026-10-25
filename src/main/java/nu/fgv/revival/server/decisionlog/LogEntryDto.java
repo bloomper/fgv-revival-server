@@ -25,11 +25,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * A row as GraphQL's {@code LogEntry}. People are display names; {@code overdue} is computed for today in Sweden
- * (FR-011).
+ * A row as GraphQL's {@code LogEntry}. People are display names; {@code overdue} is computed for today in Sweden.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record LogEntryDto(Long id,
                           Long revivalId,

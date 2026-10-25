@@ -26,7 +26,7 @@ import java.time.LocalDate;
  * GraphQL's {@code ChecklistSummary}, with its open, overdue and total item counts.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
                                   GuideVersionView.@Nullable Text chapterTitle, @Nullable String name,

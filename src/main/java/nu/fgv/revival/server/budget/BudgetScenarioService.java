@@ -32,11 +32,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * What-ifs over a revival's budget (product spec 5.10, M5-FR-10): who reads the budget calculates, who writes it saves
+ * What-ifs over a revival's budget: who reads the budget calculates, who writes it saves
  * named scenarios. A saved scenario's result is calculated from the budget as it is when it is read.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class BudgetScenarioService {
@@ -97,8 +97,6 @@ public class BudgetScenarioService {
         }
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
     private static @Nullable BigDecimal amount(final @Nullable BigDecimal amount) {
         return BudgetService.validAmount(amount, BigDecimal.ZERO);
     }
@@ -151,7 +149,7 @@ public class BudgetScenarioService {
     }
 
     /**
-     * Marks the scenario removed; it stays in the history (constitution IV).
+     * Marks the scenario removed; it stays in the history.
      */
     @Transactional
     public void remove(final Long id, final Long version) {

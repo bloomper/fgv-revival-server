@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
  * on first use, so the application starts while Keycloak is down or the secret is missing.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Configuration(proxyBeanMethods = false)
 public class KeycloakAdminConfig {

@@ -26,10 +26,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Editing the draft, the immutability of published versions (SC-003), refusals (SC-006) and the audit trail (FR-039).
+ * Editing the draft, the immutability of published versions, refusals and the audit trail.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

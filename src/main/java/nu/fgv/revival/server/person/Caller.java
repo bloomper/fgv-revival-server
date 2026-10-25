@@ -26,7 +26,7 @@ import java.util.Set;
  * The person making the current request, their global roles and their active revival roles.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record Caller(Person person, Set<GlobalRole> globalRoles, Map<Long, RevivalRoleAssignment> revivalRoles) {
 

@@ -33,10 +33,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Event types, a revival's events with their checklists, and calendar links over GraphQL and the calendar feed over
- * HTTP, against MySQL and Keycloak (M4).
+ * HTTP, against MySQL and Keycloak.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

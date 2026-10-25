@@ -58,14 +58,14 @@ import java.util.stream.Collectors;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Invitations (product spec 5.6, M6-FR-5–8). Each invited participant gets the participant or helper role in the
+ * Invitations. Each invited participant gets the participant or helper role in the
  * revival, waiting on their email address exactly as directeurs and steering group members do, an FGV account when the
  * address has none (Keycloak emails them), and Nyuppsättning's own email with the link to their page. Inviting someone
  * again sends a reminder. The super admins hear once per call about everyone who lacks access. Addresses are never
  * logged.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Service
 public class ParticipantInvitations {

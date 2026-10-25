@@ -23,7 +23,7 @@ import java.util.Optional;
 
 /**
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @NoRepositoryBean
 public interface CatalogRepository<E extends CatalogEntry> extends Repository<E, String> {

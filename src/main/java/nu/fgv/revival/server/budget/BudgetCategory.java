@@ -28,11 +28,11 @@ import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A budget category, from the list the super admin keeps (M5-FR-1). Its kind is fixed when it is created, so lines and
+ * A budget category, from the list the super admin keeps. Its kind is fixed when it is created, so lines and
  * transactions in it keep counting as income or cost.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "budget_category")

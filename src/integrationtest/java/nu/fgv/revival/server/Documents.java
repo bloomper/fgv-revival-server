@@ -20,7 +20,7 @@ package nu.fgv.revival.server;
  * GraphQL documents shared by the integration tests.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public final class Documents {
 

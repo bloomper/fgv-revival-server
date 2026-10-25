@@ -31,10 +31,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The steering group's meetings that are not cancelled, all day, for its directeurs and steering group only (M4-FR-6).
+ * The steering group's meetings that are not cancelled, all day, for its directeurs and steering group only.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Component
 class MeetingCalendarSource implements CalendarSource {

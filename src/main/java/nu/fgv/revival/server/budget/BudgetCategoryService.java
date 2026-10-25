@@ -33,11 +33,11 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The budget categories the super admin keeps (M5-FR-1). A category's kind is fixed when it is created; its role may
+ * The budget categories the super admin keeps. A category's kind is fixed when it is created; its role may
  * change, but at most one active category holds each role, and only one of the role's kind.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class BudgetCategoryService extends CatalogService<BudgetCategory> {

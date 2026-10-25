@@ -20,10 +20,10 @@ package nu.fgv.revival.server.checklist;
 import org.jspecify.annotations.Nullable;
 
 /**
- * GraphQL's {@code ChecklistItemFilter}: every given filter must match (FR-028).
+ * GraphQL's {@code ChecklistItemFilter}: every given filter must match.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistItemFilterDto(@Nullable Boolean mine, @Nullable Boolean open, @Nullable Boolean overdue,
                                      @Nullable Long checklistId,

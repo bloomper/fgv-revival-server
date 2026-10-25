@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Searching one version in memory (research R4, FR-021): case-insensitive substring matching on the Swedish and English
+ * Searching one version in memory: case-insensitive substring matching on the Swedish and English
  * plain text of the introduction, titles and items. A query without diacritics ignores them in the text ("kar" finds
  * "kår"); a query with diacritics matches them exactly ("kår" does not find "kar").
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public final class GuideSearch {
 

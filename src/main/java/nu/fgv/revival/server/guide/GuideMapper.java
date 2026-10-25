@@ -24,7 +24,7 @@ import org.mapstruct.factory.Mappers;
  * {@link GuideVersionViews}. This maps the small types several features share.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Mapper
 public interface GuideMapper {

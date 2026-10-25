@@ -25,10 +25,10 @@ import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 /**
- * Calendar links over GraphQL (event.graphqls). A thin adapter: every rule is in {@link CalendarFeedService}.
+ * Calendar links over GraphQL (event.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @Controller
 public class CalendarFeedGraphqlApi {

@@ -31,11 +31,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * The budget categories, and every field that shows one: rows store the id, GraphQL returns the entry. A thin adapter:
- * every rule is in {@link BudgetCategoryService}.
+ * The budget categories, and every field that shows one: rows store the id, GraphQL returns the entry.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Controller
 public class BudgetCategoryGraphqlApi {

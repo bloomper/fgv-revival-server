@@ -16,11 +16,11 @@
 package nu.fgv.revival.server.guide;
 
 /**
- * What the application does with a guide item, set by its type (product spec 5.2). The super admin names the types;
+ * What the application does with a guide item, set by its type. The super admin names the types;
  * the kinds are fixed, because each one drives behaviour.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public enum GuideItemKind {
 

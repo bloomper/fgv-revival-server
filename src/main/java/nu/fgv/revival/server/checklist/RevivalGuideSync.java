@@ -42,14 +42,14 @@ import java.util.Optional;
 
 /**
  * Keeps a revival's chapter checklists, required items and guide question rows in line with the guide version it is
- * pinned to (FR-022, FR-033, FR-034, research R10). Idempotent. Runs in the transaction of the pin or creation that
+ * pinned to. Idempotent. Runs in the transaction of the pin or creation that
  * triggered it, so both succeed or fail together, and once at startup for every revival that is not archived.
  *
  * <p>It writes through internal methods that do not ask {@code AccessPolicy}: the triggering operation was checked, and
- * super admins, who publish versions and create revivals, may not write the log or checklists themselves (FR-002).
+ * super admins, who publish versions and create revivals, may not write the log or checklists themselves.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 @Slf4j

@@ -29,7 +29,7 @@ import java.util.List;
  * from the ids the records hold.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public final class BudgetDtos {
 

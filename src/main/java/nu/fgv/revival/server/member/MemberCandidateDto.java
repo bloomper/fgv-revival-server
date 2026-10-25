@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
  * A user of the FGV realm as GraphQL's {@code MemberCandidate}, for picking a member.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 public record MemberCandidateDto(String email, @Nullable String displayName, boolean hasAccess) {
 }

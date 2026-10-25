@@ -16,10 +16,10 @@
 package nu.fgv.revival.server.material;
 
 /**
- * What a material is (product spec 5.9).
+ * What a material is.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 public enum MaterialCategory {
     SCRIPT,

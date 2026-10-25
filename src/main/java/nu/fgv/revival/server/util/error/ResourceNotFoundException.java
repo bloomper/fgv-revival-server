@@ -20,10 +20,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * A record that does not exist, or that the caller may not see (FR-017). Both give the same message.
+ * A record that does not exist, or that the caller may not see. Both give the same message.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public class ResourceNotFoundException extends ResponseStatusException {
 

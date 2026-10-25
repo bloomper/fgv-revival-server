@@ -31,12 +31,12 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * A revival's participants over MCP (M6), read only, for its directeurs and steering group and the super admins: names,
- * positions, responses, invitations and whether fees are paid. Never contact details or dietary needs (constitution V,
- * product spec section 7). Participants and helpers get no MCP tools.
+ * A revival's participants over MCP, read only, for its directeurs and steering group and the super admins: names,
+ * positions, responses, invitations and whether fees are paid. Never contact details or dietary needs. Participants and
+ * helpers get no MCP tools.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Component
 public class ParticipantMcpTools {

@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Declares only what checklists need, so it has no delete method (constitution IV).
+ * Declares only what checklists need, so it has no delete method.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public interface ChecklistRepository extends Repository<Checklist, Long> {
 

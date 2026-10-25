@@ -22,10 +22,10 @@ import org.jspecify.annotations.Nullable;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * The limits on guide text, per language (FR-009, FR-009a, data-model.md).
+ * The limits on guide text, per language.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public final class GuideRules {
 

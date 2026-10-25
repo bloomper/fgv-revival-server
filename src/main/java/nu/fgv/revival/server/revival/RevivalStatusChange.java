@@ -32,10 +32,10 @@ import org.hibernate.envers.Audited;
 import java.time.Instant;
 
 /**
- * One status change of a revival. Append-only (FR-018).
+ * One status change of a revival. Append-only.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Entity
 @Table(name = "revival_status_change")

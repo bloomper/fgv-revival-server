@@ -29,10 +29,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The list_events MCP tool (M4-FR-10).
+ * The list_events MCP tool.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 class EventMcpToolsIntegrationTest extends AbstractIntegrationTest {
 

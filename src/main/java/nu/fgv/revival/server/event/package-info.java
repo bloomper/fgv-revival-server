@@ -17,7 +17,7 @@
 
 /**
  * A revival's timeline: the event types the super admin keeps, a revival's events, and the dates proposed from its
- * premiere (product spec 5.3, M4).
+ * premiere.
  */
 @NullMarked
 package nu.fgv.revival.server.event;

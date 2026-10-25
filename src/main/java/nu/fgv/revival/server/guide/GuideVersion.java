@@ -35,11 +35,11 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * A published version of the guide, or the one draft. Publishing keeps the id, so the draft becomes the version
- * (research R3). Every version holds its own chapters, sections and items.
+ * A published version of the guide, or the one draft. Publishing keeps the id, so the draft becomes the version.
+ * Every version holds its own chapters, sections and items.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "guide_version")

@@ -31,7 +31,7 @@ import java.util.List;
  * folded at 75 octets without splitting a UTF-8 character, text escaped, and times in UTC.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 final class IcsWriter {
 

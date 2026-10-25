@@ -20,7 +20,7 @@ package nu.fgv.revival.server.participant;
  * A participant's answer to the invitation.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 public enum ParticipantResponse {
 

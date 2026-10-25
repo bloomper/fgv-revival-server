@@ -41,7 +41,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Closing end to end (M7): the sync's preview, starting it, its run against a stub of Spexregister with a failure and a
+ * Closing end to end: the sync's preview, starting it, its run against a stub of Spexregister with a failure and a
  * resume without duplicates, membership marks, the closing status, anonymization with its person rule and audit purge,
  * the automatic anonymization, the audit purge on deletion, and the guard on references to {@code person}.
  *

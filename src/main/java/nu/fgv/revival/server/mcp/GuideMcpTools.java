@@ -35,11 +35,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * MCP tools for the guide (specs/003-m2-guide/contracts/mcp.md). A thin adapter over {@link GuideService} and
- * {@link GuideSuggestionService}: the same rules as GraphQL (FR-038). Output never names a person (constitution V).
+ * MCP tools for the guide. Output never names a person.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Component
 public class GuideMcpTools {
@@ -59,7 +58,7 @@ public class GuideMcpTools {
 
     /**
      * The version to read: the one a revival follows when one is given, otherwise the latest published one. Never the
-     * draft (FR-037).
+     * draft.
      */
     private GuideVersionView version(final @Nullable Long revivalId) {
         return revivalId == null

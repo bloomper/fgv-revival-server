@@ -25,7 +25,7 @@ import java.util.List;
  * A mailing's recipients; never deleted while the revival exists.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface MailingRecipientRepository extends Repository<MailingRecipient, Long> {
 

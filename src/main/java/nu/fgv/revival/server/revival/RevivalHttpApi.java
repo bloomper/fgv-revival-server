@@ -29,11 +29,10 @@ import java.time.Duration;
 import java.util.Set;
 
 /**
- * A revival's plain HTTP endpoints, for what GraphQL does not suit (constitution II): the spex poster as an image. A
- * thin adapter: the services decide.
+ * A revival's plain HTTP endpoints, for what GraphQL does not suit: the spex poster as an image.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @RestController
 public class RevivalHttpApi {

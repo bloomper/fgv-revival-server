@@ -30,10 +30,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * The link services over GraphQL (material.graphqls). A thin adapter: every rule is in {@link LinkServiceCatalog}.
+ * The link services over GraphQL (material.graphqls).
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Controller
 public class LinkServiceGraphqlApi {

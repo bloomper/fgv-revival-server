@@ -49,10 +49,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The event types the super admin keeps (M4-FR-1).
+ * The event types the super admin keeps.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class EventTypeServiceTest {

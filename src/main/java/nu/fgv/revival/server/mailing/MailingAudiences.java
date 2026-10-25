@@ -53,12 +53,12 @@ import java.util.stream.Collectors;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Whom an audience reaches now (M6B-FR-8), resolved when a mailing is previewed or sent, and their email addresses at
+ * Whom an audience reaches now, resolved when a mailing is previewed or sent, and their email addresses at
  * that moment: a spexare's from Spexregister in one call, a pending person's own, a steering group member's login
  * address. Addresses are only handed to the mailer, never stored or logged.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 @Component
 class MailingAudiences {

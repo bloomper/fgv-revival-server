@@ -25,7 +25,7 @@ import java.util.Optional;
  * Calendar links are revoked, not deleted, except with their revival.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public interface CalendarFeedRepository extends Repository<CalendarFeed, Long> {
 

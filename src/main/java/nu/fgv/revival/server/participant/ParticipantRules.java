@@ -30,7 +30,7 @@ import static org.springframework.util.StringUtils.hasText;
  * The checks on what people type for participants, so the services and their tests agree.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 final class ParticipantRules {
 

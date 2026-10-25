@@ -31,10 +31,10 @@ import java.util.Objects;
 
 /**
  * The current Chalmersspex's show dates: the super admin keeps them, super admins and observers read them for the
- * cross-revival timeline (product spec 5.1).
+ * cross-revival timeline.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Service
 public class SpexCalendarService {

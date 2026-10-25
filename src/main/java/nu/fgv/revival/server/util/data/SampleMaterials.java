@@ -32,13 +32,13 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Sample materials and inventory (M8-FR-8): a material in each kind of place, FGV's applications and services such as
+ * Sample materials and inventory: a material in each kind of place, FGV's applications and services such as
  * Google Drive, one for a single position when Spexregister has positions, and a few inventory items with owners and
  * statuses; one of each removed. The links are fictitious. Goes through the
  * repositories, so the rows are audited as usual.
  *
  * @author Anders Jacobsson
- * @since 0.9
+ * @since 1.0
  */
 @Component
 class SampleMaterials {

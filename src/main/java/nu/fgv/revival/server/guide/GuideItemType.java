@@ -31,7 +31,7 @@ import org.hibernate.envers.Audited;
  * which never change, keep behaving as they did.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "guide_item_type")

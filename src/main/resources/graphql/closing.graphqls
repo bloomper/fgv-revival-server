@@ -1,4 +1,4 @@
-# M7: closing, the participation sync to Spexregister, anonymization (product spec 5.11, section 7).
+# Closing, the participation sync to Spexregister, anonymization.
 
 enum SyncOperation {
     "Create the revival in Spexregister (spexRevivalCreate)."

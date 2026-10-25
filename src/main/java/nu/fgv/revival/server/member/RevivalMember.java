@@ -40,11 +40,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A role in one revival, held by a person or waiting on an email address. Removing closes the row; it is never deleted
- * (constitution IV). The waiting email is not audited and is cleared on removal or claim (FR-028).
+ * A role in one revival, held by a person or waiting on an email address. Removing closes the row; it is never deleted.
+ * The waiting email is not audited and is cleared on removal or claim.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 @Entity
 @Table(name = "revival_member")

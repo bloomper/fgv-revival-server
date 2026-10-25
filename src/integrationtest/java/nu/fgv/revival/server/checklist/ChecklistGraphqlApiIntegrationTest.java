@@ -29,10 +29,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Chapter checklists over GraphQL against MySQL and Keycloak (US4, FR-022–FR-029).
+ * Chapter checklists over GraphQL against MySQL and Keycloak.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 

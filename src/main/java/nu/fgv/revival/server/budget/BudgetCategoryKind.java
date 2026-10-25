@@ -19,7 +19,7 @@ package nu.fgv.revival.server.budget;
  * Whether a category's amounts are income or cost. Fixed when the category is created.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public enum BudgetCategoryKind {
     INCOME,

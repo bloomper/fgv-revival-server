@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Links (M8-FR-2, M8-FR-3): only absolute https URLs with a host and without credentials, and recognition of a link's
+ * Links: only absolute https URLs with a host and without credentials, and recognition of a link's
  * service by its host.
  *
  * @author Anders Jacobsson

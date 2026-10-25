@@ -59,12 +59,11 @@ import static nu.fgv.revival.server.guide.GuideMapper.GUIDE_MAPPER;
 import static org.springframework.util.StringUtils.hasText;
 
 /**
- * Suggestions from running revivals and the super admin's decisions (FR-031–FR-035, research R11). Accepting applies the
- * change to the draft through {@link GuideDraftService}, so the draft's own checks apply. Discarding a draft reopens what
- * was accepted into it.
+ * Suggestions from running revivals and the super admin's decisions. Accepting applies the change to the draft through
+ * {@link GuideDraftService}, so the draft's own checks apply. Discarding a draft reopens what was accepted into it.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Service
 public class GuideSuggestionService implements DraftSuggestions, GuideDraftService.DraftDiscardListener {
@@ -132,7 +131,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
     }
 
     /**
-     * Records a suggestion on a published version, from a revival the author may suggest from (FR-031).
+     * Records a suggestion on a published version, from a revival the author may suggest from.
      */
     @Transactional
     public GuideSuggestionDto create(final Proposal proposal) {
@@ -218,7 +217,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
     }
 
     /**
-     * Applies an open suggestion to the draft, starting one from the latest version when there is none (FR-033).
+     * Applies an open suggestion to the draft, starting one from the latest version when there is none.
      */
     @Transactional
     public GuideSuggestionDto accept(final Long id, final Long expectedVersion, final @Nullable String note, final @Nullable Resolution resolution) {
@@ -340,7 +339,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
     }
 
     /**
-     * Only the author withdraws, while they may still suggest from the revival (FR-034).
+     * Only the author withdraws, while they may still suggest from the revival.
      */
     @Transactional
     public GuideSuggestionDto withdraw(final Long id, final Long expectedVersion) {
@@ -356,7 +355,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
     }
 
     /**
-     * The suggestions the caller may see (FR-035), newest first.
+     * The suggestions the caller may see, newest first.
      */
     @Transactional(readOnly = true)
     public List<GuideSuggestionDto> findVisible(final @Nullable Collection<GuideSuggestionStatus> statuses, final @Nullable Long revivalId) {
@@ -465,7 +464,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
     }
 
     /**
-     * What the draft gets when its item differs from the suggestion's version (FR-033).
+     * What the draft gets when its item differs from the suggestion's version.
      */
     public record Resolution(boolean keep, @Nullable String type, @Nullable String sv, @Nullable String en) {
     }

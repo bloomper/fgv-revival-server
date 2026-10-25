@@ -18,10 +18,10 @@
 package nu.fgv.revival.server.checklist;
 
 /**
- * How a template item's deadline is computed from a checklist's date (FR-031, research R11).
+ * How a template item's deadline is computed from a checklist's date.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public enum RelativeDeadlineKind {
 

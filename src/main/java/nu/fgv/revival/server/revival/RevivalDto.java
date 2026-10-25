@@ -29,7 +29,7 @@ import java.util.List;
  * GraphQL layer resolves them to display names.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalDto(Long id,
                          SpexDto spex,

@@ -15,7 +15,7 @@
  */
 
 /**
- * MCP tools, thin adapters over the services (constitution II).
+ * MCP tools, thin adapters over the services.
  */
 @NullMarked
 package nu.fgv.revival.server.mcp;

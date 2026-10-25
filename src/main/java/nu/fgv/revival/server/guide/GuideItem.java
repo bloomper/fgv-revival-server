@@ -30,11 +30,11 @@ import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A tip, requirement, question or text in Markdown. A null section means it comes before the chapter's first section
- * (FR-007). Its key stays the same from version to version, so M3 can link to it (research R3).
+ * A tip, requirement, question or text in Markdown. A null section means it comes before the chapter's first section.
+ * Its key stays the same from version to version, so checklists can link to it.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "guide_item")

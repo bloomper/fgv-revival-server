@@ -101,15 +101,15 @@ import java.util.Set;
 /**
  * Brings the sample revivals to life once the guide sync has given them their checklists and guide questions at
  * startup: progress in the checklists in line with each revival's status, events with their checklists (one cancelled),
- * decision log entries (some imported from a workbook), meetings with minutes sent by email, guide suggestions, budgets,
- * materials and inventory, calendar links, and Chalmersspexet's dates, one of them clashing with an open revival's
- * premiere. Revivals that are or have been open get participants, availability, shifts and mailings; those that have
- * settled the surplus decision, the FGV membership and a sync to Spexregister, failed while settling and done once
- * archived. Last, the revival archived {@value SampleDataImporter#ANONYMIZED_YEARS_AGO} years ago is anonymized, as the
- * nightly job would. Goes through the repositories, so the rows are audited as usual.
+ * decision log entries (some imported from a workbook), meetings with minutes sent by email, guide suggestions,
+ * budgets, materials and inventory, calendar links, and Chalmersspexet's dates, one of them clashing with an open
+ * revival's premiere. Revivals that are or have been open get participants, availability, shifts and mailings; those
+ * that have settled the surplus decision, the FGV membership and a sync to Spexregister, failed while settling and done
+ * once archived. Last, the revival archived {@value SampleDataImporter#ANONYMIZED_YEARS_AGO} years ago is anonymized,
+ * as the nightly job would. Goes through the repositories, so the rows are audited as usual.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Slf4j
 @Component
@@ -389,8 +389,6 @@ public class SampleActivityImporter {
         }
     }
 
-    // --- Checklists ---------------------------------------------------------------------------------------------------
-
     private void progressPhaseChecklists(final SampleRevival revival, final int phasesDone) {
         for (final Checklist checklist : checklistRepository.findByRevivalIdAndKind(revival.id(), ChecklistKind.CHAPTER)) {
             final int phase = SampleGuide.chapterIndex(Objects.requireNonNull(checklist.getChapterKey()));
@@ -430,8 +428,6 @@ public class SampleActivityImporter {
         item.setStateChangedAt(Instant.now().minus(Duration.ofDays(daysAgo)));
         checklistItemRepository.save(item);
     }
-
-    // --- Events -------------------------------------------------------------------------------------------------------
 
     /**
      * The sample event templates on the types they are for, so that a new rehearsal or show weekend gets its checklist.
@@ -589,8 +585,6 @@ public class SampleActivityImporter {
                            final Set<String> tags) {
         return entry(revival, date, type, text, status, owner, deadline, tags, LogEntryOrigin.MANUAL);
     }
-
-    // --- Decision log and meetings ------------------------------------------------------------------------------------
 
     private LogEntry entry(final SampleRevival revival,
                            final LocalDate date,
@@ -804,8 +798,6 @@ public class SampleActivityImporter {
         spexCalendarRepository.saveAndFlush(spexCalendarDate);
     }
 
-    // --- Closing ------------------------------------------------------------------------------------------------------
-
     /**
      * An accepted suggestion behind the tip v2 added, one rejected and two open ones.
      */
@@ -846,8 +838,6 @@ public class SampleActivityImporter {
         suggestionRepository.saveAll(List.of(accepted, rejected, change, add));
     }
 
-    // --- Chalmersspexet's dates ---------------------------------------------------------------------------------------
-
     private LocalDate today() {
         return LocalDate.now(zone);
     }
@@ -863,8 +853,6 @@ public class SampleActivityImporter {
             return people;
         }
     }
-
-    // --- Guide suggestions --------------------------------------------------------------------------------------------
 
     private record SteeringGroupMember(long personId, Set<String> capabilities) {
     }

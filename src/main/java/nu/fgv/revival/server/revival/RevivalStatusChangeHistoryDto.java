@@ -22,7 +22,7 @@ import java.time.Instant;
  * One entry in a revival's status history. {@code changedBy} is a person id, resolved to a name by the GraphQL layer.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public record RevivalStatusChangeHistoryDto(RevivalStatus from, RevivalStatus to, Long changedBy, Instant changedAt) {
 }

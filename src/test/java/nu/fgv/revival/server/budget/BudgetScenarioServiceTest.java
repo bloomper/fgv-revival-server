@@ -45,10 +45,10 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * Saved scenarios (M5-FR-10): readers calculate, writers save, and a removed scenario is kept but not listed.
+ * Saved scenarios: readers calculate, writers save, and a removed scenario is kept but not listed.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class BudgetScenarioServiceTest {

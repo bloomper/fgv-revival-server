@@ -1,5 +1,5 @@
-# Every operation requires a bearer token from the fgv-revival client with the USER client role. Rules per operation
-# are in specs/001-m1-foundation/contracts/README.md; they are enforced in the service layer.
+# Every operation requires a bearer token from the fgv-revival client with the USER client role.
+# Rules per operation are enforced in the service layer.
 
 schema {
     query: Query

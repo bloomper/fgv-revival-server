@@ -37,11 +37,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * The M6 spexare calls against a stub of Spexregister's GraphQL API (constitution VII): what is sent, with the acting
+ * The spexare calls against a stub of Spexregister's GraphQL API: what is sent, with the acting
  * person, and what is read back.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 class SpexregisterClientTest {
 

@@ -57,12 +57,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * The steering group's side of participants (product spec 5.6, M6-FR-2–4, M6-FR-16–18): candidates from Spexregister,
- * adding, changing and removing participants, fees, settings, counts and referrals. Every method resolves the caller and
- * asks {@link AccessPolicy} first (constitution III).
+ * The steering group's side of participants: candidates from Spexregister, adding, changing and removing participants,
+ * fees, settings, counts and referrals. Every method resolves the caller and asks {@link AccessPolicy} first.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Service
 public class ParticipantService {
@@ -146,8 +145,8 @@ public class ParticipantService {
     }
 
     /**
-     * A pending person: names 1–100 characters; a participant needs an email address, a helper an email address or a phone
-     * number.
+     * A pending person: names 1–100 characters; a participant needs an email address, a helper an email address or a
+     * phone number.
      */
     static PendingPerson pendingPerson(final ParticipantKind kind, final @Nullable String firstName, final @Nullable String lastName,
                                        final @Nullable String email, final @Nullable String phone) {
@@ -171,8 +170,6 @@ public class ParticipantService {
             throw new BadRequestException("error.participant.contactRequired");
         }
     }
-
-    // --- Reading ----------------------------------------------------------------------------------------------------
 
     private static @Nullable BigDecimal compensation(final ParticipantKind kind, final @Nullable BigDecimal compensation) {
         if (compensation != null && kind != ParticipantKind.HELPER) {
@@ -218,7 +215,7 @@ public class ParticipantService {
 
     /**
      * Spexare who took part in the revival's original spex or its earlier revivals, not deceased and not already a
-     * participant, by last and first name, with the spex of that family they took part in, newest first (M6-FR-2).
+     * participant, by last and first name, with the spex of that family they took part in, newest first.
      */
     @Transactional(readOnly = true)
     public List<SpexareCandidate> candidates(final Long revivalId) {
@@ -275,8 +272,6 @@ public class ParticipantService {
                 .collect(Collectors.toSet());
     }
 
-    // --- Adding and changing ----------------------------------------------------------------------------------------
-
     /**
      * Spexregister's tasks as positions. Every signed-in caller.
      */
@@ -292,7 +287,7 @@ public class ParticipantService {
 
     /**
      * Adds a spexare who exists in Spexregister, is not deceased and is not already a participant, or a pending person:
-     * a participant needs an email address to be invited, a helper an email address or a phone number (M6-FR-3, 4).
+     * a participant needs an email address to be invited, a helper an email address or a phone number.
      */
     @Transactional
     public ParticipantDto add(final NewParticipant input, final Locale locale) {
@@ -409,7 +404,7 @@ public class ParticipantService {
 
     /**
      * Closes the participant and their participant role. A pending person's name and contact details, and anyone's
-     * dietary needs, are deleted (product spec section 7).
+     * dietary needs, are deleted.
      */
     @Transactional
     public void remove(final Long id, final Long version) {
@@ -438,9 +433,9 @@ public class ParticipantService {
     }
 
     /**
-     * The year the revival pays FGV membership for, and for whom (M7-FR-1): participants who answered yes and are not
-     * removed; everyone else is unmarked. A directeur while the revival is closing or settling, or a super admin. Returns
-     * the participants who may be marked.
+     * The year the revival pays FGV membership for, and for whom: participants who answered yes and are not removed;
+     * everyone else is unmarked. A directeur while the revival is closing or settling, or a super admin. Returns the
+     * participants who may be marked.
      */
     @Transactional
     public List<ParticipantDto> setMembership(final Long revivalId, final Integer year, final Collection<Long> participantIds, final Locale locale) {
@@ -482,7 +477,7 @@ public class ParticipantService {
     }
 
     /**
-     * Marks a participant's fee paid or not: writers of the budget (M5's {@code FINANCE}).
+     * Marks a participant's fee paid or not: writers of the budget ({@code FINANCE}).
      */
     @Transactional
     public ParticipantDto setFeePaid(final Long id, final Long version, final boolean paid, final Locale locale) {
@@ -611,8 +606,6 @@ public class ParticipantService {
         }
     }
 
-    // --- Settings ---------------------------------------------------------------------------------------------------
-
     /**
      * Counts for the dashboard, from the database alone; null for callers who do not read participants. Fees count
      * participants, not helpers: paid, and unpaid among those who said yes and owe more than nothing.
@@ -676,8 +669,8 @@ public class ParticipantService {
     }
 
     /**
-     * Open referrals, oldest first, for readers of participants; empty for others. The referrer's name is left out while
-     * Spexregister cannot be read.
+     * Open referrals, oldest first, for readers of participants; empty for others. The referrer's name is left out
+     * while Spexregister cannot be read.
      */
     @Transactional(readOnly = true)
     public List<ReferralDto> referrals(final Long revivalId, final Locale locale) {
@@ -706,8 +699,6 @@ public class ParticipantService {
                     referrer == null ? null : (referrer.firstName() + " " + referrer.lastName()).strip(), referral.getCreatedAt());
         }).toList();
     }
-
-    // --- Counts -----------------------------------------------------------------------------------------------------
 
     /**
      * Handles a referral: ADDED makes a pending participant of it, named by splitting at the last space, with the
@@ -754,8 +745,6 @@ public class ParticipantService {
         referralRepository.delete(referral);
         return added;
     }
-
-    // --- Referrals --------------------------------------------------------------------------------------------------
 
     /**
      * Whether the caller reads participants of the revival, for resolvers that leave others out.

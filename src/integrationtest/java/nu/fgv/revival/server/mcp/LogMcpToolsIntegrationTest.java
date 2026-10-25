@@ -33,7 +33,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The decision log MCP tools apply the web application's rules, with owners by display name (M3 FR-043, FR-045).
+ * The decision log MCP tools apply the web application's rules, with owners by display name.
  *
  * @author Anders Jacobsson
  */

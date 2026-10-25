@@ -12,7 +12,7 @@ extend type Query {
 
 extend type Mutation {
     """
-    SUPER_ADMIN adds DIRECTEUR or STEERING_GROUP. Directeur adds STEERING_GROUP (FR-019, FR-019a). Someone who has not
+    SUPER_ADMIN adds DIRECTEUR or STEERING_GROUP. Directeur adds STEERING_GROUP. Someone who has not
     logged in with that verified email waits. An email that is not a user in the FGV realm gets one, without any role,
     and Keycloak emails them an invitation (invitedAt); the super admins are emailed when the user lacks the fgv-revival
     USER role. Never fails because Keycloak cannot be reached: the member then waits without an invitation.
@@ -48,7 +48,7 @@ enum RevivalRole {
 }
 
 """
-An area of responsibility a steering group member can hold (FR-003), from the list SUPER_ADMIN keeps. The four the
+An area of responsibility a steering group member can hold, from the list SUPER_ADMIN keeps. The four the
 list started with have the ids FINANCE, CATERING, STAFFING and COMMS; new ones get a UUID.
 """
 type Capability {
@@ -118,7 +118,7 @@ input RevivalMemberCapabilitiesInput {
     capabilities: [ID!]!
 }
 
-"A member of the revival or a free-text name (FR-009). Exactly one of person or name is set."
+"A member of the revival or a free-text name. Exactly one of person or name is set."
 type Owner {
     "A directeur or steering group member, by display name only."
     person: OwnerPerson
@@ -129,7 +129,7 @@ type Owner {
 type OwnerPerson {
     id: ID!
     displayName: String
-    "False when the person no longer holds a revival role (counts as no owner for FR-019)."
+    "False when the person no longer holds a revival role (counts as no owner)."
     active: Boolean!
 }
 
@@ -140,13 +140,13 @@ input OwnerInput {
     name: String
 }
 
-"A person shown by display name, never by email address (FR-048)."
+"A person shown by display name, never by email address."
 type PersonRef {
     id: ID!
     displayName: String
 }
 
 extend type Revival {
-    "Active directeurs and steering group members, who can own rows and checklist items (M3 FR-009)."
+    "Active directeurs and steering group members, who can own rows and checklist items."
     ownerCandidates: [PersonRef!]!
 }

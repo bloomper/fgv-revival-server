@@ -23,7 +23,7 @@ import java.time.Instant;
  * GraphQL's {@code CalendarFeed}: the caller's active link, without its token.
  *
  * @author Anders Jacobsson
- * @since 0.5
+ * @since 1.0
  */
 public record CalendarFeedDto(Instant createdAt) {
 }

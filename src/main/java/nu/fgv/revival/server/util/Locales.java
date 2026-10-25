@@ -21,10 +21,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.Locale;
 
 /**
- * Swedish first, English when asked for (constitution VIII).
+ * Swedish first, English when asked for.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public final class Locales {
 

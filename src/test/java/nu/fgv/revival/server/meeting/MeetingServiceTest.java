@@ -60,10 +60,10 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * A meeting's lifecycle and its closing rule (FR-016–FR-020).
+ * A meeting's lifecycle and its closing rule.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 class MeetingServiceTest {

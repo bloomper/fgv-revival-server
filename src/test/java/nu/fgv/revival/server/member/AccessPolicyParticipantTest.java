@@ -37,12 +37,12 @@ import static nu.fgv.revival.server.member.AccessPolicyTest.revival;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The M6 rules in {@link AccessPolicy} (M6-FR-1, constitution III): participants and helpers see their revival while it
+ * The participant rules in {@link AccessPolicy}: participants and helpers see their revival while it
  * is {@code OPEN}, for their own page, and every row of the permission matrix that belongs to the steering group stays
  * closed to them; and who reads and writes participants and their dietary needs.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 class AccessPolicyParticipantTest {
 
@@ -76,7 +76,7 @@ class AccessPolicyParticipantTest {
     }
 
     /**
-     * Walks every steering group operation of the permission matrix (product spec 3) for a participant and a helper, in
+     * Walks every steering group operation of the permission matrix for a participant and a helper, in
      * every status: all refused.
      */
     @ParameterizedTest
@@ -135,7 +135,7 @@ class AccessPolicyParticipantTest {
             assertThat(policy.canWriteBudget(caller, revival)).as(as).isFalse();
             assertThat(policy.canReadSpexCalendar(caller)).as(as).isFalse();
             assertThat(policy.canManageSpexCalendar(caller)).as(as).isFalse();
-            // Staffing and mailings (M6b): their own on their page, nothing of the steering group's
+            // Staffing and mailings: their own on their page, nothing of the steering group's
             assertThat(policy.canReadStaffing(caller, revival)).as(as).isFalse();
             assertThat(policy.canWriteStaffing(caller, revival)).as(as).isFalse();
             assertThat(policy.canReadMailings(caller, revival)).as(as).isFalse();

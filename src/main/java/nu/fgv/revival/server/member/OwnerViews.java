@@ -32,11 +32,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Owners as shown: members by display name with whether they are still active, free-text names as written (FR-009,
- * FR-048). Builds many at once, so a list of rows costs a few queries.
+ * Owners as shown: members by display name with whether they are still active, free-text names as written. Builds many
+ * at once, so a list of rows costs a few queries.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class OwnerViews {

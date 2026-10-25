@@ -27,7 +27,7 @@ import java.util.List;
  * GraphQL's {@code ChecklistTemplate}, with its items that are not retired, in order.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 public record ChecklistTemplateDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
                                    GuideVersionView.@Nullable Text name, boolean retired,

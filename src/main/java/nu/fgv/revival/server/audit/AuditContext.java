@@ -22,10 +22,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * The source, operation and comment of the change being made on the current thread. Adapters set the source, services
- * set the operation (research R11).
+ * set the operation.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public final class AuditContext {
 

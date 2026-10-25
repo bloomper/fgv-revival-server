@@ -36,13 +36,12 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * A participant or helper of a revival (product spec 5.6): a spexare by id, or a pending person kept in
- * {@link PendingPerson} until they become one. Their login role is the {@code memberId} row, made when they are invited.
- * Removing closes the row; it is never deleted while the revival exists (constitution IV). The comment is the person's
- * own free text and is not audited.
+ * A participant or helper of a revival: a spexare by id, or a pending person kept in {@link PendingPerson} until they
+ * become one. Their login role is the {@code memberId} row, made when they are invited. Removing closes the row; it is
+ * never deleted while the revival exists. The comment is the person's own free text and is not audited.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @Entity
 @Table(name = "participant")

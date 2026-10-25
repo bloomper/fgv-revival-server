@@ -19,7 +19,7 @@ package nu.fgv.revival.server.budget;
  * How an event type's budget line counts: a fixed quantity, or one per planned participant.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 public enum BudgetLineQuantity {
     FIXED,

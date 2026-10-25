@@ -24,7 +24,7 @@ import java.time.Instant;
  * GraphQL's {@code GuideVersionSummary}.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 public record GuideVersionSummaryDto(Long id,
                                      @Nullable String label,

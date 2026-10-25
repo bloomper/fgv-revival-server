@@ -22,10 +22,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Row numbers per revival, consecutive and never reused (FR-008, research R3).
+ * Row numbers per revival, consecutive and never reused.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 public class LogEntryCounters {

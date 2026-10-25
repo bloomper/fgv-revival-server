@@ -31,10 +31,10 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 
 /**
- * One change of the guide version a revival is pinned to. Append-only (FR-020), as status changes are.
+ * One change of the guide version a revival is pinned to. Append-only, as status changes are.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Entity
 @Table(name = "revival_guide_version_change")

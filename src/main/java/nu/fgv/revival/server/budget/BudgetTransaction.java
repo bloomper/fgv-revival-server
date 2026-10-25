@@ -37,12 +37,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * Money that came in or went out (product spec 5.10, M5-FR-5): income or cost by its category's kind. A cost may have
+ * Money that came in or went out: income or cost by its category's kind. A cost may have
  * been paid by someone out of their own pocket, who is then reimbursed. Cancelled rather than deleted; a cancelled
  * transaction stays readable and cannot be changed. The receipt's file is kept apart, in {@link ReceiptContent}.
  *
  * @author Anders Jacobsson
- * @since 0.6
+ * @since 1.0
  */
 @Entity
 @Table(name = "budget_transaction")

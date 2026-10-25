@@ -40,7 +40,7 @@ import java.time.format.DateTimeFormatter;
  * has two shows with the same date, time and venue; {@link RevivalService} checks that, since a unique key cannot hold a null venue.
  *
  * @author Anders Jacobsson
- * @since 0.4
+ * @since 1.0
  */
 @Entity
 @Table(name = "revival_show")

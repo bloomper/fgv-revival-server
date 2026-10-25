@@ -22,10 +22,10 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The guide works while Spexregister is down (FR-006, SC-008). No guide operation calls Spexregister.
+ * The guide works while Spexregister is down. No guide operation calls Spexregister.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 

@@ -30,10 +30,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The guide's MCP tools (specs/003-m2-guide/contracts/mcp.md, FR-036–FR-038, SC-007).
+ * The guide's MCP tools.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
 

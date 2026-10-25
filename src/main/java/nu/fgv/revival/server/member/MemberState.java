@@ -17,10 +17,10 @@
 package nu.fgv.revival.server.member;
 
 /**
- * Whether a revival role has been matched to a person (FR-019b).
+ * Whether a revival role has been matched to a person.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 public enum MemberState {
 

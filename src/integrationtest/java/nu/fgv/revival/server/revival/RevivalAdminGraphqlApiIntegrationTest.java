@@ -37,10 +37,10 @@ import static nu.fgv.revival.server.Documents.UPDATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * User story 1: the super admin records, approves and staffs revivals (FR-006–FR-013, FR-018, FR-019).
+ * The super admin records, approves and staffs revivals.
  *
  * @author Anders Jacobsson
- * @since 0.1
+ * @since 1.0
  */
 class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
@@ -192,7 +192,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * Every super-admin-only operation refused for everyone else (SC-003).
+     * Every super-admin-only operation refused for everyone else.
      */
     @Nested
     class Refusals {

@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Availability answers. Deleting one is clearing the person's own answer (M6B-FR-1).
+ * Availability answers. Deleting one is clearing the person's own answer.
  *
  * @author Anders Jacobsson
- * @since 0.8
+ * @since 1.0
  */
 public interface AvailabilityRepository extends Repository<Availability, Long> {
 

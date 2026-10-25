@@ -71,11 +71,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * A participant's own page (M6-FR-9–15, M6-FR-19): the response with terms and consent, what consenting writes to
+ * A participant's own page: the response with terms and consent, what consenting writes to
  * Spexregister, contact details, dietary needs, referrals and the Swish payment.
  *
  * @author Anders Jacobsson
- * @since 0.7
+ * @since 1.0
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

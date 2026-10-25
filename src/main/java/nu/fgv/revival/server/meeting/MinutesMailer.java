@@ -38,11 +38,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Writes and sends a meeting's minutes as plain text, one message per recipient, as Spexregister sends its mail
- * (contracts/email.md, research R9). Never logs addresses or content.
+ * Writes and sends a meeting's minutes as plain text, one message per recipient, as Spexregister sends its mail.
+ * Never logs addresses or content.
  *
  * @author Anders Jacobsson
- * @since 0.3
+ * @since 1.0
  */
 @Component
 @Slf4j

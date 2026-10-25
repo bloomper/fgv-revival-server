@@ -26,11 +26,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Loads the caller's revivals for {@link AccessPolicy}'s guide rules, which keeps the policy free of repositories
- * (research R10).
+ * Loads the caller's revivals for {@link AccessPolicy}'s guide rules, which keeps the policy free of repositories.
  *
  * @author Anders Jacobsson
- * @since 0.2
+ * @since 1.0
  */
 @Component
 public class GuideAccess {
