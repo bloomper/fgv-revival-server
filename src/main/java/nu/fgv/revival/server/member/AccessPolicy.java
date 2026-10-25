@@ -431,6 +431,13 @@ public class AccessPolicy {
     }
 
     /**
+     * Writing news, and reading drafts and withdrawn news. Everyone with access reads what is published.
+     */
+    public boolean canManageNews(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
      * Reading a revival's participants, their responses and contact details: super admins, and its directeurs and
      * steering group while they can see it. Observers do not.
      */
@@ -785,6 +792,10 @@ public class AccessPolicy {
         require(canManageSpexCalendar(caller));
     }
 
+    public void requireManageNews(final Caller caller) {
+        require(canManageNews(caller));
+    }
+
     public void requireReadStaffing(final Caller caller, final Revival revival) {
         require(canReadStaffing(caller, revival));
     }
@@ -815,6 +826,10 @@ public class AccessPolicy {
 
     public void requireReadMaterials(final Caller caller, final Revival revival) {
         require(canReadMaterials(caller, revival));
+    }
+
+    public void requireReadAllMaterials(final Caller caller, final Revival revival) {
+        require(canReadAllMaterials(caller, revival));
     }
 
     public void requireWriteMaterials(final Caller caller, final Revival revival) {

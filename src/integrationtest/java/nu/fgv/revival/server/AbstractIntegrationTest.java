@@ -408,7 +408,7 @@ public abstract class AbstractIntegrationTest {
         jdbcClient.sql("UPDATE event_type SET checklist_template_id = NULL").update();
         for (final String table : List.of("sync_step", "sync_run", "inventory_item", "material_position", "material", "mailing_reminder", "mailing_recipient", "mailing", "mailing_template", "shift_assignment", "shift_slot",
                 "availability", "receipt_content", "budget_transaction", "budget_line", "budget_scenario", "budget_settings",
-                "reference_figure", "reference_revival", "event_type_budget_line", "spex_calendar_date", "calendar_feed", "minutes_email_recipient",
+                "reference_figure", "reference_revival", "event_type_budget_line", "spex_calendar_date", "news", "calendar_feed", "minutes_email_recipient",
                 "minutes_email", "meeting_entry_change", "log_entry_tag",
                 "log_entry", "log_entry_counter", "meeting_agenda_point", "meeting_attendee", "meeting",
                 "checklist_item", "checklist", "event", "checklist_template_item", "checklist_template", "guide_suggestion", "referral", "dietary_need",
@@ -451,7 +451,7 @@ public abstract class AbstractIntegrationTest {
                 "guide_suggestion_audit", "guide_item_audit", "guide_section_audit", "guide_chapter_audit", "guide_version_audit",
                 "capability_audit", "guide_item_type_audit", "budget_transaction_audit", "budget_line_audit", "budget_scenario_audit",
                 "budget_settings_audit", "reference_figure_audit", "reference_revival_audit", "event_type_budget_line_audit", "budget_category_audit",
-                "spex_calendar_date_audit", "participant_audit", "participation_settings_audit", "availability_audit", "shift_slot_audit",
+                "spex_calendar_date_audit", "news_audit", "participant_audit", "participation_settings_audit", "availability_audit", "shift_slot_audit",
                 "shift_assignment_audit", "mailing_audit", "mailing_recipient_audit", "mailing_template_audit", "inventory_item_audit",
                 "material_position_audit", "material_audit", "sync_step_audit", "sync_run_audit", "link_service_host_audit", "link_service_audit", "revchanges", "revinfo", "person")) {
             jdbcClient.sql("DELETE FROM " + table).update();

@@ -1,0 +1,77 @@
+# The history of a record, read only, from the audit trail every change leaves. Who may read a record's history is
+# whoever may read the record: the decision log, checklists and events those who read the revival's work, the budget
+# its readers, materials those who read them all (not observers), and news SUPER_ADMIN.
+
+extend type Query {
+    "Newest first. NOT_FOUND for a record that never existed or whose revival the caller cannot see."
+    revisions(type: AuditedType!, id: ID!): [Revision!]!
+}
+
+enum AuditedType {
+    LOG_ENTRY
+    CHECKLIST_ITEM
+    EVENT
+    BUDGET_LINE
+    BUDGET_TRANSACTION
+    MATERIAL
+    NEWS
+}
+
+enum RevisionType {
+    "Created."
+    ADD
+    "Changed."
+    MOD
+    "Deleted, which only news and checklist items of a chapter the guide dropped are."
+    DEL
+}
+
+enum AuditSource {
+    WEB
+    MCP
+    SYSTEM
+}
+
+"How a value is written, so it can be shown as the field is elsewhere."
+enum FieldKind {
+    "Free text, or a name looked up by the server."
+    TEXT
+    "yyyy-mm-dd."
+    DATE
+    "hh:mm."
+    TIME
+    "An ISO-8601 instant."
+    INSTANT
+    "A decimal string, as Amount."
+    AMOUNT
+    NUMBER
+    "true or false."
+    BOOLEAN
+    "The enum value's name."
+    ENUM
+    "Values sorted and separated by \", \"."
+    LIST
+}
+
+type Revision {
+    revision: Int!
+    type: AuditedType!
+    entityId: ID!
+    revisionType: RevisionType!
+    modifiedAt: Instant!
+    "A display name, \"System\" or \"Unknown person\"; never an email address."
+    modifiedBy: String!
+    source: AuditSource
+    "The reason given, if any."
+    comment: String
+    "What differs from the revision before; empty for a deletion."
+    changes: [FieldChange!]!
+}
+
+type FieldChange {
+    "The entity's field name, e.g. status or unitAmount."
+    field: String!
+    kind: FieldKind!
+    oldValue: String
+    newValue: String
+}

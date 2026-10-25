@@ -205,6 +205,29 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void givesTheSampleRecordsAHistoryOverTheRevivalsTime() throws SQLException {
+        importSampleDataAndActivity();
+
+        // Creations are dated in the revival's time and made by its people, or by the guide sync
+        assertThat(count("revinfo WHERE source = 'WEB'")).isPositive();
+        assertThat(count("""
+                log_entry_audit a JOIN revinfo r ON r.id = a.rev JOIN log_entry l ON l.id = a.id
+                WHERE a.revtype = 0 AND l.origin = 'MANUAL' AND r.source <> 'WEB' AND l.revival_id NOT IN
+                    (SELECT id FROM revival WHERE anonymized_at IS NOT NULL)""")).isZero();
+        assertThat(count("checklist_item_audit a JOIN revinfo r ON r.id = a.rev WHERE a.revtype = 0 AND r.source = 'SYSTEM'")).isPositive();
+        // Earlier edits, each closing the row before it
+        for (final String table : List.of("log_entry", "checklist_item", "event", "budget_line", "budget_transaction", "material", "news")) {
+            assertThat(count(table + "_audit WHERE revtype = 1")).as(table).isPositive();
+            assertThat(count(table + "_audit a WHERE a.revend IS NULL AND EXISTS (SELECT 1 FROM " + table + "_audit b WHERE b.id = a.id AND b.revend IS NULL AND b.rev <> a.rev)"))
+                    .as(table).isZero();
+        }
+        assertThat(count("checklist_item_audit a JOIN checklist_item_audit b ON b.id = a.id AND b.revend = a.rev "
+                + "WHERE a.revtype = 1 AND a.state = 'DONE' AND b.state = 'OPEN'")).isPositive();
+        // Every revision is in the past
+        assertThat(count("revinfo WHERE modified_at > UNIX_TIMESTAMP(NOW(3)) * 1000 + 60000")).isZero();
+    }
+
+    @Test
     void fillsEveryKindOfData() throws SQLException {
         importSampleDataAndActivity();
 

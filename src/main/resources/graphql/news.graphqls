@@ -1,0 +1,39 @@
+# News for everyone with access, kept by SUPER_ADMIN and shown on the start page. A piece is published from
+# visibleFrom up to and including visibleTo; without visibleFrom it is a draft.
+
+extend type Query {
+    "Published news, newest first. With all, SUPER_ADMIN only: drafts and withdrawn news as well, drafts first."
+    news(all: Boolean = false, limit: Int): [News!]!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, for every mutation below."
+    newsCreate(input: NewsInput!): News!
+    newsUpdate(id: ID!, version: Int!, input: NewsInput!): News!
+    "Not revival data; deleted for real."
+    newsDelete(id: ID!, version: Int!): Void
+}
+
+type News {
+    id: ID!
+    "1–255 characters."
+    subject: String!
+    "Plain text with line breaks, 1–10000 characters."
+    text: String!
+    visibleFrom: Date
+    visibleTo: Date
+    "Whether it is visible today."
+    published: Boolean!
+    createdAt: Instant!
+    lastModifiedAt: Instant
+    version: Int!
+}
+
+input NewsInput {
+    subject: String!
+    text: String!
+    "Leave out to keep it as a draft."
+    visibleFrom: Date
+    "Leave out to keep it visible. Not before visibleFrom."
+    visibleTo: Date
+}

@@ -106,7 +106,8 @@ import java.util.Set;
  * revival's premiere. Revivals that are or have been open get participants, availability, shifts and mailings; those
  * that have settled the surplus decision, the FGV membership and a sync to Spexregister, failed while settling and done
  * once archived. Last, the revival archived {@value SampleDataImporter#ANONYMIZED_YEARS_AGO} years ago is anonymized,
- * as the nightly job would. Goes through the repositories, so the rows are audited as usual.
+ * as the nightly job would. Goes through the repositories, so the rows are audited as usual; {@link SampleHistory} then
+ * spreads that audit trail over each revival's time.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -159,6 +160,7 @@ public class SampleActivityImporter {
     private final SyncRunRepository syncRunRepository;
     private final SyncStepRepository syncStepRepository;
     private final LogEntryCounters logEntryCounters;
+    private final SampleHistory sampleHistory;
     private final ZoneId zone;
     private final SecureRandom rnd = new SecureRandom();
 
@@ -186,7 +188,8 @@ public class SampleActivityImporter {
                                   final CalendarFeedRepository calendarFeedRepository,
                                   final SyncRunRepository syncRunRepository,
                                   final SyncStepRepository syncStepRepository,
-                                  final LogEntryCounters logEntryCounters) {
+                                  final LogEntryCounters logEntryCounters,
+                                  final SampleHistory sampleHistory) {
         this.importSampleData = importSampleData;
         this.zone = zone;
         this.jdbcClient = jdbcClient;
@@ -212,6 +215,7 @@ public class SampleActivityImporter {
         this.syncRunRepository = syncRunRepository;
         this.syncStepRepository = syncStepRepository;
         this.logEntryCounters = logEntryCounters;
+        this.sampleHistory = sampleHistory;
     }
 
     /**
@@ -288,6 +292,7 @@ public class SampleActivityImporter {
             createSuggestions(revivals);
         });
         anonymization.anonymizeExpired();
+        transactions.executeWithoutResult(status -> sampleHistory.seed());
         log.info("Imported the sample activity of {} revivals in {} ms", revivals.size(), Duration.ofNanos(System.nanoTime() - started).toMillis());
     }
 

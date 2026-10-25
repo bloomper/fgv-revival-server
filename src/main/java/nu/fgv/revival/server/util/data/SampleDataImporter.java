@@ -32,6 +32,7 @@ import nu.fgv.revival.server.material.LinkService;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalRole;
+import nu.fgv.revival.server.news.News;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalGuideVersionChange;
@@ -361,6 +362,10 @@ public class SampleDataImporter {
                         SELECT id, name_sv, name_en, home_url, position, retired_at, version, :rev, 0 FROM link_service
                         """,
                 """
+                        INSERT INTO news_audit (id, subject, text, visible_from, visible_to, version, rev, revtype)
+                        SELECT id, subject, text, visible_from, visible_to, version, :rev, 0 FROM news
+                        """,
+                """
                         INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
                         SELECT link_service_id, host, :rev, 0 FROM link_service_host
                         """,
@@ -376,7 +381,7 @@ public class SampleDataImporter {
 
         Stream.of(Revival.class, RevivalShow.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
                 GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
-                Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class).forEach(entity -> jdbcClient
+                Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class, News.class).forEach(entity -> jdbcClient
                 .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
                 .param("rev", rev)
                 .param("entityName", entity.getName())
@@ -401,6 +406,7 @@ public class SampleDataImporter {
         final List<SampleGuide.Version> guide = timedResult("Created the guide", () -> SampleGuide.insert(jdbcClient, people.get(ADMIN).id(), people.get(ADMIN).externalId()));
 
         timed("Created the checklist templates", () -> SampleChecklistTemplates.insert(jdbcClient, people.get(ADMIN).externalId()));
+        timed("Created the news", () -> SampleNews.insert(jdbcClient, people.get(ADMIN).externalId()));
         timed("Created the revivals", () -> createSampleRevivals(jdbcClient, spex, people, guide));
         timed("Seeded the baseline revision", () -> seedBaselineRevision(jdbcClient));
         log.info("Imported sample data in {} s", Duration.ofNanos(System.nanoTime() - started).toSeconds());
@@ -462,6 +468,7 @@ public class SampleDataImporter {
                 "event_type_budget_line_audit",
                 "budget_category_audit",
                 "spex_calendar_date_audit",
+                "news_audit",
                 "minutes_email_recipient",
                 "minutes_email",
                 "meeting_entry_change",
@@ -499,6 +506,7 @@ public class SampleDataImporter {
                 "reference_revival",
                 "event_type_budget_line",
                 "spex_calendar_date",
+                "news",
                 "log_entry_tag",
                 "log_entry",
                 "log_entry_counter",
