@@ -24,6 +24,7 @@ import nu.fgv.revival.server.guide.GuideService;
 import nu.fgv.revival.server.guide.GuideVersionStatus;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.member.OwnerInputDto;
+import nu.fgv.revival.server.participant.ParticipantDtos;
 import nu.fgv.revival.server.revival.RevivalDto;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import org.jspecify.annotations.Nullable;
@@ -58,6 +59,16 @@ public class ChecklistGraphqlApi {
         this.service = service;
         this.logEntryService = logEntryService;
         this.guideService = guideService;
+    }
+
+    @SchemaMapping(typeName = "Participation", field = "checklistItems")
+    public List<AssignedChecklistItemDto> participationChecklistItems(final ParticipantDtos.Participation participation) {
+        return service.assigned(participation.revival().id());
+    }
+
+    @MutationMapping
+    public AssignedChecklistItemDto assignedChecklistItemSetDone(@Argument final Long id, @Argument final Long version, @Argument final boolean done) {
+        return service.setAssignedDone(id, version, done);
     }
 
     @QueryMapping

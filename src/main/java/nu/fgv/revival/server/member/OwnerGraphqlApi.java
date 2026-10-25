@@ -18,6 +18,8 @@
 package nu.fgv.revival.server.member;
 
 import nu.fgv.revival.server.revival.RevivalDto;
+import org.jspecify.annotations.Nullable;
+import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
@@ -40,14 +42,16 @@ public class OwnerGraphqlApi {
     }
 
     /**
-     * Empty for callers who do not read the revival's work, as its permissions say.
+     * Empty for callers who do not read the revival's work, as its permissions say. With {@code includeParticipants},
+     * the participants who have logged in as well, for checklist items.
      */
     @SchemaMapping(typeName = "Revival", field = "ownerCandidates")
-    public List<PersonRefDto> ownerCandidates(final RevivalDto revival) {
+    public List<PersonRefDto> ownerCandidates(final RevivalDto revival, @Argument final @Nullable Boolean includeParticipants) {
         if (!revival.permissions().canReadWork()) {
             return List.of();
         }
-        return ownerResolver.activeMembers(revival.id()).entrySet().stream()
+        return (Boolean.TRUE.equals(includeParticipants) ? ownerResolver.checklistOwners(revival.id()) : ownerResolver.activeMembers(revival.id()))
+                .entrySet().stream()
                 .map(entry -> new PersonRefDto(entry.getKey(), entry.getValue()))
                 .toList();
     }

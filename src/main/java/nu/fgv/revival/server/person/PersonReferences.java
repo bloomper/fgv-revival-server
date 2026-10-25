@@ -55,7 +55,7 @@ public class PersonReferences {
      */
     static final List<String> GLOBAL_SUBJECT_TABLES = List.of("guide_version", "guide_chapter", "guide_section", "guide_item",
             "checklist_template", "checklist_template_item", "mailing_template", "event_type", "event_type_budget_line", "budget_category",
-            "capability", "guide_item_type", "link_service", "spex_calendar_date", "news");
+            "capability", "guide_item_type", "link_service", "spex_calendar_date", "news", "library_entry", "application_settings");
     private static final String OWN = "t.revival_id";
     private static final String VIA_MEETING = "(SELECT m.revival_id FROM meeting m WHERE m.id = t.meeting_id)";
 

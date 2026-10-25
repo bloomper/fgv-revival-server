@@ -171,6 +171,7 @@ input ChecklistAddFromTemplateInput {
 input ChecklistItemCreateInput {
     checklistId: ID!
     text: String!
+    "A directeur or steering group member, a participant who has logged in, or a free-text name."
     owner: OwnerInput
     deadline: Date
     comment: String
@@ -181,6 +182,7 @@ input ChecklistItemUpdateInput {
     id: ID!
     version: Int!
     text: String
+    "As in ChecklistItemCreateInput."
     owner: OwnerInput
     clearOwner: Boolean = false
     "Sets deadlineManual."
@@ -195,4 +197,36 @@ input ChecklistItemSetStateInput {
     version: Int!
     state: ChecklistItemState!
     reason: String
+}
+
+extend type Participation {
+    """
+    The checklist items assigned to the caller, a PARTICIPANT, in checklists not cancelled and not marked not
+    applicable, by deadline. Empty for helpers.
+    """
+    checklistItems: [AssignedChecklistItem!]!
+}
+
+extend type Mutation {
+    "The PARTICIPANT the item is assigned to, while the revival is OPEN; NOT_FOUND for anyone else."
+    assignedChecklistItemSetDone(id: ID!, version: Int!, done: Boolean!): AssignedChecklistItem!
+}
+
+"A checklist item as the participant it is assigned to sees it."
+type AssignedChecklistItem {
+    id: ID!
+    "Required items: the guide item's text in the pinned version. Others: the item's text."
+    text: LocalizedText!
+    "An event checklist's name."
+    checklistName: String
+    "A chapter checklist's chapter title."
+    chapterTitle: LocalizedText
+    "An event checklist's date."
+    checklistDate: Date
+    deadline: Date
+    "Not done, with a deadline before today."
+    overdue: Boolean!
+    done: Boolean!
+    comment: String
+    version: Int!
 }

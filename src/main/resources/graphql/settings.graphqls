@@ -1,0 +1,30 @@
+# The application settings SUPER_ADMIN keeps: the terms every participant accepts and the participation fee new
+# revivals start with.
+
+extend type Query {
+    "SUPER_ADMIN."
+    applicationSettings: ApplicationSettings!
+}
+
+extend type Mutation {
+    "SUPER_ADMIN. Replaces every setting."
+    applicationSettingsUpdate(version: Int!, input: ApplicationSettingsInput!): ApplicationSettings!
+}
+
+type ApplicationSettings {
+    """
+    Plain text every participant accepts when answering yes, in every revival, after the fee and the shared liability for
+    the loan and before the revival's own terms.
+    """
+    terms: LocalizedText
+    "The participation fee a new revival's budget starts with. The revival's directeur or FINANCE can change it."
+    defaultParticipationFee: Amount
+    version: Int!
+}
+
+input ApplicationSettingsInput {
+    "At most 4000 characters each; a blank Swedish text removes the terms."
+    terms: LocalizedTextInput
+    "0–10000000; left out, new revivals start without a fee."
+    defaultParticipationFee: Amount
+}

@@ -63,7 +63,7 @@ public class OwnerViews {
             final Owner owner = ref.owner();
 
             if (owner.getPersonId() != null) {
-                final Map<Long, @Nullable String> members = active.computeIfAbsent(ref.revivalId(), ownerResolver::activeMembers);
+                final Map<Long, @Nullable String> members = active.computeIfAbsent(ref.revivalId(), ownerResolver::checklistOwners);
 
                 result.put(ref, new OwnerDto(new OwnerDto.OwnerPersonDto(owner.getPersonId(), names.get(owner.getPersonId()),
                         members.containsKey(owner.getPersonId())), null));

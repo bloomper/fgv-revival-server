@@ -407,7 +407,7 @@ public class ChecklistService {
         item.setRevivalId(checklist.getRevivalId());
         item.setPosition(nextPosition(checklist.getId()));
         item.setText(validText(newItem.text()));
-        item.setOwner(ownerResolver.validate(checklist.getRevivalId(), newItem.owner()));
+        item.setOwner(ownerResolver.validateChecklistOwner(checklist.getRevivalId(), newItem.owner()));
         item.setDeadline(newItem.deadline());
         item.setDeadlineManual(newItem.deadline() != null);
         item.setComment(validComment(newItem.comment()));
@@ -430,7 +430,7 @@ public class ChecklistService {
         if (change.clearOwner()) {
             item.setOwner(Owner.none());
         } else if (change.owner() != null) {
-            item.setOwner(ownerResolver.change(item.getRevivalId(), item.getOwner(), change.owner()));
+            item.setOwner(ownerResolver.changeChecklistOwner(item.getRevivalId(), item.getOwner(), change.owner()));
         }
         if (change.clearDeadline() && item.getDeadline() != null) {
             item.setDeadline(null);
@@ -491,6 +491,88 @@ public class ChecklistService {
                 : updateItem(new ItemChange(id, item.version(), null, null, false, null, false, comment, comment.isBlank()), locale).version();
 
         return setState(id, version, ChecklistItemState.DONE, null, locale);
+    }
+
+    /**
+     * The items assigned to the caller, a participant of the revival while it is {@code OPEN}: in checklists not
+     * cancelled and not marked not applicable, by deadline. None for helpers.
+     */
+    @Transactional(readOnly = true)
+    public List<AssignedChecklistItemDto> assigned(final Long revivalId) {
+        final Caller caller = callerService.current();
+
+        if (!accessPolicy.canWorkAssignedChecklistItems(caller, revivalOf(revivalId))) {
+            return List.of();
+        }
+
+        final Map<Long, Checklist> checklists = checklistRepository.findByRevivalId(revivalId).stream()
+                .filter(checklist -> !checklist.isCancelled())
+                .collect(Collectors.toMap(Checklist::getId, Function.identity()));
+        final List<ChecklistItem> items = itemRepository.findByRevivalId(revivalId).stream()
+                .filter(item -> checklists.containsKey(item.getChecklistId()))
+                .filter(item -> caller.person().getId().equals(item.getOwner().getPersonId()))
+                .filter(item -> item.getState() != ChecklistItemState.NOT_APPLICABLE)
+                .sorted(Comparator.comparing(ChecklistItem::getDeadline, Comparator.nullsLast(Comparator.<LocalDate>naturalOrder()))
+                        .thenComparing(ChecklistItem::getId))
+                .toList();
+
+        return assignedDtos(items, checklists);
+    }
+
+    /**
+     * Marks an item assigned to the caller done, or open again. Only the participant who owns it, while the revival is
+     * {@code OPEN}.
+     */
+    @Transactional
+    public AssignedChecklistItemDto setAssignedDone(final Long id, final Long version, final boolean done) {
+        final Caller caller = callerService.current();
+        final ChecklistItem item = itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(ChecklistItem.class, id));
+        final Revival revival = revivalOf(item.getRevivalId());
+
+        if (!accessPolicy.canWorkAssignedChecklistItems(caller, revival) || !caller.person().getId().equals(item.getOwner().getPersonId())) {
+            throw new ResourceNotFoundException(ChecklistItem.class, id);
+        }
+
+        final Checklist checklist = checklistRepository.findById(item.getChecklistId())
+                .orElseThrow(() -> new ResourceNotFoundException(Checklist.class, item.getChecklistId()));
+
+        if (checklist.isCancelled() || item.getState() == ChecklistItemState.NOT_APPLICABLE) {
+            throw new BadRequestException("error.checklist.cancelled");
+        }
+        if (!Objects.equals(version, item.getVersion())) {
+            throw new ConflictException("error.conflict");
+        }
+
+        final ChecklistItemState state = done ? ChecklistItemState.DONE : ChecklistItemState.OPEN;
+
+        if (item.getState() != state) {
+            AuditContext.operation("assignedChecklistItemSetDone");
+            item.setState(state);
+            item.setStateChangedBy(caller.person().getId());
+            item.setStateChangedAt(clock.instant());
+            item.setReason(null);
+            item.setReasonKey(null);
+            item.setReasonArg(null);
+            itemRepository.saveAndFlush(item);
+        }
+        return assignedDtos(List.of(item), Map.of(checklist.getId(), checklist)).getFirst();
+    }
+
+    private List<AssignedChecklistItemDto> assignedDtos(final List<ChecklistItem> items, final Map<Long, Checklist> checklists) {
+        if (items.isEmpty()) {
+            return List.of();
+        }
+
+        final Map<Long, GuideVersionView.Text> itemTexts = texts.texts(items);
+        final Map<Long, ChecklistSummaryDto> summaries = summaries(items.stream().map(item -> checklists.get(item.getChecklistId())).distinct().toList());
+        final LocalDate today = today();
+
+        return items.stream().map(item -> {
+            final ChecklistSummaryDto checklist = summaries.get(item.getChecklistId());
+
+            return new AssignedChecklistItemDto(item.getId(), itemTexts.get(item.getId()), checklist.name(), checklist.chapterTitle(), checklist.date(),
+                    item.getDeadline(), item.isOverdue(today), item.getState() == ChecklistItemState.DONE, item.getComment(), item.getVersion());
+        }).toList();
     }
 
     /**

@@ -60,6 +60,12 @@ type LogEntry {
     guideItem: GuideItem
     guideItemKey: ID
     checklistItem: ChecklistItemSummary
+    "An event of the revival, cancelled or not."
+    event: Event
+    """
+    On a DECISION: the budget lines that refer to it, not removed. Null unless the caller reads the revival's budget.
+    """
+    budgetLines: [BudgetLine!]
     "On a DECISION: the question it answers."
     answers: LogEntrySummary
     "On a QUESTION: the decision answering it."
@@ -112,6 +118,8 @@ input LogEntryCreateInput {
     tags: [String!]
     guideItemKey: ID
     checklistItemId: ID
+    "An event of the same revival."
+    eventId: ID
 }
 
 "Fields left out are unchanged. The clear* flags remove a value."
@@ -133,6 +141,10 @@ input LogEntryUpdateInput {
     tags: [String!]
     guideItemKey: ID
     checklistItemId: ID
+    eventId: ID
+    "Removes the event link only."
+    clearEvent: Boolean = false
+    "Removes the guide item, checklist item and event links, before any given ones are set."
     clearLinks: Boolean = false
 }
 

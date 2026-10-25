@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.TestCallers;
+import nu.fgv.revival.server.library.LibraryService;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
@@ -87,7 +88,7 @@ class GuideDraftServicePublishTest {
     @BeforeEach
     void setUp() {
         service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
-                views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener), events, mock(GuideItemTypeService.class));
+                views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener), events, mock(GuideItemTypeService.class), mock(LibraryService.class));
         draft = new GuideVersion();
         draft.setId(DRAFT_ID);
         draft.setVersion(2L);

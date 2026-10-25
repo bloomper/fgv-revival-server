@@ -103,7 +103,7 @@ public class LogMcpTools {
         return support.call("create_log_entry", () -> {
             final ResolvedOwner resolved = resolve(revivalId, owner);
             final LogEntryDto created = logEntryService.create(new LogEntryService.Draft(revivalId, null, null, type, text, null, resolved.input(),
-                    McpToolSupport.date(deadline), comment, tags, null, null), Locale.ENGLISH);
+                    McpToolSupport.date(deadline), comment, tags, null, null, null), Locale.ENGLISH);
 
             return LogEntryWritten.of(created, resolved.resolution());
         });
@@ -127,7 +127,7 @@ public class LogMcpTools {
             final ResolvedOwner resolved = clearOwner ? new ResolvedOwner(null, Resolution.NONE) : resolve(revivalId, owner);
             final LogEntryDto updated = logEntryService.update(new LogEntryService.Change(row.id(), row.version(), null, null, null, text, status,
                     resolved.input(), clearOwner, deadline == null || deadline.isBlank() ? null : McpToolSupport.date(deadline), deadline != null && deadline.isBlank(),
-                    comment == null || comment.isBlank() ? null : comment, comment != null && comment.isBlank(), tags, null, null, false), Locale.ENGLISH);
+                    comment == null || comment.isBlank() ? null : comment, comment != null && comment.isBlank(), tags, null, null, null, false, false), Locale.ENGLISH);
 
             return LogEntryWritten.of(updated, owner == null ? (updated.owner() == null ? Resolution.NONE
                     : updated.owner().person() != null ? Resolution.MEMBER : Resolution.FREE_TEXT) : resolved.resolution());

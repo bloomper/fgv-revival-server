@@ -35,6 +35,7 @@ import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalService;
 import nu.fgv.revival.server.revival.RevivalTitles;
+import nu.fgv.revival.server.settings.ApplicationSettingsService;
 import nu.fgv.revival.server.spex.SpexareDirectory;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.Amounts;
@@ -90,6 +91,7 @@ public class ParticipationService {
     private final SpexareDirectory directory;
     private final SwishQrClient swish;
     private final MessageSource messageSource;
+    private final ApplicationSettingsService applicationSettings;
     private final Clock clock;
 
     public ParticipationService(final ParticipantRepository repository,
@@ -111,6 +113,7 @@ public class ParticipationService {
                                 final SpexareDirectory directory,
                                 final SwishQrClient swish,
                                 final MessageSource messageSource,
+                                final ApplicationSettingsService applicationSettings,
                                 final Clock clock) {
         this.repository = repository;
         this.pendingRepository = pendingRepository;
@@ -131,6 +134,7 @@ public class ParticipationService {
         this.directory = directory;
         this.swish = swish;
         this.messageSource = messageSource;
+        this.applicationSettings = applicationSettings;
         this.clock = clock;
     }
 
@@ -198,7 +202,7 @@ public class ParticipationService {
                 dto,
                 revivalService.findById(revival.getId()),
                 Settings.of(settings),
-                terms(fee, budget == null ? null : budget.getLoanAmount(), settings, locale),
+                terms(fee, budget == null ? null : budget.getLoanAmount(), applicationSettings.terms(locale), settings, locale),
                 contact,
                 dietaryRepository.findById(participant.getId()).map(DietaryNeed::getText).orElse(null),
                 payment,
@@ -219,11 +223,11 @@ public class ParticipationService {
     }
 
     /**
-     * What accepting means: the fee when there is one, the shared liability for the loan from FGV/JK, and the revival's
-     * own terms.
+     * What accepting means: the fee when there is one, the shared liability for the loan from FGV/JK, the terms every
+     * participant accepts, and the revival's own terms.
      */
-    List<String> terms(final @Nullable BigDecimal fee, final @Nullable BigDecimal loan, final @Nullable ParticipationSettings settings,
-                       final Locale locale) {
+    List<String> terms(final @Nullable BigDecimal fee, final @Nullable BigDecimal loan, final @Nullable String applicationTerms,
+                       final @Nullable ParticipationSettings settings, final Locale locale) {
         final List<String> terms = new ArrayList<>();
 
         if (fee != null && fee.signum() > 0) {
@@ -231,6 +235,9 @@ public class ParticipationService {
         }
         terms.add(loan != null && loan.signum() > 0 ? text("participant.terms.loan", locale, Amounts.format(loan))
                 : text("participant.terms.loanWithoutAmount", locale));
+        if (hasText(applicationTerms)) {
+            terms.add(applicationTerms.strip());
+        }
         if (settings != null && hasText(settings.getTerms())) {
             terms.add(settings.getTerms().strip());
         }

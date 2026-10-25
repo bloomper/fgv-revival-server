@@ -19,6 +19,8 @@ package nu.fgv.revival.server.decisionlog;
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.checklist.ChecklistItem;
 import nu.fgv.revival.server.checklist.ChecklistItemRepository;
+import nu.fgv.revival.server.event.Event;
+import nu.fgv.revival.server.event.EventRepository;
 import nu.fgv.revival.server.meeting.MeetingEntryChangeKind;
 import nu.fgv.revival.server.meeting.MeetingRecorder;
 import nu.fgv.revival.server.member.AccessPolicy;
@@ -73,6 +75,7 @@ public class LogEntryService {
     private final LogEntryCounters counters;
     private final RevivalRepository revivalRepository;
     private final ChecklistItemRepository checklistItemRepository;
+    private final EventRepository eventRepository;
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
     private final OwnerResolver ownerResolver;
@@ -86,6 +89,7 @@ public class LogEntryService {
                            final LogEntryCounters counters,
                            final RevivalRepository revivalRepository,
                            final ChecklistItemRepository checklistItemRepository,
+                           final EventRepository eventRepository,
                            final CallerService callerService,
                            final AccessPolicy accessPolicy,
                            final OwnerResolver ownerResolver,
@@ -98,6 +102,7 @@ public class LogEntryService {
         this.counters = counters;
         this.revivalRepository = revivalRepository;
         this.checklistItemRepository = checklistItemRepository;
+        this.eventRepository = eventRepository;
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
         this.ownerResolver = ownerResolver;
@@ -114,7 +119,7 @@ public class LogEntryService {
 
     private static String snapshot(final LogEntry entry) {
         return Stream.of(entry.getDate(), entry.getType(), entry.getText(), entry.getDeadline(), entry.getComment(),
-                        new TreeSet<>(entry.getTags()), entry.getGuideItemKey(), entry.getChecklistItemId())
+                        new TreeSet<>(entry.getTags()), entry.getGuideItemKey(), entry.getChecklistItemId(), entry.getEventId())
                 .map(String::valueOf)
                 .collect(Collectors.joining("\u0000"));
     }
@@ -264,6 +269,7 @@ public class LogEntryService {
         entry.setTags(validTags(draft.tags()));
         entry.setGuideItemKey(draft.guideItemKey());
         entry.setChecklistItemId(validChecklistItem(revival.getId(), draft.checklistItemId()));
+        entry.setEventId(validEvent(revival.getId(), draft.eventId()));
         entry.setMeetingId(draft.meetingId());
         entry.setOrigin(LogEntryOrigin.MANUAL);
 
@@ -327,12 +333,18 @@ public class LogEntryService {
         if (change.clearLinks()) {
             entry.setGuideItemKey(null);
             entry.setChecklistItemId(null);
+            entry.setEventId(null);
         }
         if (change.guideItemKey() != null) {
             entry.setGuideItemKey(change.guideItemKey());
         }
         if (change.checklistItemId() != null) {
             entry.setChecklistItemId(validChecklistItem(revival.getId(), change.checklistItemId()));
+        }
+        if (change.clearEvent()) {
+            entry.setEventId(null);
+        } else if (change.eventId() != null) {
+            entry.setEventId(validEvent(revival.getId(), change.eventId()));
         }
 
         if (!entry.getOwner().equals(ownerBefore) && entry.getOwner().isSet()) {
@@ -488,6 +500,19 @@ public class LogEntryService {
         return checklistItemId;
     }
 
+    private @Nullable Long validEvent(final Long revivalId, final @Nullable Long eventId) {
+        if (eventId == null) {
+            return null;
+        }
+
+        final Event event = eventRepository.findById(eventId).orElseThrow(() -> new ResourceNotFoundException(Event.class, eventId));
+
+        if (!event.getRevivalId().equals(revivalId)) {
+            throw new BadRequestException("error.log.event.otherRevival");
+        }
+        return eventId;
+    }
+
     List<LogEntryDto> toDtos(final List<LogEntry> entries, final Locale locale) {
         final List<OwnerViews.Ref> refs = entries.stream().map(entry -> new OwnerViews.Ref(entry.getRevivalId(), entry.getOwner())).toList();
         final Map<OwnerViews.Ref, @Nullable OwnerDto> owners = ownerViews.toDtos(refs, locale);
@@ -508,7 +533,7 @@ public class LogEntryService {
             dtos.add(new LogEntryDto(entry.getId(), entry.getRevivalId(), entry.getNumber(), entry.getDate(), entry.getType(),
                     entry.getText(), entry.getStatus(), owners.get(new OwnerViews.Ref(entry.getRevivalId(), entry.getOwner())),
                     entry.getDeadline(), entry.isOverdue(today), entry.getComment(), entry.getTags().stream().sorted().toList(),
-                    entry.getMeetingId(), entry.getGuideItemKey(), entry.getChecklistItemId(), entry.getAnswersEntryId(),
+                    entry.getMeetingId(), entry.getGuideItemKey(), entry.getChecklistItemId(), entry.getEventId(), entry.getAnswersEntryId(),
                     entry.getOrigin(), names.get(entry.getCreatedBy()), entry.getCreatedAt(),
                     entry.getLastModifiedBy() == null ? null : names.get(entry.getLastModifiedBy()), entry.getLastModifiedAt(),
                     entry.getVersion()));
@@ -527,7 +552,7 @@ public class LogEntryService {
                         String text,
                         @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
                         @Nullable String comment, @Nullable List<String> tags, @Nullable String guideItemKey,
-                        @Nullable Long checklistItemId) {
+                        @Nullable Long checklistItemId, @Nullable Long eventId) {
     }
 
     /**
@@ -540,7 +565,7 @@ public class LogEntryService {
                          @Nullable LocalDate deadline, boolean clearDeadline, @Nullable String comment,
                          boolean clearComment,
                          @Nullable List<String> tags, @Nullable String guideItemKey, @Nullable Long checklistItemId,
-                         boolean clearLinks) {
+                         @Nullable Long eventId, boolean clearEvent, boolean clearLinks) {
     }
 
     /**

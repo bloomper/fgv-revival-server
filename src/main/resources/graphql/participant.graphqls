@@ -240,7 +240,7 @@ type ParticipationSettings {
     swishNumber: String
     "WhatsApp group invite link, https://chat.whatsapp.com/…; shown to participants who said yes."
     whatsappLink: String
-    "Extra terms shown when accepting, besides the fee and the shared liability for the loan."
+    "Extra terms shown when accepting, besides the fee, the shared liability for the loan and the application's terms."
     terms: String
     version: Int!
 }
@@ -310,7 +310,7 @@ type Participation {
     participant: Participant!
     revival: Revival!
     settings: ParticipationSettings!
-    "The texts to accept: the fee, the shared liability for the loan, the revival's extra terms."
+    "The texts to accept: the fee, the shared liability for the loan, the application's terms, the revival's extra terms."
     terms: [String!]!
     "Their contact details, from Spexregister or the pending person. Null while Spexregister is unavailable."
     contact: Contact

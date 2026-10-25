@@ -23,6 +23,7 @@ import nu.fgv.revival.server.budget.BudgetDtos.Scenario;
 import nu.fgv.revival.server.budget.BudgetDtos.Settings;
 import nu.fgv.revival.server.budget.BudgetDtos.Totals;
 import nu.fgv.revival.server.budget.BudgetDtos.Transaction;
+import nu.fgv.revival.server.decisionlog.LogEntryDto;
 import nu.fgv.revival.server.decisionlog.LogEntrySummaryDto;
 import nu.fgv.revival.server.event.EventDto;
 import nu.fgv.revival.server.event.EventService;
@@ -173,6 +174,28 @@ public class BudgetGraphqlApi {
                 .forEach(revivalId -> eventService.list(revivalId, true).forEach(event -> events.put(event.id(), event)));
         lines.stream().filter(line -> line.eventId() != null && events.containsKey(line.eventId()))
                 .forEach(line -> result.put(line, events.get(line.eventId())));
+        return result;
+    }
+
+    /**
+     * The lines that refer to each decision, for readers of the budget; null for anyone else.
+     */
+    @BatchMapping(typeName = "LogEntry", field = "budgetLines")
+    public Map<LogEntryDto, List<Line>> logEntryBudgetLines(final List<LogEntryDto> entries) {
+        final Map<Long, @Nullable Map<Long, List<Line>>> byRevival = new HashMap<>();
+        final Map<LogEntryDto, List<Line>> result = new HashMap<>();
+
+        entries.stream().map(LogEntryDto::revivalId).distinct().forEach(revivalId -> byRevival.put(revivalId, budgetService.canRead(revivalId)
+                ? budgetService.lines(revivalId, false).stream().filter(line -> line.logEntryId() != null)
+                .collect(Collectors.groupingBy(line -> Objects.requireNonNull(line.logEntryId())))
+                : null));
+        entries.forEach(entry -> {
+            final @Nullable Map<Long, List<Line>> lines = byRevival.get(entry.revivalId());
+
+            if (lines != null) {
+                result.put(entry, lines.getOrDefault(entry.id(), List.of()));
+            }
+        });
         return result;
     }
 

@@ -38,6 +38,7 @@ import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalCreated;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalStatus;
+import nu.fgv.revival.server.settings.ApplicationSettingsService;
 import nu.fgv.revival.server.staffing.HelperCompensation;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
@@ -45,6 +46,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
@@ -109,6 +111,8 @@ class BudgetServiceTest {
     private CallerService callerService;
     @Mock
     private HelperCompensation helperCompensation;
+    @Mock
+    private ApplicationSettingsService applicationSettings;
     private BudgetService service;
     private BigDecimal helpers = BigDecimal.ZERO;
     private BudgetSettings settings;
@@ -140,7 +144,7 @@ class BudgetServiceTest {
 
         service = new BudgetService(settingsRepository, lineRepository, transactionRepository, typeLineRepository, categoryService, referenceService,
                 eventRepository, eventService, logEntryRepository, callerService, new BudgetAccess(revivalRepository, accessPolicy), helperCompensation,
-                TestClocks.at(TODAY));
+                applicationSettings, TestClocks.at(TODAY));
         lenient().when(helperCompensation.total(REVIVAL_ID)).thenAnswer(invocation -> helpers);
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         settings = new BudgetSettings(REVIVAL_ID);
@@ -231,12 +235,16 @@ class BudgetServiceTest {
     }
 
     @Test
-    void everyRevivalGetsItsSettingsWhenItIsCreated() {
+    void everyRevivalGetsItsSettingsWhenItIsCreatedWithTheDefaultFee() {
         settings = null;
+        when(applicationSettings.defaultParticipationFee()).thenReturn(new BigDecimal("900.00"));
 
         service.revivalCreated(new RevivalCreated(REVIVAL_ID));
 
-        verify(settingsRepository).saveAndFlush(any(BudgetSettings.class));
+        final ArgumentCaptor<BudgetSettings> saved = ArgumentCaptor.forClass(BudgetSettings.class);
+
+        verify(settingsRepository).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getParticipationFee()).isEqualByComparingTo("900");
     }
 
     @Test

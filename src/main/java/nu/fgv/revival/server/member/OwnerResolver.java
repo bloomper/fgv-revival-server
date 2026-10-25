@@ -35,11 +35,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
  * Owners of rows and checklist items: validates an {@link OwnerInputDto}, tells whether an owner
- * still counts as an owner, and matches a display name to a member for MCP and the import.
+ * still counts as an owner, and matches a display name to a member for MCP and the import. Checklist items can also be
+ * owned by the revival's participants, who see and complete the items assigned to them.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -48,6 +50,7 @@ import java.util.stream.Collectors;
 public class OwnerResolver {
 
     private static final Set<RevivalRole> OWNER_ROLES = EnumSet.of(RevivalRole.DIRECTEUR, RevivalRole.STEERING_GROUP);
+    private static final Set<RevivalRole> PARTICIPANT_ROLES = EnumSet.of(RevivalRole.PARTICIPANT);
     private static final String ME = "me";
 
     private final RevivalMemberRepository memberRepository;
@@ -88,8 +91,31 @@ public class OwnerResolver {
      */
     @Transactional(readOnly = true)
     public Map<Long, @Nullable String> activeMembers(final Long revivalId) {
+        return active(revivalId, OWNER_ROLES);
+    }
+
+    /**
+     * The participants who have logged in, by person id, with their display names: they can own checklist items.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, @Nullable String> activeParticipants(final Long revivalId) {
+        return active(revivalId, PARTICIPANT_ROLES);
+    }
+
+    /**
+     * Whoever can own a checklist item: the active directeurs and steering group members, then the participants.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, @Nullable String> checklistOwners(final Long revivalId) {
+        final Map<Long, @Nullable String> owners = new LinkedHashMap<>(activeMembers(revivalId));
+
+        owners.putAll(activeParticipants(revivalId));
+        return owners;
+    }
+
+    private Map<Long, @Nullable String> active(final Long revivalId, final Set<RevivalRole> roles) {
         final List<Long> ids = memberRepository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId).stream()
-                .filter(member -> OWNER_ROLES.contains(member.getRole()) && member.getPersonId() != null)
+                .filter(member -> roles.contains(member.getRole()) && member.getPersonId() != null)
                 .map(RevivalMember::getPersonId)
                 .filter(Objects::nonNull)
                 .toList();
@@ -143,11 +169,29 @@ public class OwnerResolver {
      */
     @Transactional(readOnly = true)
     public Owner change(final Long revivalId, final Owner current, final OwnerInputDto input) {
-        final boolean same = input.personId() != null && input.name() == null
+        return isSame(current, input) ? current : validate(revivalId, input);
+    }
+
+    /**
+     * As {@link #change}, for a checklist item, whose owner may also be a participant.
+     */
+    @Transactional(readOnly = true)
+    public Owner changeChecklistOwner(final Long revivalId, final Owner current, final OwnerInputDto input) {
+        return isSame(current, input) ? current : validateChecklistOwner(revivalId, input);
+    }
+
+    private static boolean isSame(final Owner current, final OwnerInputDto input) {
+        return input.personId() != null && input.name() == null
                 ? input.personId().equals(current.getPersonId())
                 : input.personId() == null && input.name() != null && input.name().strip().equals(current.getName());
+    }
 
-        return same ? current : validate(revivalId, input);
+    /**
+     * As {@link #validate}, for a checklist item, whose owner may also be a participant who has logged in.
+     */
+    @Transactional(readOnly = true)
+    public Owner validateChecklistOwner(final Long revivalId, final @Nullable OwnerInputDto input) {
+        return validate(input, () -> checklistOwners(revivalId).keySet());
     }
 
     /**
@@ -156,6 +200,10 @@ public class OwnerResolver {
      */
     @Transactional(readOnly = true)
     public Owner validate(final Long revivalId, final @Nullable OwnerInputDto input) {
+        return validate(input, () -> activeMembers(revivalId).keySet());
+    }
+
+    private static Owner validate(final @Nullable OwnerInputDto input, final Supplier<Set<Long>> owners) {
         if (input == null || (input.personId() == null && input.name() == null)) {
             return Owner.none();
         }
@@ -163,7 +211,7 @@ public class OwnerResolver {
             throw new BadRequestException("error.owner.both");
         }
         if (input.personId() != null) {
-            if (!activeMembers(revivalId).containsKey(input.personId())) {
+            if (!owners.get().contains(input.personId())) {
                 throw new BadRequestException("error.owner.notMember");
             }
             return Owner.member(input.personId());

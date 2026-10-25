@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.audit.AuditContext;
+import nu.fgv.revival.server.library.LibraryService;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
@@ -32,8 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.springframework.util.StringUtils.hasText;
@@ -61,6 +64,7 @@ public class GuideDraftService {
     private final List<DraftDiscardListener> discardListeners;
     private final ApplicationEventPublisher events;
     private final GuideItemTypeService typeService;
+    private final LibraryService libraryService;
 
     public GuideDraftService(final GuideVersionRepository versionRepository,
                              final GuideChapterRepository chapterRepository,
@@ -72,7 +76,8 @@ public class GuideDraftService {
                              final AccessPolicy accessPolicy,
                              @Lazy final List<DraftDiscardListener> discardListeners,
                              final ApplicationEventPublisher events,
-                             final GuideItemTypeService typeService) {
+                             final GuideItemTypeService typeService,
+                             final LibraryService libraryService) {
         this.versionRepository = versionRepository;
         this.chapterRepository = chapterRepository;
         this.sectionRepository = sectionRepository;
@@ -84,6 +89,7 @@ public class GuideDraftService {
         this.discardListeners = discardListeners;
         this.events = events;
         this.typeService = typeService;
+        this.libraryService = libraryService;
     }
 
     /**
@@ -205,6 +211,7 @@ public class GuideDraftService {
             copy.setType(source.getType());
             copy.setTextSv(source.getTextSv());
             copy.setTextEn(source.getTextEn());
+            copy.setLibraryEntryIds(new HashSet<>(source.getLibraryEntryIds()));
             itemRepository.save(copy);
         }
         itemRepository.flush();
@@ -497,6 +504,16 @@ public class GuideDraftService {
     @Transactional
     public Long createItem(final Long chapterId, final @Nullable Long sectionId, final @Nullable Integer position,
                            final String type, final @Nullable String sv, final @Nullable String en) {
+        return createItem(chapterId, sectionId, position, type, sv, en, null);
+    }
+
+    /**
+     * As {@link #createItem(Long, Long, Integer, String, String, String)}, linking it to active library entries.
+     */
+    @Transactional
+    public Long createItem(final Long chapterId, final @Nullable Long sectionId, final @Nullable Integer position,
+                           final String type, final @Nullable String sv, final @Nullable String en,
+                           final @Nullable Collection<Long> libraryEntryIds) {
         manager();
 
         final GuideChapter chapter = chapter(chapterId);
@@ -505,7 +522,15 @@ public class GuideDraftService {
         requirePlace(chapter, sectionId);
         typeService.requireAssignable(List.of(type), List.of());
         AuditContext.operation("guideItemCreate");
-        return addItem(chapter, sectionId, position, type, GuideRules.itemTextSv(sv), GuideRules.itemTextEn(en)).getId();
+
+        final Set<Long> links = libraryEntryIds == null ? Set.of() : libraryService.validLinks(libraryEntryIds, List.of());
+        final GuideItem item = addItem(chapter, sectionId, position, type, GuideRules.itemTextSv(sv), GuideRules.itemTextEn(en));
+
+        if (!links.isEmpty()) {
+            item.setLibraryEntryIds(new HashSet<>(links));
+            itemRepository.saveAndFlush(item);
+        }
+        return item.getId();
     }
 
     /**
@@ -534,6 +559,16 @@ public class GuideDraftService {
 
     @Transactional
     public Long updateItem(final Long id, final Long expectedVersion, final String type, final @Nullable String sv, final @Nullable String en) {
+        return updateItem(id, expectedVersion, type, sv, en, null);
+    }
+
+    /**
+     * As {@link #updateItem(Long, Long, String, String, String)}; {@code libraryEntryIds}, when given, replaces the
+     * links. A retired entry the item already links to may stay.
+     */
+    @Transactional
+    public Long updateItem(final Long id, final Long expectedVersion, final String type, final @Nullable String sv, final @Nullable String en,
+                           final @Nullable Collection<Long> libraryEntryIds) {
         manager();
 
         final GuideItem item = item(id);
@@ -545,6 +580,9 @@ public class GuideDraftService {
         item.setType(type);
         item.setTextSv(GuideRules.itemTextSv(sv));
         item.setTextEn(GuideRules.itemTextEn(en));
+        if (libraryEntryIds != null) {
+            item.setLibraryEntryIds(new HashSet<>(libraryService.validLinks(libraryEntryIds, item.getLibraryEntryIds())));
+        }
         itemRepository.saveAndFlush(item);
         return item.getId();
     }

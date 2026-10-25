@@ -1,0 +1,72 @@
+# The reference library: venues, ticket services, role descriptions and roles to contact. Kept by SUPER_ADMIN, read by
+# whoever reads the guide. Entries are retired, never deleted. Texts are plain text in Swedish, optionally English.
+
+extend type Query {
+    "By kind, then Swedish name. Readers of the guide."
+    libraryEntries(includeRetired: Boolean = false): [LibraryEntry!]!
+
+    "Retired or not. Readers of the guide."
+    libraryEntry(id: ID!): LibraryEntry
+}
+
+extend type Mutation {
+    "SUPER_ADMIN, for every mutation below."
+    libraryEntryCreate(input: LibraryEntryInput!): LibraryEntry!
+    "The kind stays as created."
+    libraryEntryUpdate(id: ID!, version: Int!, input: LibraryEntryInput!): LibraryEntry!
+    "No longer offered to link to; guide items that link to it keep it."
+    libraryEntryRetire(id: ID!, version: Int!): LibraryEntry!
+    libraryEntryRestore(id: ID!, version: Int!): LibraryEntry!
+}
+
+enum LibraryEntryKind {
+    "Pros, cons, how to book it and prices from earlier revivals."
+    VENUE
+    TICKET_SERVICE
+    "What a role in a revival does, e.g. casseur or production manager."
+    ROLE_DESCRIPTION
+    "A role to contact that changes every year, e.g. this year's directeur of Chalmersspexet. Never a named person."
+    CONTACT_ROLE
+}
+
+type LibraryEntry {
+    id: ID!
+    kind: LibraryEntryKind!
+    name: LocalizedText!
+    description: LocalizedText
+    "VENUE and TICKET_SERVICE."
+    pros: LocalizedText
+    "VENUE and TICKET_SERVICE."
+    cons: LocalizedText
+    "VENUE: how and where it is booked."
+    booking: LocalizedText
+    "VENUE and TICKET_SERVICE: what earlier revivals paid."
+    prices: LocalizedText
+    "CONTACT_ROLE: how the role is reached, e.g. a shared address."
+    contact: LocalizedText
+    "An https link to its own page."
+    url: String
+    retired: Boolean!
+    version: Int!
+}
+
+input LibraryEntryInput {
+    "Read only on create."
+    kind: LibraryEntryKind!
+    "1–100 characters each."
+    name: LocalizedTextInput!
+    "Each text at most 4000 characters; a blank Swedish text clears it."
+    description: LocalizedTextInput
+    pros: LocalizedTextInput
+    cons: LocalizedTextInput
+    booking: LocalizedTextInput
+    prices: LocalizedTextInput
+    contact: LocalizedTextInput
+    "An absolute https URL of at most 500 characters; blank clears it."
+    url: String
+}
+
+extend type GuideItem {
+    "The reference library entries it links to, retired ones too, by kind and name. Empty for those who do not read the library."
+    libraryEntries: [LibraryEntry!]!
+}

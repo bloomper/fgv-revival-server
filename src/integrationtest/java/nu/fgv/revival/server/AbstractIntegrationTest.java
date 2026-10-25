@@ -414,7 +414,7 @@ public abstract class AbstractIntegrationTest {
                 "checklist_item", "checklist", "event", "checklist_template_item", "checklist_template", "guide_suggestion", "referral", "dietary_need",
                 "pending_person", "participant", "participation_settings", "revival_member_capability", "revival_member", "revival_status_change",
                 "revival_guide_version_change", "revival_show", "revival",
-                "guide_item", "guide_section", "guide_chapter", "guide_version")) {
+                "guide_item_library_entry", "library_entry", "guide_item", "guide_section", "guide_chapter", "guide_version")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         // Back to the lists the migration seeds
@@ -437,6 +437,7 @@ public abstract class AbstractIntegrationTest {
                        ('YOUTUBE', 'youtube.com'), ('YOUTUBE', 'youtu.be'), ('ONEDRIVE', 'onedrive.live.com'), ('ONEDRIVE', '1drv.ms'),
                        ('ONEDRIVE', 'sharepoint.com')""").update();
         jdbcClient.sql("DELETE FROM event_type WHERE created_by <> 'system'").update();
+        jdbcClient.sql("UPDATE application_settings SET terms_sv = NULL, terms_en = NULL, default_participation_fee = NULL, version = 0").update();
         jdbcClient.sql("DELETE FROM budget_category WHERE created_by <> 'system'").update();
         jdbcClient.sql("UPDATE budget_category SET retired_at = NULL, position = FIELD(id, " + SEEDED_BUDGET_CATEGORIES + ") - 1, "
                 + "name_sv = ELT(FIELD(id, " + SEEDED_BUDGET_CATEGORIES + "), " + SEEDED_BUDGET_CATEGORY_NAMES + "), "
@@ -453,7 +454,8 @@ public abstract class AbstractIntegrationTest {
                 "budget_settings_audit", "reference_figure_audit", "reference_revival_audit", "event_type_budget_line_audit", "budget_category_audit",
                 "spex_calendar_date_audit", "news_audit", "participant_audit", "participation_settings_audit", "availability_audit", "shift_slot_audit",
                 "shift_assignment_audit", "mailing_audit", "mailing_recipient_audit", "mailing_template_audit", "inventory_item_audit",
-                "material_position_audit", "material_audit", "sync_step_audit", "sync_run_audit", "link_service_host_audit", "link_service_audit", "revchanges", "revinfo", "person")) {
+                "material_position_audit", "material_audit", "sync_step_audit", "sync_run_audit", "link_service_host_audit", "link_service_audit",
+                "guide_item_library_entry_audit", "library_entry_audit", "application_settings_audit", "revchanges", "revinfo", "person")) {
             jdbcClient.sql("DELETE FROM " + table).update();
         }
         // The validity audit strategy needs a previous revision before the seeded entries can be changed
@@ -479,6 +481,9 @@ public abstract class AbstractIntegrationTest {
         jdbcClient.sql("""
                 INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
                 SELECT link_service_id, host, (SELECT MAX(id) FROM revinfo), 0 FROM link_service_host""").update();
+        jdbcClient.sql("""
+                INSERT INTO application_settings_audit (id, terms_sv, terms_en, default_participation_fee, version, rev, revtype)
+                SELECT id, terms_sv, terms_en, default_participation_fee, version, (SELECT MAX(id) FROM revinfo), 0 FROM application_settings""").update();
         cacheManager.getCacheNames().forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
         spexregisterUp();
         MAIL.reset();

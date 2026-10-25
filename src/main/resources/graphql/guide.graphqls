@@ -351,6 +351,8 @@ input GuideItemCreateInput {
     "A guide item type id, not retired."
     type: ID!
     text: LocalizedTextInput!
+    "Reference library entries to link to, not retired."
+    libraryEntryIds: [ID!]
 }
 
 input GuideItemUpdateInput {
@@ -359,6 +361,8 @@ input GuideItemUpdateInput {
     "A guide item type id, not retired unless the item already has it."
     type: ID!
     text: LocalizedTextInput!
+    "Replaces the links to reference library entries; left out, they stay. Not retired unless the item links to it."
+    libraryEntryIds: [ID!]
 }
 
 input GuideItemMoveInput {

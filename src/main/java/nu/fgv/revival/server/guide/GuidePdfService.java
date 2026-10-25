@@ -16,6 +16,8 @@
 
 package nu.fgv.revival.server.guide;
 
+import nu.fgv.revival.server.event.EventType;
+import nu.fgv.revival.server.event.EventTypeRepository;
 import nu.fgv.revival.server.guide.GuideMarkdown.PdfFonts;
 import org.jspecify.annotations.Nullable;
 import org.openpdf.text.Chapter;
@@ -42,15 +44,18 @@ import java.io.UncheckedIOException;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * The guide as a PDF, in Swedish or English: a title page, a linked table of contents,
- * bookmarks, the introduction and every chapter, section and item with its type. The draft is marked on every page. No
- * access checks here: callers check first. Never calls Spexregister.
+ * bookmarks, the introduction, every chapter, section and item with its type, and last the timeline template: the active
+ * event types with their offsets from the premiere. Event types are not versioned, so every version shows the current
+ * ones. The draft is marked on every page. No access checks here: callers check first. Never calls Spexregister.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -63,15 +68,29 @@ public class GuidePdfService {
     private final GuideMarkdown markdown;
     private final MessageSource messageSource;
     private final GuideItemTypeRepository typeRepository;
+    private final EventTypeRepository eventTypeRepository;
 
-    public GuidePdfService(final GuideMarkdown markdown, final MessageSource messageSource, final GuideItemTypeRepository typeRepository) {
+    public GuidePdfService(final GuideMarkdown markdown, final MessageSource messageSource, final GuideItemTypeRepository typeRepository,
+                           final EventTypeRepository eventTypeRepository) {
         this.markdown = markdown;
         this.messageSource = messageSource;
         this.typeRepository = typeRepository;
+        this.eventTypeRepository = eventTypeRepository;
     }
 
     private static String text(final GuideVersionView.Text text, final boolean english) {
         return english && text.en() != null ? text.en() : text.sv();
+    }
+
+    private static @Nullable String text(final @Nullable String sv, final @Nullable String en, final boolean english) {
+        return english && en != null ? en : sv;
+    }
+
+    /**
+     * Whole weeks from the premiere, rounded as the web rounds them.
+     */
+    private static long weeks(final int days) {
+        return Math.abs(Math.round(days / 7.0));
     }
 
     public byte[] render(final GuideVersionView version, final Locale locale, final @Nullable String revivalTitle) {
@@ -85,6 +104,9 @@ public class GuidePdfService {
         final Font noteFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8.5f, Font.NORMAL, new Color(120, 120, 120));
         final Map<String, GuideItemType> types = typeRepository.findAllByOrderByPositionAscIdAsc().stream()
                 .collect(Collectors.toMap(GuideItemType::getId, Function.identity()));
+        final List<EventType> eventTypes = eventTypeRepository.findAllByOrderByPositionAscIdAsc().stream()
+                .filter(type -> !type.isRetired())
+                .toList();
 
         try (final ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             final Document document = new Document(PageSize.A4, 56, 56, 56, 56);
@@ -135,6 +157,14 @@ public class GuidePdfService {
                     document.add(sectionLine);
                 }
             }
+            if (!eventTypes.isEmpty()) {
+                final Chunk entry = new Chunk(message("guide.pdf.timeline", locale), body.normal());
+                final Paragraph line = new Paragraph(entry);
+
+                entry.setLocalGoto("timeline");
+                line.setSpacingBefore(4);
+                document.add(line);
+            }
             document.newPage();
 
             final GuideVersionView.Text introduction = version.introduction();
@@ -175,12 +205,86 @@ public class GuidePdfService {
                 }
                 document.add(pdfChapter);
             }
+            if (!eventTypes.isEmpty()) {
+                document.add(timeline(eventTypes, number, english, body, chapterFont, sectionFont, typeFont, locale));
+            }
 
             document.close();
             return out.toByteArray();
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * The timeline template: each active event type with when it falls, how long it lasts, whether the revival pays,
+     * and its default content.
+     */
+    private Chapter timeline(final List<EventType> eventTypes, final int number, final boolean english, final PdfFonts body,
+                             final Font chapterFont, final Font sectionFont, final Font typeFont, final Locale locale) {
+        final Chunk heading = new Chunk(message("guide.pdf.timeline", locale), chapterFont);
+
+        heading.setLocalDestination("timeline");
+
+        final Chapter chapter = new Chapter(new Paragraph(heading), number);
+
+        chapter.setNumberDepth(0);
+        chapter.setBookmarkTitle(heading.getContent());
+        chapter.add(new Paragraph(message("guide.pdf.timeline.intro", locale), body.normal()));
+        for (final EventType type : eventTypes) {
+            final Paragraph name = new Paragraph(GuideMarkdown.pdfSafe(Objects.requireNonNull(text(type.getNameSv(), type.getNameEn(), english))), sectionFont);
+
+            name.setSpacingBefore(10);
+
+            final Section section = chapter.addSection(name);
+            final String days = message(type.getDays() == 1 ? "guide.pdf.timeline.day" : "guide.pdf.timeline.days", locale, type.getDays());
+            final String facts = type.isRevivalPays()
+                    ? String.join(" · ", offset(type, locale), days, message("guide.pdf.timeline.revivalPays", locale))
+                    : String.join(" · ", offset(type, locale), days);
+
+            section.setNumberDepth(0);
+            section.setBookmarkTitle(name.getContent());
+            section.add(new Paragraph(facts, typeFont));
+            addTimelineText(section, message("guide.pdf.timeline.description", locale), text(type.getDescriptionSv(), type.getDescriptionEn(), english), body);
+            addTimelineText(section, message("guide.pdf.timeline.rooms", locale), text(type.getRoomsSv(), type.getRoomsEn(), english), body);
+            addTimelineText(section, message("guide.pdf.timeline.catering", locale), text(type.getCateringSv(), type.getCateringEn(), english), body);
+        }
+        return chapter;
+    }
+
+    /**
+     * When a type falls, in whole weeks from the premiere: "8–10 veckor före premiären".
+     */
+    private String offset(final EventType type, final Locale locale) {
+        final Integer min = type.getOffsetMinDays();
+        final Integer max = type.getOffsetMaxDays();
+
+        if (min == null || max == null) {
+            return message("guide.pdf.timeline.offsetNone", locale);
+        }
+        if (min == 0 && max == 0) {
+            return message("guide.pdf.timeline.offsetPremiere", locale);
+        }
+        if (max <= 0) {
+            return message("guide.pdf.timeline.offsetBefore", locale, weeks(min), weeks(max));
+        }
+        if (min >= 0) {
+            return message("guide.pdf.timeline.offsetAfter", locale, weeks(min), weeks(max));
+        }
+        return message("guide.pdf.timeline.offsetAround", locale, weeks(min), weeks(max));
+    }
+
+    private static void addTimelineText(final Section target, final String label, final @Nullable String text, final PdfFonts body) {
+        if (text == null || text.isBlank()) {
+            return;
+        }
+
+        final Paragraph paragraph = new Paragraph();
+
+        paragraph.setSpacingBefore(3);
+        paragraph.add(new Chunk(label + ": ", body.bold()));
+        paragraph.add(new Chunk(GuideMarkdown.pdfSafe(text.strip()), body.normal()));
+        target.add(paragraph);
     }
 
     private void addItem(final Section target, final GuideVersionView.Item item, final @Nullable GuideItemType itemType, final boolean english,

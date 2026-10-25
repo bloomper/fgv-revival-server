@@ -16,11 +16,14 @@
 
 package nu.fgv.revival.server.guide;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,9 +32,13 @@ import nu.fgv.revival.server.util.AbstractAuditable;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * A tip, requirement, question or text in Markdown. A null section means it comes before the chapter's first section.
- * Its key stays the same from version to version, so checklists can link to it.
+ * Its key stays the same from version to version, so checklists can link to it. It can link to reference library
+ * entries.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -74,5 +81,10 @@ public class GuideItem extends AbstractAuditable {
 
     @Column(name = "text_en", columnDefinition = "TEXT")
     private @Nullable String textEn;
+
+    @ElementCollection
+    @CollectionTable(name = "guide_item_library_entry", joinColumns = @JoinColumn(name = "item_id"))
+    @Column(name = "library_entry_id", nullable = false)
+    private Set<Long> libraryEntryIds = new HashSet<>();
 
 }

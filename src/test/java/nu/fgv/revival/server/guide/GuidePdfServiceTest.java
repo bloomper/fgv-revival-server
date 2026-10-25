@@ -17,6 +17,8 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.TestCatalogs;
+import nu.fgv.revival.server.event.EventType;
+import nu.fgv.revival.server.event.EventTypeRepository;
 import org.junit.jupiter.api.Test;
 import org.openpdf.text.pdf.PdfArray;
 import org.openpdf.text.pdf.PdfName;
@@ -37,6 +39,8 @@ import java.util.Locale;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * The PDF, read back with OpenPDF's own reader.
@@ -48,7 +52,28 @@ class GuidePdfServiceTest {
 
     private static final Locale SWEDISH = Locale.of("sv");
 
-    private final GuidePdfService service = new GuidePdfService(new GuideMarkdown(), messages(), TestCatalogs.itemTypeRepository());
+    private final GuidePdfService service = new GuidePdfService(new GuideMarkdown(), messages(), TestCatalogs.itemTypeRepository(), eventTypes());
+
+    private static EventTypeRepository eventTypes() {
+        final EventTypeRepository repository = mock(EventTypeRepository.class);
+        final EventType rehearsal = new EventType();
+        final EventType aw = new EventType();
+        final EventType retired = new EventType();
+
+        rehearsal.setNameSv("Repetitionshelg 1");
+        rehearsal.setNameEn("Rehearsal weekend 1");
+        rehearsal.setOffsetMinDays(-70);
+        rehearsal.setOffsetMaxDays(-56);
+        rehearsal.setDays(2);
+        rehearsal.setRevivalPays(true);
+        rehearsal.setRoomsSv("Två rum för ensemblen.");
+        aw.setNameSv("AW");
+        aw.setDescriptionSv("Öl och mat på restaurang.");
+        retired.setNameSv("Gammal typ");
+        retired.setRetiredAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(repository.findAllByOrderByPositionAscIdAsc()).thenReturn(List.of(aw, rehearsal, retired));
+        return repository;
+    }
 
     private static ResourceBundleMessageSource messages() {
         final ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
@@ -120,11 +145,26 @@ class GuidePdfServiceTest {
     }
 
     @Test
+    void theTimelineTemplateComesLastWithTheActiveEventTypes() throws IOException {
+        final String swedish = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of()), SWEDISH, null));
+
+        assertThat(swedish).contains("Tidplan", "AW", "Inget fast datum", "Innehåll: Öl och mat på restaurang.", "Repetitionshelg 1",
+                "10–8 veckor före premiären", "2 dagar", "Nyuppsättningen betalar mat och dryck", "Lokaler: Två rum för ensemblen.");
+        assertThat(swedish).doesNotContain("Gammal typ");
+        assertThat(swedish.lastIndexOf("Kapitel J")).isLessThan(swedish.lastIndexOf("Repetitionshelg 1"));
+        assertThat(swedish.indexOf("AW")).isLessThan(swedish.indexOf("Repetitionshelg 1"));
+
+        final String english = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of()), Locale.ENGLISH, null));
+
+        assertThat(english).contains("Timeline", "Rehearsal weekend 1", "10–8 weeks before the premiere", "Rooms: Två rum för ensemblen.");
+    }
+
+    @Test
     void chaptersAndSectionsAreBookmarksAndLinksAreAnnotations() throws IOException {
         final PdfReader reader = new PdfReader(service.render(version(GuideVersionStatus.PUBLISHED, List.of()), SWEDISH, null));
         final List<Map<String, Object>> bookmarks = SimpleBookmark.getBookmarkList(reader);
 
-        assertThat(bookmarks).extracting(bookmark -> bookmark.get("Title")).contains("1. Kapitel A", "10. Kapitel J");
+        assertThat(bookmarks).extracting(bookmark -> bookmark.get("Title")).contains("1. Kapitel A", "10. Kapitel J", "Tidplan");
 
         int links = 0;
 

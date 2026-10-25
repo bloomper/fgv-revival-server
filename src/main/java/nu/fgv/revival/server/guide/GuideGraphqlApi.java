@@ -155,12 +155,13 @@ public class GuideGraphqlApi {
     @MutationMapping
     public GuideVersionView.Item guideItemCreate(@Argument final GuideItemCreateInput input) {
         return service.draftItem(draftService.createItem(input.chapterId(), input.sectionId(), input.position(), input.type(),
-                input.text().sv(), input.text().en()));
+                input.text().sv(), input.text().en(), input.libraryEntryIds()));
     }
 
     @MutationMapping
     public GuideVersionView.Item guideItemUpdate(@Argument final GuideItemUpdateInput input) {
-        return service.draftItem(draftService.updateItem(input.id(), input.version(), input.type(), input.text().sv(), input.text().en()));
+        return service.draftItem(draftService.updateItem(input.id(), input.version(), input.type(), input.text().sv(), input.text().en(),
+                input.libraryEntryIds()));
     }
 
     @MutationMapping
@@ -231,10 +232,10 @@ public class GuideGraphqlApi {
     }
 
     public record GuideItemCreateInput(Long chapterId, @Nullable Long sectionId, @Nullable Integer position,
-                                       String type, LocalizedTextInput text) {
+                                       String type, LocalizedTextInput text, @Nullable List<Long> libraryEntryIds) {
     }
 
-    public record GuideItemUpdateInput(Long id, Long version, String type, LocalizedTextInput text) {
+    public record GuideItemUpdateInput(Long id, Long version, String type, LocalizedTextInput text, @Nullable List<Long> libraryEntryIds) {
     }
 
     public record GuideItemMoveInput(Long id, Long version, Long chapterId, @Nullable Long sectionId, int position) {

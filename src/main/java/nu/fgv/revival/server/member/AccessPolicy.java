@@ -323,6 +323,14 @@ public class AccessPolicy {
     }
 
     /**
+     * The checklist items assigned to the caller, read and marked done on their own page: a participant of a revival
+     * they can see, which is then {@code OPEN}. Helpers own no items.
+     */
+    public boolean canWorkAssignedChecklistItems(final Caller caller, final Revival revival) {
+        return isVisibleParticipant(caller, revival, RevivalRole.PARTICIPANT);
+    }
+
+    /**
      * Reading a revival's events: whoever reads its work, and its participants while they can see it. Helpers get only
      * the events they hold shifts in, on their own page, never the revival's list.
      */
@@ -416,6 +424,25 @@ public class AccessPolicy {
      * The reference figures and the lines event types propose for budgets: the super admin keeps them.
      */
     public boolean canManageReferenceFigures(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
+     * The reference library: read by whoever reads the guide, whose items link to it.
+     */
+    public boolean canReadLibrary(final Caller caller, final Collection<Revival> callerRevivals) {
+        return canReadGuide(caller, callerRevivals);
+    }
+
+    public boolean canManageLibrary(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
+     * Application settings: the default terms text and participation fee. The super admin keeps them; whoever writes
+     * a revival's participation settings reads them, as defaults.
+     */
+    public boolean canManageApplicationSettings(final Caller caller) {
         return caller.isSuperAdmin();
     }
 
@@ -754,6 +781,22 @@ public class AccessPolicy {
 
     public void requireManageChecklistTemplates(final Caller caller) {
         require(canManageChecklistTemplates(caller));
+    }
+
+    public void requireReadLibrary(final Caller caller, final Collection<Revival> callerRevivals) {
+        require(canReadLibrary(caller, callerRevivals));
+    }
+
+    public void requireManageLibrary(final Caller caller) {
+        require(canManageLibrary(caller));
+    }
+
+    public void requireManageApplicationSettings(final Caller caller) {
+        require(canManageApplicationSettings(caller));
+    }
+
+    public void requireWorkAssignedChecklistItems(final Caller caller, final Revival revival) {
+        require(canWorkAssignedChecklistItems(caller, revival));
     }
 
     public void requireManageCatalogs(final Caller caller) {

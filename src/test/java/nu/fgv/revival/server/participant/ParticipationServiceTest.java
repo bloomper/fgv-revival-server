@@ -33,6 +33,7 @@ import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalService;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalTitles;
+import nu.fgv.revival.server.settings.ApplicationSettingsService;
 import nu.fgv.revival.server.spex.SpexareDirectory;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.error.BadRequestException;
@@ -116,6 +117,8 @@ class ParticipationServiceTest {
     private SpexareDirectory directory;
     @Mock
     private SwishQrClient swish;
+    @Mock
+    private ApplicationSettingsService applicationSettings;
 
     private ParticipationService service;
     private Revival revival;
@@ -142,7 +145,7 @@ class ParticipationServiceTest {
         messages.addMessage("participant.terms.loanWithoutAmount", SV, "Lånet.");
         service = new ParticipationService(repository, pendingRepository, dietaryRepository, settingsRepository, referralRepository,
                 budgetSettingsRepository, revivalRepository, revivalService, titles, ownerResolver, callerService, accessPolicy, access, views,
-                participantService, mailer, directory, swish, messages, TestClocks.at(LocalDate.of(2028, 1, 10)));
+                participantService, mailer, directory, swish, messages, applicationSettings, TestClocks.at(LocalDate.of(2028, 1, 10)));
         revival = TestCallers.revival(RevivalStatus.OPEN);
         member.setId(30L);
         member.setRevivalId(REVIVAL_ID);
@@ -302,12 +305,13 @@ class ParticipationServiceTest {
         budget.setLoanAmount(new BigDecimal("50000"));
         when(settingsRepository.findByRevivalId(REVIVAL_ID)).thenReturn(Optional.of(settings));
         when(budgetSettingsRepository.findByRevivalId(REVIVAL_ID)).thenReturn(Optional.of(budget));
+        when(applicationSettings.terms(SV)).thenReturn(" FGV:s villkor. ");
 
         final ParticipantDtos.Participation participation = service.mine(REVIVAL_ID, SV);
 
         assertThat(participation.swish()).isEqualTo(new ParticipantDtos.SwishPayment("1231234567", new BigDecimal("1200.00"),
                 "Ali Baba 2028 Pia Persson", true));
-        assertThat(participation.terms()).containsExactly("Deltagaravgiften är 1200 kr.", "Lånet är 50000 kr.");
+        assertThat(participation.terms()).containsExactly("Deltagaravgiften är 1200 kr.", "Lånet är 50000 kr.", "FGV:s villkor.");
         assertThat(participation.whatsappLink()).isNull();
         assertThat(participation.contact()).isEqualTo(new ParticipantDtos.Contact("pia@example.org", null, null, null, null));
         assertThat(participation.steeringGroup()).extracting(ref -> ref.displayName()).containsExactly("Stina Styrgrupp");

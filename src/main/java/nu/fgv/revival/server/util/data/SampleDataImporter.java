@@ -29,6 +29,7 @@ import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideSection;
 import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.material.LinkService;
+import nu.fgv.revival.server.library.LibraryEntry;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalRole;
@@ -366,6 +367,17 @@ public class SampleDataImporter {
                         SELECT id, subject, text, visible_from, visible_to, version, :rev, 0 FROM news
                         """,
                 """
+                        INSERT INTO library_entry_audit (id, kind, name_sv, name_en, description_sv, description_en, pros_sv, pros_en, cons_sv,
+                                                         cons_en, booking_sv, booking_en, prices_sv, prices_en, contact_sv, contact_en, url,
+                                                         retired_at, version, rev, revtype)
+                        SELECT id, kind, name_sv, name_en, description_sv, description_en, pros_sv, pros_en, cons_sv, cons_en, booking_sv,
+                               booking_en, prices_sv, prices_en, contact_sv, contact_en, url, retired_at, version, :rev, 0 FROM library_entry
+                        """,
+                """
+                        INSERT INTO guide_item_library_entry_audit (item_id, library_entry_id, rev, revtype)
+                        SELECT item_id, library_entry_id, :rev, 0 FROM guide_item_library_entry
+                        """,
+                """
                         INSERT INTO link_service_host_audit (link_service_id, host, rev, revtype)
                         SELECT link_service_id, host, :rev, 0 FROM link_service_host
                         """,
@@ -381,7 +393,8 @@ public class SampleDataImporter {
 
         Stream.of(Revival.class, RevivalShow.class, RevivalStatusChange.class, RevivalMember.class, RevivalGuideVersionChange.class,
                 GuideVersion.class, GuideChapter.class, GuideSection.class, GuideItem.class, ChecklistTemplate.class, ChecklistTemplateItem.class,
-                Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class, News.class).forEach(entity -> jdbcClient
+                Capability.class, GuideItemType.class, EventType.class, BudgetCategory.class, LinkService.class, News.class,
+                LibraryEntry.class).forEach(entity -> jdbcClient
                 .sql("INSERT INTO revchanges (rev, entityname) VALUES (:rev, :entityName)")
                 .param("rev", rev)
                 .param("entityName", entity.getName())
@@ -407,6 +420,7 @@ public class SampleDataImporter {
 
         timed("Created the checklist templates", () -> SampleChecklistTemplates.insert(jdbcClient, people.get(ADMIN).externalId()));
         timed("Created the news", () -> SampleNews.insert(jdbcClient, people.get(ADMIN).externalId()));
+        timed("Created the reference library", () -> SampleLibrary.insert(jdbcClient, people.get(ADMIN).externalId()));
         timed("Created the revivals", () -> createSampleRevivals(jdbcClient, spex, people, guide));
         timed("Seeded the baseline revision", () -> seedBaselineRevision(jdbcClient));
         log.info("Imported sample data in {} s", Duration.ofNanos(System.nanoTime() - started).toSeconds());
@@ -469,6 +483,8 @@ public class SampleDataImporter {
                 "budget_category_audit",
                 "spex_calendar_date_audit",
                 "news_audit",
+                "guide_item_library_entry_audit",
+                "library_entry_audit",
                 "minutes_email_recipient",
                 "minutes_email",
                 "meeting_entry_change",
@@ -507,6 +523,8 @@ public class SampleDataImporter {
                 "event_type_budget_line",
                 "spex_calendar_date",
                 "news",
+                "guide_item_library_entry",
+                "library_entry",
                 "log_entry_tag",
                 "log_entry",
                 "log_entry_counter",

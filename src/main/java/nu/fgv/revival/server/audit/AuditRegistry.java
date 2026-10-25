@@ -85,7 +85,7 @@ public class AuditRegistry {
 
         register(AuditedType.LOG_ENTRY, LogEntry.class, revivalRead(accessPolicy::requireReadRevivalWork),
                 Set.of(REVIVAL_ID, "number", "origin", "guideItemKey", "checklistItemId", "answersEntryId", "meetingId"),
-                Map.of("owner", owner));
+                Map.of("owner", owner, "eventId", event));
         register(AuditedType.CHECKLIST_ITEM, ChecklistItem.class, revivalRead(accessPolicy::requireReadRevivalWork),
                 Set.of(REVIVAL_ID, "checklistId", "position", "required", "guideItemKey", "stateChangedBy", "stateChangedAt", "reasonKey",
                         "reasonArg", "deadlineManual", "relativeDeadline", "templateItemId", "defaultCapability"),

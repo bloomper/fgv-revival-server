@@ -33,6 +33,7 @@ import nu.fgv.revival.server.member.OwnerViews;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalMemberRepository;
 import nu.fgv.revival.server.member.RevivalRole;
+import nu.fgv.revival.server.member.RevivalRoleAssignment;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.person.PersonNames;
@@ -60,6 +61,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.PERSON_ID;
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
@@ -146,8 +148,8 @@ class ChecklistServiceTest {
         });
         lenient().when(ownerViews.toDtos(anyCollection(), any())).thenReturn(Map.of());
         lenient().when(texts.texts(anyCollection())).thenReturn(Map.of());
-        lenient().when(ownerResolver.validate(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
-        lenient().when(ownerResolver.change(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validate(REVIVAL_ID, invocation.getArgument(2)));
+        lenient().when(ownerResolver.validateChecklistOwner(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
+        lenient().when(ownerResolver.changeChecklistOwner(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validateChecklistOwner(REVIVAL_ID, invocation.getArgument(2)));
         lenient().when(itemRepository.findByChecklistIdInOrderByPositionAscIdAsc(anyList())).thenReturn(List.of());
     }
 
@@ -208,7 +210,7 @@ class ChecklistServiceTest {
         void ownersGoThroughTheResolver() {
             final OwnerInputDto owner = new OwnerInputDto(null, "Sam");
 
-            when(ownerResolver.validate(REVIVAL_ID, owner)).thenReturn(Owner.named("Sam"));
+            when(ownerResolver.validateChecklistOwner(REVIVAL_ID, owner)).thenReturn(Owner.named("Sam"));
             service.createItem(new ChecklistService.NewItem(CHECKLIST_ID, "x", owner, TODAY, null, null), Locale.ENGLISH);
 
             org.mockito.Mockito.verify(itemRepository).saveAndFlush(org.mockito.ArgumentMatchers.argThat(saved ->
@@ -242,7 +244,7 @@ class ChecklistServiceTest {
             final OwnerInputDto owner = new OwnerInputDto(PERSON_ID, null);
 
             item.setOwner(Owner.member(PERSON_ID));
-            when(ownerResolver.change(REVIVAL_ID, Owner.member(PERSON_ID), owner)).thenReturn(Owner.member(PERSON_ID));
+            when(ownerResolver.changeChecklistOwner(REVIVAL_ID, Owner.member(PERSON_ID), owner)).thenReturn(Owner.member(PERSON_ID));
             service.updateItem(new ChecklistService.ItemChange(7L, 2L, "Ny", owner, false, null, false, null, false), Locale.ENGLISH);
 
             assertThat(item.getOwner()).isEqualTo(Owner.member(PERSON_ID));
@@ -657,6 +659,75 @@ class ChecklistServiceTest {
 
             assertThatThrownBy(() -> create(SATURDAY, 5L, Locale.ENGLISH)).isInstanceOf(AccessDeniedException.class);
             assertThat(checklists).doesNotContainKey(EVENT_ID);
+        }
+    }
+
+    @Nested
+    class Assigned {
+
+        private final Caller participant = new Caller(TestCallers.steeringGroup().person(), Set.of(),
+                Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.PARTICIPANT, Set.of())));
+
+        @BeforeEach
+        void open() {
+            revival.setStatus(RevivalStatus.OPEN);
+            lenient().when(callerService.current()).thenReturn(participant);
+            lenient().when(checklistRepository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(checklist));
+        }
+
+        @Test
+        void aParticipantSeesOnlyTheItemsAssignedToThem() {
+            final ChecklistItem mine = item(false);
+            final ChecklistItem theirs = new ChecklistItem();
+            final ChecklistItem waived = new ChecklistItem();
+
+            mine.setOwner(Owner.member(PERSON_ID));
+            theirs.setId(8L);
+            theirs.setChecklistId(CHECKLIST_ID);
+            theirs.setOwner(Owner.member(PERSON_ID + 1));
+            waived.setId(9L);
+            waived.setChecklistId(CHECKLIST_ID);
+            waived.setOwner(Owner.member(PERSON_ID));
+            waived.setState(ChecklistItemState.NOT_APPLICABLE);
+            when(itemRepository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(mine, theirs, waived));
+
+            assertThat(service.assigned(REVIVAL_ID)).extracting(AssignedChecklistItemDto::id).containsExactly(7L);
+        }
+
+        @Test
+        void helpersHaveNoItems() {
+            when(callerService.current()).thenReturn(new Caller(TestCallers.steeringGroup().person(), Set.of(),
+                    Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.HELPER, Set.of()))));
+
+            assertThat(service.assigned(REVIVAL_ID)).isEmpty();
+        }
+
+        @Test
+        void theOwnerMarksTheirItemDoneAndOpenAgain() {
+            final ChecklistItem mine = item(false);
+
+            mine.setOwner(Owner.member(PERSON_ID));
+
+            assertThat(service.setAssignedDone(7L, 2L, true).done()).isTrue();
+            assertThat(mine.getState()).isEqualTo(ChecklistItemState.DONE);
+            assertThat(mine.getStateChangedBy()).isEqualTo(PERSON_ID);
+            assertThat(service.setAssignedDone(7L, 2L, false).done()).isFalse();
+        }
+
+        @Test
+        void someoneElsesItemIsNotFound() {
+            item(false).setOwner(Owner.member(PERSON_ID + 1));
+
+            assertThatThrownBy(() -> service.setAssignedDone(7L, 2L, true)).isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        void notWhileTheRevivalIsClosing() {
+            item(false).setOwner(Owner.member(PERSON_ID));
+            revival.setStatus(RevivalStatus.CLOSING);
+
+            assertThatThrownBy(() -> service.setAssignedDone(7L, 2L, true)).isInstanceOf(ResourceNotFoundException.class);
+            assertThat(service.assigned(REVIVAL_ID)).isEmpty();
         }
     }
 }

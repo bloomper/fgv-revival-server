@@ -120,7 +120,7 @@ input RevivalMemberCapabilitiesInput {
 
 "A member of the revival or a free-text name. Exactly one of person or name is set."
 type Owner {
-    "A directeur or steering group member, by display name only."
+    "A directeur or steering group member, or on a checklist item a participant, by display name only."
     person: OwnerPerson
     "A free-text name for someone outside the steering group."
     name: String
@@ -147,6 +147,9 @@ type PersonRef {
 }
 
 extend type Revival {
-    "Active directeurs and steering group members, who can own rows and checklist items."
-    ownerCandidates: [PersonRef!]!
+    """
+    Active directeurs and steering group members, who can own rows and checklist items. With includeParticipants, then
+    the participants who have logged in, who can own checklist items only.
+    """
+    ownerCandidates(includeParticipants: Boolean = false): [PersonRef!]!
 }

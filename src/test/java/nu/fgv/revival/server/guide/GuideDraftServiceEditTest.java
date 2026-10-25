@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.TestCallers;
+import nu.fgv.revival.server.library.LibraryService;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.RevivalGuideVersions;
@@ -115,7 +116,7 @@ class GuideDraftServiceEditTest {
         void setUp() {
             service = new GuideDraftService(versionRepository, chapterRepository, sectionRepository, itemRepository,
                     views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(), event -> {
-            }, mock(GuideItemTypeService.class));
+            }, mock(GuideItemTypeService.class), mock(LibraryService.class));
             lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
             lenient().when(versionRepository.saveAndFlush(any())).thenAnswer(invocation -> {
                 final GuideVersion version = invocation.getArgument(0);

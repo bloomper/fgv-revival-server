@@ -20,6 +20,8 @@ package nu.fgv.revival.server.decisionlog;
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
 import nu.fgv.revival.server.checklist.ChecklistItem;
+import nu.fgv.revival.server.event.Event;
+import nu.fgv.revival.server.event.EventRepository;
 import nu.fgv.revival.server.checklist.ChecklistItemRepository;
 import nu.fgv.revival.server.meeting.MeetingEntryChangeKind;
 import nu.fgv.revival.server.meeting.MeetingRecorder;
@@ -97,6 +99,8 @@ class LogEntryServiceTest {
     @Mock
     private PersonNames personNames;
     @Mock
+    private EventRepository eventRepository;
+    @Mock
     private MeetingRecorder meetingRecorder;
     @Mock
     private SpecificationQueries specificationQueries;
@@ -104,7 +108,7 @@ class LogEntryServiceTest {
     private Revival revival;
 
     private static LogEntryService.Draft draft(final LogEntryType type, final String text) {
-        return new LogEntryService.Draft(REVIVAL_ID, null, null, type, text, null, null, null, null, null, null, null);
+        return new LogEntryService.Draft(REVIVAL_ID, null, null, type, text, null, null, null, null, null, null, null, null);
     }
 
     private static LogEntry entry(final long id, final LogEntryType type, final LogEntryStatus status) {
@@ -124,13 +128,13 @@ class LogEntryServiceTest {
     }
 
     private static LogEntryService.Change change(final long id) {
-        return new LogEntryService.Change(id, 2L, null, null, null, null, null, null, false, null, false, null, false, null, null, null, false);
+        return new LogEntryService.Change(id, 2L, null, null, null, null, null, null, false, null, false, null, false, null, null, null, null, false, false);
     }
 
     @BeforeEach
     void setUp() {
         service = new LogEntryService(repository, new LogEntryCounters(counterRepository), revivalRepository, checklistItemRepository,
-                callerService, new AccessPolicy(), ownerResolver, ownerViews, personNames, meetingRecorder, specificationQueries,
+                eventRepository, callerService, new AccessPolicy(), ownerResolver, ownerViews, personNames, meetingRecorder, specificationQueries,
                 TestClocks.at(TODAY));
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
@@ -175,9 +179,9 @@ class LogEntryServiceTest {
         @Test
         void aCommentIsAtMost5000CharactersAndBlankIsNone() {
             final LogEntryService.Draft tooLong = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.TODO, "x", null, null,
-                    null, "c".repeat(5001), null, null, null);
+                    null, "c".repeat(5001), null, null, null, null);
             final LogEntryService.Draft blank = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.TODO, "x", null, null,
-                    null, "  ", null, null, null);
+                    null, "  ", null, null, null, null);
 
             assertThatThrownBy(() -> service.create(tooLong, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
             assertThat(service.create(blank, Locale.ENGLISH).comment()).isNull();
@@ -186,9 +190,9 @@ class LogEntryServiceTest {
         @Test
         void tagsAreTrimmedDeduplicatedAndAtMost50Characters() {
             final LogEntryService.Draft tagged = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.TODO, "x", null, null,
-                    null, null, List.of(" lokal ", "lokal", "budget"), null, null);
+                    null, null, List.of(" lokal ", "lokal", "budget"), null, null, null);
             final LogEntryService.Draft tooLong = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.TODO, "x", null, null,
-                    null, null, List.of("t".repeat(51)), null, null);
+                    null, null, List.of("t".repeat(51)), null, null, null);
 
             assertThat(service.create(tagged, Locale.ENGLISH).tags()).containsExactly("budget", "lokal");
             assertThatThrownBy(() -> service.create(tooLong, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
@@ -201,7 +205,7 @@ class LogEntryServiceTest {
             when(ownerResolver.validate(REVIVAL_ID, input)).thenReturn(Owner.named("Sam"));
 
             final LogEntryService.Draft owned = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.TODO, "x", null, input,
-                    null, null, null, null, null);
+                    null, null, null, null, null, null);
             final ArgumentCaptor<LogEntry> saved = ArgumentCaptor.forClass(LogEntry.class);
 
             service.create(owned, Locale.ENGLISH);
@@ -217,15 +221,41 @@ class LogEntryServiceTest {
             when(checklistItemRepository.findById(7L)).thenReturn(Optional.of(item));
 
             final LogEntryService.Draft linked = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.TODO, "x", null, null,
-                    null, null, null, null, 7L);
+                    null, null, null, null, 7L, null);
 
             assertThatThrownBy(() -> service.create(linked, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
         }
 
         @Test
+        void anEventInAnotherRevivalIsRefused() {
+            final Event event = new Event();
+
+            event.setRevivalId(2L);
+            when(eventRepository.findById(8L)).thenReturn(Optional.of(event));
+
+            final LogEntryService.Draft linked = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.DECISION, "x", null, null,
+                    null, null, null, null, null, 8L);
+
+            assertThatThrownBy(() -> service.create(linked, Locale.ENGLISH)).isInstanceOf(BadRequestException.class);
+        }
+
+        @Test
+        void anEventOfTheRevivalIsLinked() {
+            final Event event = new Event();
+
+            event.setRevivalId(REVIVAL_ID);
+            when(eventRepository.findById(8L)).thenReturn(Optional.of(event));
+
+            final LogEntryService.Draft linked = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.DECISION, "x", null, null,
+                    null, null, null, null, null, 8L);
+
+            assertThat(service.create(linked, Locale.ENGLISH).eventId()).isEqualTo(8L);
+        }
+
+        @Test
         void aRowFromAMeetingIsRecordedAsCreatedInIt() {
             final LogEntryService.Draft inMeeting = new LogEntryService.Draft(REVIVAL_ID, 5L, null, LogEntryType.DECISION, "x", null,
-                    null, null, null, null, null, null);
+                    null, null, null, null, null, null, null);
             final LogEntryDto created = service.create(inMeeting, Locale.ENGLISH);
 
             verify(meetingRecorder).requireInProgress(5L, REVIVAL_ID);
@@ -245,7 +275,7 @@ class LogEntryServiceTest {
 
                 when(repository.findById(1L)).thenReturn(Optional.of(entry));
                 assertThat(service.update(new LogEntryService.Change(1L, 2L, null, null, null, null, to, null, false, null, false,
-                        null, false, null, null, null, false), Locale.ENGLISH).status()).isEqualTo(to);
+                        null, false, null, null, null, null, false, false), Locale.ENGLISH).status()).isEqualTo(to);
             }
         }
 
@@ -254,7 +284,7 @@ class LogEntryServiceTest {
             when(repository.findById(1L)).thenReturn(Optional.of(entry(1L, LogEntryType.TODO, LogEntryStatus.OPEN)));
 
             assertThatThrownBy(() -> service.update(new LogEntryService.Change(1L, 1L, null, null, null, "y", null, null, false, null,
-                    false, null, false, null, null, null, false), Locale.ENGLISH)).isInstanceOf(ConflictException.class);
+                    false, null, false, null, null, null, null, false, false), Locale.ENGLISH)).isInstanceOf(ConflictException.class);
         }
 
         @Test
@@ -263,7 +293,7 @@ class LogEntryServiceTest {
 
             when(repository.findById(4L)).thenReturn(Optional.of(entry));
             assertThat(service.update(new LogEntryService.Change(4L, 2L, null, TODAY.minusDays(3), LogEntryType.DECISION, "Ny text",
-                    LogEntryStatus.DONE, null, true, TODAY, false, "k", false, List.of("t"), "key", null, false), Locale.ENGLISH).number())
+                    LogEntryStatus.DONE, null, true, TODAY, false, "k", false, List.of("t"), "key", null, null, false, false), Locale.ENGLISH).number())
                     .isEqualTo(4);
         }
 
@@ -276,7 +306,7 @@ class LogEntryServiceTest {
             when(ownerResolver.validate(REVIVAL_ID, owner)).thenReturn(Owner.member(PERSON_ID));
 
             service.update(new LogEntryService.Change(1L, 2L, 5L, null, null, "Ny text", LogEntryStatus.DONE, owner, false, null, false,
-                    null, false, null, null, null, false), Locale.ENGLISH);
+                    null, false, null, null, null, null, false, false), Locale.ENGLISH);
 
             verify(meetingRecorder).record(5L, 1L, EnumSet.of(MeetingEntryChangeKind.ASSIGNED, MeetingEntryChangeKind.CLOSED,
                     MeetingEntryChangeKind.UPDATED), PERSON_ID);
@@ -287,7 +317,7 @@ class LogEntryServiceTest {
             when(repository.findById(1L)).thenReturn(Optional.of(entry(1L, LogEntryType.TODO, LogEntryStatus.OPEN)));
 
             service.update(new LogEntryService.Change(1L, 2L, 5L, null, null, null, null, null, false, null, false, null, false, null,
-                    null, null, false), Locale.ENGLISH);
+                    null, null, null, false, false), Locale.ENGLISH);
 
             verify(meetingRecorder, never()).record(any(), any(), anyCollection(), any());
         }

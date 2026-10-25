@@ -33,6 +33,7 @@ import nu.fgv.revival.server.event.EventService;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.RevivalCreated;
+import nu.fgv.revival.server.settings.ApplicationSettingsService;
 import nu.fgv.revival.server.staffing.HelperCompensation;
 import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.error.BadRequestException;
@@ -87,6 +88,7 @@ public class BudgetService {
     private final CallerService callerService;
     private final BudgetAccess access;
     private final HelperCompensation helperCompensation;
+    private final ApplicationSettingsService applicationSettings;
     private final Clock clock;
 
     public BudgetService(final BudgetSettingsRepository settingsRepository,
@@ -101,6 +103,7 @@ public class BudgetService {
                          final CallerService callerService,
                          final BudgetAccess access,
                          final HelperCompensation helperCompensation,
+                         final ApplicationSettingsService applicationSettings,
                          final Clock clock) {
         this.settingsRepository = settingsRepository;
         this.lineRepository = lineRepository;
@@ -114,6 +117,7 @@ public class BudgetService {
         this.callerService = callerService;
         this.access = access;
         this.helperCompensation = helperCompensation;
+        this.applicationSettings = applicationSettings;
         this.clock = clock;
     }
 
@@ -216,12 +220,15 @@ public class BudgetService {
     }
 
     /**
-     * Every revival gets its settings when it is created.
+     * Every revival gets its settings when it is created, starting with the application's default participation fee.
      */
     @EventListener
     public void revivalCreated(final RevivalCreated event) {
         if (settingsRepository.findByRevivalId(event.revivalId()).isEmpty()) {
-            settingsRepository.saveAndFlush(new BudgetSettings(event.revivalId()));
+            final BudgetSettings settings = new BudgetSettings(event.revivalId());
+
+            settings.setParticipationFee(applicationSettings.defaultParticipationFee());
+            settingsRepository.saveAndFlush(settings);
         }
     }
 

@@ -19,6 +19,8 @@ package nu.fgv.revival.server.decisionlog;
 
 import nu.fgv.revival.server.checklist.ChecklistItemSummaryDto;
 import nu.fgv.revival.server.checklist.ChecklistTexts;
+import nu.fgv.revival.server.event.EventDto;
+import nu.fgv.revival.server.event.EventService;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.meeting.MeetingRecorder;
 import nu.fgv.revival.server.meeting.MeetingSummaryDto;
@@ -51,11 +53,14 @@ public class LogEntryGraphqlApi {
     private final LogEntryService service;
     private final MeetingRecorder meetingRecorder;
     private final ChecklistTexts checklistTexts;
+    private final EventService eventService;
 
-    public LogEntryGraphqlApi(final LogEntryService service, final MeetingRecorder meetingRecorder, final ChecklistTexts checklistTexts) {
+    public LogEntryGraphqlApi(final LogEntryService service, final MeetingRecorder meetingRecorder, final ChecklistTexts checklistTexts,
+                              final EventService eventService) {
         this.service = service;
         this.meetingRecorder = meetingRecorder;
         this.checklistTexts = checklistTexts;
+        this.eventService = eventService;
     }
 
     private static <V> Map<LogEntryDto, V> mapped(final List<LogEntryDto> entries, final java.util.function.Function<LogEntryDto, @Nullable V> value) {
@@ -90,7 +95,7 @@ public class LogEntryGraphqlApi {
     public LogEntryDto logEntryCreate(@Argument final LogEntryCreateInput input, final Locale locale) {
         return service.create(new LogEntryService.Draft(input.revivalId(), input.meetingId(), input.date(), input.type(), input.text(),
                 input.status(), input.owner(), input.deadline(), input.comment(), input.tags(), input.guideItemKey(),
-                input.checklistItemId()), locale);
+                input.checklistItemId(), input.eventId()), locale);
     }
 
     @MutationMapping
@@ -98,7 +103,8 @@ public class LogEntryGraphqlApi {
         return service.update(new LogEntryService.Change(input.id(), input.version(), input.meetingId(), input.date(), input.type(),
                 input.text(), input.status(), input.owner(), Boolean.TRUE.equals(input.clearOwner()), input.deadline(),
                 Boolean.TRUE.equals(input.clearDeadline()), input.comment(), Boolean.TRUE.equals(input.clearComment()), input.tags(),
-                input.guideItemKey(), input.checklistItemId(), Boolean.TRUE.equals(input.clearLinks())), locale);
+                input.guideItemKey(), input.checklistItemId(), input.eventId(), Boolean.TRUE.equals(input.clearEvent()),
+                Boolean.TRUE.equals(input.clearLinks())), locale);
     }
 
     @MutationMapping
@@ -121,6 +127,15 @@ public class LogEntryGraphqlApi {
                 .map(LogEntryDto::checklistItemId).filter(Objects::nonNull).collect(Collectors.toSet()));
 
         return mapped(entries, entry -> entry.checklistItemId() == null ? null : items.get(entry.checklistItemId()));
+    }
+
+    @BatchMapping(typeName = "LogEntry", field = "event")
+    public Map<LogEntryDto, EventDto> event(final List<LogEntryDto> entries) {
+        final Map<Long, EventDto> events = new HashMap<>();
+
+        entries.stream().filter(entry -> entry.eventId() != null).map(LogEntryDto::revivalId).distinct()
+                .forEach(revivalId -> eventService.list(revivalId, true).forEach(event -> events.put(event.id(), event)));
+        return mapped(entries, entry -> entry.eventId() == null ? null : events.get(entry.eventId()));
     }
 
     @BatchMapping(typeName = "LogEntry", field = "guideItem")
@@ -156,7 +171,7 @@ public class LogEntryGraphqlApi {
                                       @Nullable LocalDate deadline,
                                       @Nullable String comment, @Nullable List<String> tags,
                                       @Nullable String guideItemKey,
-                                      @Nullable Long checklistItemId) {
+                                      @Nullable Long checklistItemId, @Nullable Long eventId) {
     }
 
     public record LogEntryUpdateInput(Long id, Long version, @Nullable Long meetingId, @Nullable LocalDate date,
@@ -168,7 +183,7 @@ public class LogEntryGraphqlApi {
                                       @Nullable String comment, @Nullable Boolean clearComment,
                                       @Nullable List<String> tags,
                                       @Nullable String guideItemKey, @Nullable Long checklistItemId,
-                                      @Nullable Boolean clearLinks) {
+                                      @Nullable Long eventId, @Nullable Boolean clearEvent, @Nullable Boolean clearLinks) {
     }
 
     public record LogEntryAnswerInput(Long questionId, Long questionVersion, @Nullable Long meetingId, String text,

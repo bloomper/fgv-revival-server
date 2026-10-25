@@ -101,6 +101,9 @@ public class LogEntry extends AbstractAuditable {
     @Column(name = "checklist_item_id")
     private @Nullable Long checklistItemId;
 
+    @Column(name = "event_id")
+    private @Nullable Long eventId;
+
     @Column(name = "answers_entry_id")
     private @Nullable Long answersEntryId;
 
