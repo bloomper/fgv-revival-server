@@ -93,7 +93,7 @@ dependencies {
     implementation 'org.keycloak:keycloak-admin-client:26.0.12'
     implementation 'org.apache.poi:poi-ooxml:5.5.1'
     implementation 'com.github.librepdf:openpdf:3.0.5'
-    implementation 'org.commonmark:commonmark:0.30.1'
+    implementation 'org.commonmark:commonmark:0.31.0'
 
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
