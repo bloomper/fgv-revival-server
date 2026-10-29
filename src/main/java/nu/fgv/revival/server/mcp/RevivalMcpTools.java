@@ -157,7 +157,7 @@ public class RevivalMcpTools {
             final boolean clear = premiereDate != null && premiereDate.isBlank();
 
             return toDetails(revivalService.update(new RevivalUpdateDto(revivalId, revival.version(), null, null,
-                    clear ? null : McpToolSupport.date(premiereDate), clear, shows)), callerService.current());
+                    clear ? null : McpToolSupport.date(premiereDate), clear, shows, null)), callerService.current());
         });
     }
 
@@ -179,8 +179,9 @@ public class RevivalMcpTools {
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public RevivalDetails createRevival(
             @McpToolParam(description = "The spex's id in Spexregister") final Long spexId,
-            @McpToolParam(description = "The year it plays") final Integer year) {
-        return support.call("create_revival", () -> toDetails(revivalService.create(new RevivalCreateDto(spexId, year)), callerService.current()));
+            @McpToolParam(description = "The year it plays") final Integer year,
+            @McpToolParam(required = false, description = "True for a revival that has already been played, to allow a year before this one") final @Nullable Boolean past) {
+        return support.call("create_revival", () -> toDetails(revivalService.create(new RevivalCreateDto(spexId, year, past)), callerService.current()));
     }
 
     @McpTool(name = "search_spex",

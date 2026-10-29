@@ -22,7 +22,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Omitted fields are left unchanged. Lists replace the whole list.
+ * Omitted fields are left unchanged. Lists replace the whole list. A changed year is this year or later unless
+ * {@code past} is set, for a revival that has already been played.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -33,7 +34,8 @@ public record RevivalUpdateDto(Long id,
                                @Nullable Integer year,
                                @Nullable LocalDate premiereDate,
                                @Nullable Boolean clearPremiereDate,
-                               @Nullable List<RevivalShowDto> shows) {
+                               @Nullable List<RevivalShowDto> shows,
+                               @Nullable Boolean past) {
 
     boolean changesCore() {
         return spexId != null || year != null;

@@ -103,12 +103,14 @@ type RevivalStatusChange {
 }
 
 """
-The year must not be before the original spex nor before the current year, and the spex must not already have a
-revival that year.
+The year must not be before the original spex nor, unless past is set, before the current year, and the spex must not
+already have a revival that year.
 """
 input RevivalCreateInput {
     spexId: ID!
     year: Year!
+    "Set for a revival that has already been played, to allow a year before the current one."
+    past: Boolean = false
 }
 
 "Omitted fields are left unchanged. Lists replace the whole list."
@@ -124,6 +126,8 @@ input RevivalUpdateInput {
     none without one; the same date, time and venue only once.
     """
     shows: [RevivalShowInput!]
+    "Set to move the year to before the current one, for a revival that has already been played."
+    past: Boolean = false
 }
 
 input RevivalShowInput {

@@ -117,6 +117,17 @@ public class RevivalService {
     }
 
     /**
+     * A year before this one only for a revival marked as already played.
+     */
+    private void requireNotPast(final Integer year, final @Nullable Boolean past) {
+        final int thisYear = LocalDate.now(clock).getYear();
+
+        if (year < thisYear && !Boolean.TRUE.equals(past)) {
+            throw new BadRequestException("error.revival.year.past", thisYear);
+        }
+    }
+
+    /**
      * At most {@value #MAX_SHOWS}, times as {@code HH:mm} and venues trimmed with blank as not decided, and no date,
      * time and venue twice.
      */
@@ -285,9 +296,7 @@ public class RevivalService {
         final SpexDto spex = spexService.requireOriginal(dto.spexId());
         final Integer year = validYear(dto.year(), spex);
 
-        if (year < LocalDate.now(clock).getYear()) {
-            throw new BadRequestException("error.revival.year.past", LocalDate.now(clock).getYear());
-        }
+        requireNotPast(year, dto.past());
         requireUnique(dto.spexId(), year, null);
         revival.setYear(year);
         revival.setSpexId(dto.spexId());
@@ -325,6 +334,9 @@ public class RevivalService {
             final SpexDto spex = spexService.requireOriginal(spexId);
             final Integer year = validYear(dto.year() != null ? dto.year() : revival.getYear(), spex);
 
+            if (!year.equals(revival.getYear())) {
+                requireNotPast(year, dto.past());
+            }
             requireUnique(spexId, year, revival.getId());
             revival.setSpexId(spexId);
             revival.setYear(year);

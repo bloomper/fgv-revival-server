@@ -16,9 +16,13 @@
 
 package nu.fgv.revival.server.revival;
 
+import org.jspecify.annotations.Nullable;
+
 /**
+ * The year is this year or later unless {@code past} is set, for a revival that has already been played.
+ *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalCreateDto(Long spexId, Integer year) {
+public record RevivalCreateDto(Long spexId, Integer year, @Nullable Boolean past) {
 }
