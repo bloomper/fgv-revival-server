@@ -52,10 +52,8 @@ import java.util.Locale;
 @Slf4j
 public class ParticipantMailer {
 
-    private final ExternalIds ids;
-
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
-
+    private final ExternalIds ids;
     private final ObjectProvider<JavaMailSender> mailSender;
     private final MessageSource messageSource;
     private final String from;

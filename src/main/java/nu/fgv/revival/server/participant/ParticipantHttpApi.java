@@ -37,10 +37,8 @@ import java.util.UUID;
 @RestController
 public class ParticipantHttpApi {
 
-    private final ExternalIds ids;
-
     static final MediaType SVG = MediaType.valueOf("image/svg+xml");
-
+    private final ExternalIds ids;
     private final ParticipationService participation;
 
     public ParticipantHttpApi(final ParticipationService participation, final ExternalIds ids) {

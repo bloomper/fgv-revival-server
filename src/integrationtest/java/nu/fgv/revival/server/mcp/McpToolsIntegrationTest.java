@@ -43,6 +43,15 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
         return response.has("error") || response.path("result").path("isError").asBoolean(false);
     }
 
+    private static Map<String, Object> args(final Object... pairs) {
+        final Map<String, Object> map = new HashMap<>();
+
+        for (int i = 0; i < pairs.length; i += 2) {
+            map.put((String) pairs[i], pairs[i + 1]);
+        }
+        return map;
+    }
+
     @BeforeEach
     void organisingRevivalWithAPremiere() {
         revival = organisingRevival();
@@ -68,15 +77,6 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(response.toString()).as(tool).doesNotContain(DOMAIN);
         return result(response);
-    }
-
-    private static Map<String, Object> args(final Object... pairs) {
-        final Map<String, Object> map = new HashMap<>();
-
-        for (int i = 0; i < pairs.length; i += 2) {
-            map.put((String) pairs[i], pairs[i + 1]);
-        }
-        return map;
     }
 
     @Test

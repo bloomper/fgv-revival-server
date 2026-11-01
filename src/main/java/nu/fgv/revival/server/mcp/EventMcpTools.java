@@ -51,11 +51,9 @@ import java.util.UUID;
 @Component
 public class EventMcpTools {
 
-    private final ExternalIds ids;
-
     static final int DEFAULT_LIMIT = 50;
     static final int MAX_LIMIT = 200;
-
+    private final ExternalIds ids;
     private final EventService eventService;
     private final EventTypeService typeService;
     private final EventTypeBudgetLineService typeLineService;
@@ -71,16 +69,24 @@ public class EventMcpTools {
         this.support = support;
     }
 
-    private Event written(final EventDto event) {
-        final Long internal = ids.idOf(nu.fgv.revival.server.event.Event.class, event.id());
-
-        return toMcp(event, event.typeId() == null ? null : typeService.get(ids.idOf(nu.fgv.revival.server.event.EventType.class, event.typeId())), eventService.checklists(List.of(internal)).get(internal));
-    }
-
     static Event toMcp(final EventDto event, final @Nullable EventTypeDto type, final @Nullable ChecklistSummaryDto checklist) {
         return new Event(event.id(), type == null ? null : new ChecklistMcpTools.Text(type.name().sv(), type.name().en()), event.title(),
                 event.startDate(), event.endDate(), event.startTime(), event.endTime(), event.location(), event.cancelled(), event.daysFromPremiere(),
                 checklist == null ? null : new Checklist(checklist.id(), checklist.openCount(), checklist.totalCount()));
+    }
+
+    private static @Nullable String blankToNull(final @Nullable String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private static boolean isBlank(final @Nullable String value) {
+        return value != null && value.isBlank();
+    }
+
+    private Event written(final EventDto event) {
+        final Long internal = ids.idOf(nu.fgv.revival.server.event.Event.class, event.id());
+
+        return toMcp(event, event.typeId() == null ? null : typeService.get(ids.idOf(nu.fgv.revival.server.event.EventType.class, event.typeId())), eventService.checklists(List.of(internal)).get(internal));
     }
 
     @McpTool(name = "list_events",
@@ -125,7 +131,7 @@ public class EventMcpTools {
             @McpToolParam(required = false, description = "A description") final @Nullable String description,
             @McpToolParam(required = false, description = "Whether the revival pays for it") final @Nullable Boolean revivalPays) {
         return support.call("create_event", () -> written(eventService.create(new EventService.NewEvent(ids.idOf(Revival.class, revivalId), ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId), title,
-                Objects.requireNonNull(McpToolSupport.date(startDate)), McpToolSupport.date(endDate), startTime, endTime, location, description, revivalPays),
+                        Objects.requireNonNull(McpToolSupport.date(startDate)), McpToolSupport.date(endDate), startTime, endTime, location, description, revivalPays),
                 Locales.SWEDISH)));
     }
 
@@ -247,14 +253,6 @@ public class EventMcpTools {
 
             return typeLineService.update(ids.idOf(EventTypeBudgetLine.class, lineId), line.version(), definition);
         });
-    }
-
-    private static @Nullable String blankToNull(final @Nullable String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
-
-    private static boolean isBlank(final @Nullable String value) {
-        return value != null && value.isBlank();
     }
 
     /**

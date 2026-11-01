@@ -48,10 +48,8 @@ import java.util.UUID;
 @RestController
 public class BudgetHttpApi {
 
-    private final ExternalIds ids;
-
     static final MediaType XLSX = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-
+    private final ExternalIds ids;
     private final BudgetExportService exportService;
     private final TransactionService transactionService;
 

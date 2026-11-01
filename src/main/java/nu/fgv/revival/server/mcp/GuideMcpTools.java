@@ -50,11 +50,9 @@ import java.util.UUID;
 @Component
 public class GuideMcpTools {
 
-    private final ExternalIds ids;
-
     static final int DEFAULT_LIMIT = 20;
     static final int MAX_LIMIT = 50;
-
+    private final ExternalIds ids;
     private final GuideService guideService;
     private final GuideSuggestionService suggestionService;
     private final McpToolSupport support;
@@ -180,9 +178,12 @@ public class GuideMcpTools {
     /**
      * A suggestion as list_guide_suggestions returns it: no people.
      */
-    public record Suggestion(UUID id, GuideSuggestionKind kind, GuideSuggestionStatus status, UUID revivalId, boolean mine, @Nullable String madeOn,
-                             String chapterKey, @Nullable String sectionKey, @Nullable String itemKey, @Nullable String proposedType,
-                             @Nullable Text proposedText, @Nullable String reason, @Nullable Instant decidedAt, @Nullable String decisionReason,
+    public record Suggestion(UUID id, GuideSuggestionKind kind, GuideSuggestionStatus status, UUID revivalId,
+                             boolean mine, @Nullable String madeOn,
+                             String chapterKey, @Nullable String sectionKey, @Nullable String itemKey,
+                             @Nullable String proposedType,
+                             @Nullable Text proposedText, @Nullable String reason, @Nullable Instant decidedAt,
+                             @Nullable String decisionReason,
                              Instant createdAt) {
 
         static Suggestion of(final GuideSuggestionDto suggestion) {

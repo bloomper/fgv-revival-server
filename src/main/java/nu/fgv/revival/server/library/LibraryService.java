@@ -52,11 +52,6 @@ import java.util.stream.Collectors;
 @Service
 public class LibraryService {
 
-    private static final Comparator<LibraryEntry> ORDER = Comparator
-            .comparing(LibraryEntry::getKind)
-            .thenComparing(LibraryEntry::getNameSv, Collator.getInstance(Locale.of("sv")))
-            .thenComparing(LibraryEntry::getId);
-
     /**
      * As the list: by kind, then Swedish name.
      */
@@ -64,7 +59,10 @@ public class LibraryService {
             .comparing(LibraryEntryDto::kind)
             .thenComparing((LibraryEntryDto entry) -> entry.name().sv(), Collator.getInstance(Locale.of("sv")))
             .thenComparing(LibraryEntryDto::id);
-
+    private static final Comparator<LibraryEntry> ORDER = Comparator
+            .comparing(LibraryEntry::getKind)
+            .thenComparing(LibraryEntry::getNameSv, Collator.getInstance(Locale.of("sv")))
+            .thenComparing(LibraryEntry::getId);
     private final LibraryEntryRepository repository;
     private final GuideItemRepository itemRepository;
     private final CallerService callerService;
@@ -281,7 +279,9 @@ public class LibraryService {
      * Everything the super admin sets on an entry. A null or blank Swedish text clears that text. The kind is read only
      * on create.
      */
-    public record Definition(LibraryEntryKind kind, Text name, @Nullable Text description, @Nullable Text pros, @Nullable Text cons,
-                             @Nullable Text booking, @Nullable Text prices, @Nullable Text contact, @Nullable String url) {
+    public record Definition(LibraryEntryKind kind, Text name, @Nullable Text description, @Nullable Text pros,
+                             @Nullable Text cons,
+                             @Nullable Text booking, @Nullable Text prices, @Nullable Text contact,
+                             @Nullable String url) {
     }
 }

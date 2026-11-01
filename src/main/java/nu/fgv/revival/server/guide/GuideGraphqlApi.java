@@ -242,7 +242,8 @@ public class GuideGraphqlApi {
                                        String type, LocalizedTextInput text, @Nullable List<UUID> libraryEntryIds) {
     }
 
-    public record GuideItemUpdateInput(UUID id, Long version, String type, LocalizedTextInput text, @Nullable List<UUID> libraryEntryIds) {
+    public record GuideItemUpdateInput(UUID id, Long version, String type, LocalizedTextInput text,
+                                       @Nullable List<UUID> libraryEntryIds) {
     }
 
     public record GuideItemMoveInput(UUID id, Long version, UUID chapterId, @Nullable UUID sectionId, int position) {

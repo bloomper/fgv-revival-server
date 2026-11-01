@@ -139,9 +139,12 @@ public class LibraryMcpTools {
     /**
      * An entry of the reference library, with the texts its kind uses.
      */
-    public record Entry(UUID id, LibraryEntryKind kind, ChecklistMcpTools.Text name, ChecklistMcpTools.@Nullable Text description,
-                        ChecklistMcpTools.@Nullable Text pros, ChecklistMcpTools.@Nullable Text cons, ChecklistMcpTools.@Nullable Text booking,
-                        ChecklistMcpTools.@Nullable Text prices, ChecklistMcpTools.@Nullable Text contact, @Nullable String url, boolean retired) {
+    public record Entry(UUID id, LibraryEntryKind kind, ChecklistMcpTools.Text name,
+                        ChecklistMcpTools.@Nullable Text description,
+                        ChecklistMcpTools.@Nullable Text pros, ChecklistMcpTools.@Nullable Text cons,
+                        ChecklistMcpTools.@Nullable Text booking,
+                        ChecklistMcpTools.@Nullable Text prices, ChecklistMcpTools.@Nullable Text contact,
+                        @Nullable String url, boolean retired) {
 
         static Entry of(final LibraryEntryDto entry) {
             return new Entry(entry.id(), entry.kind(), new ChecklistMcpTools.Text(entry.name().sv(), entry.name().en()), toMcp(entry.description()),

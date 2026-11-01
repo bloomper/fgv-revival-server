@@ -61,12 +61,10 @@ import static org.springframework.util.StringUtils.hasText;
 @Slf4j
 public class RevivalMemberService {
 
-    private final ExternalIds ids;
-
     static final int CANDIDATE_QUERY_MIN_LENGTH = 3;
     static final int MAX_CANDIDATES = 10;
     static final int NAME_MAX_LENGTH = 100;
-
+    private final ExternalIds ids;
     private final RevivalMemberRepository repository;
     private final RevivalRepository revivalRepository;
     private final PersonRepository personRepository;

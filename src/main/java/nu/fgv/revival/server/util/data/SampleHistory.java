@@ -326,7 +326,8 @@ public class SampleHistory {
     /**
      * @param systemRow a condition on the audit row: true when the system, not a person, made it
      */
-    private record Table(Class<?> entity, String table, boolean revivalScoped, String systemRow, String createOperation, List<Edit> edits) {
+    private record Table(Class<?> entity, String table, boolean revivalScoped, String systemRow, String createOperation,
+                         List<Edit> edits) {
 
         String auditTable() {
             return table + "_audit";

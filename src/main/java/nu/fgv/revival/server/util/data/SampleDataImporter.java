@@ -406,6 +406,29 @@ public class SampleDataImporter {
         return instant.atOffset(ZoneOffset.UTC);
     }
 
+    /**
+     * The rows were inserted without external ids and got them from the column default; their history, written here by
+     * hand, gets the same ones.
+     */
+    private static void copyExternalIdsToHistory(final JdbcClient jdbcClient) {
+        jdbcClient
+                .sql("""
+                        SELECT table_name FROM information_schema.columns
+                        WHERE table_schema = DATABASE() AND column_name = 'uuid' AND table_name LIKE '%\\_audit'""")
+                .query(String.class)
+                .list()
+                .forEach(audit -> jdbcClient
+                        .sql("UPDATE %s a JOIN %s e ON a.id = e.id SET a.uuid = e.uuid WHERE a.uuid IS NULL"
+                                .formatted(audit, audit.substring(0, audit.length() - "_audit".length())))
+                        .update());
+    }
+
+    private static UserRepresentation spexregisterUser(final RealmResource realm, final String email) {
+        return realm.users().searchByEmail(email, true).stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Keycloak has no user " + email + "; import Spexregister's sample data first"));
+    }
+
     public void importSampleData(final Connection connection) {
         final JdbcClient jdbcClient = JdbcClient.create(new SingleConnectionDataSource(connection, true));
         final long started = System.nanoTime();
@@ -426,23 +449,6 @@ public class SampleDataImporter {
         timed("Seeded the baseline revision", () -> seedBaselineRevision(jdbcClient));
         timed("Gave the history the external ids of its rows", () -> copyExternalIdsToHistory(jdbcClient));
         log.info("Imported sample data in {} s", Duration.ofNanos(System.nanoTime() - started).toSeconds());
-    }
-
-    /**
-     * The rows were inserted without external ids and got them from the column default; their history, written here by
-     * hand, gets the same ones.
-     */
-    private static void copyExternalIdsToHistory(final JdbcClient jdbcClient) {
-        jdbcClient
-                .sql("""
-                        SELECT table_name FROM information_schema.columns
-                        WHERE table_schema = DATABASE() AND column_name = 'uuid' AND table_name LIKE '%\\_audit'""")
-                .query(String.class)
-                .list()
-                .forEach(audit -> jdbcClient
-                        .sql("UPDATE %s a JOIN %s e ON a.id = e.id SET a.uuid = e.uuid WHERE a.uuid IS NULL"
-                                .formatted(audit, audit.substring(0, audit.length() - "_audit".length())))
-                        .update());
     }
 
     private void timed(final String step, final Runnable action) {
@@ -631,12 +637,6 @@ public class SampleDataImporter {
         });
 
         return people;
-    }
-
-    private static UserRepresentation spexregisterUser(final RealmResource realm, final String email) {
-        return realm.users().searchByEmail(email, true).stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Keycloak has no user " + email + "; import Spexregister's sample data first"));
     }
 
     private UserRepresentation sampleUser(final RealmResource realm, final String email, final String firstName) {

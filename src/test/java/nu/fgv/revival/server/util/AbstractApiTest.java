@@ -68,19 +68,6 @@ public abstract class AbstractApiTest {
     );
 
     protected MockMvc mockMvc;
-
-    /**
-     * External ids without a database, as {@link TestExternalIds} maps them.
-     */
-    @TestConfiguration
-    static class ExternalIdsConfig {
-
-        @Bean
-        ExternalIds externalIds() {
-            return TestExternalIds.IDS;
-        }
-    }
-
     @MockitoBean
     private CallerService callerService;
 
@@ -101,5 +88,17 @@ public abstract class AbstractApiTest {
                         .withPort(8443)
                         .withScheme("https"))
                 .build();
+    }
+
+    /**
+     * External ids without a database, as {@link TestExternalIds} maps them.
+     */
+    @TestConfiguration
+    static class ExternalIdsConfig {
+
+        @Bean
+        ExternalIds externalIds() {
+            return TestExternalIds.IDS;
+        }
     }
 }

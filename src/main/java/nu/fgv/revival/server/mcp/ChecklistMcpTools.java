@@ -17,9 +17,7 @@
 
 package nu.fgv.revival.server.mcp;
 
-import nu.fgv.revival.server.checklist.Checklist;
 import nu.fgv.revival.server.checklist.ChecklistDto;
-import nu.fgv.revival.server.checklist.ChecklistItem;
 import nu.fgv.revival.server.checklist.ChecklistItemDto;
 import nu.fgv.revival.server.checklist.ChecklistItemFilterDto;
 import nu.fgv.revival.server.checklist.ChecklistItemState;
@@ -53,11 +51,9 @@ import java.util.UUID;
 @Component
 public class ChecklistMcpTools {
 
-    private final ExternalIds ids;
-
     static final int DEFAULT_LIMIT = 50;
     static final int MAX_LIMIT = 200;
-
+    private final ExternalIds ids;
     private final ChecklistService checklistService;
     private final GuideService guideService;
     private final McpToolSupport support;
@@ -75,6 +71,16 @@ public class ChecklistMcpTools {
                         item.checklist().chapterTitle() == null ? null : Text.of(item.checklist().chapterTitle()), item.checklist().date()),
                 item.required(), Text.of(item.text()), item.state(), item.overdue(), McpOwner.of(item.owner()),
                 item.deadline(), item.comment());
+    }
+
+    static Checklist toMcp(final ChecklistDto checklist) {
+        return new Checklist(checklist.id(), checklist.kind(), checklist.chapterKey(), checklist.chapterTitle() == null ? null : Text.of(checklist.chapterTitle()),
+                checklist.name(), checklist.date(), checklist.eventId(), checklist.templateId(), checklist.cancelled(),
+                checklist.items().stream().map(ChecklistMcpTools::toMcp).toList());
+    }
+
+    private static @Nullable LocalDate dateOrNull(final @Nullable String value) {
+        return value == null || value.isBlank() ? null : McpToolSupport.date(value);
     }
 
     @McpTool(name = "list_checklist_items",
@@ -107,16 +113,6 @@ public class ChecklistMcpTools {
             @McpToolParam(description = "The item's id") final UUID itemId,
             @McpToolParam(required = false, description = "Replaces the comment") final @Nullable String comment) {
         return support.call("complete_checklist_item", () -> toMcp(checklistService.complete(ids.idOf(ChecklistItem.class, itemId), comment, Locale.ENGLISH)));
-    }
-
-    static Checklist toMcp(final ChecklistDto checklist) {
-        return new Checklist(checklist.id(), checklist.kind(), checklist.chapterKey(), checklist.chapterTitle() == null ? null : Text.of(checklist.chapterTitle()),
-                checklist.name(), checklist.date(), checklist.eventId(), checklist.templateId(), checklist.cancelled(),
-                checklist.items().stream().map(ChecklistMcpTools::toMcp).toList());
-    }
-
-    private static @Nullable LocalDate dateOrNull(final @Nullable String value) {
-        return value == null || value.isBlank() ? null : McpToolSupport.date(value);
     }
 
     @McpTool(name = "list_checklists",
@@ -239,8 +235,10 @@ public class ChecklistMcpTools {
     /**
      * A checklist as get_checklist returns it.
      */
-    public record Checklist(UUID id, ChecklistKind kind, @Nullable String chapterKey, @Nullable Text chapterTitle, @Nullable String name,
-                            @Nullable LocalDate date, @Nullable UUID eventId, @Nullable UUID templateId, boolean cancelled,
+    public record Checklist(UUID id, ChecklistKind kind, @Nullable String chapterKey, @Nullable Text chapterTitle,
+                            @Nullable String name,
+                            @Nullable LocalDate date, @Nullable UUID eventId, @Nullable UUID templateId,
+                            boolean cancelled,
                             List<ChecklistItem> items) {
     }
 

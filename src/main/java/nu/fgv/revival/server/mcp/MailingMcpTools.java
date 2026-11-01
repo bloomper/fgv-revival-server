@@ -20,7 +20,6 @@ import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
 import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.event.EventType;
-import nu.fgv.revival.server.mailing.Mailing;
 import nu.fgv.revival.server.mailing.MailingAudienceKind;
 import nu.fgv.revival.server.mailing.MailingDtos.MailingDto;
 import nu.fgv.revival.server.mailing.MailingDtos.MailingTemplateDto;
@@ -38,7 +37,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -187,15 +185,18 @@ public class MailingMcpTools {
     /**
      * One entry of the mailing plan.
      */
-    public record PlanEntry(UUID templateId, ChecklistMcpTools.Text template, @Nullable UUID eventId, @Nullable String event,
+    public record PlanEntry(UUID templateId, ChecklistMcpTools.Text template, @Nullable UUID eventId,
+                            @Nullable String event,
                             java.time.LocalDate dueDate, boolean due, @Nullable Mailing mailing) {
     }
 
     /**
      * A mailing without its recipients: how many it went to, only.
      */
-    public record Mailing(UUID id, UUID revivalId, MailingAudienceKind audience, @Nullable String positionId, @Nullable UUID eventId, String subject,
-                          String body, MailingStatus status, int recipients, @Nullable Instant sentAt, @Nullable UUID templateId) {
+    public record Mailing(UUID id, UUID revivalId, MailingAudienceKind audience, @Nullable String positionId,
+                          @Nullable UUID eventId, String subject,
+                          String body, MailingStatus status, int recipients, @Nullable Instant sentAt,
+                          @Nullable UUID templateId) {
 
         static Mailing of(final MailingDto mailing) {
             return new Mailing(mailing.id(), mailing.revivalId(), mailing.audience().kind(),
@@ -215,8 +216,10 @@ public class MailingMcpTools {
     /**
      * A mailing template as the tools take it; Swedish is required, English optional.
      */
-    public record TemplateInput(String nameSv, @Nullable String nameEn, String subjectSv, @Nullable String subjectEn, String bodySv,
-                                @Nullable String bodyEn, MailingAudienceKind audience, @Nullable UUID eventTypeId, Due due) {
+    public record TemplateInput(String nameSv, @Nullable String nameEn, String subjectSv, @Nullable String subjectEn,
+                                String bodySv,
+                                @Nullable String bodyEn, MailingAudienceKind audience, @Nullable UUID eventTypeId,
+                                Due due) {
 
         MailingTemplateService.Definition definition(final ExternalIds ids) {
             return new MailingTemplateService.Definition(new MailingTemplateService.Text(nameSv, nameEn), new MailingTemplateService.Text(subjectSv, subjectEn),

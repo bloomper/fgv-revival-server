@@ -219,8 +219,10 @@ public class MaterialMcpTools {
     /**
      * An inventory item with who holds it by name.
      */
-    public record Inventory(UUID id, String name, InventoryKind kind, int quantity, InventoryStatus status, @Nullable InventoryLocation location,
-                            @Nullable String locationNote, @Nullable McpOwner owner, @Nullable String comment, @Nullable UUID materialId,
+    public record Inventory(UUID id, String name, InventoryKind kind, int quantity, InventoryStatus status,
+                            @Nullable InventoryLocation location,
+                            @Nullable String locationNote, @Nullable McpOwner owner, @Nullable String comment,
+                            @Nullable UUID materialId,
                             boolean removed) {
     }
 }

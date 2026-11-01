@@ -75,13 +75,11 @@ import java.util.stream.Collectors;
 @Service
 public class BudgetService {
 
-    private final ExternalIds ids;
-
     static final BigDecimal MIN_QUANTITY = new BigDecimal("0.01");
     static final BigDecimal MAX_QUANTITY = new BigDecimal("100000");
     static final BigDecimal MAX_AMOUNT = new BigDecimal("10000000");
     static final String MAX_AMOUNT_TEXT = "10000000";
-
+    private final ExternalIds ids;
     private final BudgetSettingsRepository settingsRepository;
     private final BudgetLineRepository lineRepository;
     private final BudgetTransactionRepository transactionRepository;

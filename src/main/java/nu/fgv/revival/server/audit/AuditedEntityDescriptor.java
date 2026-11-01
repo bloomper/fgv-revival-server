@@ -45,15 +45,15 @@ public record AuditedEntityDescriptor(
         void require(Caller caller, Object snapshot);
     }
 
-    /**
-     * Writes a value that is not null.
-     */
-    public record Formatter(FieldKind kind, Format format) {
-    }
-
     @FunctionalInterface
     public interface Format {
 
         @Nullable String apply(Object value, Locale locale);
+    }
+
+    /**
+     * Writes a value that is not null.
+     */
+    public record Formatter(FieldKind kind, Format format) {
     }
 }

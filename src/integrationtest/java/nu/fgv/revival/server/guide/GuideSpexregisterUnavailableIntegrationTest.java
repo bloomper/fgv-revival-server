@@ -57,7 +57,7 @@ class GuideSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTes
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute().errors().verify();
 
         final EntityId item = entityId(jdbcClient.sql("SELECT i.id, i.uuid FROM guide_item i JOIN guide_version v ON v.id = i.version_id WHERE v.status = 'DRAFT' ORDER BY i.id LIMIT 1")
-                );
+        );
         final long version = jdbcClient.sql("SELECT version FROM guide_item WHERE id = ?").param(item).query(Long.class).single();
 
         execute(SUPER_ADMIN, "mutation($input: GuideItemUpdateInput!) { guideItemUpdate(input: $input) { id } }",

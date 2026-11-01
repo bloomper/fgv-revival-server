@@ -113,7 +113,8 @@ public class LibraryGraphqlApi {
         return result;
     }
 
-    public record LibraryEntryInput(LibraryEntryKind kind, LocalizedTextInput name, @Nullable LocalizedTextInput description,
+    public record LibraryEntryInput(LibraryEntryKind kind, LocalizedTextInput name,
+                                    @Nullable LocalizedTextInput description,
                                     @Nullable LocalizedTextInput pros, @Nullable LocalizedTextInput cons,
                                     @Nullable LocalizedTextInput booking, @Nullable LocalizedTextInput prices,
                                     @Nullable LocalizedTextInput contact, @Nullable String url) {

@@ -64,6 +64,7 @@ public class NewsGraphqlApi {
         service.delete(ids.idOf(News.class, id), version);
     }
 
-    public record NewsInput(String subject, String text, @Nullable LocalDate visibleFrom, @Nullable LocalDate visibleTo) {
+    public record NewsInput(String subject, String text, @Nullable LocalDate visibleFrom,
+                            @Nullable LocalDate visibleTo) {
     }
 }

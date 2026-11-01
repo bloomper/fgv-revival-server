@@ -105,43 +105,6 @@ public class McpToolSupport {
     }
 
     /**
-     * An owner from a tool argument: a display name or "me". A unique member match is that member, none a free-text
-     * name; several are refused with the candidates. Blank is no owner.
-     */
-    @Nullable OwnerInputDto owner(final Long revivalId, final @Nullable String owner) {
-        if (owner == null || owner.isBlank()) {
-            return null;
-        }
-        return switch (ownerResolver.resolve(revivalId, owner, callerService.current())) {
-            case OwnerResolver.Resolution.Member member -> new OwnerInputDto(ids.uuidOf(Person.class, member.personId()), null);
-            case OwnerResolver.Resolution.FreeText name -> new OwnerInputDto(null, name.name());
-            case OwnerResolver.Resolution.Ambiguous ambiguous ->
-                    throw new BadRequestException("error.owner.ambiguous", owner.strip(), String.join(", ", ambiguous.candidates()));
-        };
-    }
-
-    /**
-     * Directeurs and steering group members by display name or "me", e.g. a meeting's attendees. Someone outside the
-     * steering group is refused: they go in the free text of who else was there.
-     */
-    @Nullable List<Long> members(final Long revivalId, final @Nullable List<String> names) {
-        if (names == null) {
-            return null;
-        }
-        return names.stream()
-                .map(name -> {
-                    final OwnerInputDto resolved = owner(revivalId, name);
-
-                    if (resolved == null || resolved.personId() == null) {
-                        throw new BadRequestException("error.mcp.notMember", name.strip());
-                    }
-                    return ids.idOf(Person.class, resolved.personId());
-                })
-                .distinct()
-                .toList();
-    }
-
-    /**
      * A chapter of the version from a tool argument: its key, or its number counting from 1.
      */
     static GuideVersionView.Chapter chapter(final GuideVersionView version, final String chapter) {
@@ -169,6 +132,44 @@ public class McpToolSupport {
         } catch (final DateTimeParseException e) {
             throw new BadRequestException("error.date.invalid");
         }
+    }
+
+    /**
+     * An owner from a tool argument: a display name or "me". A unique member match is that member, none a free-text
+     * name; several are refused with the candidates. Blank is no owner.
+     */
+    @Nullable OwnerInputDto owner(final Long revivalId, final @Nullable String owner) {
+        if (owner == null || owner.isBlank()) {
+            return null;
+        }
+        return switch (ownerResolver.resolve(revivalId, owner, callerService.current())) {
+            case OwnerResolver.Resolution.Member member ->
+                    new OwnerInputDto(ids.uuidOf(Person.class, member.personId()), null);
+            case OwnerResolver.Resolution.FreeText name -> new OwnerInputDto(null, name.name());
+            case OwnerResolver.Resolution.Ambiguous ambiguous ->
+                    throw new BadRequestException("error.owner.ambiguous", owner.strip(), String.join(", ", ambiguous.candidates()));
+        };
+    }
+
+    /**
+     * Directeurs and steering group members by display name or "me", e.g. a meeting's attendees. Someone outside the
+     * steering group is refused: they go in the free text of who else was there.
+     */
+    @Nullable List<Long> members(final Long revivalId, final @Nullable List<String> names) {
+        if (names == null) {
+            return null;
+        }
+        return names.stream()
+                .map(name -> {
+                    final OwnerInputDto resolved = owner(revivalId, name);
+
+                    if (resolved == null || resolved.personId() == null) {
+                        throw new BadRequestException("error.mcp.notMember", name.strip());
+                    }
+                    return ids.idOf(Person.class, resolved.personId());
+                })
+                .distinct()
+                .toList();
     }
 
     /**

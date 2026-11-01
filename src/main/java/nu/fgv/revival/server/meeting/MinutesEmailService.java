@@ -67,11 +67,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MinutesEmailService {
 
-    private final ExternalIds ids;
-
     private static final Set<RevivalRole> RECIPIENT_ROLES = EnumSet.of(RevivalRole.DIRECTEUR, RevivalRole.STEERING_GROUP);
     private static final Set<String> LANGUAGES = Set.of("sv", "en");
-
+    private final ExternalIds ids;
     private final MinutesEmailRepository repository;
     private final MeetingService meetingService;
     private final MinutesMailer mailer;

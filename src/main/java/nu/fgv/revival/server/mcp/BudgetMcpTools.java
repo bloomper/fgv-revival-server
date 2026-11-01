@@ -92,6 +92,10 @@ public class BudgetMcpTools {
         this.support = support;
     }
 
+    private static @Nullable BigDecimal quantity(final @Nullable Double quantity) {
+        return quantity == null ? null : BigDecimal.valueOf(quantity);
+    }
+
     @McpTool(name = "get_budget_summary",
             description = "Get a revival's budget position: budgeted and actual income, cost and result, per category, the loan from FGV/JK, and how many costs are not yet reimbursed and how many transactions lack a receipt. Amounts are Swedish kronor.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
@@ -150,10 +154,6 @@ public class BudgetMcpTools {
 
     private @Nullable String categoryId(final @Nullable String category) {
         return category == null || category.isBlank() ? null : categoryService.resolveActive(category).getId();
-    }
-
-    private static @Nullable BigDecimal quantity(final @Nullable Double quantity) {
-        return quantity == null ? null : BigDecimal.valueOf(quantity);
     }
 
     private BudgetDtos.Line line(final Long revivalId, final UUID lineId) {
@@ -423,7 +423,8 @@ public class BudgetMcpTools {
     /**
      * A transaction as list_transactions returns it: who paid by name, never bank details or the receipt itself.
      */
-    public record TransactionView(UUID id, LocalDate date, String amount, String categoryId, String description, @Nullable UUID budgetLineId,
+    public record TransactionView(UUID id, LocalDate date, String amount, String categoryId, String description,
+                                  @Nullable UUID budgetLineId,
                                   @Nullable McpOwner paidBy, boolean reimbursed, boolean receipt, boolean cancelled) {
     }
 

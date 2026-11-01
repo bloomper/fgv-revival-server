@@ -77,10 +77,8 @@ import java.util.stream.Collectors;
 @Service
 public class ChecklistService {
 
-    private final ExternalIds ids;
-
     private static final Locale SWEDISH = Locale.of("sv");
-
+    private final ExternalIds ids;
     private final ChecklistRepository checklistRepository;
     private final ChecklistItemRepository itemRepository;
     private final ChecklistTexts texts;

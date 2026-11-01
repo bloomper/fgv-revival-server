@@ -39,14 +39,12 @@ import java.util.UUID;
 @RestController
 public class RevivalHttpApi {
 
-    private final ExternalIds ids;
-
     /**
      * The image types Spexregister accepts for posters; anything else is treated as no poster.
      */
     static final Set<String> POSTER_TYPES = Set.of(
             MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_GIF_VALUE, "image/svg+xml", "image/webp");
-
+    private final ExternalIds ids;
     private final RevivalService revivalService;
 
     public RevivalHttpApi(final RevivalService revivalService, final ExternalIds ids) {

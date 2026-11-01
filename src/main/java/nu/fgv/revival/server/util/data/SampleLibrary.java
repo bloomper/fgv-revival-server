@@ -108,7 +108,8 @@ final class SampleLibrary {
      * A library entry and, as a LIKE pattern, the guide items (by text or section title) that link to it.
      */
     private record Entry(String kind, String name, String description, @Nullable String pros, @Nullable String cons,
-                         @Nullable String booking, @Nullable String prices, @Nullable String contact, @Nullable String url,
+                         @Nullable String booking, @Nullable String prices, @Nullable String contact,
+                         @Nullable String url,
                          @Nullable String linkedItems, boolean retired) {
     }
 }
