@@ -34,8 +34,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The sample data is built on Spexregister's: its spex and its sample user {@code admin@fgv.nu}. The other users
- * have one purpose each and are created by the import.
+ * The sample data is built on Spexregister's: its spex and its sample users {@code admin@fgv.nu} and
+ * {@code user@fgv.nu}. The other users have one purpose each and are created by the import.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -54,9 +54,10 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     private SampleActivityImporter activityImporter;
 
     @BeforeAll
-    static void createSpexregisterSampleAdmin() {
+    static void createSpexregisterSampleUsers() {
         try (Keycloak admin = keycloakAdmin()) {
             createUser(realm(admin), SampleDataImporter.ADMIN, "Admin", "Spexregister", "spexregister", List.of("USER", "EDITOR", "ADMIN"));
+            createUser(realm(admin), SampleDataImporter.USER, "User", "Spexregister", "spexregister", List.of("USER"));
         }
     }
 
@@ -98,7 +99,7 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
             assertThat(jdbcClient.sql("SELECT DISTINCT c.capability FROM revival_member_capability c JOIN revival_member m ON m.id = c.member_id JOIN person p ON p.id = m.person_id WHERE p.email = ?")
                     .param(email).query(String.class).list()).containsExactly(capability.name());
         }
-        assertThat(memberships(SampleDataImporter.NO_ROLE, "STEERING_GROUP") + memberships(SampleDataImporter.NO_ROLE, "DIRECTEUR")).isZero();
+        assertThat(memberships(SampleDataImporter.USER, "STEERING_GROUP") + memberships(SampleDataImporter.USER, "DIRECTEUR")).isZero();
         assertThat(count("revival_member WHERE pending_email = '%s'".formatted(SampleDataImporter.INVITED))).isEqualTo(APPROVED_STATUSES);
         assertThat(count("revival_member WHERE removed_at IS NOT NULL")).isEqualTo(APPROVED_STATUSES);
     }
@@ -368,7 +369,7 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
                 .execute()
                 .path("me.revivalRoles[*].role").entityList(String.class).contains("STEERING_GROUP").doesNotContain("DIRECTEUR")
                 .path("me.revivalRoles[*].capabilities[*].id").entityList(String.class).contains("FINANCE").doesNotContain("CATERING", "STAFFING", "COMMS");
-        graphQl(SampleDataImporter.NO_ROLE)
+        graphQl(SampleDataImporter.USER)
                 .document("{ me { globalRoles revivalRoles { role } } }")
                 .execute()
                 .path("me.globalRoles").entityList(String.class).hasSize(0)

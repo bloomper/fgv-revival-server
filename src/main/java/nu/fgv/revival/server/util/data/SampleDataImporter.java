@@ -103,7 +103,8 @@ public class SampleDataImporter {
     static final String DIRECTEUR = "directeur" + SAMPLE_USER_DOMAIN;
     static final String DIRECTEUR_2 = "directeur2" + SAMPLE_USER_DOMAIN;
     static final String STEERING_GROUP = "steering-group" + SAMPLE_USER_DOMAIN;
-    static final String NO_ROLE = "no-role" + SAMPLE_USER_DOMAIN;
+    // Spexregister's sample user, given only USER here
+    static final String USER = "user" + SAMPLE_USER_DOMAIN;
     static final String INVITED = "invited" + SAMPLE_USER_DOMAIN;
     static final String PARTICIPANT = "participant" + SAMPLE_USER_DOMAIN;
     static final String HELPER = "helper" + SAMPLE_USER_DOMAIN;
@@ -586,9 +587,7 @@ public class SampleDataImporter {
     private Map<String, SamplePerson> createSampleUsers(final JdbcClient jdbcClient, final RealmResource realm) {
         final ClientResource client = realm.clients().get(realm.clients().findByClientId(SecurityUtil.CLIENT_ID).getFirst().getId());
         final String clientUuid = client.toRepresentation().getId();
-        final UserRepresentation admin = realm.users().searchByEmail(ADMIN, true).stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Keycloak has no user " + ADMIN + "; import Spexregister's sample data first"));
+        final UserRepresentation admin = spexregisterUser(realm, ADMIN);
         final Map<String, UserRepresentation> users = new LinkedHashMap<>();
 
         users.put(ADMIN, admin);
@@ -600,7 +599,7 @@ public class SampleDataImporter {
                 users.put(steeringGroupWith(capability), sampleUser(realm, steeringGroupWith(capability), "Steering group " + capability.name().toLowerCase(Locale.ROOT))));
         users.put(PARTICIPANT, sampleUser(realm, PARTICIPANT, "Participant"));
         users.put(HELPER, sampleUser(realm, HELPER, "Helper"));
-        users.put(NO_ROLE, sampleUser(realm, NO_ROLE, "No role"));
+        users.put(USER, spexregisterUser(realm, USER));
 
         final Map<String, SamplePerson> people = new LinkedHashMap<>();
 
@@ -614,6 +613,12 @@ public class SampleDataImporter {
         });
 
         return people;
+    }
+
+    private static UserRepresentation spexregisterUser(final RealmResource realm, final String email) {
+        return realm.users().searchByEmail(email, true).stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Keycloak has no user " + email + "; import Spexregister's sample data first"));
     }
 
     private UserRepresentation sampleUser(final RealmResource realm, final String email, final String firstName) {

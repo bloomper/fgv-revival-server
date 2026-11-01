@@ -34,10 +34,28 @@ $ git clone https://github.com/bloomper/fgv-revival-server
 [[setup]]
 == Setup
 
-Keycloak, Mailpit and Caddy, which FGV's applications share, run in the local stack of
-https://github.com/bloomper/fgv-infra-deploy[fgv-infra-deploy].
-Check it out next to this repository and set it up as its README describes under _Local development_.
+[[infrastructure]]
+=== Shared infrastructure
+
+Keycloak (with the realm ``fgv``), Mailpit, Umami and Caddy, which FGV's applications share, run in the local stack of https://github.com/bloomper/fgv-infra-deploy[fgv-infra-deploy].
+Check it out next to this repository and start it once; it keeps running for every application:
+
+[source,bash]
+----
+$ git clone https://github.com/bloomper/fgv-infra-deploy ../fgv-infra-deploy
+$ cd ../fgv-infra-deploy/local
+$ printf '%s' 'verysecret' > .docker/secrets/KEYCLOAK_MYSQL_ROOT_PASSWORD
+$ printf '%s' 'secret' > .docker/secrets/KEYCLOAK_MYSQL_USER_PASSWORD
+$ printf '%s' 'password' > .docker/secrets/KEYCLOAK_ADMIN_PASSWORD   # for the user KEYCLOAK_ADMIN in local/.env
+$ git update-index --skip-worktree .docker/secrets/*
+$ docker compose up -d
+----
+
 It creates the Docker network ``fgv-local``, which this repository's ``docker-compose.yaml`` joins.
+Keycloak imports the realm, with its clients and their secrets, from ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak].
+
+[[configuration]]
+=== Configuration
 
 Nyuppsättning reads spex from Spexregister.
 Running https://github.com/bloomper/spexregister-server[spexregister-server]'s local stack as well is optional; without it, spex show as unavailable.
@@ -94,6 +112,7 @@ Add the following to `/etc/hosts` (or the Windows equivalent):
 127.0.0.1 api.revival.fgv.local.nu
 127.0.0.1 revival.fgv.local.nu
 127.0.0.1 mail.fgv.local.nu
+127.0.0.1 analytics.fgv.local.nu
 ----
 
 [[run]]
@@ -131,7 +150,7 @@ The import needs the secret of ``fgv-admin`` in ``API_KEYCLOAK_ADMIN_CLIENT_SECR
 The sample data is built on Spexregister's, so Spexregister must run with ``API_IMPORT_SAMPLE_DATA=true``:
 
 * The spex are read from Spexregister's API. The import waits up to 5 minutes for Spexregister, which answers only once its own import is done.
-* Spexregister's sample user ``admin@fgv.nu`` becomes super admin. The import refuses to run without it, which keeps it away from real environments.
+* Spexregister's sample user ``admin@fgv.nu`` becomes super admin, and ``user@fgv.nu`` gets ``USER`` only. The import refuses to run without them, which keeps it away from real environments.
 
 [sidebar]
 .NOTE
@@ -238,7 +257,8 @@ $ ./gradlew build              # all of the above, plus this documentation
 [[test_credentials]]
 == Test credentials
 
-The following test users are created when sample data is imported (see <<sample_data>>), with the password in ``SAMPLE_USER_PASSWORD`` (default ``s3cr3t-s3cr3t``, the same as Spexregister's):
+The following test users are created when sample data is imported (see <<sample_data>>), with the password in ``SAMPLE_USER_PASSWORD`` (default ``s3cr3t-s3cr3t``, the same as Spexregister's).
+``admin@fgv.nu`` and ``user@fgv.nu`` are Spexregister's sample users, which are the same in every FGV application; the others are Nyuppsättning's own, since they stand for its roles.
 
 |===
 |Username|In Nyuppsättning
@@ -254,7 +274,7 @@ The following test users are created when sample data is imported (see <<sample_
 |steering-group-comms@fgv.nu|The same, with ``COMMS``
 |participant@fgv.nu|Participant who said yes in both ``OPEN`` revivals, with shifts, availability and dietary needs
 |helper@fgv.nu|Helper in both ``OPEN`` revivals who has not answered yet
-|no-role@fgv.nu|``USER`` only
+|user@fgv.nu|``USER`` only
 |invited@fgv.nu|No Keycloak user: waiting in ``directeur2@fgv.nu``'s revivals
 
 |===
