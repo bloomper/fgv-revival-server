@@ -28,6 +28,8 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+
 /**
  * Fictitious callers and revivals for unit tests.
  *
@@ -46,6 +48,7 @@ public final class TestCallers {
         final Person person = new Person();
 
         person.setId(PERSON_ID);
+        person.setUuid(uuid(person.getId()));
         person.setExternalId("00000000-0000-0000-0000-000000000010");
         person.setEmail("kim@example.org");
         person.setEmailVerified(true);
@@ -77,7 +80,8 @@ public final class TestCallers {
         final Revival revival = new Revival();
 
         revival.setId(REVIVAL_ID);
-        revival.setSpexId(1L);
+        revival.setUuid(uuid(revival.getId()));
+        revival.setSpexId("1");
         revival.setYear(2028);
         revival.setStatus(status);
         revival.setVersion(3L);

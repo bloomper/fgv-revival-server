@@ -27,10 +27,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * An entry in the reference library, in Swedish with optional English. Which texts apply depends on the kind; the
@@ -54,6 +56,9 @@ public class LibraryEntry extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "kind", nullable = false, length = 16)

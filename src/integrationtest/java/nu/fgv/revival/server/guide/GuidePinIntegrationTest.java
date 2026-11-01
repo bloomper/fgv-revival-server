@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,9 +51,9 @@ class GuidePinIntegrationTest extends AbstractIntegrationTest {
             }""";
     private static final String CHANGES = "query($from: ID!, $to: ID!) { guideChanges(fromId: $from, toId: $to) { from { label } to { label } items { key kind reworded } } }";
 
-    private long v1;
-    private long v2;
-    private long revival;
+    private EntityId v1;
+    private EntityId v2;
+    private EntityId revival;
 
     @BeforeEach
     void twoVersionsAndARevival() {
@@ -67,8 +68,8 @@ class GuidePinIntegrationTest extends AbstractIntegrationTest {
 
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute();
 
-        final long draft = jdbcClient.sql("SELECT id FROM guide_version WHERE status = 'DRAFT'").query(Long.class).single();
-        final long item = jdbcClient.sql("SELECT id FROM guide_item WHERE version_id = ? ORDER BY id LIMIT 1").param(draft).query(Long.class).single();
+        final EntityId draft = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_version WHERE status = 'DRAFT'"));
+        final EntityId item = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_item WHERE version_id = ? ORDER BY id LIMIT 1").param(draft));
         final long itemVersion = jdbcClient.sql("SELECT version FROM guide_item WHERE id = ?").param(item).query(Long.class).single();
 
         execute(SUPER_ADMIN, "mutation($input: GuideItemUpdateInput!) { guideItemUpdate(input: $input) { id } }",
@@ -78,7 +79,7 @@ class GuidePinIntegrationTest extends AbstractIntegrationTest {
         v2 = draft;
     }
 
-    private Map<String, Object> change(final Long from, final long to) {
+    private Map<String, Object> change(final EntityId from, final EntityId to) {
         final Map<String, Object> input = new java.util.HashMap<>();
 
         input.put("revivalId", revival);
@@ -147,7 +148,7 @@ class GuidePinIntegrationTest extends AbstractIntegrationTest {
 
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute();
 
-        final long draft = jdbcClient.sql("SELECT id FROM guide_version WHERE status = 'DRAFT'").query(Long.class).single();
+        final EntityId draft = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_version WHERE status = 'DRAFT'"));
 
         execute(SUPER_ADMIN, CHANGES, Map.of("from", v2, "to", draft)).path("guideChanges.items").entityList(Object.class).hasSize(0);
         expectError(execute(STEERING_GROUP, CHANGES, Map.of("from", v2, "to", draft)), "NOT_FOUND");

@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -39,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class LogMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
-    private long revival;
+    private EntityId revival;
 
     private static boolean refused(final JsonNode response) {
         return response.has("error") || response.path("result").path("isError").asBoolean(false);
@@ -90,7 +91,7 @@ class LogMcpToolsIntegrationTest extends AbstractIntegrationTest {
             assertThat(mcp).isNotEmpty().isEqualTo(web);
         }
 
-        final long meeting = Long.parseLong(execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
+        final EntityId meeting = entityId("meeting", execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "date", LocalDate.now().toString()))).path("meetingCreate.id").entity(String.class).get());
 
         execute(STEERING_GROUP, "mutation($id: ID!, $version: Int!) { meetingStart(id: $id, version: $version) { id } }",

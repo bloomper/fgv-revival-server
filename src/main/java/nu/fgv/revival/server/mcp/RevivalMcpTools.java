@@ -28,13 +28,14 @@ import nu.fgv.revival.server.participant.ParticipantDtos;
 import nu.fgv.revival.server.participant.ParticipantService;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalCreateDto;
 import nu.fgv.revival.server.revival.RevivalDto;
 import nu.fgv.revival.server.revival.RevivalService;
-import nu.fgv.revival.server.revival.RevivalStatus;
-import nu.fgv.revival.server.revival.RevivalStatusDto;
 import nu.fgv.revival.server.revival.RevivalShowDto;
+import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalStatusChangeDto;
+import nu.fgv.revival.server.revival.RevivalStatusDto;
 import nu.fgv.revival.server.revival.RevivalStatusService;
 import nu.fgv.revival.server.revival.RevivalUpdateDto;
 import nu.fgv.revival.server.revival.UpcomingRevivalDto;
@@ -42,6 +43,7 @@ import nu.fgv.revival.server.revival.UpcomingRevivals;
 import nu.fgv.revival.server.spex.SpexDto;
 import nu.fgv.revival.server.spex.SpexService;
 import nu.fgv.revival.server.util.Amounts;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -51,6 +53,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * MCP tools for revivals. Members,
@@ -61,6 +64,8 @@ import java.util.Locale;
  */
 @Component
 public class RevivalMcpTools {
+
+    private final ExternalIds ids;
 
     private final RevivalService revivalService;
     private final RevivalStatusService statusService;
@@ -74,7 +79,9 @@ public class RevivalMcpTools {
 
     public RevivalMcpTools(final RevivalService revivalService, final RevivalStatusService statusService, final CallerService callerService,
                            final BudgetService budgetService, final ParticipantService participantService, final ClosingService closingService,
-                           final UpcomingRevivals upcomingRevivals, final SpexService spexService, final McpToolSupport support) {
+                           final UpcomingRevivals upcomingRevivals, final SpexService spexService, final McpToolSupport support,
+                           final ExternalIds ids) {
+        this.ids = ids;
         this.revivalService = revivalService;
         this.statusService = statusService;
         this.callerService = callerService;
@@ -86,15 +93,15 @@ public class RevivalMcpTools {
         this.support = support;
     }
 
-    private static RevivalDetails toDetails(final RevivalDto revival, final Caller caller) {
-        final RevivalRoleAssignment assignment = caller.roleIn(revival.id());
+    private RevivalDetails toDetails(final RevivalDto revival, final Caller caller) {
+        final RevivalRoleAssignment assignment = caller.roleIn(ids.idOf(Revival.class, revival.id()));
 
         return new RevivalDetails(revival.id(), revival.spex().title(), revival.year(), revival.status(), revival.premiereDate(), revival.shows(),
                 revival.guideVersionId(), revival.permissions().allowedStatuses(), assignment == null ? null : assignment.role());
     }
 
-    private static McpRevival toMcpRevival(final RevivalDto revival, final Caller caller) {
-        final RevivalRoleAssignment assignment = caller.roleIn(revival.id());
+    private McpRevival toMcpRevival(final RevivalDto revival, final Caller caller) {
+        final RevivalRoleAssignment assignment = caller.roleIn(ids.idOf(Revival.class, revival.id()));
 
         return new McpRevival(
                 revival.id(),
@@ -122,9 +129,9 @@ public class RevivalMcpTools {
     @McpTool(name = "get_revival_status",
             description = "Get a revival's status: its lifecycle status, overdue decision log rows and checklist items, open guide requirements per chapter, its budgeted and actual result when you can read its budget, its participants' responses when you can read them, and while it is closing or settling, whether its participation has been written to Spexregister.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public McpRevivalStatus getRevivalStatus(@McpToolParam(description = "A revival you can see") final Long revivalId) {
+    public McpRevivalStatus getRevivalStatus(@McpToolParam(description = "A revival you can see") final UUID revivalId) {
         return support.call("get_revival_status", () -> {
-            final RevivalStatusDto status = statusService.status(revivalId, Locale.ENGLISH);
+            final RevivalStatusDto status = statusService.status(ids.idOf(Revival.class, revivalId), Locale.ENGLISH);
 
             return new McpRevivalStatus(status.revival(),
                     status.overdueLogEntries().stream().map(row -> new OverdueLogEntry(row.number(), row.type(), row.text(), McpOwner.of(row.owner()),
@@ -132,28 +139,28 @@ public class RevivalMcpTools {
                     status.overdueChecklistItems().stream().map(ChecklistMcpTools::toMcp).map(item -> new OverdueChecklistItem(item.id(), item.checklist(),
                             item.text(), item.owner(), item.deadline())).toList(),
                     status.openRequirements().stream().map(OpenRequirements::of).toList(),
-                    budgetPosition(revivalId),
-                    responseCounts(revivalId),
-                    closing(status.revival().status(), revivalId));
+                    budgetPosition(ids.idOf(Revival.class, revivalId)),
+                    responseCounts(ids.idOf(Revival.class, revivalId)),
+                    closing(status.revival().status(), ids.idOf(Revival.class, revivalId)));
         });
     }
 
     @McpTool(name = "get_revival",
             description = "Get one revival you can see: spex, year, status, premiere date, shows with time and venue, the guide version it follows, the statuses you may move it to, and your role in it.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public RevivalDetails getRevival(@McpToolParam(description = "A revival you can see") final Long revivalId) {
-        return support.call("get_revival", () -> toDetails(revivalService.findById(revivalId), callerService.current()));
+    public RevivalDetails getRevival(@McpToolParam(description = "A revival you can see") final UUID revivalId) {
+        return support.call("get_revival", () -> toDetails(revivalService.findById(ids.idOf(Revival.class, revivalId)), callerService.current()));
     }
 
     @McpTool(name = "update_revival",
             description = "Change a revival's premiere date or its shows. Leave out what stays as it is; shows replace all shows.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public RevivalDetails updateRevival(
-            @McpToolParam(description = "A revival whose details you can change") final Long revivalId,
+            @McpToolParam(description = "A revival whose details you can change") final UUID revivalId,
             @McpToolParam(required = false, description = "yyyy-MM-dd. An empty string clears it.") final @Nullable String premiereDate,
             @McpToolParam(required = false, description = "Every show: date (yyyy-MM-dd), time (HH:mm, optional) and venue (optional)") final @Nullable List<RevivalShowDto> shows) {
         return support.call("update_revival", () -> {
-            final RevivalDto revival = revivalService.findById(revivalId);
+            final RevivalDto revival = revivalService.findById(ids.idOf(Revival.class, revivalId));
             final boolean clear = premiereDate != null && premiereDate.isBlank();
 
             return toDetails(revivalService.update(new RevivalUpdateDto(revivalId, revival.version(), null, null,
@@ -165,10 +172,10 @@ public class RevivalMcpTools {
             description = "Move a revival to another status in its lifecycle, e.g. from ORGANISING to OPEN. get_revival lists the statuses you may move it to. Archiving and rejecting are for super admins.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public RevivalDetails changeRevivalStatus(
-            @McpToolParam(description = "A revival you can see") final Long revivalId,
+            @McpToolParam(description = "A revival you can see") final UUID revivalId,
             @McpToolParam(description = "PROPOSED, APPROVED, ORGANISING, OPEN, CLOSING, SETTLING, ARCHIVED or REJECTED") final RevivalStatus status) {
         return support.call("change_revival_status", () -> {
-            final RevivalDto revival = revivalService.findById(revivalId);
+            final RevivalDto revival = revivalService.findById(ids.idOf(Revival.class, revivalId));
 
             return toDetails(revivalService.changeStatus(new RevivalStatusChangeDto(revivalId, revival.status(), status)), callerService.current());
         });
@@ -178,7 +185,7 @@ public class RevivalMcpTools {
             description = "Super admins: create a revival of a spex from Spexregister (search_spex finds it) in a year. It starts as PROPOSED; directeurs and steering group members are added in the web.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public RevivalDetails createRevival(
-            @McpToolParam(description = "The spex's id in Spexregister") final Long spexId,
+            @McpToolParam(description = "The spex's id in Spexregister") final String spexId,
             @McpToolParam(description = "The year it plays") final Integer year,
             @McpToolParam(required = false, description = "True for a revival that has already been played, to allow a year before this one") final @Nullable Boolean past) {
         return support.call("create_revival", () -> toDetails(revivalService.create(new RevivalCreateDto(spexId, year, past)), callerService.current()));
@@ -255,7 +262,7 @@ public class RevivalMcpTools {
     /**
      * A revival as {@code list_revivals} returns it.
      */
-    public record McpRevival(Long id,
+    public record McpRevival(UUID id,
                              @Nullable String spexTitle,
                              boolean spexAvailable,
                              Integer year,
@@ -267,8 +274,8 @@ public class RevivalMcpTools {
     /**
      * A revival as {@code get_revival} returns it: no people.
      */
-    public record RevivalDetails(Long id, @Nullable String spexTitle, Integer year, RevivalStatus status, @Nullable LocalDate premiereDate,
-                                 List<RevivalShowDto> shows, @Nullable Long guideVersionId, List<RevivalStatus> allowedStatuses,
+    public record RevivalDetails(UUID id, @Nullable String spexTitle, Integer year, RevivalStatus status, @Nullable LocalDate premiereDate,
+                                 List<RevivalShowDto> shows, @Nullable UUID guideVersionId, List<RevivalStatus> allowedStatuses,
                                  @Nullable RevivalRole role) {
     }
 
@@ -304,7 +311,7 @@ public class RevivalMcpTools {
                                   @Nullable LocalDate deadline) {
     }
 
-    public record OverdueChecklistItem(Long id, ChecklistMcpTools.ChecklistRef checklist, ChecklistMcpTools.Text text,
+    public record OverdueChecklistItem(UUID id, ChecklistMcpTools.ChecklistRef checklist, ChecklistMcpTools.Text text,
                                        @Nullable McpOwner owner,
                                        @Nullable LocalDate deadline) {
     }

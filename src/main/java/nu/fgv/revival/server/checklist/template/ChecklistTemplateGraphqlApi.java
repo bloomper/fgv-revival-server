@@ -22,6 +22,7 @@ import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.checklist.RelativeDeadlineKind;
 import nu.fgv.revival.server.guide.GuideGraphqlApi.LocalizedTextInput;
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
@@ -34,6 +35,7 @@ import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Checklist templates over GraphQL.
@@ -44,9 +46,12 @@ import java.util.Objects;
 @Controller
 public class ChecklistTemplateGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final ChecklistTemplateService service;
 
-    public ChecklistTemplateGraphqlApi(final ChecklistTemplateService service) {
+    public ChecklistTemplateGraphqlApi(final ChecklistTemplateService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
@@ -60,8 +65,8 @@ public class ChecklistTemplateGraphqlApi {
     }
 
     @QueryMapping
-    public ChecklistTemplateDto checklistTemplate(@Argument final Long id) {
-        return service.get(id);
+    public ChecklistTemplateDto checklistTemplate(@Argument final UUID id) {
+        return service.get(ids.idOf(ChecklistTemplate.class, id));
     }
 
     @MutationMapping
@@ -71,51 +76,51 @@ public class ChecklistTemplateGraphqlApi {
 
     @MutationMapping
     public ChecklistTemplateDto checklistTemplateUpdate(@Argument final ChecklistTemplateUpdateInput input) {
-        return service.update(input.id(), input.version(), texts(input.name()));
+        return service.update(ids.idOf(ChecklistTemplate.class, input.id()), input.version(), texts(input.name()));
     }
 
     @MutationMapping
-    public ChecklistTemplateDto checklistTemplateRetire(@Argument final Long id, @Argument final Long version) {
-        return service.retire(id, version);
+    public ChecklistTemplateDto checklistTemplateRetire(@Argument final UUID id, @Argument final Long version) {
+        return service.retire(ids.idOf(ChecklistTemplate.class, id), version);
     }
 
     @MutationMapping
-    public ChecklistTemplateDto checklistTemplateRestore(@Argument final Long id, @Argument final Long version) {
-        return service.restore(id, version);
+    public ChecklistTemplateDto checklistTemplateRestore(@Argument final UUID id, @Argument final Long version) {
+        return service.restore(ids.idOf(ChecklistTemplate.class, id), version);
     }
 
     @MutationMapping
     public ChecklistTemplateItemDto checklistTemplateItemCreate(@Argument final ChecklistTemplateItemCreateInput input) {
-        return service.createItem(new ChecklistTemplateService.NewItem(input.templateId(), input.position(),
+        return service.createItem(new ChecklistTemplateService.NewItem(ids.idOf(ChecklistTemplate.class, input.templateId()), input.position(),
                 Objects.requireNonNull(texts(input.text())), input.guideItemKey(), input.defaultCapability(),
                 input.deadline() == null ? null : input.deadline().toDeadline()));
     }
 
     @MutationMapping
     public ChecklistTemplateItemDto checklistTemplateItemUpdate(@Argument final ChecklistTemplateItemUpdateInput input) {
-        return service.updateItem(new ChecklistTemplateService.ItemChange(input.id(), input.version(), texts(input.text()), input.guideItemKey(),
+        return service.updateItem(new ChecklistTemplateService.ItemChange(ids.idOf(ChecklistTemplateItem.class, input.id()), input.version(), texts(input.text()), input.guideItemKey(),
                 Boolean.TRUE.equals(input.clearGuideItem()), input.defaultCapability(), Boolean.TRUE.equals(input.clearDefaultCapability()),
                 input.deadline() == null ? null : input.deadline().toDeadline(), Boolean.TRUE.equals(input.clearDeadline())));
     }
 
     @MutationMapping
-    public ChecklistTemplateDto checklistTemplateItemMove(@Argument final Long id, @Argument final Long version, @Argument final int position) {
-        return service.moveItem(id, version, position);
+    public ChecklistTemplateDto checklistTemplateItemMove(@Argument final UUID id, @Argument final Long version, @Argument final int position) {
+        return service.moveItem(ids.idOf(ChecklistTemplateItem.class, id), version, position);
     }
 
     @MutationMapping
-    public ChecklistTemplateDto checklistTemplateItemRetire(@Argument final Long id, @Argument final Long version) {
-        return service.retireItem(id, version);
+    public ChecklistTemplateDto checklistTemplateItemRetire(@Argument final UUID id, @Argument final Long version) {
+        return service.retireItem(ids.idOf(ChecklistTemplateItem.class, id), version);
     }
 
     @MutationMapping
-    public ChecklistTemplateDto checklistTemplateItemRestore(@Argument final Long id, @Argument final Long version) {
-        return service.restoreItem(id, version);
+    public ChecklistTemplateDto checklistTemplateItemRestore(@Argument final UUID id, @Argument final Long version) {
+        return service.restoreItem(ids.idOf(ChecklistTemplateItem.class, id), version);
     }
 
     @SchemaMapping(typeName = "ChecklistTemplate")
     public List<ChecklistTemplateItemDto> retiredItems(final ChecklistTemplateDto template) {
-        return service.retiredItems(template.id());
+        return service.retiredItems(ids.idOf(ChecklistTemplate.class, template.id()));
     }
 
     @SchemaMapping(typeName = "ChecklistTemplate")
@@ -145,15 +150,15 @@ public class ChecklistTemplateGraphqlApi {
                                                @Nullable LocalizedTextInput name) {
     }
 
-    public record ChecklistTemplateUpdateInput(Long id, Long version, @Nullable LocalizedTextInput name) {
+    public record ChecklistTemplateUpdateInput(UUID id, Long version, @Nullable LocalizedTextInput name) {
     }
 
-    public record ChecklistTemplateItemCreateInput(Long templateId, @Nullable Integer position, LocalizedTextInput text,
+    public record ChecklistTemplateItemCreateInput(UUID templateId, @Nullable Integer position, LocalizedTextInput text,
                                                    @Nullable String guideItemKey, @Nullable String defaultCapability,
                                                    @Nullable RelativeDeadlineInput deadline) {
     }
 
-    public record ChecklistTemplateItemUpdateInput(Long id, Long version, @Nullable LocalizedTextInput text,
+    public record ChecklistTemplateItemUpdateInput(UUID id, Long version, @Nullable LocalizedTextInput text,
                                                    @Nullable String guideItemKey,
                                                    @Nullable Boolean clearGuideItem, @Nullable String defaultCapability,
                                                    @Nullable Boolean clearDefaultCapability,

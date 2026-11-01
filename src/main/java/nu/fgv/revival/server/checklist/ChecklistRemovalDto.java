@@ -18,6 +18,8 @@ package nu.fgv.revival.server.checklist;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * A chapter checklist that moving the revival to another guide version would delete, with the items that would go
  * with it and the log rows linked to them, which stay but lose the link.
@@ -25,7 +27,7 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistRemovalDto(Long checklistId,
+public record ChecklistRemovalDto(UUID checklistId,
                                   String chapterKey,
                                   GuideVersionView.@Nullable Text chapterTitle,
                                   int itemCount,

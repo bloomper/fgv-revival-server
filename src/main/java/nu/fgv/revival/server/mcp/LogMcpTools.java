@@ -17,6 +17,7 @@
 
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.decisionlog.LogEntry;
 import nu.fgv.revival.server.decisionlog.LogEntryDto;
 import nu.fgv.revival.server.decisionlog.LogEntryFilterDto;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
@@ -25,7 +26,10 @@ import nu.fgv.revival.server.decisionlog.LogEntryType;
 import nu.fgv.revival.server.member.OwnerInputDto;
 import nu.fgv.revival.server.member.OwnerResolver;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.person.Person;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.error.BadRequestException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -35,6 +39,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * The decision log over MCP. The same service methods as GraphQL, with the token's
@@ -46,6 +51,8 @@ import java.util.Locale;
 @Component
 public class LogMcpTools {
 
+    private final ExternalIds ids;
+
     static final int DEFAULT_LIMIT = 50;
     static final int MAX_LIMIT = 200;
 
@@ -55,7 +62,9 @@ public class LogMcpTools {
     private final McpToolSupport support;
 
     public LogMcpTools(final LogEntryService logEntryService, final OwnerResolver ownerResolver, final CallerService callerService,
-                       final McpToolSupport support) {
+                       final McpToolSupport support,
+                       final ExternalIds ids) {
+        this.ids = ids;
         this.logEntryService = logEntryService;
         this.ownerResolver = ownerResolver;
         this.callerService = callerService;
@@ -71,17 +80,17 @@ public class LogMcpTools {
             description = "List rows of a revival's decision log. Filters combine: mine, open (open or waiting), overdue, types, meeting, tag and text.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public LogEntries listLogEntries(
-            @McpToolParam(description = "A revival you can see") final Long revivalId,
+            @McpToolParam(description = "A revival you can see") final UUID revivalId,
             @McpToolParam(required = false, description = "Rows you own") final @Nullable Boolean mine,
             @McpToolParam(required = false, description = "OPEN or WAITING") final @Nullable Boolean open,
             @McpToolParam(required = false, description = "Open rows past their deadline") final @Nullable Boolean overdue,
             @McpToolParam(required = false, description = "DECISION, TODO or QUESTION") final @Nullable List<LogEntryType> types,
-            @McpToolParam(required = false, description = "Rows created in this meeting, by its id") final @Nullable Long meeting,
+            @McpToolParam(required = false, description = "Rows created in this meeting, by its id") final @Nullable UUID meeting,
             @McpToolParam(required = false, description = "A tag") final @Nullable String tag,
             @McpToolParam(required = false, description = "Words in the text, comment or owner name") final @Nullable String text,
             @McpToolParam(required = false, description = "1-200, default 50. The first rows by number.") final @Nullable Integer limit) {
         return support.call("list_log_entries", () -> {
-            final List<LogEntryDto> rows = logEntryService.list(revivalId, new LogEntryFilterDto(mine, open, overdue, types, meeting,
+            final List<LogEntryDto> rows = logEntryService.list(ids.idOf(Revival.class, revivalId), new LogEntryFilterDto(mine, open, overdue, types, meeting,
                     tag == null || tag.isBlank() ? null : List.of(tag.strip()), text), Locale.ENGLISH);
             final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
 
@@ -93,7 +102,7 @@ public class LogMcpTools {
             description = "Add a decision, to-do or question to a revival's decision log. The owner is a steering group member's name, \"me\", or the name of someone outside the steering group.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public LogEntryWritten createLogEntry(
-            @McpToolParam(description = "A revival you can work in") final Long revivalId,
+            @McpToolParam(description = "A revival you can work in") final UUID revivalId,
             @McpToolParam(description = "DECISION, TODO or QUESTION") final LogEntryType type,
             @McpToolParam(description = "At most 5,000 characters") final String text,
             @McpToolParam(required = false, description = "A display name, or me. A unique member match is that member; several matches are refused with the candidates; none is a free-text owner.") final @Nullable String owner,
@@ -101,8 +110,8 @@ public class LogMcpTools {
             @McpToolParam(required = false, description = "A comment") final @Nullable String comment,
             @McpToolParam(required = false, description = "Tags") final @Nullable List<String> tags) {
         return support.call("create_log_entry", () -> {
-            final ResolvedOwner resolved = resolve(revivalId, owner);
-            final LogEntryDto created = logEntryService.create(new LogEntryService.Draft(revivalId, null, null, type, text, null, resolved.input(),
+            final ResolvedOwner resolved = resolve(ids.idOf(Revival.class, revivalId), owner);
+            final LogEntryDto created = logEntryService.create(new LogEntryService.Draft(ids.idOf(Revival.class, revivalId), null, null, type, text, null, resolved.input(),
                     McpToolSupport.date(deadline), comment, tags, null, null, null), Locale.ENGLISH);
 
             return LogEntryWritten.of(created, resolved.resolution());
@@ -113,7 +122,7 @@ public class LogMcpTools {
             description = "Change a row in a revival's decision log, by its number: status, owner, deadline, comment, text or tags. Rows are never deleted; set the status to CANCELLED instead.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public LogEntryWritten updateLogEntry(
-            @McpToolParam(description = "A revival you can work in") final Long revivalId,
+            @McpToolParam(description = "A revival you can work in") final UUID revivalId,
             @McpToolParam(description = "The row's number") final Integer number,
             @McpToolParam(required = false, description = "OPEN, DONE, WAITING or CANCELLED") final @Nullable LogEntryStatus status,
             @McpToolParam(required = false, description = "As in create_log_entry. An empty string clears it.") final @Nullable String owner,
@@ -122,10 +131,10 @@ public class LogMcpTools {
             @McpToolParam(required = false, description = "The row's text") final @Nullable String text,
             @McpToolParam(required = false, description = "Replaces the tags") final @Nullable List<String> tags) {
         return support.call("update_log_entry", () -> {
-            final LogEntryDto row = logEntryService.getByNumber(revivalId, number, Locale.ENGLISH);
+            final LogEntryDto row = logEntryService.getByNumber(ids.idOf(Revival.class, revivalId), number, Locale.ENGLISH);
             final boolean clearOwner = owner != null && owner.isBlank();
-            final ResolvedOwner resolved = clearOwner ? new ResolvedOwner(null, Resolution.NONE) : resolve(revivalId, owner);
-            final LogEntryDto updated = logEntryService.update(new LogEntryService.Change(row.id(), row.version(), null, null, null, text, status,
+            final ResolvedOwner resolved = clearOwner ? new ResolvedOwner(null, Resolution.NONE) : resolve(ids.idOf(Revival.class, revivalId), owner);
+            final LogEntryDto updated = logEntryService.update(new LogEntryService.Change(ids.idOf(LogEntry.class, row.id()), row.version(), null, null, null, text, status,
                     resolved.input(), clearOwner, deadline == null || deadline.isBlank() ? null : McpToolSupport.date(deadline), deadline != null && deadline.isBlank(),
                     comment == null || comment.isBlank() ? null : comment, comment != null && comment.isBlank(), tags, null, null, null, false, false), Locale.ENGLISH);
 
@@ -137,24 +146,24 @@ public class LogMcpTools {
     @McpTool(name = "list_log_tags",
             description = "List the tags used in a revival's decision log, to filter by or to reuse.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public McpToolSupport.ListResult<String> listLogTags(@McpToolParam(description = "A revival you can see") final Long revivalId) {
-        return support.call("list_log_tags", () -> new McpToolSupport.ListResult<>(logEntryService.tags(revivalId)));
+    public McpToolSupport.ListResult<String> listLogTags(@McpToolParam(description = "A revival you can see") final UUID revivalId) {
+        return support.call("list_log_tags", () -> new McpToolSupport.ListResult<>(logEntryService.tags(ids.idOf(Revival.class, revivalId))));
     }
 
     @McpTool(name = "answer_log_question",
             description = "Answer an open QUESTION in a revival's decision log, by its number: the answer becomes a new DECISION row that points back at the question, and the question is marked DONE.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public Answered answerLogQuestion(
-            @McpToolParam(description = "A revival you can work in") final Long revivalId,
+            @McpToolParam(description = "A revival you can work in") final UUID revivalId,
             @McpToolParam(description = "The question's number") final Integer number,
             @McpToolParam(description = "The answer, at most 5,000 characters") final String text,
             @McpToolParam(required = false, description = "The decision's owner, as in create_log_entry") final @Nullable String owner,
             @McpToolParam(required = false, description = "yyyy-MM-dd") final @Nullable String deadline,
             @McpToolParam(required = false, description = "A comment") final @Nullable String comment) {
         return support.call("answer_log_question", () -> {
-            final LogEntryDto question = logEntryService.getByNumber(revivalId, number, Locale.ENGLISH);
-            final ResolvedOwner resolved = resolve(revivalId, owner);
-            final LogEntryService.Answered answered = logEntryService.answer(new LogEntryService.Answer(question.id(), question.version(), null, text,
+            final LogEntryDto question = logEntryService.getByNumber(ids.idOf(Revival.class, revivalId), number, Locale.ENGLISH);
+            final ResolvedOwner resolved = resolve(ids.idOf(Revival.class, revivalId), owner);
+            final LogEntryService.Answered answered = logEntryService.answer(new LogEntryService.Answer(ids.idOf(LogEntry.class, question.id()), question.version(), null, text,
                     resolved.input(), McpToolSupport.date(deadline), comment), Locale.ENGLISH);
 
             return new Answered(LogEntryWritten.of(answered.question(), Resolution.NONE), LogEntryWritten.of(answered.decision(), resolved.resolution()));
@@ -167,7 +176,7 @@ public class LogMcpTools {
         }
         return switch (ownerResolver.resolve(revivalId, owner, callerService.current())) {
             case OwnerResolver.Resolution.Member member ->
-                    new ResolvedOwner(new OwnerInputDto(member.personId(), null), Resolution.MEMBER);
+                    new ResolvedOwner(new OwnerInputDto(ids.uuidOf(Person.class, member.personId()), null), Resolution.MEMBER);
             case OwnerResolver.Resolution.FreeText name ->
                     new ResolvedOwner(new OwnerInputDto(null, name.name()), Resolution.FREE_TEXT);
             case OwnerResolver.Resolution.Ambiguous ambiguous ->
@@ -186,7 +195,7 @@ public class LogMcpTools {
                            String text,
                            @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment,
                            List<String> tags,
-                           @Nullable Long meeting, Long id) {
+                           @Nullable UUID meeting, UUID id) {
     }
 
     public record LogEntries(List<LogEntry> items, int total) {
@@ -206,7 +215,7 @@ public class LogMcpTools {
                                   String text,
                                   @Nullable McpOwner owner, @Nullable LocalDate deadline, @Nullable String comment,
                                   List<String> tags,
-                                  @Nullable Long meeting, Resolution ownerResolution, Long id) {
+                                  @Nullable UUID meeting, Resolution ownerResolution, UUID id) {
 
         static LogEntryWritten of(final LogEntryDto row, final Resolution resolution) {
             return new LogEntryWritten(row.number(), row.date(), row.type(), row.status(), row.overdue(), row.text(), McpOwner.of(row.owner()),

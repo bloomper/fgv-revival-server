@@ -16,6 +16,7 @@
 
 package nu.fgv.revival.server.config;
 
+import nu.fgv.revival.server.util.jpa.FormulaRefreshingRepository;
 import nu.fgv.revival.server.util.security.JwtAuditorAwareImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,14 +25,14 @@ import org.springframework.data.envers.repository.config.EnableEnversRepositorie
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
- * JPA auditing with the caller's Keycloak subject, and Envers repositories.
+ * JPA auditing with the caller's Keycloak subject, and Envers repositories that read formulas back on save.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
 @Configuration
 @EnableJpaAuditing
-@EnableEnversRepositories(basePackages = "nu.fgv.revival.server")
+@EnableEnversRepositories(basePackages = "nu.fgv.revival.server", repositoryBaseClass = FormulaRefreshingRepository.class)
 public class JpaConfig {
 
     @Bean

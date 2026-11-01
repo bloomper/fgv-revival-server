@@ -16,6 +16,7 @@
 
 package nu.fgv.revival.server.participant;
 
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * The participant's Swish QR code as an image, which GraphQL does not suit.
@@ -35,11 +37,14 @@ import java.util.Locale;
 @RestController
 public class ParticipantHttpApi {
 
+    private final ExternalIds ids;
+
     static final MediaType SVG = MediaType.valueOf("image/svg+xml");
 
     private final ParticipationService participation;
 
-    public ParticipantHttpApi(final ParticipationService participation) {
+    public ParticipantHttpApi(final ParticipationService participation, final ExternalIds ids) {
+        this.ids = ids;
         this.participation = participation;
     }
 
@@ -49,12 +54,12 @@ public class ParticipantHttpApi {
      * on its own could otherwise run script.
      */
     @GetMapping("/api/revivals/{id}/swish-qr")
-    public ResponseEntity<byte[]> swishQr(@PathVariable final Long id, final Locale locale) {
+    public ResponseEntity<byte[]> swishQr(@PathVariable final UUID id, final Locale locale) {
         return ResponseEntity.ok()
                 .contentType(SVG)
                 .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate())
                 .header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
                 .header("X-Content-Type-Options", "nosniff")
-                .body(participation.swishQr(id, locale));
+                .body(participation.swishQr(ids.idOf(Participant.class, id), locale));
     }
 }

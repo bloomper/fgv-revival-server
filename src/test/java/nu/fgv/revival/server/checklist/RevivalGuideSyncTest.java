@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideTestChapters;
@@ -37,6 +38,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -59,7 +62,7 @@ class RevivalGuideSyncTest {
     private ChecklistService service;
 
     private static GuideVersionView.Item requirement(final String key, final String chapter) {
-        return new GuideVersionView.Item(1L, key, chapter, null, "REQUIREMENT", GuideItemKind.REQUIREMENT, GuideVersionView.Text.plain("Krav " + key, null), 0L);
+        return new GuideVersionView.Item(uuid(1), key, chapter, null, "REQUIREMENT", GuideItemKind.REQUIREMENT, GuideVersionView.Text.plain("Krav " + key, null), 0L);
     }
 
     private static GuideVersionView version(final String label, final GuideVersionView.Item... chapterItems) {
@@ -69,8 +72,8 @@ class RevivalGuideSyncTest {
     private static GuideVersionView version(final String label, final List<String> chapters, final GuideVersionView.Item... chapterItems) {
         final Map<String, List<GuideVersionView.Item>> byChapter = Arrays.stream(chapterItems).collect(Collectors.groupingBy(GuideVersionView.Item::chapterKey));
 
-        return new GuideVersionView(1L, GuideVersionStatus.PUBLISHED, label, null, null, null, null, 0L, GuideVersionView.Text.plain("", null),
-                chapters.stream().map(key -> new GuideVersionView.Chapter(1L, key, GuideVersionView.Text.plain(key, null),
+        return new GuideVersionView(uuid(1), GuideVersionStatus.PUBLISHED, label, null, null, null, null, 0L, GuideVersionView.Text.plain("", null),
+                chapters.stream().map(key -> new GuideVersionView.Chapter(uuid(1), key, GuideVersionView.Text.plain(key, null),
                         byChapter.getOrDefault(key, List.of()), List.of(), 0L)).toList());
     }
 
@@ -85,7 +88,7 @@ class RevivalGuideSyncTest {
         final Store store = new Store();
 
         service = new ChecklistService(repository(ChecklistRepository.class, store), repository(ChecklistItemRepository.class, store), null, null,
-                null, null, null, null, null, null, null, null, null, TestClocks.at(LocalDate.of(2026, 10, 21)), logEntries);
+                null, null, null, null, null, null, null, null, null, TestClocks.at(LocalDate.of(2026, 10, 21)), logEntries, TestExternalIds.IDS);
     }
 
     private Checklist chapter(final String key) {
@@ -156,11 +159,13 @@ class RevivalGuideSyncTest {
         final ChecklistItem added = new ChecklistItem();
 
         added.setChecklistId(chapter("B").getId());
+        added.setChecklistUuid(uuidOrNull(added.getChecklistId()));
         added.setRevivalId(REVIVAL_ID);
         added.setText("Egen punkt");
         added.setPosition(1);
         items.add(added);
         added.setId(ids.incrementAndGet());
+        added.setUuid(uuid(added.getId()));
 
         service.syncRequiredItems(REVIVAL_ID, version("v6", requirement("r0", "B"), requirement("r1", "B")));
 
@@ -196,11 +201,13 @@ class RevivalGuideSyncTest {
         final ChecklistItem own = new ChecklistItem();
 
         own.setChecklistId(chapter("B").getId());
+        own.setChecklistUuid(uuidOrNull(own.getChecklistId()));
         own.setRevivalId(REVIVAL_ID);
         own.setText("Egen punkt");
         own.setPosition(9);
         items.add(own);
         own.setId(ids.incrementAndGet());
+        own.setUuid(uuid(own.getId()));
 
         final long removedChecklist = chapter("B").getId();
         final long goes = required("goes").orElseThrow().getId();
@@ -239,6 +246,7 @@ class RevivalGuideSyncTest {
         public Checklist save(final Checklist checklist) {
             if (checklist.getId() == null) {
                 checklist.setId(ids.incrementAndGet());
+                checklist.setUuid(uuid(checklist.getId()));
                 checklists.add(checklist);
             }
             return checklist;
@@ -259,6 +267,7 @@ class RevivalGuideSyncTest {
         public ChecklistItem save(final ChecklistItem item) {
             if (item.getId() == null) {
                 item.setId(ids.incrementAndGet());
+                item.setUuid(uuid(item.getId()));
                 items.add(item);
             }
             return item;

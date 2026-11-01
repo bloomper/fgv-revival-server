@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static nu.fgv.revival.server.member.AccessPolicyTest.caller;
 import static nu.fgv.revival.server.member.AccessPolicyTest.revival;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,6 +61,7 @@ class AccessPolicyParticipantTest {
         final Person person = new Person();
 
         person.setId(10L);
+        person.setUuid(uuid(person.getId()));
         return new Caller(person, Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of(capability))));
     }
 
@@ -88,8 +90,8 @@ class AccessPolicyParticipantTest {
             final Revival revival = revivalIn(status);
             final String as = "%s in %s".formatted(role, status);
             final List<GuideVersionSummaryDto> published = List.of(
-                    new GuideVersionSummaryDto(1L, "v1", null, EARLIER, 1L, 0L),
-                    new GuideVersionSummaryDto(2L, "v2", null, LATER, 1L, 0L));
+                    new GuideVersionSummaryDto(uuid(1), "v1", null, EARLIER, 1L, 0L),
+                    new GuideVersionSummaryDto(uuid(2), "v2", null, LATER, 1L, 0L));
 
             // Revival settings and roles
             assertThat(policy.canEditCore(caller, revival)).as(as).isFalse();

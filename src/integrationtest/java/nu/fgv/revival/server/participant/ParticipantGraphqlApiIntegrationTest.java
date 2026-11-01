@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.participant;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.graphql.test.tester.GraphQlTester;
@@ -62,7 +63,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @org.springframework.beans.factory.annotation.Autowired
     private ParticipantRetention retention;
 
-    private long revival;
+    private EntityId revival;
 
     private static void stub(final String operation, final String body) {
         SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing(operation))
@@ -92,28 +93,28 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         stub("ConsentCreate", "{\"data\": {\"consentCreate\": {\"id\": \"101\"}}}");
     }
 
-    private long addPending(final String kind, final String email) {
-        return Long.parseLong(execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", "Pia",
+    private EntityId addPending(final String kind, final String email) {
+        return entityId("participant", execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", "Pia",
                 "lastName", "Deltagare", "email", email))).path("participantAdd.id").entity(String.class).get());
     }
 
-    private void invite(final long... ids) {
+    private void invite(final EntityId... ids) {
         execute(STEERING_GROUP, INVITE, Map.of("input", Map.of("revivalId", revival, "participantIds",
-                java.util.Arrays.stream(ids).boxed().toList(), "language", "sv"))).path("participantsInvite.invited").entityList(Object.class).hasSize(ids.length);
+                List.of(ids), "language", "sv"))).path("participantsInvite.invited").entityList(Object.class).hasSize(ids.length);
     }
 
-    private long participantVersion(final long id) {
+    private long participantVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM participant WHERE id = ?").param(id).query(Long.class).single();
     }
 
     @Test
     void theSteeringGroupAddsAndInvitesAndTheParticipantAnswersOnTheirPage() {
-        final long pending = addPending("PARTICIPANT", PARTICIPANT);
+        final EntityId pending = addPending("PARTICIPANT", PARTICIPANT);
 
         execute(STEERING_GROUP, "query($id: ID!) { participantCandidates(revivalId: $id) { spexareId history added } }", Map.of("id", revival))
                 .path("participantCandidates[*].spexareId").entityList(String.class).containsExactly("7");
 
-        final long spexare = Long.parseLong(execute(STEERING_GROUP, "mutation($id: ID!, $ids: [ID!]!) { participantsAddSpexare(revivalId: $id, spexareIds: $ids) { id } }",
+        final EntityId spexare = entityId("participant", execute(STEERING_GROUP, "mutation($id: ID!, $ids: [ID!]!) { participantsAddSpexare(revivalId: $id, spexareIds: $ids) { id } }",
                 Map.of("id", revival, "ids", List.of(7, 8))).path("participantsAddSpexare[0].id").entity(String.class).get());
 
         invite(pending, spexare);
@@ -148,7 +149,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         // Dietary needs: theirs, and the directeur's to read; not the steering group's without CATERING
         execute(PARTICIPANT, "mutation($id: ID!) { participationDietarySet(revivalId: $id, text: \"Nötter\") { dietary } }", Map.of("id", revival))
                 .path("participationDietarySet.dietary").entity(String.class).isEqualTo("Nötter");
-        execute(DIRECTEUR, PARTICIPANTS, Map.of("id", revival)).path("participants[?(@.id == '%d')].dietary".formatted(pending)).entityList(String.class)
+        execute(DIRECTEUR, PARTICIPANTS, Map.of("id", revival)).path("participants[?(@.id == '%s')].dietary".formatted(pending)).entityList(String.class)
                 .containsExactly("Nötter");
         execute(STEERING_GROUP, PARTICIPANTS, Map.of("id", revival)).path("participants[0].dietaryReadable").entity(Boolean.class).isEqualTo(false);
 
@@ -239,9 +240,9 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void invitationsNeedAnOpenRevivalAndSkipThoseWithoutAnAddress() {
-        final long helper = Long.parseLong(execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", "HELPER", "firstName", "Hugo",
+        final EntityId helper = entityId("participant", execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", "HELPER", "firstName", "Hugo",
                 "lastName", "Springare", "phone", "0701234567"))).path("participantAdd.id").entity(String.class).get());
-        final long taken = addPending("PARTICIPANT", STEERING_GROUP);
+        final EntityId taken = addPending("PARTICIPANT", STEERING_GROUP);
 
         execute(STEERING_GROUP, INVITE, Map.of("input", Map.of("revivalId", revival, "participantIds", List.of(helper, taken), "language", "en")))
                 .path("participantsInvite.skipped[*].reason").entityList(String.class).containsExactly("NO_EMAIL", "ALREADY_MEMBER");
@@ -256,8 +257,8 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
      */
     @Test
     void leavingOpenDeletesUnansweredPendingPeopleAndDeletionTakesEverything() {
-        final long unanswered = addPending("PARTICIPANT", "ny@example.org");
-        final long spexare = Long.parseLong(execute(STEERING_GROUP, "mutation($id: ID!) { participantsAddSpexare(revivalId: $id, spexareIds: [7]) { id } }",
+        final EntityId unanswered = addPending("PARTICIPANT", "ny@example.org");
+        final EntityId spexare = entityId("participant", execute(STEERING_GROUP, "mutation($id: ID!) { participantsAddSpexare(revivalId: $id, spexareIds: [7]) { id } }",
                 Map.of("id", revival)).path("participantsAddSpexare[0].id").entity(String.class).get());
 
         invite(unanswered);

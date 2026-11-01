@@ -133,8 +133,8 @@ class ParticipantViews {
     /**
      * The spexare among the participants, or none when Spexregister is unavailable and {@code require} is false.
      */
-    Map<Long, SpexregisterClient.Spexare> people(final Collection<Participant> participants, final String actingPerson, final boolean require) {
-        final List<Long> ids = participants.stream().map(Participant::getSpexareId).filter(Objects::nonNull).distinct().toList();
+    Map<String, SpexregisterClient.Spexare> people(final Collection<Participant> participants, final String actingPerson, final boolean require) {
+        final List<String> ids = participants.stream().map(Participant::getSpexareId).filter(Objects::nonNull).distinct().toList();
 
         if (ids.isEmpty()) {
             return Map.of();
@@ -159,7 +159,7 @@ class ParticipantViews {
         }
 
         final List<Long> ids = participants.stream().map(Participant::getId).toList();
-        final Map<Long, SpexregisterClient.Spexare> people = people(participants, options.actingPerson(), options.requirePeople());
+        final Map<String, SpexregisterClient.Spexare> people = people(participants, options.actingPerson(), options.requirePeople());
         final Map<Long, PendingPerson> pending = pendingRepository.findByParticipantIdIn(ids).stream()
                 .collect(Collectors.toMap(PendingPerson::getParticipantId, Function.identity()));
         final Map<Long, DietaryNeed> dietary = !options.dietary() ? Map.of() : dietaryRepository.findByParticipantIdIn(ids).stream()
@@ -181,8 +181,8 @@ class ParticipantViews {
             final BigDecimal revivalFee = fees.computeIfAbsent(participant.getRevivalId(), this::revivalFee);
 
             return new ParticipantDto(
-                    participant.getId(),
-                    participant.getRevivalId(),
+                    participant.getUuid(),
+                    participant.getRevivalUuid(),
                     participant.getKind(),
                     participant.getSpexareId(),
                     Objects.requireNonNull(name[0]),

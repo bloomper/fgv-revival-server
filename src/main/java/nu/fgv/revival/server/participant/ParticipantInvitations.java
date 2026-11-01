@@ -53,6 +53,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -183,7 +184,7 @@ public class ParticipantInvitations {
         AuditContext.operation("participantsInvite");
 
         final List<Participant> participants = ids.stream().map(byId::get).toList();
-        final Map<Long, SpexregisterClient.Spexare> people = views.people(participants.stream().filter(participant -> !participant.isRemoved()).toList(),
+        final Map<String, SpexregisterClient.Spexare> people = views.people(participants.stream().filter(participant -> !participant.isRemoved()).toList(),
                 ActingPerson.of(caller), true);
         final Map<Long, PendingPerson> pending = pendingRepository.findByParticipantIdIn(ids).stream()
                 .collect(Collectors.toMap(PendingPerson::getParticipantId, Function.identity()));
@@ -257,10 +258,10 @@ public class ParticipantInvitations {
 
         final ParticipantViews.Options options = new ParticipantViews.Options(accessPolicy.canReadParticipants(caller, revival),
                 accessPolicy.canReadDietary(caller, revival), false, ActingPerson.of(caller), locale);
-        final Map<Long, ParticipantDto> dtos = views.toDtos(participants, options).stream()
+        final Map<UUID, ParticipantDto> dtos = views.toDtos(participants, options).stream()
                 .collect(Collectors.toMap(ParticipantDto::id, Function.identity()));
 
-        return new InviteResult(invited.stream().map(participant -> dtos.get(participant.getId())).toList(),
-                skipped.entrySet().stream().map(entry -> new ParticipantSkip(dtos.get(entry.getKey().getId()), entry.getValue())).toList());
+        return new InviteResult(invited.stream().map(participant -> dtos.get(participant.getUuid())).toList(),
+                skipped.entrySet().stream().map(entry -> new ParticipantSkip(dtos.get(entry.getKey().getUuid()), entry.getValue())).toList());
     }
 }

@@ -16,8 +16,12 @@
 
 package nu.fgv.revival.server.guide.suggestion;
 
+import nu.fgv.revival.server.guide.GuideVersion;
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonNames;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalTitles;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -27,6 +31,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * No authorization here: the services decide.
@@ -37,24 +42,27 @@ import java.util.Locale;
 @Controller
 public class GuideSuggestionGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final GuideSuggestionService service;
     private final PersonNames personNames;
     private final RevivalTitles titles;
 
-    public GuideSuggestionGraphqlApi(final GuideSuggestionService service, final PersonNames personNames, final RevivalTitles titles) {
+    public GuideSuggestionGraphqlApi(final GuideSuggestionService service, final PersonNames personNames, final RevivalTitles titles, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
         this.personNames = personNames;
         this.titles = titles;
     }
 
     @QueryMapping
-    public List<GuideSuggestionDto> guideSuggestions(@Argument final @Nullable List<GuideSuggestionStatus> status, @Argument final @Nullable Long revivalId) {
-        return service.findVisible(status, revivalId);
+    public List<GuideSuggestionDto> guideSuggestions(@Argument final @Nullable List<GuideSuggestionStatus> status, @Argument final @Nullable UUID revivalId) {
+        return service.findVisible(status, ids.idOfNullable(Revival.class, revivalId));
     }
 
     @MutationMapping
     public GuideSuggestionDto guideSuggestionCreate(@Argument final GuideSuggestionCreateInput input) {
-        return service.create(new GuideSuggestionService.Proposal(input.revivalId(), input.versionId(), input.kind(), input.itemKey(), input.chapterKey(),
+        return service.create(new GuideSuggestionService.Proposal(ids.idOf(Revival.class, input.revivalId()), ids.idOf(GuideVersion.class, input.versionId()), input.kind(), input.itemKey(), input.chapterKey(),
                 input.sectionKey(), input.proposedType(), input.proposedTextSv(), input.proposedTextEn(), input.reason()));
     }
 
@@ -62,19 +70,19 @@ public class GuideSuggestionGraphqlApi {
     public GuideSuggestionDto guideSuggestionAccept(@Argument final GuideSuggestionAcceptInput input) {
         final GuideSuggestionResolutionInput resolution = input.resolution();
 
-        return service.accept(input.id(), input.version(), input.note(), resolution == null ? null : new GuideSuggestionService.Resolution(
+        return service.accept(ids.idOf(GuideSuggestion.class, input.id()), input.version(), input.note(), resolution == null ? null : new GuideSuggestionService.Resolution(
                 Boolean.TRUE.equals(resolution.keep()), resolution.type(),
                 resolution.text() == null ? null : resolution.text().sv(), resolution.text() == null ? null : resolution.text().en()));
     }
 
     @MutationMapping
     public GuideSuggestionDto guideSuggestionReject(@Argument final GuideSuggestionRejectInput input) {
-        return service.reject(input.id(), input.version(), input.reason());
+        return service.reject(ids.idOf(GuideSuggestion.class, input.id()), input.version(), input.reason());
     }
 
     @MutationMapping
-    public GuideSuggestionDto guideSuggestionWithdraw(@Argument final Long id, @Argument final Long version) {
-        return service.withdraw(id, version);
+    public GuideSuggestionDto guideSuggestionWithdraw(@Argument final UUID id, @Argument final Long version) {
+        return service.withdraw(ids.idOf(GuideSuggestion.class, id), version);
     }
 
     @SchemaMapping(typeName = "GuideSuggestionRevival", field = "title")
@@ -84,15 +92,23 @@ public class GuideSuggestionGraphqlApi {
 
     @SchemaMapping(typeName = "GuideSuggestion", field = "author")
     public @Nullable String author(final GuideSuggestionDto suggestion, final Locale locale) {
-        return personNames.byIds(List.of(suggestion.authorId()), locale).get(suggestion.authorId());
+        final Long author = ids.idOf(Person.class, suggestion.authorId());
+
+        return personNames.byIds(List.of(author), locale).get(author);
     }
 
     @SchemaMapping(typeName = "GuideSuggestion", field = "decidedBy")
     public @Nullable String decidedBy(final GuideSuggestionDto suggestion, final Locale locale) {
-        return suggestion.decidedById() == null ? null : personNames.byIds(List.of(suggestion.decidedById()), locale).get(suggestion.decidedById());
+        if (suggestion.decidedById() == null) {
+            return null;
+        }
+
+        final Long decidedBy = ids.idOf(Person.class, suggestion.decidedById());
+
+        return personNames.byIds(List.of(decidedBy), locale).get(decidedBy);
     }
 
-    public record GuideSuggestionCreateInput(Long revivalId, Long versionId, GuideSuggestionKind kind,
+    public record GuideSuggestionCreateInput(UUID revivalId, UUID versionId, GuideSuggestionKind kind,
                                              @Nullable String itemKey,
                                              @Nullable String chapterKey, @Nullable String sectionKey,
                                              @Nullable String proposedType,
@@ -107,10 +123,10 @@ public class GuideSuggestionGraphqlApi {
                                                  @Nullable LocalizedTextInput text) {
     }
 
-    public record GuideSuggestionAcceptInput(Long id, Long version, @Nullable String note,
+    public record GuideSuggestionAcceptInput(UUID id, Long version, @Nullable String note,
                                              @Nullable GuideSuggestionResolutionInput resolution) {
     }
 
-    public record GuideSuggestionRejectInput(Long id, Long version, @Nullable String reason) {
+    public record GuideSuggestionRejectInput(UUID id, Long version, @Nullable String reason) {
     }
 }

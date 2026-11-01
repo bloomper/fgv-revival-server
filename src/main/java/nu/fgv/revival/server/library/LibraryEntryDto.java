@@ -18,13 +18,15 @@ package nu.fgv.revival.server.library;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code LibraryEntry}.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record LibraryEntryDto(Long id,
+public record LibraryEntryDto(UUID id,
                               LibraryEntryKind kind,
                               GuideVersionView.Text name,
                               GuideVersionView.@Nullable Text description,
@@ -38,7 +40,7 @@ public record LibraryEntryDto(Long id,
                               Long version) {
 
     public static LibraryEntryDto of(final LibraryEntry entry) {
-        return new LibraryEntryDto(entry.getId(), entry.getKind(), GuideVersionView.Text.plain(entry.getNameSv(), entry.getNameEn()),
+        return new LibraryEntryDto(entry.getUuid(), entry.getKind(), GuideVersionView.Text.plain(entry.getNameSv(), entry.getNameEn()),
                 text(entry.getDescriptionSv(), entry.getDescriptionEn()), text(entry.getProsSv(), entry.getProsEn()),
                 text(entry.getConsSv(), entry.getConsEn()), text(entry.getBookingSv(), entry.getBookingEn()),
                 text(entry.getPricesSv(), entry.getPricesEn()), text(entry.getContactSv(), entry.getContactEn()), entry.getUrl(),

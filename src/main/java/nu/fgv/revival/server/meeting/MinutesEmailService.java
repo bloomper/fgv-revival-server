@@ -35,6 +35,7 @@ import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.MailUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +51,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class MinutesEmailService {
+
+    private final ExternalIds ids;
 
     private static final Set<RevivalRole> RECIPIENT_ROLES = EnumSet.of(RevivalRole.DIRECTEUR, RevivalRole.STEERING_GROUP);
     private static final Set<String> LANGUAGES = Set.of("sv", "en");
@@ -92,7 +96,9 @@ public class MinutesEmailService {
                                final AccessPolicy accessPolicy,
                                final TransactionTemplate transactions,
                                final Clock clock,
-                               final RevivalTitles titles) {
+                               final RevivalTitles titles,
+                               final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.meetingService = meetingService;
         this.mailer = mailer;
@@ -240,7 +246,7 @@ public class MinutesEmailService {
 
             final MinutesEmail email = new MinutesEmail();
 
-            email.setMeetingId(prepared.meeting().id());
+            email.setMeetingId(ids.idOf(Meeting.class, prepared.meeting().id()));
             email.setLanguage(prepared.language());
             email.setSentBy(prepared.caller().person().getId());
             email.setSentAt(clock.instant());
@@ -261,9 +267,10 @@ public class MinutesEmailService {
         });
 
         final Map<Long, String> names = people.isEmpty() ? Map.of() : personNames.byIds(people, locale);
-        final Function<Long, PersonRefDto> person = id -> new PersonRefDto(id, names.get(id));
+        final Map<Long, UUID> uuids = ids.uuidsOf(Person.class, people);
+        final Function<Long, PersonRefDto> person = id -> new PersonRefDto(uuids.get(id), names.get(id));
 
-        return emails.stream().map(email -> new MinutesEmailDto(email.getId(), email.getLanguage(), person.apply(email.getSentBy()),
+        return emails.stream().map(email -> new MinutesEmailDto(email.getUuid(), email.getLanguage(), person.apply(email.getSentBy()),
                 email.getSentAt(), email.getRecipients().stream()
                 .map(recipient -> new MinutesEmailDto.Recipient(person.apply(recipient.personId()), recipient.status())).toList(),
                 email.getWaitingLeftOut())).toList();

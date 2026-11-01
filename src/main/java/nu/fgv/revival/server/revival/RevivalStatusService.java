@@ -26,6 +26,7 @@ import nu.fgv.revival.server.decisionlog.LogEntryFilterDto;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.meeting.MeetingService;
 import nu.fgv.revival.server.meeting.MeetingStatus;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,8 @@ import java.util.stream.Collectors;
 @Service
 public class RevivalStatusService {
 
+    private final ExternalIds ids;
+
     private final RevivalService revivalService;
     private final LogEntryService logEntryService;
     private final ChecklistService checklistService;
@@ -52,7 +55,9 @@ public class RevivalStatusService {
     private final RevivalTitles titles;
 
     public RevivalStatusService(final RevivalService revivalService, final LogEntryService logEntryService, final ChecklistService checklistService,
-                                final MeetingService meetingService, final RevivalTitles titles) {
+                                final MeetingService meetingService, final RevivalTitles titles,
+                                final ExternalIds ids) {
+        this.ids = ids;
         this.revivalService = revivalService;
         this.logEntryService = logEntryService;
         this.checklistService = checklistService;
@@ -68,7 +73,7 @@ public class RevivalStatusService {
         final List<LogEntryDto> open = logEntryService.list(revivalId, new LogEntryFilterDto(null, true, null, null, null, null, null), locale);
         final List<ChecklistItemDto> openItems = checklistService.items(revivalId, new ChecklistItemFilterDto(null, true, null, null, null), locale);
 
-        return new RevivalWorkSummaryDto(revivalId, open.size(), (int) open.stream().filter(LogEntryDto::overdue).count(),
+        return new RevivalWorkSummaryDto(ids.uuidOf(Revival.class, revivalId), open.size(), (int) open.stream().filter(LogEntryDto::overdue).count(),
                 (int) openItems.stream().filter(ChecklistItemDto::overdue).count(), (int) openItems.stream().filter(ChecklistItemDto::required).count(),
                 meetingService.list(revivalId).stream().filter(meeting -> meeting.status() == MeetingStatus.IN_PROGRESS).findFirst().orElse(null));
     }

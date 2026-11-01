@@ -15,17 +15,25 @@
  */
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.guide.GuideChapter;
 import nu.fgv.revival.server.guide.GuideDraftDto;
 import nu.fgv.revival.server.guide.GuideDraftService;
+import nu.fgv.revival.server.guide.GuideItem;
+import nu.fgv.revival.server.guide.GuideSection;
 import nu.fgv.revival.server.guide.GuideService;
+import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionService;
 import nu.fgv.revival.server.util.error.BadRequestException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /**
  * The super admin's guide work over MCP: deciding suggestions and editing the draft. Nothing here removes a part of
@@ -38,6 +46,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class GuideAdminMcpTools {
 
+    private final ExternalIds ids;
+
     private final GuideService guideService;
     private final GuideDraftService draftService;
     private final GuideSuggestionService suggestionService;
@@ -45,7 +55,9 @@ public class GuideAdminMcpTools {
     private final McpToolSupport support;
 
     public GuideAdminMcpTools(final GuideService guideService, final GuideDraftService draftService, final GuideSuggestionService suggestionService,
-                              final GuideMcpTools guideTools, final McpToolSupport support) {
+                              final GuideMcpTools guideTools, final McpToolSupport support,
+                              final ExternalIds ids) {
+        this.ids = ids;
         this.guideService = guideService;
         this.draftService = draftService;
         this.suggestionService = suggestionService;
@@ -66,14 +78,14 @@ public class GuideAdminMcpTools {
             description = "Super admins: accept an open suggestion into the draft, or reject it with a reason. Accepting applies it to the draft as proposed.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public GuideMcpTools.Suggestion decideGuideSuggestion(
-            @McpToolParam(description = "The suggestion, by id") final Long suggestionId,
+            @McpToolParam(description = "The suggestion, by id") final UUID suggestionId,
             @McpToolParam(description = "true to accept, false to reject") final Boolean accept,
             @McpToolParam(required = false, description = "A note when accepting, the reason when rejecting") final @Nullable String note) {
         return support.call("decide_guide_suggestion", () -> {
             final Long version = guideTools.suggestion(suggestionId).version();
 
-            return GuideMcpTools.Suggestion.of(accept ? suggestionService.accept(suggestionId, version, note, null)
-                    : suggestionService.reject(suggestionId, version, note));
+            return GuideMcpTools.Suggestion.of(accept ? suggestionService.accept(ids.idOf(GuideSuggestion.class, suggestionId), version, note, null)
+                    : suggestionService.reject(ids.idOf(GuideSuggestion.class, suggestionId), version, note));
         });
     }
 
@@ -103,7 +115,7 @@ public class GuideAdminMcpTools {
         return support.call("update_guide_introduction", () -> {
             final GuideVersionView draft = draft();
 
-            return guideService.findById(draftService.updateIntroduction(draft.id(), draft.version(), sv, en));
+            return guideService.findById(draftService.updateIntroduction(ids.idOf(GuideVersion.class, draft.id()), draft.version(), sv, en));
         });
     }
 
@@ -114,19 +126,19 @@ public class GuideAdminMcpTools {
             @McpToolParam(description = "The title in Swedish") final String titleSv,
             @McpToolParam(required = false, description = "The title in English") final @Nullable String titleEn,
             @McpToolParam(required = false, description = "Its place, counting from 0") final @Nullable Integer position) {
-        return support.call("create_guide_chapter", () -> guideService.draftChapter(draftService.createChapter(draft().id(), position, titleSv, titleEn)));
+        return support.call("create_guide_chapter", () -> guideService.draftChapter(draftService.createChapter(ids.idOf(GuideVersion.class, draft().id()), position, titleSv, titleEn)));
     }
 
     @McpTool(name = "update_guide_chapter",
             description = "Super admins: rename a chapter of the draft.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public GuideVersionView.Chapter updateGuideChapter(
-            @McpToolParam(description = "The chapter, by id from get_guide_draft") final Long chapterId,
+            @McpToolParam(description = "The chapter, by id from get_guide_draft") final UUID chapterId,
             @McpToolParam(description = "The title in Swedish") final String titleSv,
             @McpToolParam(required = false, description = "The title in English") final @Nullable String titleEn) {
         return support.call("update_guide_chapter", () -> {
-            draftService.updateChapter(chapterId, guideService.draftChapter(chapterId).version(), titleSv, titleEn);
-            return guideService.draftChapter(chapterId);
+            draftService.updateChapter(ids.idOfNullable(GuideChapter.class, chapterId), guideService.draftChapter(ids.idOfNullable(GuideChapter.class, chapterId)).version(), titleSv, titleEn);
+            return guideService.draftChapter(ids.idOfNullable(GuideChapter.class, chapterId));
         });
     }
 
@@ -134,46 +146,46 @@ public class GuideAdminMcpTools {
             description = "Super admins: add a section to a chapter of the draft, last or at a position (counting from 0).",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public GuideVersionView.Section createGuideSection(
-            @McpToolParam(description = "The chapter, by id") final Long chapterId,
+            @McpToolParam(description = "The chapter, by id") final UUID chapterId,
             @McpToolParam(description = "The title in Swedish") final String titleSv,
             @McpToolParam(required = false, description = "The title in English") final @Nullable String titleEn,
             @McpToolParam(required = false, description = "Its place, counting from 0") final @Nullable Integer position) {
-        return support.call("create_guide_section", () -> guideService.draftSection(draftService.createSection(chapterId, position, titleSv, titleEn)));
+        return support.call("create_guide_section", () -> guideService.draftSection(draftService.createSection(ids.idOfNullable(GuideChapter.class, chapterId), position, titleSv, titleEn)));
     }
 
     @McpTool(name = "update_guide_section",
             description = "Super admins: rename a section of the draft.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public GuideVersionView.Section updateGuideSection(
-            @McpToolParam(description = "The section, by id from get_guide_draft") final Long sectionId,
+            @McpToolParam(description = "The section, by id from get_guide_draft") final UUID sectionId,
             @McpToolParam(description = "The title in Swedish") final String titleSv,
             @McpToolParam(required = false, description = "The title in English") final @Nullable String titleEn) {
-        return support.call("update_guide_section", () -> guideService.draftSection(draftService.updateSection(sectionId,
-                guideService.draftSection(sectionId).version(), titleSv, titleEn)));
+        return support.call("update_guide_section", () -> guideService.draftSection(draftService.updateSection(ids.idOfNullable(GuideSection.class, sectionId),
+                guideService.draftSection(ids.idOfNullable(GuideSection.class, sectionId)).version(), titleSv, titleEn)));
     }
 
     @McpTool(name = "create_guide_item",
             description = "Super admins: add an item to the draft: in a chapter, or in one of its sections, last or at a position (counting from 0). The type is an item type's id, such as TIP, REQUIREMENT, QUESTION or TEXT.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public GuideVersionView.Item createGuideItem(
-            @McpToolParam(description = "The chapter, by id") final Long chapterId,
+            @McpToolParam(description = "The chapter, by id") final UUID chapterId,
             @McpToolParam(description = "An active item type's id, from list_catalog_entries with GUIDE_ITEM_TYPES") final String type,
             @McpToolParam(description = "The text in Swedish, Markdown") final String textSv,
             @McpToolParam(required = false, description = "The text in English, Markdown") final @Nullable String textEn,
-            @McpToolParam(required = false, description = "A section of the chapter, by id") final @Nullable Long sectionId,
+            @McpToolParam(required = false, description = "A section of the chapter, by id") final @Nullable UUID sectionId,
             @McpToolParam(required = false, description = "Its place, counting from 0") final @Nullable Integer position) {
-        return support.call("create_guide_item", () -> guideService.draftItem(draftService.createItem(chapterId, sectionId, position, type, textSv, textEn)));
+        return support.call("create_guide_item", () -> guideService.draftItem(draftService.createItem(ids.idOfNullable(GuideChapter.class, chapterId), ids.idOfNullable(GuideSection.class, sectionId), position, type, textSv, textEn)));
     }
 
     @McpTool(name = "update_guide_item",
             description = "Super admins: change an item of the draft: its type and text.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public GuideVersionView.Item updateGuideItem(
-            @McpToolParam(description = "The item, by id from get_guide_draft") final Long itemId,
+            @McpToolParam(description = "The item, by id from get_guide_draft") final UUID itemId,
             @McpToolParam(description = "An item type's id") final String type,
             @McpToolParam(description = "The text in Swedish, Markdown") final String textSv,
             @McpToolParam(required = false, description = "The text in English, Markdown") final @Nullable String textEn) {
-        return support.call("update_guide_item", () -> guideService.draftItem(draftService.updateItem(itemId, guideService.draftItem(itemId).version(), type,
+        return support.call("update_guide_item", () -> guideService.draftItem(draftService.updateItem(ids.idOf(GuideItem.class, itemId), guideService.draftItem(ids.idOf(GuideItem.class, itemId)).version(), type,
                 textSv, textEn)));
     }
 
@@ -182,22 +194,30 @@ public class GuideAdminMcpTools {
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public GuideVersionView moveGuidePart(
             @McpToolParam(description = "CHAPTER, SECTION or ITEM") final Part part,
-            @McpToolParam(description = "Its id") final Long id,
+            @McpToolParam(description = "Its id") final UUID id,
             @McpToolParam(description = "Its new place, counting from 0") final Integer position,
-            @McpToolParam(required = false, description = "SECTION, ITEM: the chapter to move to, by id; default its own") final @Nullable Long chapterId,
-            @McpToolParam(required = false, description = "ITEM: the section to move to, by id; leave out for the chapter itself") final @Nullable Long sectionId) {
+            @McpToolParam(required = false, description = "SECTION, ITEM: the chapter to move to, by id; default its own") final @Nullable UUID chapterId,
+            @McpToolParam(required = false, description = "ITEM: the section to move to, by id; leave out for the chapter itself") final @Nullable UUID sectionId) {
         return support.call("move_guide_part", () -> {
             switch (part) {
-                case CHAPTER -> draftService.moveChapter(id, guideService.draftChapter(id).version(), position);
-                case SECTION -> {
-                    final GuideVersionView.Section section = guideService.draftSection(id);
+                case CHAPTER -> {
+                    final Long chapter = ids.idOf(GuideChapter.class, id);
 
-                    draftService.moveSection(id, section.version(), chapterId == null ? chapterIdOf(section.chapterKey()) : chapterId, position);
+                    draftService.moveChapter(chapter, guideService.draftChapter(chapter).version(), position);
+                }
+                case SECTION -> {
+                    final Long section0 = ids.idOf(GuideSection.class, id);
+                    final GuideVersionView.Section section = guideService.draftSection(section0);
+
+                    draftService.moveSection(section0, section.version(),
+                            chapterId == null ? chapterIdOf(section.chapterKey()) : ids.idOf(GuideChapter.class, chapterId), position);
                 }
                 case ITEM -> {
-                    final GuideVersionView.Item item = guideService.draftItem(id);
+                    final Long itemId = ids.idOf(GuideItem.class, id);
+                    final GuideVersionView.Item item = guideService.draftItem(itemId);
 
-                    draftService.moveItem(id, item.version(), chapterId == null ? chapterIdOf(item.chapterKey()) : chapterId, sectionId, position);
+                    draftService.moveItem(itemId, item.version(), chapterId == null ? chapterIdOf(item.chapterKey()) : ids.idOf(GuideChapter.class, chapterId),
+                            ids.idOfNullable(GuideSection.class, sectionId), position);
                 }
             }
             return draft();
@@ -205,7 +225,7 @@ public class GuideAdminMcpTools {
     }
 
     private Long chapterIdOf(final String chapterKey) {
-        return draft().chapter(chapterKey).map(GuideVersionView.Chapter::id).orElseThrow(() -> new BadRequestException("error.mcp.noDraft"));
+        return ids.idOf(GuideChapter.class, draft().chapter(chapterKey).map(GuideVersionView.Chapter::id).orElseThrow(() -> new BadRequestException("error.mcp.noDraft")));
     }
 
     public enum Part {

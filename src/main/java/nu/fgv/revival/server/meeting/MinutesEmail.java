@@ -29,11 +29,13 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nu.fgv.revival.server.util.Uuids;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * One sending of a meeting's minutes, saved after the mail went out with each recipient's result. Append-only, and
@@ -52,6 +54,9 @@ public class MinutesEmail {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "meeting_id", nullable = false, updatable = false)
     private Long meetingId;

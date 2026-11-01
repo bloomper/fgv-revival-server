@@ -16,10 +16,15 @@
 
 package nu.fgv.revival.server.util;
 
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.util.docs.SecuritySnippet;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
@@ -48,6 +53,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
  */
 @ExtendWith(RestDocumentationExtension.class)
 @DisabledInAotMode
+@Import(AbstractApiTest.ExternalIdsConfig.class)
 public abstract class AbstractApiTest {
 
     protected static final String BEARER = "Bearer <access token>";
@@ -62,6 +68,18 @@ public abstract class AbstractApiTest {
     );
 
     protected MockMvc mockMvc;
+
+    /**
+     * External ids without a database, as {@link TestExternalIds} maps them.
+     */
+    @TestConfiguration
+    static class ExternalIdsConfig {
+
+        @Bean
+        ExternalIds externalIds() {
+            return TestExternalIds.IDS;
+        }
+    }
 
     @MockitoBean
     private CallerService callerService;

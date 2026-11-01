@@ -30,7 +30,7 @@ public interface RevivalMemberMapper {
 
     RevivalMemberMapper REVIVAL_MEMBER_MAPPER = Mappers.getMapper(RevivalMemberMapper.class);
 
-    @Mapping(target = "id", source = "member.id")
+    @Mapping(target = "id", source = "member.uuid")
     @Mapping(target = "role", source = "member.role")
     @Mapping(target = "capabilities", source = "member.capabilities")
     @Mapping(target = "state", source = "member.state")

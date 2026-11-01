@@ -26,6 +26,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A meeting as GraphQL's {@code Meeting}, with people as display names and the minutes ready to show.
@@ -33,8 +34,8 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record MeetingDto(Long id,
-                         Long revivalId,
+public record MeetingDto(UUID id,
+                         UUID revivalId,
                          LocalDate date,
                          @Nullable String title,
                          MeetingStatus status,
@@ -58,7 +59,7 @@ public record MeetingDto(Long id,
     /**
      * GraphQL's {@code MinutesRow}: a row as it was when the meeting closed.
      */
-    public record RowDto(Long entryId, int number, LogEntryType type, String text, @Nullable OwnerDto owner,
+    public record RowDto(UUID entryId, int number, LogEntryType type, String text, @Nullable OwnerDto owner,
                          @Nullable LocalDate deadline, LogEntryStatus status) {
     }
 }

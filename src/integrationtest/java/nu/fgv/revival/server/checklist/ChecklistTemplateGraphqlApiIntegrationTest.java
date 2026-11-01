@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,19 +51,19 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
         publishedGuide();
     }
 
-    private long template(final Map<String, Object> input) {
-        return Long.parseLong(execute(SUPER_ADMIN, CREATE, Map.of("input", input)).path("checklistTemplateCreate.id").entity(String.class).get());
+    private EntityId template(final Map<String, Object> input) {
+        return entityId("checklist_template", execute(SUPER_ADMIN, CREATE, Map.of("input", input)).path("checklistTemplateCreate.id").entity(String.class).get());
     }
 
-    private long item(final long template, final Map<String, Object> fields) {
+    private EntityId item(final EntityId template, final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("templateId", template);
-        return Long.parseLong(execute(SUPER_ADMIN, ITEM_CREATE, Map.of("input", input)).path("checklistTemplateItemCreate.id").entity(String.class).get());
+        return entityId("checklist_template_item", execute(SUPER_ADMIN, ITEM_CREATE, Map.of("input", input)).path("checklistTemplateItemCreate.id").entity(String.class).get());
     }
 
-    private long rehearsalTemplate() {
-        final long template = template(Map.of("kind", "EVENT", "name", Map.of("sv", "Rephelg", "en", "Rehearsal weekend")));
+    private EntityId rehearsalTemplate() {
+        final EntityId template = template(Map.of("kind", "EVENT", "name", Map.of("sv", "Rephelg", "en", "Rehearsal weekend")));
 
         item(template, Map.of("text", Map.of("sv", "Boka replokal"), "defaultCapability", "FINANCE",
                 "deadline", Map.of("kind", "DAYS", "amount", -14)));
@@ -71,8 +72,8 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
         return template;
     }
 
-    private long revivalWithTreasurer() {
-        final long revival = createRevival(ALI_BABA, 2028);
+    private EntityId revivalWithTreasurer() {
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
@@ -83,13 +84,13 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
         return revival;
     }
 
-    private long checklistVersion(final long id) {
+    private long checklistVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM checklist WHERE id = ?").param(id).query(Long.class).single();
     }
 
     @Test
     void superAdminsManageTemplatesAndOthersOnlyRead() {
-        final long template = rehearsalTemplate();
+        final EntityId template = rehearsalTemplate();
 
         execute(SUPER_ADMIN, "query($id: ID!) { checklistTemplate(id: $id) { " + TEMPLATE_FIELDS + " } }", Map.of("id", template))
                 .path("checklistTemplate.name.en").entity(String.class).isEqualTo("Rehearsal weekend")
@@ -100,7 +101,7 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
         template(Map.of("kind", "CHAPTER", "chapterKey", "C"));
         expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("kind", "CHAPTER", "chapterKey", "C"))), "CONFLICT");
 
-        final long retired = template(Map.of("kind", "EVENT", "name", Map.of("sv", "Gammal")));
+        final EntityId retired = template(Map.of("kind", "EVENT", "name", Map.of("sv", "Gammal")));
 
         execute(SUPER_ADMIN, "mutation($id: ID!) { checklistTemplateRetire(id: $id, version: 0) { retired } }", Map.of("id", retired))
                 .path("checklistTemplateRetire.retired").entity(Boolean.class).isEqualTo(true);
@@ -121,8 +122,8 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
 
     @Test
     void theSteeringGroupMakesAnEventChecklistFromATemplateAndMovesItsDate() {
-        final long template = rehearsalTemplate();
-        final long revival = revivalWithTreasurer();
+        final EntityId template = rehearsalTemplate();
+        final EntityId revival = revivalWithTreasurer();
 
         final String id = execute(STEERING_GROUP, EVENT_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Rephelg 2",
                 "date", "2027-11-20", "templateId", template)))
@@ -132,8 +133,8 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
                 .path("eventChecklistCreate.items[1].owner").valueIsNull()
                 .path("eventChecklistCreate.templatesAvailable[*].id").entityList(String.class).containsExactly(String.valueOf(template))
                 .path("eventChecklistCreate.id").entity(String.class).get();
-        final long checklist = Long.parseLong(id);
-        final long manual = Long.parseLong(execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { id } } }", Map.of("id", checklist))
+        final EntityId checklist = entityId("checklist", id);
+        final EntityId manual = entityId("checklist_item", execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { id } } }", Map.of("id", checklist))
                 .path("checklist.items[2].id").entity(String.class).get());
         final long manualVersion = jdbcClient.sql("SELECT version FROM checklist_item WHERE id = ?").param(manual).query(Long.class).single();
 
@@ -162,14 +163,14 @@ class ChecklistTemplateGraphqlApiIntegrationTest extends AbstractIntegrationTest
 
     @Test
     void aNewRevivalGetsTheChapterTemplatesItemsAfterTheRequiredOnes() {
-        final long template = template(Map.of("kind", "CHAPTER", "chapterKey", "A"));
+        final EntityId template = template(Map.of("kind", "CHAPTER", "chapterKey", "A"));
 
         item(template, Map.of("text", Map.of("sv", "Skriv en tidsplan"), "defaultCapability", "COMMS"));
         expectError(execute(SUPER_ADMIN, ITEM_CREATE, Map.of("input", Map.of("templateId", template, "text", Map.of("sv", "x"),
                 "deadline", Map.of("kind", "DAYS", "amount", 1)))), "BAD_REQUEST");
 
-        final long revival = revivalWithTreasurer();
-        final long phaseA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival).query(Long.class).single();
+        final EntityId revival = revivalWithTreasurer();
+        final EntityId phaseA = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival));
 
         execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { required text { sv } defaultCapability { id } } templatesAvailable { id } } }",
                 Map.of("id", phaseA))

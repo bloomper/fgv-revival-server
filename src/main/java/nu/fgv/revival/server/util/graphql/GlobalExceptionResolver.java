@@ -36,6 +36,7 @@ import org.springframework.graphql.execution.ErrorType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BindException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -85,6 +86,7 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
             case final AuthenticationException _ ->
                     localized(ErrorType.UNAUTHORIZED, "error.unauthorized", null, environment);
             case final BadRequestException e -> localized(ErrorType.BAD_REQUEST, e, environment);
+            case final BindException _ -> localized(ErrorType.BAD_REQUEST, "error.invalidId", null, environment);
             case final ResourceNotFoundException e -> localized(ErrorType.NOT_FOUND, e, environment);
             case final ConflictException e -> localized(CustomErrorType.CONFLICT, e, environment);
             case final SpexregisterUnavailableException e ->

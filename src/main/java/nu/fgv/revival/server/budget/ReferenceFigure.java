@@ -27,10 +27,12 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * A reference revival's budgeted and actual amount for one category; at least one of them is set.
@@ -49,6 +51,9 @@ public class ReferenceFigure {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reference_revival_id", nullable = false, updatable = false)

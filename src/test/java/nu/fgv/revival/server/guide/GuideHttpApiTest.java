@@ -27,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.util.List;
 import java.util.Locale;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
@@ -65,7 +66,7 @@ class GuideHttpApiTest extends AbstractApiTest {
         when(guideService.versionPdf(1L, Locale.ENGLISH)).thenReturn(new GuideService.Pdf(PDF, "guide-v1.pdf"));
 
         mockMvc
-                .perform(get("/api/guide/versions/{id}/pdf", 1L).queryParam("lang", "en").header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/guide/versions/{id}/pdf", uuid(1)).queryParam("lang", "en").header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "application/pdf"))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"guide-v1.pdf\""))
@@ -85,7 +86,7 @@ class GuideHttpApiTest extends AbstractApiTest {
         when(guideService.revivalPdf(1L, Locale.of("sv"))).thenReturn(new GuideService.Pdf(PDF, "guide-v1.pdf"));
 
         mockMvc
-                .perform(get("/api/revivals/{id}/guide/pdf", 1L).queryParam("lang", "sv").header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/revivals/{id}/guide/pdf", uuid(1)).queryParam("lang", "sv").header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
                 .andExpect(content().bytes(PDF))
                 .andDo(document(

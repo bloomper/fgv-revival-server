@@ -26,9 +26,11 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nu.fgv.revival.server.util.Uuids;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A person's secret calendar link for a revival. Only the SHA-256 of the token is kept. A credential, like
@@ -47,6 +49,9 @@ public class CalendarFeed {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;

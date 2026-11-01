@@ -18,6 +18,7 @@ package nu.fgv.revival.server.closing;
 
 import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import nu.fgv.revival.server.person.PersonReferences;
 import nu.fgv.revival.server.revival.RevivalAnonymization;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,10 +76,10 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private RevivalAnonymization anonymization;
 
-    private long revival;
-    private long anna;
-    private long bertil;
-    private long pia;
+    private EntityId revival;
+    private EntityId anna;
+    private EntityId bertil;
+    private EntityId pia;
 
     private static StubMapping stub(final String operation, final String body) {
         return SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing(operation))
@@ -118,9 +119,9 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         final List<String> added = execute(STEERING_GROUP, "mutation($id: ID!) { participantsAddSpexare(revivalId: $id, spexareIds: [7, 8]) { id } }",
                 Map.of("id", revival)).path("participantsAddSpexare[*].id").entityList(String.class).get();
 
-        anna = Long.parseLong(added.get(0));
-        bertil = Long.parseLong(added.get(1));
-        pia = Long.parseLong(execute(STEERING_GROUP, "mutation($input: ParticipantAddInput!) { participantAdd(input: $input) { id } }",
+        anna = entityId("participant", added.get(0));
+        bertil = entityId("participant", added.get(1));
+        pia = entityId("participant", execute(STEERING_GROUP, "mutation($input: ParticipantAddInput!) { participantAdd(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "kind", "PARTICIPANT", "firstName", "Pia", "lastName", "Deltagare", "email", PARTICIPANT)))
                 .path("participantAdd.id").entity(String.class).get());
         execute(STEERING_GROUP, """
@@ -138,11 +139,11 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         return execute(user, PREVIEW, Map.of("id", revival)).path("syncPreview.hash").entity(String.class).get();
     }
 
-    private long start(final String user, final String hash) {
-        return Long.parseLong(execute(user, START, Map.of("id", revival, "hash", hash)).path("syncStart.id").entity(String.class).get());
+    private EntityId start(final String user, final String hash) {
+        return entityId("sync_run", execute(user, START, Map.of("id", revival, "hash", hash)).path("syncStart.id").entity(String.class).get());
     }
 
-    private String awaitFinished(final long run) throws InterruptedException {
+    private String awaitFinished(final EntityId run) throws InterruptedException {
         for (int attempt = 0; attempt < 300; attempt++) {
             final String status = jdbcClient.sql("SELECT status FROM sync_run WHERE id = ?").param(run).query(String.class).single();
 
@@ -184,7 +185,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                 .withRequestBody(matchingJsonPath("$.variables.spexareId", equalTo("8")))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json")
                         .withBody("{\"data\": {\"taskActivityCreate\": null}, \"errors\": [{\"message\": \"No\", \"extensions\": {\"classification\": \"BAD_REQUEST\"}}]}")));
-        final long first = start(DIRECTEUR, hash);
+        final EntityId first = start(DIRECTEUR, hash);
 
         assertThat(awaitFinished(first)).isEqualTo("FAILED");
         execute(DIRECTEUR, RUN, Map.of("id", first))
@@ -213,7 +214,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                 .path("syncPreview.participants[0].operations[*].exists").entityList(Boolean.class).containsExactly(true, true, true, true)
                 .path("syncPreview.participants[1].operations[*].exists").entityList(Boolean.class).containsExactly(true, false);
 
-        final long second = start(DIRECTEUR, hash(DIRECTEUR));
+        final EntityId second = start(DIRECTEUR, hash(DIRECTEUR));
 
         assertThat(awaitFinished(second)).isEqualTo("DONE");
         execute(DIRECTEUR, RUN, Map.of("id", second)).path("syncRun.total").entity(Integer.class).isEqualTo(1);
@@ -238,7 +239,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aRunningSyncIsNotStartedTwiceAndSpexregisterDownIsReported() {
-        final long person = personId(DIRECTEUR);
+        final EntityId person = personId(DIRECTEUR);
 
         jdbcClient.sql("""
                 INSERT INTO sync_run (revival_id, started_by, started_at, status, preview_hash, created_by, created_at, version)
@@ -251,7 +252,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void theClosingStatusGathersTheSignals() {
-        final long logEntry = Long.parseLong(execute(DIRECTEUR, """
+        final EntityId logEntry = entityId("log_entry", execute(DIRECTEUR, """
                         mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }""",
                 Map.of("input", Map.of("revivalId", revival, "type", "DECISION", "text", "Överskottet går till FGV", "tags", List.of("Överskott"))))
                 .path("logEntryCreate.id").entity(String.class).get());
@@ -283,14 +284,14 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         login(DIRECTEUR_2);
         addMember(revival, DIRECTEUR_2, "STEERING_GROUP", List.of());
 
-        final long other = createRevival(NOBEL, 2029);
+        final EntityId other = createRevival(NOBEL, 2029);
 
         setStatus(other, "APPROVED");
         addMember(other, DIRECTEUR_2, "DIRECTEUR", List.of());
 
-        final long directeur = personId(DIRECTEUR);
-        final long david = personId(DIRECTEUR_2);
-        final long participant = personId(PARTICIPANT);
+        final EntityId directeur = personId(DIRECTEUR);
+        final EntityId david = personId(DIRECTEUR_2);
+        final EntityId participant = personId(PARTICIPANT);
 
         // A meeting with someone from outside, a row owned by name, a calendar link
         final String meeting = execute(DIRECTEUR, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
@@ -347,12 +348,12 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
 
         // Login data: gone for those only this revival kept, kept for David
         assertThat(jdbcClient.sql("SELECT email FROM person WHERE id = ?").param(participant).query(String.class).single())
-                .isEqualTo("anonymized-" + participant + "@invalid");
+                .isEqualTo("anonymized-" + participant.id() + "@invalid");
         assertThat(jdbcClient.sql("SELECT email FROM person WHERE id = ?").param(directeur).query(String.class).single()).startsWith("anonymized-");
         assertThat(jdbcClient.sql("SELECT external_id FROM person WHERE id = ?").param(directeur).query(String.class).single()).startsWith("anonymized-");
         assertThat(jdbcClient.sql("SELECT display_name FROM person WHERE id = ?").param(directeur).query(String.class).optional()).isEmpty();
         assertThat(jdbcClient.sql("SELECT email FROM person WHERE id = ?").param(david).query(String.class).single()).isEqualTo(DIRECTEUR_2);
-        assertThat(jdbcClient.sql("SELECT anonymized_by FROM revival WHERE id = ?").param(revival).query(Long.class).single()).isEqualTo(directeur);
+        assertThat(jdbcClient.sql("SELECT anonymized_by FROM revival WHERE id = ?").param(revival).query(Long.class).single()).isEqualTo(directeur.id());
 
         // The directeur logs in again as a new person; the super admin sees it anonymized and cannot do it twice
         login(DIRECTEUR);
@@ -367,7 +368,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void archivedRevivalsAreAnonymizedAfterThirtySixMonths() {
-        final long recent = createRevival(SNORRE, 2029);
+        final EntityId recent = createRevival(SNORRE, 2029);
 
         setStatus(revival, "ARCHIVED");
         setStatus(recent, "REJECTED");

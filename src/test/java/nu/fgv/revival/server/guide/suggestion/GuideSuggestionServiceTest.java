@@ -47,6 +47,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,12 +97,12 @@ class GuideSuggestionServiceTest {
         final List<GuideVersionView.Chapter> chapters = new ArrayList<>();
 
         for (final String key : GuideTestChapters.KEYS) {
-            chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key), key, GuideVersionView.Text.plain("Kapitel " + key, null),
-                    key.equals("B") ? List.of(new GuideVersionView.Item(1L, "tip", key, null, "TIP", GuideItemKind.TIP, text, 0L)) : List.of(),
-                    key.equals("B") ? List.of(new GuideVersionView.Section(2L, "kalas", key, GuideVersionView.Text.plain("Kalas", null), List.of(), 0L)) : List.of(),
+            chapters.add(new GuideVersionView.Chapter(uuid(GuideTestChapters.KEYS.indexOf(key)), key, GuideVersionView.Text.plain("Kapitel " + key, null),
+                    key.equals("B") ? List.of(new GuideVersionView.Item(uuid(1), "tip", key, null, "TIP", GuideItemKind.TIP, text, 0L)) : List.of(),
+                    key.equals("B") ? List.of(new GuideVersionView.Section(uuid(2), "kalas", key, GuideVersionView.Text.plain("Kalas", null), List.of(), 0L)) : List.of(),
                     0L));
         }
-        return new GuideVersionView(VERSION_ID, GuideVersionStatus.PUBLISHED, "v1", null, Instant.now(), null, null, 0L,
+        return new GuideVersionView(uuid(VERSION_ID), GuideVersionStatus.PUBLISHED, "v1", null, Instant.now(), null, null, 0L,
                 GuideVersionView.Text.plain("", null), chapters);
     }
 
@@ -121,6 +124,7 @@ class GuideSuggestionServiceTest {
         final GuideVersion version = new GuideVersion();
 
         version.setId(VERSION_ID);
+        version.setUuid(uuid(version.getId()));
         version.setStatus(GuideVersionStatus.PUBLISHED);
         lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
@@ -130,7 +134,8 @@ class GuideSuggestionServiceTest {
             final GuideSuggestion suggestion = invocation.getArgument(0);
 
             suggestion.setId(9L);
-            return suggestion;
+            suggestion.setUuid(uuid(suggestion.getId()));
+            return withUuids(suggestion);
         });
     }
 
@@ -200,8 +205,10 @@ class GuideSuggestionServiceTest {
         final GuideSuggestion suggestion = new GuideSuggestion();
 
         suggestion.setId(9L);
+        suggestion.setUuid(uuid(suggestion.getId()));
         suggestion.setRevivalId(REVIVAL_ID);
         suggestion.setAuthorId(TestCallers.PERSON_ID + 1);
+        suggestion.setAuthorUuid(uuidOrNull(suggestion.getAuthorId()));
         suggestion.setVersionId(VERSION_ID);
         suggestion.setKind(GuideSuggestionKind.REMOVE);
         suggestion.setChapterKey("B");
@@ -212,6 +219,7 @@ class GuideSuggestionServiceTest {
         assertThatThrownBy(() -> service.withdraw(9L, 0L)).isInstanceOf(AccessDeniedException.class);
 
         suggestion.setAuthorId(TestCallers.PERSON_ID);
+        suggestion.setAuthorUuid(uuidOrNull(suggestion.getAuthorId()));
         assertThat(service.withdraw(9L, 0L).status()).isEqualTo(GuideSuggestionStatus.WITHDRAWN);
 
         suggestion.setStatus(GuideSuggestionStatus.REJECTED);
@@ -227,6 +235,7 @@ class GuideSuggestionServiceTest {
             suggestion.setStatus(GuideSuggestionStatus.ACCEPTED);
             suggestion.setAcceptedIntoVersionId(20L);
             suggestion.setDecidedBy(TestCallers.PERSON_ID);
+            suggestion.setDecidedByUuid(uuidOrNull(suggestion.getDecidedBy()));
             suggestion.setDecidedAt(Instant.now());
             suggestion.setDecisionReason("Bra");
         }

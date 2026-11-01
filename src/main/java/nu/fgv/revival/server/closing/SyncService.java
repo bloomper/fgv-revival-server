@@ -36,6 +36,7 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -64,6 +65,8 @@ import java.util.stream.Stream;
 @Service
 public class SyncService {
 
+    private final ExternalIds ids;
+
     private final RevivalRepository revivalRepository;
     private final SyncRunRepository runRepository;
     private final SyncStepRepository stepRepository;
@@ -79,7 +82,9 @@ public class SyncService {
     public SyncService(final RevivalRepository revivalRepository, final SyncRunRepository runRepository, final SyncStepRepository stepRepository,
                        final ParticipantRepository participantRepository, final ParticipantDirectory participantDirectory, final SyncPlanner planner,
                        final SyncWorker worker, final CallerService callerService, final AccessPolicy accessPolicy, final EntityManager entityManager,
-                       final Clock clock) {
+                       final Clock clock,
+                       final ExternalIds ids) {
+        this.ids = ids;
         this.revivalRepository = revivalRepository;
         this.runRepository = runRepository;
         this.stepRepository = stepRepository;
@@ -126,7 +131,7 @@ public class SyncService {
                 Stream.concat(plan.participants().stream().map(SyncPlanner.ParticipantPlan::participant), plan.excluded().stream()).toList(),
                 acting, locale);
 
-        return new SyncPreviewDto(revivalId, plan.hash(), plan.spexregisterRevivalId() != null,
+        return new SyncPreviewDto(ids.uuidOf(Revival.class, revivalId), plan.hash(), plan.spexregisterRevivalId() != null,
                 plan.participants().stream().map(participant -> new SyncParticipantPreviewDto(ParticipantRef.of(names.get(participant.participant().getId())),
                         participant.operations().stream().map(operation -> new SyncOperationPreviewDto(operation.operation(), operation.detail(),
                                 operation.exists())).toList())).toList(),
@@ -234,7 +239,7 @@ public class SyncService {
      */
     @Transactional(readOnly = true)
     public List<SyncFailureDto> failures(final SyncRunDto run, final Locale locale) {
-        final List<SyncStep> failed = stepRepository.findByRunIdOrderByIdAsc(run.id()).stream()
+        final List<SyncStep> failed = stepRepository.findByRunIdOrderByIdAsc(ids.idOf(SyncRun.class, run.id())).stream()
                 .filter(step -> step.getStatus() == SyncStepStatus.FAILED)
                 .toList();
 

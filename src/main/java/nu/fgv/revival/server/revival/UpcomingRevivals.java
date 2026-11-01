@@ -75,13 +75,13 @@ public class UpcomingRevivals {
         final LocalDate today = LocalDate.now(clock);
         final Specification<Revival> announced = (root, query, cb) -> cb.and(root.get("status").in(ANNOUNCED), cb.isNotNull(root.get("premiereDate")));
         final List<Revival> revivals = repository.findAll(announced, Sort.by("premiereDate", "id"));
-        final Map<Long, SpexDto> spexById = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
+        final Map<String, SpexDto> spexById = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
 
         return revivals.stream()
                 .map(revival -> {
                     final List<RevivalShowDto> shows = RevivalMapper.REVIVAL_MAPPER.toShowDtos(revival.getShows());
 
-                    return lastDay(revival, shows).isBefore(today) ? null : new UpcomingRevivalDto(revival.getId(),
+                    return lastDay(revival, shows).isBefore(today) ? null : new UpcomingRevivalDto(revival.getUuid(),
                             titles.of(spexById.get(revival.getSpexId()), revival.getYear(), locale), revival.getYear(), revival.getPremiereDate(), shows);
                 })
                 .filter(Objects::nonNull)

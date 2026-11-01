@@ -28,8 +28,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
+
+import java.util.UUID;
 
 /**
  * One recipient of a sent mailing: a participant or helper, or a person of the steering group, and how sending went.
@@ -49,6 +52,9 @@ public class MailingRecipient extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "mailing_id", nullable = false, updatable = false)
     private Long mailingId;

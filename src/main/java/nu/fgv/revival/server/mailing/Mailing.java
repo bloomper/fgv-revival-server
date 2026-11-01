@@ -28,10 +28,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A mailing of a revival: its audience, subject and Markdown body. Drafted by the steering group,
@@ -55,8 +59,15 @@ public class Mailing extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "audience_kind", nullable = false, length = 16)
@@ -74,6 +85,10 @@ public class Mailing extends AbstractAuditable {
     @Column(name = "audience_event_id")
     private @Nullable Long audienceEventId;
 
+    @Formula("(SELECT t.uuid FROM event t WHERE t.id = audience_event_id)")
+    @NotAudited
+    private @Nullable UUID audienceEventUuid;
+
     @Column(name = "subject", nullable = false, length = SUBJECT_MAX_LENGTH)
     private String subject;
 
@@ -90,8 +105,16 @@ public class Mailing extends AbstractAuditable {
     @Column(name = "template_id", updatable = false)
     private @Nullable Long templateId;
 
+    @Formula("(SELECT t.uuid FROM mailing_template t WHERE t.id = template_id)")
+    @NotAudited
+    private @Nullable UUID templateUuid;
+
     @Column(name = "plan_event_id", updatable = false)
     private @Nullable Long planEventId;
+
+    @Formula("(SELECT t.uuid FROM event t WHERE t.id = plan_event_id)")
+    @NotAudited
+    private @Nullable UUID planEventUuid;
 
     @Column(name = "created_by_person", updatable = false)
     private @Nullable Long createdByPerson;

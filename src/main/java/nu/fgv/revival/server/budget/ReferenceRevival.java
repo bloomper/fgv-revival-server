@@ -27,12 +27,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * An earlier revival's budget and outcome per category, kept as reference: entered by
@@ -56,6 +58,9 @@ public class ReferenceRevival extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "label", nullable = false, length = LABEL_MAX_LENGTH)
     private String label;

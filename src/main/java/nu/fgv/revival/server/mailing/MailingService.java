@@ -34,6 +34,7 @@ import nu.fgv.revival.server.participant.ParticipantDirectory;
 import nu.fgv.revival.server.participant.ParticipantRepository;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonNames;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
@@ -43,6 +44,7 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.MailUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -76,6 +79,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class MailingService {
+
+    private final ExternalIds ids;
 
     /**
      * How many days ahead a plan entry counts as due.
@@ -114,7 +119,9 @@ public class MailingService {
                           final CallerService callerService,
                           final AccessPolicy accessPolicy,
                           final TransactionTemplate transactions,
-                          final Clock clock) {
+                          final Clock clock,
+                          final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.recipientRepository = recipientRepository;
         this.templateRepository = templateRepository;
@@ -159,8 +166,8 @@ public class MailingService {
         return templateId + "/" + (eventId == null ? "premiere" : eventId);
     }
 
-    private static @Nullable PersonRefDto person(final @Nullable Long id, final Map<Long, String> names) {
-        return id == null ? null : new PersonRefDto(id, names.get(id));
+    private @Nullable PersonRefDto person(final @Nullable Long id, final Map<Long, String> names) {
+        return id == null ? null : new PersonRefDto(ids.uuidOf(Person.class, id), names.get(id));
     }
 
     /**
@@ -384,12 +391,12 @@ public class MailingService {
 
         final LocalDate today = LocalDate.now(clock);
         final List<PlanItem> items = planItems(revival);
-        final Map<Long, MailingDto> mailings = toDtos(items.stream().map(PlanItem::mailing).filter(Objects::nonNull).toList(), revival, caller, locale)
+        final Map<UUID, MailingDto> mailings = toDtos(items.stream().map(PlanItem::mailing).filter(Objects::nonNull).toList(), revival, caller, locale)
                 .stream().collect(Collectors.toMap(MailingDto::id, Function.identity()));
 
         return items.stream().map(item -> new MailingPlanEntry(MailingTemplateDto.of(item.template()),
                 item.event() == null ? null : EventDto.of(item.event(), revival.getPremiereDate()), item.dueDate(),
-                item.mailing() == null ? null : mailings.get(item.mailing().getId()), item.due(today))).toList();
+                item.mailing() == null ? null : mailings.get(item.mailing().getUuid()), item.due(today))).toList();
     }
 
     /**
@@ -401,10 +408,10 @@ public class MailingService {
             return null;
         }
 
-        final Revival revival = revivalRepository.findById(mailing.revivalId()).orElseThrow();
+        final Revival revival = revivalRepository.findById(ids.idOf(Revival.class, mailing.revivalId())).orElseThrow();
         final PlanItem item = planItems(revival).stream()
-                .filter(candidate -> candidate.template().getId().equals(mailing.templateId())
-                        && Objects.equals(candidate.event() == null ? null : candidate.event().getId(), mailing.planEventId()))
+                .filter(candidate -> candidate.template().getUuid().equals(mailing.templateId())
+                        && Objects.equals(candidate.event() == null ? null : candidate.event().getUuid(), mailing.planEventId()))
                 .findFirst()
                 .orElse(null);
 
@@ -609,16 +616,16 @@ public class MailingService {
             final String taskId = mailing.getAudienceTaskId();
 
             return new MailingDto(
-                    mailing.getId(),
-                    mailing.getRevivalId(),
+                    mailing.getUuid(),
+                    mailing.getRevivalUuid(),
                     new MailingAudience(mailing.getAudienceKind(),
                             taskId == null ? null : positions.getOrDefault(taskId, new SpexareDirectory.Position(taskId, taskId, null, false)),
                             event == null ? null : EventDto.of(event, revival.getPremiereDate())),
                     mailing.getSubject(),
                     mailing.getBody(),
                     mailing.getStatus(),
-                    mailing.getTemplateId(),
-                    mailing.getPlanEventId(),
+                    mailing.getTemplateUuid(),
+                    mailing.getPlanEventUuid(),
                     person(mailing.getCreatedByPerson(), personNamesById),
                     mailing.getCreatedAt(),
                     person(mailing.getSentByPerson(), personNamesById),

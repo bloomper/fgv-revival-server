@@ -17,7 +17,10 @@
 
 package nu.fgv.revival.server.member;
 
+import nu.fgv.revival.server.person.Person;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalDto;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -35,9 +38,12 @@ import java.util.List;
 @Controller
 public class OwnerGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final OwnerResolver ownerResolver;
 
-    public OwnerGraphqlApi(final OwnerResolver ownerResolver) {
+    public OwnerGraphqlApi(final OwnerResolver ownerResolver, final ExternalIds ids) {
+        this.ids = ids;
         this.ownerResolver = ownerResolver;
     }
 
@@ -50,9 +56,9 @@ public class OwnerGraphqlApi {
         if (!revival.permissions().canReadWork()) {
             return List.of();
         }
-        return (Boolean.TRUE.equals(includeParticipants) ? ownerResolver.checklistOwners(revival.id()) : ownerResolver.activeMembers(revival.id()))
+        return (Boolean.TRUE.equals(includeParticipants) ? ownerResolver.checklistOwners(ids.idOf(Revival.class, revival.id())) : ownerResolver.activeMembers(ids.idOf(Revival.class, revival.id())))
                 .entrySet().stream()
-                .map(entry -> new PersonRefDto(entry.getKey(), entry.getValue()))
+                .map(entry -> new PersonRefDto(ids.uuidOf(Person.class, entry.getKey()), entry.getValue()))
                 .toList();
     }
 }

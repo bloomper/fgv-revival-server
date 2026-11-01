@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -71,7 +72,7 @@ class BudgetHttpApiTest extends AbstractApiTest {
         when(exportService.export(1L, Locale.of("sv"))).thenReturn(new BudgetExportService.Export("budget.xlsx", new byte[]{'P', 'K'}));
 
         mockMvc
-                .perform(get("/api/revivals/{id}/budget.xlsx", 1L).queryParam("lang", "sv").header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/revivals/{id}/budget.xlsx", uuid(1)).queryParam("lang", "sv").header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, BudgetHttpApi.XLSX.toString()))
                 .andExpect(content().bytes(new byte[]{'P', 'K'}))
@@ -95,7 +96,7 @@ class BudgetHttpApiTest extends AbstractApiTest {
                 .thenReturn(new BudgetDtos.Receipt("receipt.pdf", "application/pdf", RECEIPT.length, Instant.parse("2026-09-01T10:15:00Z")));
 
         mockMvc
-                .perform(multipart("/api/transactions/{id}/receipt", 1L)
+                .perform(multipart("/api/transactions/{id}/receipt", uuid(1))
                         .file(new MockMultipartFile("file", "receipt.pdf", "application/pdf", RECEIPT))
                         .header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
@@ -119,7 +120,7 @@ class BudgetHttpApiTest extends AbstractApiTest {
     @Test
     void aMissingFileIsABadRequest() throws Exception {
         mockMvc
-                .perform(multipart("/api/transactions/{id}/receipt", 1L))
+                .perform(multipart("/api/transactions/{id}/receipt", uuid(1)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
     }
@@ -129,7 +130,7 @@ class BudgetHttpApiTest extends AbstractApiTest {
         when(transactionService.receipt(1L)).thenReturn(new TransactionService.ReceiptFile("receipt.pdf", "application/pdf", RECEIPT));
 
         mockMvc
-                .perform(get("/api/transactions/{id}/receipt", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/transactions/{id}/receipt", uuid(1)).header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Security-Policy", "default-src 'none'; sandbox"))
                 .andExpect(content().bytes(RECEIPT))
@@ -151,7 +152,7 @@ class BudgetHttpApiTest extends AbstractApiTest {
     @Test
     void removesAReceipt() throws Exception {
         mockMvc
-                .perform(delete("/api/transactions/{id}/receipt", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(delete("/api/transactions/{id}/receipt", uuid(1)).header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isNoContent())
                 .andDo(document(
                         "transaction-receipt-delete",

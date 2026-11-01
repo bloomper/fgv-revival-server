@@ -18,6 +18,7 @@ package nu.fgv.revival.server.participant;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.budget.BudgetSettings;
 import nu.fgv.revival.server.budget.BudgetSettingsRepository;
 import nu.fgv.revival.server.member.AccessPolicy;
@@ -57,12 +58,14 @@ import java.util.Optional;
 import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -83,7 +86,7 @@ import static org.mockito.Mockito.when;
 class ParticipationServiceTest {
 
     private static final Locale SV = Locale.of("sv");
-    private static final String ACTING = "participant via revival 1 (Nyuppsättning)";
+    private static final String ACTING = "participant via revival 00000000-0000-7000-8000-000000000001 (Nyuppsättning)";
 
     @Mock
     private ParticipantRepository repository;
@@ -145,15 +148,18 @@ class ParticipationServiceTest {
         messages.addMessage("participant.terms.loanWithoutAmount", SV, "Lånet.");
         service = new ParticipationService(repository, pendingRepository, dietaryRepository, settingsRepository, referralRepository,
                 budgetSettingsRepository, revivalRepository, revivalService, titles, ownerResolver, callerService, accessPolicy, access, views,
-                participantService, mailer, directory, swish, messages, applicationSettings, TestClocks.at(LocalDate.of(2028, 1, 10)));
+                participantService, mailer, directory, swish, messages, applicationSettings, TestClocks.at(LocalDate.of(2028, 1, 10)), TestExternalIds.IDS);
         revival = TestCallers.revival(RevivalStatus.OPEN);
         member.setId(30L);
+        member.setUuid(uuid(member.getId()));
         member.setRevivalId(REVIVAL_ID);
         member.setRole(RevivalRole.PARTICIPANT);
         member.setPersonId(TestCallers.PERSON_ID);
         participant = new Participant();
         participant.setId(1L);
+        participant.setUuid(uuid(participant.getId()));
         participant.setRevivalId(REVIVAL_ID);
+        participant.setRevivalUuid(uuidOrNull(participant.getRevivalId()));
         participant.setKind(ParticipantKind.PARTICIPANT);
         participant.setMemberId(30L);
         participant.setVersion(0L);
@@ -165,7 +171,7 @@ class ParticipationServiceTest {
         when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
         when(memberRepository.findByRevivalIdAndPersonIdAndRemovedAtIsNull(REVIVAL_ID, TestCallers.PERSON_ID)).thenReturn(Optional.of(member));
         when(repository.findByMemberIdAndRemovedAtIsNull(30L)).thenReturn(Optional.of(participant));
-        when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
         when(pendingRepository.findById(1L)).thenReturn(Optional.of(person));
         when(pendingRepository.findByParticipantIdIn(any())).thenAnswer(_ -> participant.isPending() ? List.of(person) : List.of());
         when(titles.ofCached(any(), any())).thenReturn("Ali Baba 2028");
@@ -207,14 +213,14 @@ class ParticipationServiceTest {
 
     @Test
     void aPendingPersonWhoConsentsBecomesAnUnpublishedSpexare() {
-        when(directory.create("Pia", "Persson", ACTING)).thenReturn(99L);
+        when(directory.create("Pia", "Persson", ACTING)).thenReturn("99");
 
         service.respond(answer(ParticipantResponse.YES, true, true), SV);
 
-        verify(directory).saveHomeAddress(eq(99L), isNull(), eq(new SpexregisterClient.AddressInput("pia@example.org", null, null, null, null)), eq(ACTING));
-        verify(directory).saveRegisterConsent(99L, null, true, ACTING);
+        verify(directory).saveHomeAddress(eq("99"), isNull(), eq(new SpexregisterClient.AddressInput("pia@example.org", null, null, null, null)), eq(ACTING));
+        verify(directory).saveRegisterConsent("99", null, true, ACTING);
         verify(pendingRepository).delete(person);
-        assertThat(participant.getSpexareId()).isEqualTo(99L);
+        assertThat(participant.getSpexareId()).isEqualTo("99");
         assertThat(participant.getRegisterConsent()).isTrue();
         assertThat(participant.getTermsAcceptedAt()).isNotNull();
         verify(mailer).sendAfterCommit(anyList());
@@ -222,9 +228,9 @@ class ParticipationServiceTest {
 
     @Test
     void whenSpexregisterFailsPartWayThePersonStaysPending() {
-        when(directory.create("Pia", "Persson", ACTING)).thenReturn(99L);
+        when(directory.create("Pia", "Persson", ACTING)).thenReturn("99");
         doThrow(new SpexregisterUnavailableException(new RuntimeException("down"))).when(directory)
-                .saveHomeAddress(anyLong(), any(), any(), anyString());
+                .saveHomeAddress(anyString(), any(), any(), anyString());
 
         assertThatThrownBy(() -> service.respond(answer(ParticipantResponse.YES, true, true), SV)).isInstanceOf(SpexregisterUnavailableException.class);
         verify(pendingRepository, never()).delete(any());
@@ -233,18 +239,18 @@ class ParticipationServiceTest {
 
     @Test
     void aSpexareWhoDeclinesConsentIsRecordedInSpexregisterOnlyAfterAnEarlierConsent() {
-        participant.setSpexareId(7L);
-        when(directory.byId(7L, ACTING)).thenReturn(spexare(null));
+        participant.setSpexareId("7");
+        when(directory.byId("7", ACTING)).thenReturn(spexare(null));
 
         service.respond(answer(ParticipantResponse.MAYBE, null, false), SV);
-        verify(directory, never()).saveRegisterConsent(anyLong(), any(), anyBoolean(), anyString());
+        verify(directory, never()).saveRegisterConsent(anyString(), any(), anyBoolean(), anyString());
 
-        when(directory.byId(7L, ACTING)).thenReturn(spexare(new SpexregisterClient.Consent("71", true, new SpexregisterClient.TypeNode("REGISTER", null))));
+        when(directory.byId("7", ACTING)).thenReturn(spexare(new SpexregisterClient.Consent("71", true, new SpexregisterClient.TypeNode("REGISTER", null))));
         service.respond(answer(ParticipantResponse.MAYBE, null, false), SV);
-        verify(directory).saveRegisterConsent(7L, "71", false, ACTING);
+        verify(directory).saveRegisterConsent("7", "71", false, ACTING);
 
         service.respond(answer(ParticipantResponse.MAYBE, null, true), SV);
-        verify(directory).saveRegisterConsent(7L, "71", true, ACTING);
+        verify(directory).saveRegisterConsent("7", "71", true, ACTING);
     }
 
     @Test
@@ -252,8 +258,8 @@ class ParticipationServiceTest {
         service.respond(answer(ParticipantResponse.NO, null, null), SV);
         verify(participantService).close(participant, TestCallers.PERSON_ID);
 
-        participant.setSpexareId(7L);
-        when(directory.byIds(any(), anyString())).thenReturn(Map.of(7L, spexare(null)));
+        participant.setSpexareId("7");
+        when(directory.byIds(any(), anyString())).thenReturn(Map.of("7", spexare(null)));
         service.respond(answer(ParticipantResponse.NO, null, null), SV);
         verify(participantService, org.mockito.Mockito.times(1)).close(any(), any());
     }
@@ -263,13 +269,13 @@ class ParticipationServiceTest {
         final ParticipationService.ContactChange change = new ParticipationService.ContactChange(REVIVAL_ID, "anna@example.org", "0702 12 34 56", "Gatan 2",
                 "41102", "Göteborg");
 
-        participant.setSpexareId(7L);
+        participant.setSpexareId("7");
         assertThatThrownBy(() -> service.updateContact(change, SV)).hasFieldOrPropertyWithValue("detailMessageCode", "error.participant.contact.noConsent");
 
         participant.setRegisterConsent(true);
-        when(directory.byId(7L, ACTING)).thenReturn(spexare(null));
+        when(directory.byId("7", ACTING)).thenReturn(spexare(null));
         service.updateContact(change, SV);
-        verify(directory).saveHomeAddress(7L, "70", new SpexregisterClient.AddressInput("anna@example.org", "0702 12 34 56", "Gatan 2", "41102", "Göteborg"),
+        verify(directory).saveHomeAddress("7", "70", new SpexregisterClient.AddressInput("anna@example.org", "0702 12 34 56", "Gatan 2", "41102", "Göteborg"),
                 ACTING);
     }
 

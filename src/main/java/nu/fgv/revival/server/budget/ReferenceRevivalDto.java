@@ -20,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code ReferenceRevival}. Figures are in the order of their categories.
@@ -27,12 +28,12 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ReferenceRevivalDto(Long id, String label, Integer year, @Nullable Integer participants,
+public record ReferenceRevivalDto(UUID id, String label, Integer year, @Nullable Integer participants,
                                   @Nullable String comment, boolean automatic,
                                   List<Figure> figures, Long version) {
 
     static ReferenceRevivalDto of(final ReferenceRevival reference, final Comparator<String> categoryOrder) {
-        return new ReferenceRevivalDto(reference.getId(), reference.getLabel(), reference.getYear(), reference.getParticipants(),
+        return new ReferenceRevivalDto(reference.getUuid(), reference.getLabel(), reference.getYear(), reference.getParticipants(),
                 reference.getComment(), reference.isAutomatic(),
                 reference.getFigures().stream()
                         .sorted(Comparator.comparing(ReferenceFigure::getCategoryId, categoryOrder))

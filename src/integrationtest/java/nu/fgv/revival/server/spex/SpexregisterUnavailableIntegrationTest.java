@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.spex;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -35,7 +36,7 @@ import static nu.fgv.revival.server.Documents.UPDATE;
  */
 class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 
-    private void assertDegraded(final long id) {
+    private void assertDegraded(final EntityId id) {
         execute(SUPER_ADMIN, REVIVALS, Map.of())
                 .path("revivals[0].spex.available").entity(Boolean.class).isEqualTo(false)
                 .path("revivals[0].spex.title").valueIsNull();
@@ -49,7 +50,7 @@ class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void anErrorResponse() {
-        final long id = createRevival(ALI_BABA, 2028);
+        final EntityId id = createRevival(ALI_BABA, 2028);
 
         spexregisterDown(false);
         assertDegraded(id);
@@ -57,7 +58,7 @@ class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aTimeout() {
-        final long id = createRevival(ALI_BABA, 2028);
+        final EntityId id = createRevival(ALI_BABA, 2028);
 
         spexregisterDown(true);
         assertDegraded(id);

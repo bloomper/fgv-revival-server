@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -35,18 +36,18 @@ class UpcomingRevivalsIntegrationTest extends AbstractIntegrationTest {
     private static final String UPCOMING = "{ upcomingRevivals { id title year premiereDate shows { date time venue } } }";
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));
 
-    private void premiere(final long revival, final String status, final LocalDate premiere) {
+    private void premiere(final EntityId revival, final String status, final LocalDate premiere) {
         jdbcClient.sql("UPDATE revival SET status = ?, premiere_date = ? WHERE id = ?").params(status, premiere, revival).update();
     }
 
     @Test
     void everyoneSeesTheAnnouncedRevivalsComingUpSoonestFirst() {
-        final long later = createRevival(ALI_BABA, 2029);
-        final long sooner = createRevival(NOBEL, 2028);
-        final long playing = createRevival(SNORRE, 2027);
-        final long proposed = createRevival(ALI_BABA, 2030);
-        final long over = createRevival(NOBEL, 2026);
-        final long noPremiere = createRevival(SNORRE, 2031);
+        final EntityId later = createRevival(ALI_BABA, 2029);
+        final EntityId sooner = createRevival(NOBEL, 2028);
+        final EntityId playing = createRevival(SNORRE, 2027);
+        final EntityId proposed = createRevival(ALI_BABA, 2030);
+        final EntityId over = createRevival(NOBEL, 2026);
+        final EntityId noPremiere = createRevival(SNORRE, 2031);
 
         premiere(later, "ORGANISING", TODAY.plusDays(200));
         premiere(sooner, "OPEN", TODAY.plusDays(30));
@@ -59,7 +60,7 @@ class UpcomingRevivalsIntegrationTest extends AbstractIntegrationTest {
 
         for (final String user : new String[]{PLAIN_USER, PARTICIPANT, STEERING_GROUP, OBSERVER}) {
             execute(user, UPCOMING, Map.of())
-                    .path("upcomingRevivals[*].id").entityList(Long.class).containsExactly(playing, sooner, later)
+                    .path("upcomingRevivals[*].id").entityList(String.class).containsExactly(playing.external(), sooner.external(), later.external())
                     .path("upcomingRevivals[0].shows[0].venue").entity(String.class).isEqualTo("RunAn")
                     .path("upcomingRevivals[1].year").entity(Integer.class).isEqualTo(2028)
                     .path("upcomingRevivals[1].title").entity(String.class).satisfies(title -> assertThat(title).endsWith("2028"));

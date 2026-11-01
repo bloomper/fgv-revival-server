@@ -144,8 +144,8 @@ public class LibraryService {
     @Transactional(readOnly = true)
     public Map<Long, LibraryEntryDto> byIds(final Collection<Long> ids) {
         return ids.isEmpty() ? Map.of()
-                : repository.findAllById(Set.copyOf(ids)).stream().map(LibraryEntryDto::of)
-                .collect(Collectors.toMap(LibraryEntryDto::id, Function.identity()));
+                : repository.findAllById(Set.copyOf(ids)).stream()
+                .collect(Collectors.toMap(LibraryEntry::getId, LibraryEntryDto::of));
     }
 
     /**

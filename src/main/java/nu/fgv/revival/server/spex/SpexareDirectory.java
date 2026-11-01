@@ -78,12 +78,12 @@ public class SpexareDirectory {
     /**
      * The spexare with these ids that Spexregister lets the application read, by id, from the cache where it can.
      */
-    public Map<Long, SpexregisterClient.Spexare> byIds(final Collection<Long> ids, final String actingPerson) {
-        final Set<Long> wanted = new LinkedHashSet<>(ids);
-        final Map<Long, SpexregisterClient.Spexare> found = new LinkedHashMap<>();
-        final List<Long> missing = new ArrayList<>();
+    public Map<String, SpexregisterClient.Spexare> byIds(final Collection<String> ids, final String actingPerson) {
+        final Set<String> wanted = new LinkedHashSet<>(ids);
+        final Map<String, SpexregisterClient.Spexare> found = new LinkedHashMap<>();
+        final List<String> missing = new ArrayList<>();
 
-        for (final Long id : wanted) {
+        for (final String id : wanted) {
             final SpexregisterClient.Spexare cached = people().get(id, SpexregisterClient.Spexare.class);
 
             if (cached != null) {
@@ -93,10 +93,10 @@ public class SpexareDirectory {
             }
         }
         for (int from = 0; from < missing.size(); from += SpexregisterClient.MAX_SPEXARE) {
-            final List<Long> chunk = missing.subList(from, Math.min(missing.size(), from + SpexregisterClient.MAX_SPEXARE));
+            final List<String> chunk = missing.subList(from, Math.min(missing.size(), from + SpexregisterClient.MAX_SPEXARE));
 
             unavailableOnFailure(() -> client.spexareByIds(chunk, actingPerson)).forEach(spexare -> {
-                final Long id = Long.valueOf(spexare.id());
+                final String id = spexare.id();
 
                 people().put(id, spexare);
                 found.put(id, spexare);
@@ -105,14 +105,14 @@ public class SpexareDirectory {
         return found;
     }
 
-    public SpexregisterClient.@Nullable Spexare byId(final Long id, final String actingPerson) {
+    public SpexregisterClient.@Nullable Spexare byId(final String id, final String actingPerson) {
         return byIds(List.of(id), actingPerson).get(id);
     }
 
     /**
      * The participants of a spex and its revivals as Spexregister lists them.
      */
-    public List<SpexregisterClient.Spexare> bySpex(final Long spexId, final String actingPerson) {
+    public List<SpexregisterClient.Spexare> bySpex(final String spexId, final String actingPerson) {
         return unavailableOnFailure(() -> client.spexareBySpex(spexId, actingPerson));
     }
 
@@ -123,7 +123,7 @@ public class SpexareDirectory {
     /**
      * The ids of a spex and its revivals in Spexregister.
      */
-    public Set<Long> family(final Long spexId) {
+    public Set<String> family(final String spexId) {
         return Set.copyOf(unavailableOnFailure(() -> Objects.requireNonNull(reference().get(FAMILY + spexId, () -> client.spexFamily(spexId)))));
     }
 
@@ -171,15 +171,15 @@ public class SpexareDirectory {
     /**
      * Forgets what is cached about a spexare, after the sync has written to them.
      */
-    public void evict(final Long spexareId) {
+    public void evict(final String spexareId) {
         people().evict(spexareId);
     }
 
-    public Long create(final String firstName, final String lastName, final String actingPerson) {
+    public String create(final String firstName, final String lastName, final String actingPerson) {
         return unavailableOnFailure(() -> client.createSpexare(firstName, lastName, actingPerson));
     }
 
-    public void saveHomeAddress(final Long spexareId, final @Nullable String addressId, final SpexregisterClient.AddressInput address,
+    public void saveHomeAddress(final String spexareId, final @Nullable String addressId, final SpexregisterClient.AddressInput address,
                                 final String actingPerson) {
         try {
             unavailableOnFailure(() -> {
@@ -191,7 +191,7 @@ public class SpexareDirectory {
         }
     }
 
-    public void saveRegisterConsent(final Long spexareId, final @Nullable String consentId, final boolean value, final String actingPerson) {
+    public void saveRegisterConsent(final String spexareId, final @Nullable String consentId, final boolean value, final String actingPerson) {
         try {
             unavailableOnFailure(() -> {
                 client.saveRegisterConsent(spexareId, consentId, value, actingPerson);

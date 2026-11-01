@@ -26,10 +26,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A saved what-if over a revival's budget. Its result is computed when it is read, from
@@ -52,8 +56,15 @@ public class BudgetScenario extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Column(name = "name", nullable = false, length = NAME_MAX_LENGTH)
     private String name;

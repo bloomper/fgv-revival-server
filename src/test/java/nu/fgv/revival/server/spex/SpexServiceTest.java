@@ -48,10 +48,10 @@ import static org.mockito.Mockito.when;
 class SpexServiceTest {
 
     private static final List<SpexDto> SPEX = List.of(
-            new SpexDto(1L, "Ali Baba", 1956, true),
-            new SpexDto(2L, "Nobel", 1988, true),
-            new SpexDto(3L, "Snorre", 1974, true),
-            new SpexDto(4L, "Ålänningen", 1960, true));
+            new SpexDto("1", "Ali Baba", 1956, true),
+            new SpexDto("2", "Nobel", 1988, true),
+            new SpexDto("3", "Snorre", 1974, true),
+            new SpexDto("4", "Ålänningen", 1960, true));
 
     @Mock
     private SpexregisterClient client;
@@ -72,7 +72,7 @@ class SpexServiceTest {
 
         service.search("ali", 20);
         service.search("nobel", 20);
-        service.findTitles(List.of(1L, 2L));
+        service.findTitles(List.of("1", "2"));
 
         verify(client, times(1)).originalSpex();
     }
@@ -97,20 +97,20 @@ class SpexServiceTest {
     void findTitlesResolvesSeveralIdsFromOneList() {
         when(client.originalSpex()).thenReturn(SPEX);
 
-        final Map<Long, SpexDto> titles = service.findTitles(List.of(1L, 3L, 1L));
+        final Map<String, SpexDto> titles = service.findTitles(List.of("1", "3", "1"));
 
-        assertThat(titles).containsOnlyKeys(1L, 3L);
-        assertThat(titles.get(3L).title()).isEqualTo("Snorre");
+        assertThat(titles).containsOnlyKeys("1", "3");
+        assertThat(titles.get("3").title()).isEqualTo("Snorre");
     }
 
     @Test
     void anErrorMakesTitlesUnavailable() {
         when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("down"));
 
-        final Map<Long, SpexDto> titles = service.findTitles(List.of(1L));
+        final Map<String, SpexDto> titles = service.findTitles(List.of("1"));
 
-        assertThat(titles.get(1L).available()).isFalse();
-        assertThat(titles.get(1L).title()).isNull();
+        assertThat(titles.get("1").available()).isFalse();
+        assertThat(titles.get("1").title()).isNull();
     }
 
     @Test
@@ -124,49 +124,49 @@ class SpexServiceTest {
     void requireOriginalAcceptsAnOriginalSpex() {
         when(client.originalSpex()).thenReturn(SPEX);
 
-        service.requireOriginal(2L);
+        service.requireOriginal("2");
     }
 
     @Test
     void requireOriginalRefusesAnUnknownSpexOrARevival() {
         when(client.originalSpex()).thenReturn(SPEX);
-        when(client.spexById(98L)).thenReturn(Optional.empty());
-        when(client.spexById(99L)).thenReturn(Optional.of(new SpexregisterClient.SpexNode("99", "2004", "Ali Baba", true)));
+        when(client.spexById("98")).thenReturn(Optional.empty());
+        when(client.spexById("99")).thenReturn(Optional.of(new SpexregisterClient.SpexNode("99", "2004", "Ali Baba", true)));
 
-        assertThatThrownBy(() -> service.requireOriginal(98L)).isInstanceOf(BadRequestException.class);
-        assertThatThrownBy(() -> service.requireOriginal(99L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.requireOriginal("98")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.requireOriginal("99")).isInstanceOf(BadRequestException.class);
     }
 
     @Test
     void requireOriginalFailsOnTimeout() {
         when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("timeout"));
 
-        assertThatThrownBy(() -> service.requireOriginal(1L)).isInstanceOf(SpexregisterUnavailableException.class);
+        assertThatThrownBy(() -> service.requireOriginal("1")).isInstanceOf(SpexregisterUnavailableException.class);
     }
 
     @Test
     void postersAreCachedIncludingTheMissingOnes() {
         final SpexregisterClient.Poster poster = new SpexregisterClient.Poster(new byte[]{1, 2}, "image/png");
 
-        when(client.poster(1L)).thenReturn(Optional.of(poster));
-        when(client.poster(2L)).thenReturn(Optional.empty());
+        when(client.poster("1")).thenReturn(Optional.of(poster));
+        when(client.poster("2")).thenReturn(Optional.empty());
 
-        assertThat(service.poster(1L)).contains(poster);
-        assertThat(service.poster(1L)).contains(poster);
-        assertThat(service.poster(2L)).isEmpty();
-        assertThat(service.poster(2L)).isEmpty();
+        assertThat(service.poster("1")).contains(poster);
+        assertThat(service.poster("1")).contains(poster);
+        assertThat(service.poster("2")).isEmpty();
+        assertThat(service.poster("2")).isEmpty();
 
-        verify(client, times(1)).poster(1L);
-        verify(client, times(1)).poster(2L);
+        verify(client, times(1)).poster("1");
+        verify(client, times(1)).poster("2");
     }
 
     @Test
     void posterFailsWhenSpexregisterIsUnavailableAndIsNotCached() {
-        when(client.poster(1L))
+        when(client.poster("1"))
                 .thenThrow(new SpexregisterClient.SpexregisterCallException("down"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.poster(1L)).isInstanceOf(SpexregisterUnavailableException.class);
-        assertThat(service.poster(1L)).isEmpty();
+        assertThatThrownBy(() -> service.poster("1")).isInstanceOf(SpexregisterUnavailableException.class);
+        assertThat(service.poster("1")).isEmpty();
     }
 }

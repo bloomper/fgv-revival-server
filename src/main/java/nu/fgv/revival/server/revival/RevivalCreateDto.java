@@ -24,5 +24,5 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalCreateDto(Long spexId, Integer year, @Nullable Boolean past) {
+public record RevivalCreateDto(String spexId, Integer year, @Nullable Boolean past) {
 }

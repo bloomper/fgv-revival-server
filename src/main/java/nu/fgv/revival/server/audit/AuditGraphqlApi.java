@@ -21,6 +21,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * A record's history over GraphQL (audit.graphqls).
@@ -38,7 +39,7 @@ public class AuditGraphqlApi {
     }
 
     @QueryMapping
-    public List<RevisionDto> revisions(@Argument final AuditedType type, @Argument final Long id, final Locale locale) {
+    public List<RevisionDto> revisions(@Argument final AuditedType type, @Argument final UUID id, final Locale locale) {
         return service.revisions(type, id, locale);
     }
 }

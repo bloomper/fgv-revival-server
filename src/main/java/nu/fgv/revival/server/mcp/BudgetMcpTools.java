@@ -16,27 +16,32 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.budget.BudgetCategory;
-import nu.fgv.revival.server.budget.BudgetCategoryKind;
 import nu.fgv.revival.server.budget.BudgetCategoryDto;
+import nu.fgv.revival.server.budget.BudgetCategoryKind;
 import nu.fgv.revival.server.budget.BudgetCategoryService;
+import nu.fgv.revival.server.budget.BudgetDtos;
 import nu.fgv.revival.server.budget.BudgetLine;
 import nu.fgv.revival.server.budget.BudgetScenario;
 import nu.fgv.revival.server.budget.BudgetScenarioService;
+import nu.fgv.revival.server.budget.BudgetService;
 import nu.fgv.revival.server.budget.BudgetTransaction;
+import nu.fgv.revival.server.budget.ReferenceRevival;
 import nu.fgv.revival.server.budget.ReferenceRevivalDto;
 import nu.fgv.revival.server.budget.ReferenceRevivalService;
 import nu.fgv.revival.server.budget.ScenarioParameters;
 import nu.fgv.revival.server.budget.ScenarioResultDto;
-import nu.fgv.revival.server.budget.BudgetDtos;
-import nu.fgv.revival.server.budget.BudgetService;
 import nu.fgv.revival.server.budget.TransactionService;
+import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.member.OwnerDto;
 import nu.fgv.revival.server.member.OwnerInputDto;
 import nu.fgv.revival.server.member.OwnerResolver;
 import nu.fgv.revival.server.member.OwnerViews;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.person.Person;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.error.BadRequestException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -47,6 +52,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * A revival's budget over MCP: its position for readers of the budget, never who paid what, and recording a
@@ -57,6 +63,8 @@ import java.util.Locale;
  */
 @Component
 public class BudgetMcpTools {
+
+    private final ExternalIds ids;
 
     private final BudgetService budgetService;
     private final TransactionService transactionService;
@@ -70,7 +78,9 @@ public class BudgetMcpTools {
 
     public BudgetMcpTools(final BudgetService budgetService, final TransactionService transactionService, final BudgetCategoryService categoryService,
                           final OwnerResolver ownerResolver, final OwnerViews ownerViews, final CallerService callerService,
-                          final BudgetScenarioService scenarioService, final ReferenceRevivalService referenceService, final McpToolSupport support) {
+                          final BudgetScenarioService scenarioService, final ReferenceRevivalService referenceService, final McpToolSupport support,
+                          final ExternalIds ids) {
+        this.ids = ids;
         this.scenarioService = scenarioService;
         this.referenceService = referenceService;
         this.budgetService = budgetService;
@@ -85,15 +95,15 @@ public class BudgetMcpTools {
     @McpTool(name = "get_budget_summary",
             description = "Get a revival's budget position: budgeted and actual income, cost and result, per category, the loan from FGV/JK, and how many costs are not yet reimbursed and how many transactions lack a receipt. Amounts are Swedish kronor.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public BudgetSummary getBudgetSummary(@McpToolParam(description = "A revival whose budget you can read") final Long revivalId) {
+    public BudgetSummary getBudgetSummary(@McpToolParam(description = "A revival whose budget you can read") final UUID revivalId) {
         return support.call("get_budget_summary", () -> {
-            final BudgetDtos.Totals totals = budgetService.totals(revivalId);
-            final BudgetDtos.Settings settings = budgetService.settings(revivalId);
+            final BudgetDtos.Totals totals = budgetService.totals(ids.idOf(Revival.class, revivalId));
+            final BudgetDtos.Settings settings = budgetService.settings(ids.idOf(Revival.class, revivalId));
 
             return new BudgetSummary(
                     new Position(Amounts.format(totals.budgetedIncome()), Amounts.format(totals.budgetedCost()), Amounts.format(totals.budgetedResult())),
                     new Position(Amounts.format(totals.actualIncome()), Amounts.format(totals.actualCost()), Amounts.format(totals.actualResult())),
-                    budgetService.categories(revivalId).stream().map(summary -> new Category(summary.category().id(),
+                    budgetService.categories(ids.idOf(Revival.class, revivalId)).stream().map(summary -> new Category(summary.category().id(),
                             ChecklistMcpTools.Text.of(summary.category().name()), summary.category().kind(), Amounts.format(summary.budgeted()),
                             Amounts.format(summary.actual()))).toList(),
                     new Loan(settings.loanAmount() == null ? null : Amounts.format(settings.loanAmount()), settings.loanReceivedOn(),
@@ -109,7 +119,7 @@ public class BudgetMcpTools {
             description = "Record money that came in or went out in a revival's budget. Income or cost follows the category. For a cost someone paid out of their own pocket, give who paid: a steering group member's name, \"me\", or the name of someone outside the steering group. Transactions are never deleted; they can be cancelled in the web.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public TransactionWritten addTransaction(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
             @McpToolParam(description = "The date, yyyy-MM-dd") final String date,
             @McpToolParam(description = "The amount in kronor, positive, at most two decimals, e.g. 1200 or 349.50") final String amount,
             @McpToolParam(description = "An active budget category, by id or by its Swedish or English name") final String category,
@@ -127,10 +137,10 @@ public class BudgetMcpTools {
             }
 
             final BudgetCategory resolved = categoryService.resolveActive(category);
-            final ResolvedPayer payer = resolve(revivalId, paidBy);
-            final BudgetDtos.Transaction transaction = transactionService.create(new TransactionService.NewTransaction(revivalId, day, value,
+            final ResolvedPayer payer = resolve(ids.idOf(Revival.class, revivalId), paidBy);
+            final BudgetDtos.Transaction transaction = transactionService.create(new TransactionService.NewTransaction(ids.idOf(Revival.class, revivalId), day, value,
                     resolved.getId(), description, null, payer.input()));
-            final OwnerDto owner = ownerViews.toDto(transaction.revivalId(), transaction.payer(), Locale.ENGLISH);
+            final OwnerDto owner = ownerViews.toDto(ids.idOf(Revival.class, transaction.revivalId()), transaction.payer(), Locale.ENGLISH);
 
             return new TransactionWritten(transaction.id(), transaction.date(), Amounts.format(transaction.amount()),
                     new ChecklistMcpTools.Text(resolved.getNameSv(), resolved.getNameEn()), resolved.getKind(), transaction.description(),
@@ -146,17 +156,17 @@ public class BudgetMcpTools {
         return quantity == null ? null : BigDecimal.valueOf(quantity);
     }
 
-    private BudgetDtos.Line line(final Long revivalId, final Long lineId) {
+    private BudgetDtos.Line line(final Long revivalId, final UUID lineId) {
         return McpToolSupport.byId(budgetService.lines(revivalId, true), BudgetDtos.Line::id, lineId, BudgetLine.class);
     }
 
-    private BudgetDtos.Transaction transaction(final Long revivalId, final Long transactionId) {
+    private BudgetDtos.Transaction transaction(final Long revivalId, final UUID transactionId) {
         return McpToolSupport.byId(transactionService.list(revivalId, true), BudgetDtos.Transaction::id, transactionId, BudgetTransaction.class);
     }
 
     private TransactionView toView(final BudgetDtos.Transaction transaction) {
         return new TransactionView(transaction.id(), transaction.date(), Amounts.format(transaction.amount()), transaction.categoryId(),
-                transaction.description(), transaction.budgetLineId(), McpOwner.of(ownerViews.toDto(transaction.revivalId(), transaction.payer(), Locale.ENGLISH)),
+                transaction.description(), transaction.budgetLineId(), McpOwner.of(ownerViews.toDto(ids.idOf(Revival.class, transaction.revivalId()), transaction.payer(), Locale.ENGLISH)),
                 transaction.reimbursed(), transaction.receipt() != null, transaction.cancelled());
     }
 
@@ -164,43 +174,43 @@ public class BudgetMcpTools {
             description = "List a revival's budget lines: category, description, quantity, amount each and in total, the event or decision it belongs to, and comment.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<BudgetDtos.Line> listBudgetLines(
-            @McpToolParam(description = "A revival whose budget you can read") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can read") final UUID revivalId,
             @McpToolParam(required = false, description = "Also removed lines") final @Nullable Boolean includeRemoved) {
-        return support.call("list_budget_lines", () -> new McpToolSupport.ListResult<>(budgetService.lines(revivalId, Boolean.TRUE.equals(includeRemoved))));
+        return support.call("list_budget_lines", () -> new McpToolSupport.ListResult<>(budgetService.lines(ids.idOf(Revival.class, revivalId), Boolean.TRUE.equals(includeRemoved))));
     }
 
     @McpTool(name = "create_budget_line",
             description = "Add a line to a revival's budget: what it is, the category, how many and the amount each in kronor.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public BudgetDtos.Line createBudgetLine(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
             @McpToolParam(description = "An active budget category, by id or by its Swedish or English name") final String category,
             @McpToolParam(description = "What it is, 1-255 characters") final String description,
             @McpToolParam(description = "The amount each in kronor, e.g. 1200 or 349.50") final String unitAmount,
             @McpToolParam(required = false, description = "How many, default 1") final @Nullable Double quantity,
-            @McpToolParam(required = false, description = "The event it belongs to, by id") final @Nullable Long eventId,
+            @McpToolParam(required = false, description = "The event it belongs to, by id") final @Nullable UUID eventId,
             @McpToolParam(required = false, description = "A comment") final @Nullable String comment) {
-        return support.call("create_budget_line", () -> budgetService.createLine(new BudgetService.NewLine(revivalId, categoryId(category), description,
-                quantity(quantity), McpToolSupport.amount(unitAmount), eventId, null, comment, null)));
+        return support.call("create_budget_line", () -> budgetService.createLine(new BudgetService.NewLine(ids.idOf(Revival.class, revivalId), categoryId(category), description,
+                quantity(quantity), McpToolSupport.amount(unitAmount), ids.idOfNullable(Event.class, eventId), null, comment, null)));
     }
 
     @McpTool(name = "update_budget_line",
             description = "Change a budget line. Leave out what stays as it is; an empty comment clears it.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public BudgetDtos.Line updateBudgetLine(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
-            @McpToolParam(description = "The line, by id") final Long lineId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
+            @McpToolParam(description = "The line, by id") final UUID lineId,
             @McpToolParam(required = false, description = "A budget category, by id or name") final @Nullable String category,
             @McpToolParam(required = false, description = "What it is") final @Nullable String description,
             @McpToolParam(required = false, description = "The amount each in kronor") final @Nullable String unitAmount,
             @McpToolParam(required = false, description = "How many") final @Nullable Double quantity,
-            @McpToolParam(required = false, description = "The event it belongs to, by id") final @Nullable Long eventId,
+            @McpToolParam(required = false, description = "The event it belongs to, by id") final @Nullable UUID eventId,
             @McpToolParam(required = false, description = "A comment; an empty string clears it") final @Nullable String comment) {
         return support.call("update_budget_line", () -> {
-            final BudgetDtos.Line line = line(revivalId, lineId);
+            final BudgetDtos.Line line = line(ids.idOf(Revival.class, revivalId), lineId);
 
-            return budgetService.updateLine(new BudgetService.LineChange(lineId, line.version(), categoryId(category), description, quantity(quantity),
-                    McpToolSupport.amount(unitAmount), eventId, false, null, false, comment == null || comment.isBlank() ? null : comment,
+            return budgetService.updateLine(new BudgetService.LineChange(ids.idOf(BudgetLine.class, lineId), line.version(), categoryId(category), description, quantity(quantity),
+                    McpToolSupport.amount(unitAmount), ids.idOfNullable(Event.class, eventId), false, null, false, comment == null || comment.isBlank() ? null : comment,
                     comment != null && comment.isBlank()));
         });
     }
@@ -209,30 +219,30 @@ public class BudgetMcpTools {
             description = "Remove a budget line from the totals, or restore a removed one. Removed lines stay in the history; nothing is deleted.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public BudgetDtos.Line setBudgetLineRemoved(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
-            @McpToolParam(description = "The line, by id") final Long lineId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
+            @McpToolParam(description = "The line, by id") final UUID lineId,
             @McpToolParam(description = "true to remove, false to restore") final Boolean removed) {
         return support.call("set_budget_line_removed", () -> {
-            final BudgetDtos.Line line = line(revivalId, lineId);
+            final BudgetDtos.Line line = line(ids.idOf(Revival.class, revivalId), lineId);
 
-            return removed ? budgetService.removeLine(lineId, line.version()) : budgetService.restoreLine(lineId, line.version());
+            return removed ? budgetService.removeLine(ids.idOf(BudgetLine.class, lineId), line.version()) : budgetService.restoreLine(ids.idOf(BudgetLine.class, lineId), line.version());
         });
     }
 
     @McpTool(name = "list_budget_proposals",
             description = "List the budget lines a revival's events propose from their event types, for those not added yet: the event, the category, the quantity and the amount.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public McpToolSupport.ListResult<BudgetDtos.Proposal> listBudgetProposals(@McpToolParam(description = "A revival whose budget you can read") final Long revivalId) {
-        return support.call("list_budget_proposals", () -> new McpToolSupport.ListResult<>(budgetService.proposals(revivalId)));
+    public McpToolSupport.ListResult<BudgetDtos.Proposal> listBudgetProposals(@McpToolParam(description = "A revival whose budget you can read") final UUID revivalId) {
+        return support.call("list_budget_proposals", () -> new McpToolSupport.ListResult<>(budgetService.proposals(ids.idOf(Revival.class, revivalId))));
     }
 
     @McpTool(name = "list_transactions",
             description = "List a revival's transactions: date, amount, category, description, budget line, who paid a cost by name, whether it is reimbursed and has a receipt. Never bank details.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<TransactionView> listTransactions(
-            @McpToolParam(description = "A revival whose budget you can read") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can read") final UUID revivalId,
             @McpToolParam(required = false, description = "Also cancelled ones") final @Nullable Boolean includeCancelled) {
-        return support.call("list_transactions", () -> new McpToolSupport.ListResult<>(transactionService.list(revivalId, Boolean.TRUE.equals(includeCancelled))
+        return support.call("list_transactions", () -> new McpToolSupport.ListResult<>(transactionService.list(ids.idOf(Revival.class, revivalId), Boolean.TRUE.equals(includeCancelled))
                 .stream().map(this::toView).toList()));
     }
 
@@ -240,19 +250,19 @@ public class BudgetMcpTools {
             description = "Change a transaction that is not cancelled. Leave out what stays as it is; an empty paidBy clears who paid.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public TransactionView updateTransaction(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
-            @McpToolParam(description = "The transaction, by id") final Long transactionId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
+            @McpToolParam(description = "The transaction, by id") final UUID transactionId,
             @McpToolParam(required = false, description = "yyyy-MM-dd") final @Nullable String date,
             @McpToolParam(required = false, description = "The amount in kronor") final @Nullable String amount,
             @McpToolParam(required = false, description = "A budget category, by id or name") final @Nullable String category,
             @McpToolParam(required = false, description = "What it was") final @Nullable String description,
-            @McpToolParam(required = false, description = "The budget line it belongs to, by id") final @Nullable Long budgetLineId,
+            @McpToolParam(required = false, description = "The budget line it belongs to, by id") final @Nullable UUID budgetLineId,
             @McpToolParam(required = false, description = "As in add_transaction; an empty string clears it") final @Nullable String paidBy) {
         return support.call("update_transaction", () -> {
-            final BudgetDtos.Transaction transaction = transaction(revivalId, transactionId);
+            final BudgetDtos.Transaction transaction = transaction(ids.idOf(Revival.class, revivalId), transactionId);
 
-            return toView(transactionService.update(new TransactionService.TransactionChange(transactionId, transaction.version(), McpToolSupport.date(date),
-                    McpToolSupport.amount(amount), categoryId(category), description, budgetLineId, false, support.owner(revivalId, paidBy),
+            return toView(transactionService.update(new TransactionService.TransactionChange(ids.idOf(BudgetTransaction.class, transactionId), transaction.version(), McpToolSupport.date(date),
+                    McpToolSupport.amount(amount), categoryId(category), description, ids.idOfNullable(BudgetLine.class, budgetLineId), false, support.owner(ids.idOf(Revival.class, revivalId), paidBy),
                     paidBy != null && paidBy.isBlank())));
         });
     }
@@ -261,42 +271,42 @@ public class BudgetMcpTools {
             description = "Cancel a transaction recorded by mistake. It stays readable and never counts in the totals; transactions are never deleted.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public TransactionView cancelTransaction(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
-            @McpToolParam(description = "The transaction, by id") final Long transactionId) {
-        return support.call("cancel_transaction", () -> toView(transactionService.cancel(transactionId, transaction(revivalId, transactionId).version())));
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
+            @McpToolParam(description = "The transaction, by id") final UUID transactionId) {
+        return support.call("cancel_transaction", () -> toView(transactionService.cancel(ids.idOf(BudgetTransaction.class, transactionId), transaction(ids.idOf(Revival.class, revivalId), transactionId).version())));
     }
 
     @McpTool(name = "set_transaction_reimbursed",
             description = "Mark a cost someone paid out of their own pocket as reimbursed, or not.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public TransactionView setTransactionReimbursed(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
-            @McpToolParam(description = "The transaction, by id") final Long transactionId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
+            @McpToolParam(description = "The transaction, by id") final UUID transactionId,
             @McpToolParam(description = "true when paid back") final Boolean reimbursed) {
-        return support.call("set_transaction_reimbursed", () -> toView(transactionService.setReimbursed(transactionId,
-                transaction(revivalId, transactionId).version(), reimbursed)));
+        return support.call("set_transaction_reimbursed", () -> toView(transactionService.setReimbursed(ids.idOf(BudgetTransaction.class, transactionId),
+                transaction(ids.idOf(Revival.class, revivalId), transactionId).version(), reimbursed)));
     }
 
     @McpTool(name = "update_budget_settings",
             description = "Change a revival's budget settings: participants planned, the participation fee and the loan from FGV/JK. Leave out what stays as it is.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public BudgetDtos.Settings updateBudgetSettings(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
             @McpToolParam(required = false, description = "How many participants are planned") final @Nullable Integer participantsPlanned,
             @McpToolParam(required = false, description = "The fee in kronor") final @Nullable String participationFee,
             @McpToolParam(required = false, description = "The loan in kronor") final @Nullable String loanAmount,
             @McpToolParam(required = false, description = "When the loan came in, yyyy-MM-dd") final @Nullable String loanReceivedOn,
             @McpToolParam(required = false, description = "When it was paid back, yyyy-MM-dd") final @Nullable String loanRepaidOn) {
         return support.call("update_budget_settings", () -> {
-            final BudgetDtos.Settings settings = budgetService.settings(revivalId);
+            final BudgetDtos.Settings settings = budgetService.settings(ids.idOf(Revival.class, revivalId));
 
-            budgetService.updateSettings(new BudgetService.SettingsChange(revivalId, settings.version(),
+            budgetService.updateSettings(new BudgetService.SettingsChange(ids.idOf(Revival.class, revivalId), settings.version(),
                     participantsPlanned == null ? settings.participantsPlanned() : participantsPlanned,
                     participationFee == null ? settings.participationFee() : McpToolSupport.amount(participationFee),
                     loanAmount == null ? settings.loanAmount() : McpToolSupport.amount(loanAmount),
                     loanReceivedOn == null ? settings.loanReceivedOn() : McpToolSupport.date(loanReceivedOn),
                     loanRepaidOn == null ? settings.loanRepaidOn() : McpToolSupport.date(loanRepaidOn)));
-            return budgetService.settings(revivalId);
+            return budgetService.settings(ids.idOf(Revival.class, revivalId));
         });
     }
 
@@ -304,29 +314,29 @@ public class BudgetMcpTools {
             description = "Work out what the result would be with other numbers: participants, the fee, ticket prices and counts, the venue's and the party's cost. Nothing is saved.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public ScenarioResultDto calculateBudgetScenario(
-            @McpToolParam(description = "A revival whose budget you can read") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can read") final UUID revivalId,
             @McpToolParam(description = "The numbers to try; leave out what stays as budgeted") final ScenarioParameters parameters) {
-        return support.call("calculate_budget_scenario", () -> scenarioService.calculate(revivalId, parameters));
+        return support.call("calculate_budget_scenario", () -> scenarioService.calculate(ids.idOf(Revival.class, revivalId), parameters));
     }
 
     @McpTool(name = "list_budget_scenarios",
             description = "List a revival's saved budget scenarios with their numbers and results.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public McpToolSupport.ListResult<BudgetDtos.Scenario> listBudgetScenarios(@McpToolParam(description = "A revival whose budget you can read") final Long revivalId) {
-        return support.call("list_budget_scenarios", () -> new McpToolSupport.ListResult<>(scenarioService.list(revivalId)));
+    public McpToolSupport.ListResult<BudgetDtos.Scenario> listBudgetScenarios(@McpToolParam(description = "A revival whose budget you can read") final UUID revivalId) {
+        return support.call("list_budget_scenarios", () -> new McpToolSupport.ListResult<>(scenarioService.list(ids.idOf(Revival.class, revivalId))));
     }
 
     @McpTool(name = "save_budget_scenario",
             description = "Save a budget scenario under a name, or with a scenarioId replace a saved one.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public BudgetDtos.Scenario saveBudgetScenario(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
             @McpToolParam(description = "Its name") final String name,
             @McpToolParam(description = "The numbers, as in calculate_budget_scenario") final ScenarioParameters parameters,
-            @McpToolParam(required = false, description = "A saved scenario to replace, by id") final @Nullable Long scenarioId) {
+            @McpToolParam(required = false, description = "A saved scenario to replace, by id") final @Nullable UUID scenarioId) {
         return support.call("save_budget_scenario", () -> scenarioId == null
-                ? scenarioService.save(revivalId, name, parameters)
-                : scenarioService.update(scenarioId, McpToolSupport.byId(scenarioService.list(revivalId), BudgetDtos.Scenario::id, scenarioId,
+                ? scenarioService.save(ids.idOf(Revival.class, revivalId), name, parameters)
+                : scenarioService.update(ids.idOfNullable(BudgetScenario.class, scenarioId), McpToolSupport.byId(scenarioService.list(ids.idOf(Revival.class, revivalId)), BudgetDtos.Scenario::id, scenarioId,
                 BudgetScenario.class).version(), name, parameters));
     }
 
@@ -334,12 +344,12 @@ public class BudgetMcpTools {
             description = "Remove a saved budget scenario from the list. It stays in the history; nothing is deleted.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public McpToolSupport.ListResult<BudgetDtos.Scenario> removeBudgetScenario(
-            @McpToolParam(description = "A revival whose budget you can change") final Long revivalId,
-            @McpToolParam(description = "The scenario, by id") final Long scenarioId) {
+            @McpToolParam(description = "A revival whose budget you can change") final UUID revivalId,
+            @McpToolParam(description = "The scenario, by id") final UUID scenarioId) {
         return support.call("remove_budget_scenario", () -> {
-            scenarioService.remove(scenarioId, McpToolSupport.byId(scenarioService.list(revivalId), BudgetDtos.Scenario::id, scenarioId,
+            scenarioService.remove(ids.idOfNullable(BudgetScenario.class, scenarioId), McpToolSupport.byId(scenarioService.list(ids.idOf(Revival.class, revivalId)), BudgetDtos.Scenario::id, scenarioId,
                     BudgetScenario.class).version());
-            return new McpToolSupport.ListResult<>(scenarioService.list(revivalId));
+            return new McpToolSupport.ListResult<>(scenarioService.list(ids.idOf(Revival.class, revivalId)));
         });
     }
 
@@ -370,9 +380,9 @@ public class BudgetMcpTools {
             description = "Super admins: replace an earlier revival's figures.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public ReferenceRevivalDto updateReferenceRevival(
-            @McpToolParam(description = "The reference revival, by id") final Long referenceId,
+            @McpToolParam(description = "The reference revival, by id") final UUID referenceId,
             @McpToolParam(description = "The figures, as in create_reference_revival") final ReferenceRevivalService.Definition definition) {
-        return support.call("update_reference_revival", () -> referenceService.update(referenceId, referenceService.get(referenceId).version(), definition));
+        return support.call("update_reference_revival", () -> referenceService.update(ids.idOf(ReferenceRevival.class, referenceId), referenceService.get(ids.idOf(ReferenceRevival.class, referenceId)).version(), definition));
     }
 
     private ResolvedPayer resolve(final Long revivalId, final @Nullable String paidBy) {
@@ -381,7 +391,7 @@ public class BudgetMcpTools {
         }
         return switch (ownerResolver.resolve(revivalId, paidBy, callerService.current())) {
             case OwnerResolver.Resolution.Member member ->
-                    new ResolvedPayer(new OwnerInputDto(member.personId(), null), LogMcpTools.Resolution.MEMBER);
+                    new ResolvedPayer(new OwnerInputDto(ids.uuidOf(Person.class, member.personId()), null), LogMcpTools.Resolution.MEMBER);
             case OwnerResolver.Resolution.FreeText name ->
                     new ResolvedPayer(new OwnerInputDto(null, name.name()), LogMcpTools.Resolution.FREE_TEXT);
             case OwnerResolver.Resolution.Ambiguous ambiguous ->
@@ -413,14 +423,14 @@ public class BudgetMcpTools {
     /**
      * A transaction as list_transactions returns it: who paid by name, never bank details or the receipt itself.
      */
-    public record TransactionView(Long id, LocalDate date, String amount, String categoryId, String description, @Nullable Long budgetLineId,
+    public record TransactionView(UUID id, LocalDate date, String amount, String categoryId, String description, @Nullable UUID budgetLineId,
                                   @Nullable McpOwner paidBy, boolean reimbursed, boolean receipt, boolean cancelled) {
     }
 
     /**
      * A transaction as add_transaction returns it, with how the payer's name was read.
      */
-    public record TransactionWritten(Long id, LocalDate date, String amount, ChecklistMcpTools.Text category,
+    public record TransactionWritten(UUID id, LocalDate date, String amount, ChecklistMcpTools.Text category,
                                      BudgetCategoryKind kind,
                                      String description, @Nullable McpOwner paidBy,
                                      LogMcpTools.Resolution paidByResolution) {

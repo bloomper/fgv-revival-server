@@ -29,11 +29,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * A revival's checklist: one per chapter of its pinned guide version, or an event checklist with a name and an optional
@@ -57,8 +61,15 @@ public class Checklist extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "kind", nullable = false, updatable = false, length = 8)
@@ -76,8 +87,16 @@ public class Checklist extends AbstractAuditable {
     @Column(name = "template_id")
     private @Nullable Long templateId;
 
+    @Formula("(SELECT t.uuid FROM checklist_template t WHERE t.id = template_id)")
+    @NotAudited
+    private @Nullable UUID templateUuid;
+
     @Column(name = "event_id", updatable = false)
     private @Nullable Long eventId;
+
+    @Formula("(SELECT t.uuid FROM event t WHERE t.id = event_id)")
+    @NotAudited
+    private @Nullable UUID eventUuid;
 
     @Column(name = "cancelled_at")
     private @Nullable Instant cancelledAt;

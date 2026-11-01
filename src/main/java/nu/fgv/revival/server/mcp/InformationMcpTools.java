@@ -24,6 +24,7 @@ import nu.fgv.revival.server.news.NewsService;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarDate;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarDateDto;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarService;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * News, the Chalmersspex's dates and a record's history over MCP. News and dates are deleted only in the web.
@@ -42,13 +44,17 @@ import java.util.Objects;
 @Component
 public class InformationMcpTools {
 
+    private final ExternalIds ids;
+
     private final NewsService newsService;
     private final SpexCalendarService spexCalendarService;
     private final AuditService auditService;
     private final McpToolSupport support;
 
     public InformationMcpTools(final NewsService newsService, final SpexCalendarService spexCalendarService, final AuditService auditService,
-                               final McpToolSupport support) {
+                               final McpToolSupport support,
+                               final ExternalIds ids) {
+        this.ids = ids;
         this.newsService = newsService;
         this.spexCalendarService = spexCalendarService;
         this.auditService = auditService;
@@ -79,7 +85,7 @@ public class InformationMcpTools {
             description = "Super admins: change news. Give every field; list_news with all shows the current ones. Leave out a day to clear it.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public NewsDto updateNews(
-            @McpToolParam(description = "The news, by id") final Long newsId,
+            @McpToolParam(description = "The news, by id") final UUID newsId,
             @McpToolParam(description = "1-255 characters") final String subject,
             @McpToolParam(description = "Plain text with line breaks") final String text,
             @McpToolParam(required = false, description = "The first day, yyyy-MM-dd") final @Nullable String visibleFrom,
@@ -87,7 +93,7 @@ public class InformationMcpTools {
         return support.call("update_news", () -> {
             final NewsDto news = McpToolSupport.byId(newsService.list(true, null), NewsDto::id, newsId, News.class);
 
-            return newsService.update(newsId, news.version(), subject, text, McpToolSupport.date(visibleFrom), McpToolSupport.date(visibleTo));
+            return newsService.update(ids.idOf(News.class, newsId), news.version(), subject, text, McpToolSupport.date(visibleFrom), McpToolSupport.date(visibleTo));
         });
     }
 
@@ -107,7 +113,7 @@ public class InformationMcpTools {
     public SpexCalendarDateDto saveSpexCalendarDate(
             @McpToolParam(description = "yyyy-MM-dd") final String date,
             @McpToolParam(description = "What, 1-100 characters, e.g. Chalmersspexet: premiär") final String label,
-            @McpToolParam(required = false, description = "A date to change, by id") final @Nullable Long id) {
+            @McpToolParam(required = false, description = "A date to change, by id") final @Nullable UUID id) {
         return support.call("save_spex_calendar_date", () -> {
             final java.time.LocalDate day = Objects.requireNonNull(McpToolSupport.date(date));
 
@@ -117,7 +123,7 @@ public class InformationMcpTools {
 
             final SpexCalendarDateDto current = McpToolSupport.byId(spexCalendarService.list(null, null), SpexCalendarDateDto::id, id, SpexCalendarDate.class);
 
-            return spexCalendarService.update(id, current.version(), day, label);
+            return spexCalendarService.update(ids.idOfNullable(SpexCalendarDate.class, id), current.version(), day, label);
         });
     }
 
@@ -126,7 +132,7 @@ public class InformationMcpTools {
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<RevisionDto> getHistory(
             @McpToolParam(description = "LOG_ENTRY, CHECKLIST_ITEM, EVENT, BUDGET_LINE, BUDGET_TRANSACTION, MATERIAL or NEWS") final AuditedType type,
-            @McpToolParam(description = "The record's id") final Long id) {
+            @McpToolParam(description = "The record's id") final UUID id) {
         return support.call("get_history", () -> new McpToolSupport.ListResult<>(auditService.revisions(type, id, Locale.ENGLISH)));
     }
 }

@@ -21,6 +21,7 @@ import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonRepository;
 import nu.fgv.revival.server.util.error.BadRequestException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,8 @@ import java.util.stream.Collectors;
 @Component
 public class OwnerResolver {
 
+    private final ExternalIds ids;
+
     private static final Set<RevivalRole> OWNER_ROLES = EnumSet.of(RevivalRole.DIRECTEUR, RevivalRole.STEERING_GROUP);
     private static final Set<RevivalRole> PARTICIPANT_ROLES = EnumSet.of(RevivalRole.PARTICIPANT);
     private static final String ME = "me";
@@ -56,7 +59,8 @@ public class OwnerResolver {
     private final RevivalMemberRepository memberRepository;
     private final PersonRepository personRepository;
 
-    public OwnerResolver(final RevivalMemberRepository memberRepository, final PersonRepository personRepository) {
+    public OwnerResolver(final RevivalMemberRepository memberRepository, final PersonRepository personRepository, final ExternalIds ids) {
+        this.ids = ids;
         this.memberRepository = memberRepository;
         this.personRepository = personRepository;
     }
@@ -180,9 +184,9 @@ public class OwnerResolver {
         return isSame(current, input) ? current : validateChecklistOwner(revivalId, input);
     }
 
-    private static boolean isSame(final Owner current, final OwnerInputDto input) {
+    private boolean isSame(final Owner current, final OwnerInputDto input) {
         return input.personId() != null && input.name() == null
-                ? input.personId().equals(current.getPersonId())
+                ? current.getPersonId() != null && input.personId().equals(ids.uuidOf(Person.class, current.getPersonId()))
                 : input.personId() == null && input.name() != null && input.name().strip().equals(current.getName());
     }
 
@@ -203,7 +207,7 @@ public class OwnerResolver {
         return validate(input, () -> activeMembers(revivalId).keySet());
     }
 
-    private static Owner validate(final @Nullable OwnerInputDto input, final Supplier<Set<Long>> owners) {
+    private Owner validate(final @Nullable OwnerInputDto input, final Supplier<Set<Long>> owners) {
         if (input == null || (input.personId() == null && input.name() == null)) {
             return Owner.none();
         }
@@ -211,10 +215,11 @@ public class OwnerResolver {
             throw new BadRequestException("error.owner.both");
         }
         if (input.personId() != null) {
-            if (!owners.get().contains(input.personId())) {
-                throw new BadRequestException("error.owner.notMember");
-            }
-            return Owner.member(input.personId());
+            final Long personId = ids.findIdOf(Person.class, input.personId())
+                    .filter(id -> owners.get().contains(id))
+                    .orElseThrow(() -> new BadRequestException("error.owner.notMember"));
+
+            return Owner.member(personId);
         }
         return Owner.named(validName(Objects.requireNonNull(input.name())));
     }

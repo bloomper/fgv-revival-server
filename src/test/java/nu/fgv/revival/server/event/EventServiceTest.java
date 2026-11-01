@@ -45,6 +45,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -91,7 +94,9 @@ class EventServiceTest {
         final Event event = new Event();
 
         event.setId(id);
+        event.setUuid(uuid(event.getId()));
         event.setRevivalId(REVIVAL_ID);
+        event.setRevivalUuid(uuidOrNull(event.getRevivalId()));
         event.setTitle("Rephelg 1");
         event.setStartDate(start);
         event.setEndDate(start.plusDays(1));
@@ -115,11 +120,13 @@ class EventServiceTest {
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         type = new EventType();
         type.setId(TYPE_ID);
+        type.setUuid(uuid(type.getId()));
         type.setNameSv("Rephelg 1");
         type.setNameEn("Rehearsal weekend 1");
         type.setDays(2);
         type.setRevivalPays(true);
         type.setChecklistTemplateId(TEMPLATE_ID);
+        type.setChecklistTemplateUuid(uuidOrNull(type.getChecklistTemplateId()));
         event = event(EVENT_ID, START, null);
         lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
@@ -130,8 +137,9 @@ class EventServiceTest {
 
             if (saved.getId() == null) {
                 saved.setId(99L);
+                saved.setUuid(uuid(saved.getId()));
             }
-            return saved;
+            return withUuids(saved);
         });
     }
 
@@ -153,7 +161,7 @@ class EventServiceTest {
             final EventDto created = service.create(newEvent(TYPE_ID, null), Locale.of("sv"));
 
             assertThat(created.title()).isEqualTo("Rephelg 1");
-            assertThat(created.typeId()).isEqualTo(TYPE_ID);
+            assertThat(created.typeId()).isEqualTo(uuid(TYPE_ID));
             assertThat(created.endDate()).isEqualTo(START.plusDays(1));
             assertThat(created.revivalPays()).isTrue();
             assertThat(created.daysFromPremiere()).isEqualTo(-61);
@@ -291,6 +299,7 @@ class EventServiceTest {
         @Test
         void anEventInAnotherRevivalIsNotFound() {
             event.setRevivalId(2L);
+            event.setRevivalUuid(uuidOrNull(event.getRevivalId()));
 
             assertThatThrownBy(() -> service.update(change())).isInstanceOf(ResourceNotFoundException.class);
             assertThatThrownBy(() -> service.get(EVENT_ID)).isInstanceOf(ResourceNotFoundException.class);
@@ -329,8 +338,8 @@ class EventServiceTest {
             timed.setStartTime(LocalTime.of(9, 0));
             when(repository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(later, timed, cancelled, event));
 
-            assertThat(service.list(REVIVAL_ID, false)).extracting(EventDto::id).containsExactly(EVENT_ID, 7L, 6L);
-            assertThat(service.list(REVIVAL_ID, true)).extracting(EventDto::id).containsExactly(8L, EVENT_ID, 7L, 6L);
+            assertThat(service.list(REVIVAL_ID, false)).extracting(EventDto::id).containsExactly(uuid(EVENT_ID), uuid(7), uuid(6));
+            assertThat(service.list(REVIVAL_ID, true)).extracting(EventDto::id).containsExactly(uuid(8), uuid(EVENT_ID), uuid(7), uuid(6));
         }
 
         @Test
@@ -339,7 +348,7 @@ class EventServiceTest {
             when(repository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(event));
 
             assertThat(service.list(REVIVAL_ID, false)).hasSize(1);
-            assertThat(service.get(EVENT_ID).id()).isEqualTo(EVENT_ID);
+            assertThat(service.get(EVENT_ID).id()).isEqualTo(uuid(EVENT_ID));
         }
 
         @Test
@@ -351,7 +360,7 @@ class EventServiceTest {
             when(repository.findByRevivalId(REVIVAL_ID)).thenReturn(events);
 
             // Event 2 started yesterday and ends today, so it has not ended
-            assertThat(service.upcoming(REVIVAL_ID)).extracting(EventDto::id).containsExactly(2L, 4L, 6L);
+            assertThat(service.upcoming(REVIVAL_ID)).extracting(EventDto::id).containsExactly(uuid(2), uuid(4), uuid(6));
         }
 
         @Test
@@ -359,6 +368,7 @@ class EventServiceTest {
             final EventType show = new EventType();
 
             show.setId(6L);
+            show.setUuid(uuid(show.getId()));
             show.setNameSv("Föreställningshelg");
             show.setOffsetMinDays(0);
             show.setOffsetMaxDays(0);
@@ -367,13 +377,14 @@ class EventServiceTest {
             type.setOffsetMinDays(-70);
             type.setOffsetMaxDays(-56);
             event.setTypeId(TYPE_ID);
+            event.setTypeUuid(uuidOrNull(event.getTypeId()));
             when(typeRepository.findAllByOrderByPositionAscIdAsc()).thenReturn(List.of(type, show));
             when(repository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(event));
 
-            assertThat(service.proposals(REVIVAL_ID)).extracting(proposal -> proposal.type().id()).containsExactly(6L);
+            assertThat(service.proposals(REVIVAL_ID)).extracting(proposal -> proposal.type().id()).containsExactly(uuid(6));
 
             event.setCancelledAt(Instant.EPOCH);
-            assertThat(service.proposals(REVIVAL_ID)).extracting(proposal -> proposal.type().id()).containsExactly(TYPE_ID, 6L);
+            assertThat(service.proposals(REVIVAL_ID)).extracting(proposal -> proposal.type().id()).containsExactly(uuid(TYPE_ID), uuid(6));
         }
     }
 }

@@ -17,10 +17,12 @@ package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.RelativeDeadline;
+import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateDto;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemDto;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateService;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -28,6 +30,7 @@ import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -40,10 +43,13 @@ import java.util.stream.Stream;
 @Component
 public class ChecklistTemplateMcpTools {
 
+    private final ExternalIds ids;
+
     private final ChecklistTemplateService templateService;
     private final McpToolSupport support;
 
-    public ChecklistTemplateMcpTools(final ChecklistTemplateService templateService, final McpToolSupport support) {
+    public ChecklistTemplateMcpTools(final ChecklistTemplateService templateService, final McpToolSupport support, final ExternalIds ids) {
+        this.ids = ids;
         this.templateService = templateService;
         this.support = support;
     }
@@ -56,7 +62,7 @@ public class ChecklistTemplateMcpTools {
         return due == null ? null : RelativeDeadline.of(due.kind(), due.amount(), due.weekday());
     }
 
-    private ChecklistTemplateItemDto item(final Long templateId, final Long itemId) {
+    private ChecklistTemplateItemDto item(final Long templateId, final UUID itemId) {
         return McpToolSupport.byId(Stream.concat(templateService.get(templateId).items().stream(), templateService.retiredItems(templateId).stream()).toList(),
                 ChecklistTemplateItemDto::id, itemId, ChecklistTemplateItem.class);
     }
@@ -85,10 +91,10 @@ public class ChecklistTemplateMcpTools {
             description = "Super admins: rename an event checklist template.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public ChecklistTemplateDto updateChecklistTemplate(
-            @McpToolParam(description = "The template, by id") final Long templateId,
+            @McpToolParam(description = "The template, by id") final UUID templateId,
             @McpToolParam(description = "The name in Swedish") final String nameSv,
             @McpToolParam(required = false, description = "The name in English") final @Nullable String nameEn) {
-        return support.call("update_checklist_template", () -> templateService.update(templateId, templateService.get(templateId).version(),
+        return support.call("update_checklist_template", () -> templateService.update(ids.idOf(ChecklistTemplate.class, templateId), templateService.get(ids.idOf(ChecklistTemplate.class, templateId)).version(),
                 texts(nameSv, nameEn)));
     }
 
@@ -96,12 +102,12 @@ public class ChecklistTemplateMcpTools {
             description = "Super admins: retire a checklist template so it is no longer used, or restore it.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public ChecklistTemplateDto setChecklistTemplateRetired(
-            @McpToolParam(description = "The template, by id") final Long templateId,
+            @McpToolParam(description = "The template, by id") final UUID templateId,
             @McpToolParam(description = "true to retire, false to restore") final Boolean retired) {
         return support.call("set_checklist_template_retired", () -> {
-            final Long version = templateService.get(templateId).version();
+            final Long version = templateService.get(ids.idOf(ChecklistTemplate.class, templateId)).version();
 
-            return retired ? templateService.retire(templateId, version) : templateService.restore(templateId, version);
+            return retired ? templateService.retire(ids.idOf(ChecklistTemplate.class, templateId), version) : templateService.restore(ids.idOf(ChecklistTemplate.class, templateId), version);
         });
     }
 
@@ -109,14 +115,14 @@ public class ChecklistTemplateMcpTools {
             description = "Super admins: add an item to a checklist template, last or at a position (counting from 0), with an optional guide item, area of responsibility (whose holder becomes its owner) and deadline relative to the checklist's date.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public ChecklistTemplateItemDto createChecklistTemplateItem(
-            @McpToolParam(description = "The template, by id") final Long templateId,
+            @McpToolParam(description = "The template, by id") final UUID templateId,
             @McpToolParam(description = "The text in Swedish") final String textSv,
             @McpToolParam(required = false, description = "The text in English") final @Nullable String textEn,
             @McpToolParam(required = false, description = "A guide item's key it belongs to") final @Nullable String guideItemKey,
             @McpToolParam(required = false, description = "An area of responsibility's id, from list_catalog_entries with CAPABILITIES") final @Nullable String defaultCapability,
             @McpToolParam(required = false, description = "When it is due, relative to the checklist's date") final MailingMcpTools.@Nullable Due deadline,
             @McpToolParam(required = false, description = "Its place, counting from 0") final @Nullable Integer position) {
-        return support.call("create_checklist_template_item", () -> templateService.createItem(new ChecklistTemplateService.NewItem(templateId, position,
+        return support.call("create_checklist_template_item", () -> templateService.createItem(new ChecklistTemplateService.NewItem(ids.idOf(ChecklistTemplate.class, templateId), position,
                 new ChecklistTemplateService.Texts(textSv, textEn), guideItemKey, defaultCapability, deadline(deadline))));
     }
 
@@ -124,8 +130,8 @@ public class ChecklistTemplateMcpTools {
             description = "Super admins: change a template item: its text, guide item, area of responsibility or deadline, and optionally its position (counting from 0). Leave out what stays as it is; an empty string clears the guide item or the area.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public ChecklistTemplateDto updateChecklistTemplateItem(
-            @McpToolParam(description = "The template, by id") final Long templateId,
-            @McpToolParam(description = "The item, by id") final Long itemId,
+            @McpToolParam(description = "The template, by id") final UUID templateId,
+            @McpToolParam(description = "The item, by id") final UUID itemId,
             @McpToolParam(required = false, description = "The text in Swedish") final @Nullable String textSv,
             @McpToolParam(required = false, description = "The text in English") final @Nullable String textEn,
             @McpToolParam(required = false, description = "A guide item's key; an empty string clears it") final @Nullable String guideItemKey,
@@ -134,17 +140,17 @@ public class ChecklistTemplateMcpTools {
             @McpToolParam(required = false, description = "true clears the deadline") final @Nullable Boolean clearDeadline,
             @McpToolParam(required = false, description = "Its place, counting from 0") final @Nullable Integer position) {
         return support.call("update_checklist_template_item", () -> {
-            ChecklistTemplateItemDto item = item(templateId, itemId);
+            ChecklistTemplateItemDto item = item(ids.idOf(ChecklistTemplate.class, templateId), itemId);
 
             if (textSv != null || textEn != null || guideItemKey != null || defaultCapability != null || deadline != null || clearDeadline != null) {
-                item = templateService.updateItem(new ChecklistTemplateService.ItemChange(itemId, item.version(),
+                item = templateService.updateItem(new ChecklistTemplateService.ItemChange(ids.idOf(ChecklistTemplateItem.class, itemId), item.version(),
                         textSv == null && textEn == null ? null : new ChecklistTemplateService.Texts(textSv == null ? item.text().sv() : textSv,
                                 textEn == null ? item.text().en() : textEn),
                         guideItemKey == null || guideItemKey.isBlank() ? null : guideItemKey, guideItemKey != null && guideItemKey.isBlank(),
                         defaultCapability == null || defaultCapability.isBlank() ? null : defaultCapability,
                         defaultCapability != null && defaultCapability.isBlank(), deadline(deadline), Boolean.TRUE.equals(clearDeadline)));
             }
-            return position == null ? templateService.get(templateId) : templateService.moveItem(itemId, item.version(), position);
+            return position == null ? templateService.get(ids.idOf(ChecklistTemplate.class, templateId)) : templateService.moveItem(ids.idOf(ChecklistTemplateItem.class, itemId), item.version(), position);
         });
     }
 
@@ -152,13 +158,13 @@ public class ChecklistTemplateMcpTools {
             description = "Super admins: retire a template item so new checklists no longer get it, or restore it. Checklists that have it keep it.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public ChecklistTemplateDto setChecklistTemplateItemRetired(
-            @McpToolParam(description = "The template, by id") final Long templateId,
-            @McpToolParam(description = "The item, by id") final Long itemId,
+            @McpToolParam(description = "The template, by id") final UUID templateId,
+            @McpToolParam(description = "The item, by id") final UUID itemId,
             @McpToolParam(description = "true to retire, false to restore") final Boolean retired) {
         return support.call("set_checklist_template_item_retired", () -> {
-            final Long version = item(templateId, itemId).version();
+            final Long version = item(ids.idOf(ChecklistTemplate.class, templateId), itemId).version();
 
-            return retired ? templateService.retireItem(itemId, version) : templateService.restoreItem(itemId, version);
+            return retired ? templateService.retireItem(ids.idOf(ChecklistTemplateItem.class, itemId), version) : templateService.restoreItem(ids.idOf(ChecklistTemplateItem.class, itemId), version);
         });
     }
 }

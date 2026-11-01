@@ -47,7 +47,7 @@ public class RevivalTitles {
                 : "%s %d".formatted(spex.title(), year);
     }
 
-    public String of(final Long spexId, final int year, final Locale locale) {
+    public String of(final String spexId, final int year, final Locale locale) {
         return of(spexService.findTitles(List.of(spexId)).get(spexId), year, locale);
     }
 

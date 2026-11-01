@@ -30,6 +30,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -57,7 +59,9 @@ class RevivalGuideVersionsTest {
         final Revival revival = TestCallers.revival(RevivalStatus.ORGANISING);
 
         revival.setId(id);
+        revival.setUuid(uuid(revival.getId()));
         revival.setGuideVersionId(versionId);
+        revival.setGuideVersionUuid(uuidOrNull(revival.getGuideVersionId()));
         return revival;
     }
 
@@ -69,6 +73,7 @@ class RevivalGuideVersionsTest {
         final GuideVersion version = new GuideVersion();
 
         version.setId(id);
+        version.setUuid(uuid(version.getId()));
         version.setLabel(label);
         when(versionRepository.findById(id)).thenReturn(Optional.of(version));
     }
@@ -101,6 +106,7 @@ class RevivalGuideVersionsTest {
         final GuideVersion version = new GuideVersion();
 
         version.setId(5L);
+        version.setUuid(uuid(version.getId()));
         labelled(5L, "v1");
         when(revivalRepository.findByGuideVersionIdIsNull()).thenReturn(List.of(revival(1L, null), revival(2L, null)));
 

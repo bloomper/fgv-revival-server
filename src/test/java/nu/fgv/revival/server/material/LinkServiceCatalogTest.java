@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,7 +70,7 @@ class LinkServiceCatalogTest {
         lenient().when(repository.findAllByOrderByPositionAscIdAsc()).thenAnswer(invocation -> List.copyOf(services));
         lenient().when(repository.findById(any())).thenAnswer(invocation ->
                 services.stream().filter(service -> service.getId().equals(invocation.getArgument(0))).findFirst());
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
     }
 
     private LinkService find(final String id) {

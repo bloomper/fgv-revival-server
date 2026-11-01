@@ -15,6 +15,7 @@
  */
 package nu.fgv.revival.server.budget;
 
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Reference figures from earlier revivals over GraphQL.
@@ -33,9 +35,12 @@ import java.util.List;
 @Controller
 public class ReferenceRevivalGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final ReferenceRevivalService service;
 
-    public ReferenceRevivalGraphqlApi(final ReferenceRevivalService service) {
+    public ReferenceRevivalGraphqlApi(final ReferenceRevivalService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
@@ -52,8 +57,8 @@ public class ReferenceRevivalGraphqlApi {
     }
 
     @QueryMapping
-    public ReferenceRevivalDto referenceRevival(@Argument final Long id) {
-        return service.get(id);
+    public ReferenceRevivalDto referenceRevival(@Argument final UUID id) {
+        return service.get(ids.idOf(ReferenceRevival.class, id));
     }
 
     @MutationMapping
@@ -62,13 +67,13 @@ public class ReferenceRevivalGraphqlApi {
     }
 
     @MutationMapping
-    public ReferenceRevivalDto referenceRevivalUpdate(@Argument final Long id, @Argument final Long version, @Argument final ReferenceRevivalInput input) {
-        return service.update(id, version, definition(input));
+    public ReferenceRevivalDto referenceRevivalUpdate(@Argument final UUID id, @Argument final Long version, @Argument final ReferenceRevivalInput input) {
+        return service.update(ids.idOf(ReferenceRevival.class, id), version, definition(input));
     }
 
     @MutationMapping
-    public void referenceRevivalDelete(@Argument final Long id, @Argument final Long version) {
-        service.delete(id, version);
+    public void referenceRevivalDelete(@Argument final UUID id, @Argument final Long version) {
+        service.delete(ids.idOf(ReferenceRevival.class, id), version);
     }
 
     public record ReferenceFigureInput(String categoryId, @Nullable BigDecimal budgeted, @Nullable BigDecimal actual) {

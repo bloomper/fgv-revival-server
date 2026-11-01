@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.member;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.graphql.test.tester.GraphQlTester;
@@ -40,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
-    private long id;
+    private EntityId id;
 
     @BeforeEach
     void setUp() {
@@ -59,7 +60,7 @@ class SteeringGroupGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     private long memberVersion(final String memberId) {
-        return jdbcClient.sql("SELECT version FROM revival_member WHERE id = ?").param(Long.parseLong(memberId)).query(Long.class).single();
+        return jdbcClient.sql("SELECT version FROM revival_member WHERE uuid = ?").param(memberId).query(Long.class).single();
     }
 
     @Test

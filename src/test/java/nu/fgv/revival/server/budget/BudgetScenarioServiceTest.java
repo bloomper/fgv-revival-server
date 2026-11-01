@@ -17,6 +17,7 @@ package nu.fgv.revival.server.budget;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.revival.Revival;
@@ -38,6 +39,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -88,12 +91,13 @@ class BudgetScenarioServiceTest {
 
             if (scenario.getId() == null) {
                 scenario.setId(1L + scenarios.size());
+                scenario.setUuid(uuid(scenario.getId()));
                 scenario.setVersion(0L);
                 scenarios.add(scenario);
             } else {
                 scenario.setVersion(scenario.getVersion() + 1);
             }
-            return scenario;
+            return withUuids(scenario);
         });
     }
 
@@ -130,12 +134,12 @@ class BudgetScenarioServiceTest {
     void aRemovedScenarioIsKeptButNotListedOrChanged() {
         final BudgetDtos.Scenario saved = service.save(REVIVAL_ID, "Test", tickets(1));
 
-        assertThatThrownBy(() -> service.update(saved.id(), 3L, "Test 2", tickets(2))).isInstanceOf(ConflictException.class);
-        assertThat(service.update(saved.id(), 0L, "Test 2", tickets(2)).name()).isEqualTo("Test 2");
-        service.remove(saved.id(), 1L);
+        assertThatThrownBy(() -> service.update(TestExternalIds.internal(saved.id()), 3L, "Test 2", tickets(2))).isInstanceOf(ConflictException.class);
+        assertThat(service.update(TestExternalIds.internal(saved.id()), 0L, "Test 2", tickets(2)).name()).isEqualTo("Test 2");
+        service.remove(TestExternalIds.internal(saved.id()), 1L);
 
         assertThat(scenarios.getFirst().getRemovedAt()).isNotNull();
         assertThat(service.list(REVIVAL_ID)).isEmpty();
-        assertThatThrownBy(() -> service.update(saved.id(), 2L, "Test 3", tickets(3))).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.update(TestExternalIds.internal(saved.id()), 2L, "Test 3", tickets(3))).isInstanceOf(ResourceNotFoundException.class);
     }
 }

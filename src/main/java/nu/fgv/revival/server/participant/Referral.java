@@ -25,9 +25,11 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nu.fgv.revival.server.util.Uuids;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Someone a participant thinks the steering group is missing. Not audited and deleted once the
@@ -50,6 +52,9 @@ public class Referral {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;

@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.decisionlog;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
 
-    private long revival;
+    private EntityId revival;
 
     @BeforeEach
     void revivalThenSpexregisterDown() {
@@ -46,7 +47,7 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
     @Test
     void theLogWorks() {
         final int before = spexregisterCalls();
-        final long id = Long.parseLong(execute(STEERING_GROUP,
+        final EntityId id = entityId("log_entry", execute(STEERING_GROUP,
                 "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "QUESTION", "text", "Var spelar vi?", "tags", List.of("lokal")))
         ).errors().verify().path("logEntryCreate.id").entity(String.class).get());
@@ -64,10 +65,10 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
     @Test
     void meetingsWork() {
         final int before = spexregisterCalls();
-        final long meeting = Long.parseLong(execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
+        final EntityId meeting = entityId("meeting", execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "date", "2026-11-01", "attendeeIds", List.of(personId(DIRECTEUR)))))
                 .errors().verify().path("meetingCreate.id").entity(String.class).get());
-        final long cancelled = Long.parseLong(execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
+        final EntityId cancelled = entityId("meeting", execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "date", "2026-11-08"))).errors().verify().path("meetingCreate.id").entity(String.class).get());
 
         execute(STEERING_GROUP, "mutation($input: MeetingUpdateInput!) { meetingUpdate(input: $input) { id } }",
@@ -78,8 +79,8 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
         execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "meetingId", meeting, "type", "DECISION", "text", "Vi spelar i RunAn"))).errors().verify();
         execute(STEERING_GROUP, "mutation($input: LogEntryUpdateInput!) { logEntryUpdate(input: $input) { id } }",
-                Map.of("input", Map.of("id", jdbcClient.sql("SELECT id FROM log_entry WHERE revival_id = ? AND type = 'QUESTION'").param(revival)
-                        .query(Long.class).single(), "version", 0, "meetingId", meeting, "status", "DONE"))).errors().verify();
+                Map.of("input", Map.of("id", entityId(jdbcClient.sql("SELECT id, uuid FROM log_entry WHERE revival_id = ? AND type = 'QUESTION'").param(revival)
+                        ), "version", 0, "meetingId", meeting, "status", "DONE"))).errors().verify();
         execute(STEERING_GROUP, "mutation($id: ID!) { meetingClose(id: $id, version: 2) { id } }", Map.of("id", meeting)).errors().verify();
         execute(STEERING_GROUP, "mutation($input: MinutesEmailSendInput!) { minutesEmailSend(input: $input) { id } }",
                 Map.of("input", Map.of("meetingId", meeting, "language", "sv"))).errors().verify();
@@ -92,12 +93,12 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
     @Test
     void checklistsWork() {
         final int before = spexregisterCalls();
-        final long phaseA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival).query(Long.class).single();
-        final long required = jdbcClient.sql("SELECT id FROM checklist_item WHERE checklist_id = ?").param(phaseA).query(Long.class).single();
-        final long event = Long.parseLong(execute(STEERING_GROUP, "mutation($input: EventChecklistCreateInput!) { eventChecklistCreate(input: $input) { id } }",
+        final EntityId phaseA = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival));
+        final EntityId required = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist_item WHERE checklist_id = ?").param(phaseA));
+        final EntityId event = entityId("checklist", execute(STEERING_GROUP, "mutation($input: EventChecklistCreateInput!) { eventChecklistCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "name", "Rephelg 2", "date", "2027-11-20"))).errors().verify()
                 .path("eventChecklistCreate.id").entity(String.class).get());
-        final long item = Long.parseLong(execute(STEERING_GROUP, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",
+        final EntityId item = entityId("checklist_item", execute(STEERING_GROUP, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",
                 Map.of("input", Map.of("checklistId", event, "text", "Fika", "owner", Map.of("personId", personId(STEERING_GROUP)))))
                 .errors().verify().path("checklistItemCreate.id").entity(String.class).get());
 

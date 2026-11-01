@@ -31,12 +31,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * A link to where a revival's file is kept: https only, in the link service chosen or recognised from its
@@ -63,8 +67,15 @@ public class Material extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Column(name = "title", nullable = false, length = TITLE_MAX_LENGTH)
     private String title;

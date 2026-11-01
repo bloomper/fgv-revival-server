@@ -15,9 +15,12 @@
  */
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.event.Event;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.staffing.ShiftSlot;
 import nu.fgv.revival.server.staffing.StaffingDtos.ShiftSlotDto;
 import nu.fgv.revival.server.staffing.StaffingService;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A revival's shift slots over MCP: the planning rows, never who holds them. Assigning people, availability and
@@ -38,10 +42,13 @@ import java.util.Objects;
 @Component
 public class StaffingMcpTools {
 
+    private final ExternalIds ids;
+
     private final StaffingService staffingService;
     private final McpToolSupport support;
 
-    public StaffingMcpTools(final StaffingService staffingService, final McpToolSupport support) {
+    public StaffingMcpTools(final StaffingService staffingService, final McpToolSupport support, final ExternalIds ids) {
+        this.ids = ids;
         this.staffingService = staffingService;
         this.support = support;
     }
@@ -61,9 +68,9 @@ public class StaffingMcpTools {
             description = "List a revival's shift slots for its events that are not cancelled, by date and time: the event, the task, the time, how many people are needed, how many hold it and how many places are open. Never who.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<Slot> listShiftSlots(
-            @McpToolParam(description = "A revival you can see") final Long revivalId,
-            @McpToolParam(required = false, description = "Only this event, by id") final @Nullable Long eventId) {
-        return support.call("list_shift_slots", () -> new McpToolSupport.ListResult<>(staffingService.slots(revivalId, eventId, Locale.ENGLISH).stream()
+            @McpToolParam(description = "A revival you can see") final UUID revivalId,
+            @McpToolParam(required = false, description = "Only this event, by id") final @Nullable UUID eventId) {
+        return support.call("list_shift_slots", () -> new McpToolSupport.ListResult<>(staffingService.slots(ids.idOf(Revival.class, revivalId), ids.idOfNullable(Event.class, eventId), Locale.ENGLISH).stream()
                 .map(StaffingMcpTools::toMcp)
                 .toList()));
     }
@@ -72,14 +79,14 @@ public class StaffingMcpTools {
             description = "Add a shift slot to one of a revival's events: a task on a day between two times, and how many people it needs. People are assigned in the web.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public Slot createShiftSlot(
-            @McpToolParam(description = "The event, by id from list_events") final Long eventId,
+            @McpToolParam(description = "The event, by id from list_events") final UUID eventId,
             @McpToolParam(description = "A day of the event, yyyy-MM-dd") final String date,
             @McpToolParam(description = "HH:mm") final String startTime,
             @McpToolParam(description = "HH:mm") final String endTime,
             @McpToolParam(description = "What to do, e.g. Biljettkontroll") final String task,
             @McpToolParam(required = false, description = "How many people, default 1") final @Nullable Integer needed,
             @McpToolParam(required = false, description = "A comment") final @Nullable String comment) {
-        return support.call("create_shift_slot", () -> toMcp(staffingService.create(input(eventId, date, startTime, endTime, task, needed, comment),
+        return support.call("create_shift_slot", () -> toMcp(staffingService.create(input(ids.idOfNullable(Event.class, eventId), date, startTime, endTime, task, needed, comment),
                 Locale.ENGLISH)));
     }
 
@@ -87,8 +94,8 @@ public class StaffingMcpTools {
             description = "Change a shift slot: its day, times, task, how many it needs or its comment. Give every field; list_shift_slots shows the current ones.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public Slot updateShiftSlot(
-            @McpToolParam(description = "A revival you can see") final Long revivalId,
-            @McpToolParam(description = "The slot, by id from list_shift_slots") final Long slotId,
+            @McpToolParam(description = "A revival you can see") final UUID revivalId,
+            @McpToolParam(description = "The slot, by id from list_shift_slots") final UUID slotId,
             @McpToolParam(description = "yyyy-MM-dd") final String date,
             @McpToolParam(description = "HH:mm") final String startTime,
             @McpToolParam(description = "HH:mm") final String endTime,
@@ -96,9 +103,9 @@ public class StaffingMcpTools {
             @McpToolParam(description = "How many people") final Integer needed,
             @McpToolParam(required = false, description = "A comment; leave out to clear it") final @Nullable String comment) {
         return support.call("update_shift_slot", () -> {
-            final ShiftSlotDto slot = McpToolSupport.byId(staffingService.slots(revivalId, null, Locale.ENGLISH), ShiftSlotDto::id, slotId, ShiftSlot.class);
+            final ShiftSlotDto slot = McpToolSupport.byId(staffingService.slots(ids.idOf(Revival.class, revivalId), null, Locale.ENGLISH), ShiftSlotDto::id, slotId, ShiftSlot.class);
 
-            return toMcp(staffingService.update(slotId, slot.version(), input(slot.event().id(), date, startTime, endTime, task, needed, comment),
+            return toMcp(staffingService.update(ids.idOf(ShiftSlot.class, slotId), slot.version(), input(ids.idOf(Event.class, slot.event().id()), date, startTime, endTime, task, needed, comment),
                     Locale.ENGLISH));
         });
     }
@@ -106,7 +113,7 @@ public class StaffingMcpTools {
     /**
      * A slot without who holds it: how many do, and how many places are open.
      */
-    public record Slot(Long id, Long eventId, String event, LocalDate date, String startTime, String endTime,
+    public record Slot(UUID id, UUID eventId, String event, LocalDate date, String startTime, String endTime,
                        String task, int needed, int held, int open, @Nullable String comment) {
     }
 }

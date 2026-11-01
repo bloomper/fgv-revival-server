@@ -17,12 +17,16 @@
 
 package nu.fgv.revival.server.calendar;
 
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalDto;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
+
+import java.util.UUID;
 
 /**
  * Calendar links over GraphQL (event.graphqls).
@@ -33,24 +37,27 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class CalendarFeedGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final CalendarFeedService service;
 
-    public CalendarFeedGraphqlApi(final CalendarFeedService service) {
+    public CalendarFeedGraphqlApi(final CalendarFeedService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
     @MutationMapping
-    public CalendarFeedLinkDto calendarFeedCreate(@Argument final Long revivalId) {
-        return service.create(revivalId);
+    public CalendarFeedLinkDto calendarFeedCreate(@Argument final UUID revivalId) {
+        return service.create(ids.idOf(Revival.class, revivalId));
     }
 
     @MutationMapping
-    public void calendarFeedRevoke(@Argument final Long revivalId) {
-        service.revoke(revivalId);
+    public void calendarFeedRevoke(@Argument final UUID revivalId) {
+        service.revoke(ids.idOf(Revival.class, revivalId));
     }
 
     @SchemaMapping(typeName = "Revival", field = "calendarFeed")
     public @Nullable CalendarFeedDto calendarFeed(final RevivalDto revival) {
-        return service.current(revival.id());
+        return service.current(ids.idOf(Revival.class, revival.id()));
     }
 }

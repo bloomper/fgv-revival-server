@@ -17,6 +17,7 @@ package nu.fgv.revival.server.budget;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
 import nu.fgv.revival.server.Documents;
+import nu.fgv.revival.server.EntityId;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,8 +48,8 @@ class BudgetHttpApiIntegrationTest extends AbstractIntegrationTest {
 
     static final byte[] PDF = "%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n".getBytes(StandardCharsets.ISO_8859_1);
 
-    private long revival;
-    private long transaction;
+    private EntityId revival;
+    private EntityId transaction;
 
     static MultiValueMap<String, HttpEntity<?>> receipt(final String filename, final byte[] content) {
         final MultipartBodyBuilder body = new MultipartBodyBuilder();
@@ -66,14 +67,14 @@ class BudgetHttpApiIntegrationTest extends AbstractIntegrationTest {
     void revivalWithATransaction() {
         revival = organisingRevival();
 
-        final long member = jdbcClient.sql("SELECT m.id FROM revival_member m JOIN person p ON p.id = m.person_id WHERE m.revival_id = ? AND p.email = ?")
-                .params(revival, STEERING_GROUP).query(Long.class).single();
+        final EntityId member = entityId(jdbcClient.sql("SELECT m.id, m.uuid FROM revival_member m JOIN person p ON p.id = m.person_id WHERE m.revival_id = ? AND p.email = ?")
+                .params(revival, STEERING_GROUP));
 
         execute(SUPER_ADMIN, Documents.MEMBER_CAPABILITIES, Map.of("input", Map.of("id", member, "version",
                 jdbcClient.sql("SELECT version FROM revival_member WHERE id = ?").param(member).query(Long.class).single(), "capabilities", List.of("FINANCE"))));
         execute(STEERING_GROUP, "mutation($input: BudgetLineCreateInput!) { budgetLineCreate(input: $input) { id } }", Map.of("input", Map.of(
                 "revivalId", revival, "categoryId", "FOOD", "description", "Mat under rephelgen", "quantity", 60, "unitAmount", "120")));
-        transaction = Long.parseLong(execute(STEERING_GROUP, BudgetGraphqlApiIntegrationTest.TRANSACTION_CREATE, Map.of("input", Map.of(
+        transaction = entityId("budget_transaction", execute(STEERING_GROUP, BudgetGraphqlApiIntegrationTest.TRANSACTION_CREATE, Map.of("input", Map.of(
                 "revivalId", revival, "date", "2027-12-11", "amount", "2350.50", "categoryId", "FOOD", "description", "Mat till rephelgen",
                 "paidBy", Map.of("personId", personId(STEERING_GROUP))))).path("transactionCreate.id").entity(String.class).get());
     }

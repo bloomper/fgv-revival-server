@@ -103,7 +103,7 @@ public class ChecklistTexts {
         final Map<Long, ChecklistItemSummaryDto> summaries = new HashMap<>();
 
         items.forEach(item -> summaries.put(item.getId(),
-                new ChecklistItemSummaryDto(item.getId(), item.getChecklistId(), texts.get(item.getId()), item.getState())));
+                new ChecklistItemSummaryDto(item.getUuid(), item.getChecklistUuid(), texts.get(item.getId()), item.getState())));
         return summaries;
     }
 

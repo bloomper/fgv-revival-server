@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The GraphQL types of availability and staffing (staffing.graphqls). Participants appear by name and position only,
@@ -37,18 +38,18 @@ public final class StaffingDtos {
     private StaffingDtos() {
     }
 
-    public record ParticipantRef(Long id, String displayName, ParticipantKind kind,
+    public record ParticipantRef(UUID id, String displayName, ParticipantKind kind,
                                  SpexareDirectory.@Nullable Position position) {
 
         public static ParticipantRef of(final ParticipantDirectory.Named named) {
-            return new ParticipantRef(named.id(), named.displayName(), named.kind(), named.position());
+            return new ParticipantRef(named.uuid(), named.displayName(), named.kind(), named.position());
         }
     }
 
-    public record AvailabilityDay(Long eventId, LocalDate date, AvailabilityAnswer answer, @Nullable String comment) {
+    public record AvailabilityDay(UUID eventId, LocalDate date, AvailabilityAnswer answer, @Nullable String comment) {
 
         static AvailabilityDay of(final Availability availability) {
-            return new AvailabilityDay(availability.getEventId(), availability.getDay(), availability.getAnswer(), availability.getComment());
+            return new AvailabilityDay(availability.getEventUuid(), availability.getDay(), availability.getAnswer(), availability.getComment());
         }
     }
 
@@ -58,7 +59,7 @@ public final class StaffingDtos {
     public record ShiftAssignmentDto(ParticipantRef participant, boolean selfSignedUp) {
     }
 
-    public record ShiftSlotDto(Long id, EventDto event, LocalDate date, String startTime, String endTime, String task,
+    public record ShiftSlotDto(UUID id, EventDto event, LocalDate date, String startTime, String endTime, String task,
                                int needed,
                                @Nullable String comment, List<ShiftAssignmentDto> assigned, int open, Long version) {
     }

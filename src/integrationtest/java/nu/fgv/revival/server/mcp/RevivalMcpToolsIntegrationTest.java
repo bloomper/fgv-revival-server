@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -35,8 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
-    private long organising;
-    private long approved;
+    private EntityId organising;
+    private EntityId approved;
 
     private void createRevivals() {
         organising = createRevival(ALI_BABA, 2028);
@@ -61,7 +62,7 @@ class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
         final JsonNode item = items.get(0);
 
-        assertThat(item.get("id").asLong()).isEqualTo(organising);
+        assertThat(item.get("id").asString()).isEqualTo(String.valueOf(organising));
         assertThat(item.get("spexTitle").asString()).isEqualTo("Ali Baba");
         assertThat(item.get("spexAvailable").asBoolean()).isTrue();
         assertThat(item.get("year").asInt()).isEqualTo(2028);
@@ -82,7 +83,7 @@ class RevivalMcpToolsIntegrationTest extends AbstractIntegrationTest {
         final JsonNode filtered = listRevivals(mcpToken(OBSERVER), Map.of("status", List.of("APPROVED")));
 
         assertThat(filtered).hasSize(1);
-        assertThat(filtered.get(0).get("id").asLong()).isEqualTo(approved);
+        assertThat(filtered.get(0).get("id").asString()).isEqualTo(String.valueOf(approved));
         assertThat(filtered.get(0).get("role").isNull()).isTrue();
     }
 

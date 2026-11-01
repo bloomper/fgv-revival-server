@@ -34,6 +34,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -78,7 +79,7 @@ class BudgetCategoryServiceTest {
             ids.forEach(id -> categories.stream().filter(category -> category.getId().equals(id)).forEach(found::add));
             return found;
         });
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
     }
 
     private BudgetCategory find(final String id) {

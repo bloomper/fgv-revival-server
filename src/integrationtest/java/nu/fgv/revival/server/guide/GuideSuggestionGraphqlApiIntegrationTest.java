@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,8 +43,8 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String WITHDRAW = "mutation($id: ID!, $version: Int!) { guideSuggestionWithdraw(id: $id, version: $version) { " + FIELDS + " } }";
     private static final String LIST = "query($revivalId: ID) { guideSuggestions(revivalId: $revivalId) { " + FIELDS + " } }";
 
-    private long version;
-    private long revival;
+    private EntityId version;
+    private EntityId revival;
     private String tipKey;
 
     @BeforeEach
@@ -71,16 +72,16 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 "proposedTextSv", "Förrådet ska inventeras innan första rephelgen."));
     }
 
-    private long create(final String user, final Map<String, Object> variables) {
-        return Long.parseLong(execute(user, CREATE, variables).path("guideSuggestionCreate.id").entity(String.class).get());
+    private EntityId create(final String user, final Map<String, Object> variables) {
+        return entityId("guide_suggestion", execute(user, CREATE, variables).path("guideSuggestionCreate.id").entity(String.class).get());
     }
 
-    private long suggestionVersion(final long id) {
+    private long suggestionVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM guide_suggestion WHERE id = ?").param(id).query(Long.class).single();
     }
 
-    private long draftId() {
-        return jdbcClient.sql("SELECT id FROM guide_version WHERE status = 'DRAFT'").query(Long.class).single();
+    private EntityId draftId() {
+        return entityId(jdbcClient.sql("SELECT id, uuid FROM guide_version WHERE status = 'DRAFT'"));
     }
 
     @Test
@@ -103,14 +104,14 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void acceptingAppliesTheChangeToANewDraftAndPublishingNamesTheVersion() {
-        final long id = create(STEERING_GROUP, change("Kontrollera sprittillstånd i god tid."));
+        final EntityId id = create(STEERING_GROUP, change("Kontrollera sprittillstånd i god tid."));
 
         execute(SUPER_ADMIN, ACCEPT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id), "note", "Bra")))
                 .path("guideSuggestionAccept.status").entity(String.class).isEqualTo("ACCEPTED")
                 .path("guideSuggestionAccept.decidedBy").entity(String.class).isEqualTo("Sara Admin")
                 .path("guideSuggestionAccept.publishedIn").valueIsNull();
 
-        final long draft = draftId();
+        final EntityId draft = draftId();
 
         assertThat(jdbcClient.sql("SELECT text_sv FROM guide_item WHERE version_id = ? AND `key` = ?").param(draft).param(tipKey).query(String.class).single())
                 .isEqualTo("Kontrollera sprittillstånd i god tid.");
@@ -124,7 +125,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void anAddLandsInTheChapter() {
-        final long id = create(DIRECTEUR, add());
+        final EntityId id = create(DIRECTEUR, add());
 
         execute(SUPER_ADMIN, ACCEPT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id)))).errors().verify();
 
@@ -136,11 +137,11 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void anItemChangedInTheDraftIsAConflictUntilResolved() {
-        final long id = create(STEERING_GROUP, change("Förslagets text."));
+        final EntityId id = create(STEERING_GROUP, change("Förslagets text."));
 
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute();
 
-        final long draftItem = jdbcClient.sql("SELECT id FROM guide_item WHERE version_id = ? AND `key` = ?").param(draftId()).param(tipKey).query(Long.class).single();
+        final EntityId draftItem = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_item WHERE version_id = ? AND `key` = ?").param(draftId()).param(tipKey));
         final long itemVersion = jdbcClient.sql("SELECT version FROM guide_item WHERE id = ?").param(draftItem).query(Long.class).single();
 
         execute(SUPER_ADMIN, "mutation($input: GuideItemUpdateInput!) { guideItemUpdate(input: $input) { id } }",
@@ -157,7 +158,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void rejectingKeepsTheReasonForTheAuthor() {
-        final long id = create(STEERING_GROUP, change("Något."));
+        final EntityId id = create(STEERING_GROUP, change("Något."));
 
         execute(SUPER_ADMIN, REJECT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id), "reason", "Står redan i kapitel D.")))
                 .path("guideSuggestionReject.status").entity(String.class).isEqualTo("REJECTED");
@@ -168,7 +169,7 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void onlySuperAdminsDecideAndOnlyTheAuthorWithdraws() {
-        final long id = create(STEERING_GROUP, change("Något."));
+        final EntityId id = create(STEERING_GROUP, change("Något."));
 
         for (final String user : List.of(OBSERVER, DIRECTEUR, STEERING_GROUP)) {
             expectError(execute(user, ACCEPT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id)))), "FORBIDDEN");
@@ -182,11 +183,11 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void discardingTheDraftReopensAcceptedSuggestions() {
-        final long id = create(STEERING_GROUP, change("Något."));
+        final EntityId id = create(STEERING_GROUP, change("Något."));
 
         execute(SUPER_ADMIN, ACCEPT, Map.of("input", Map.of("id", id, "version", suggestionVersion(id)))).errors().verify();
 
-        final long draft = draftId();
+        final EntityId draft = draftId();
 
         graphQl(SUPER_ADMIN).document("{ guideDraft { acceptedSuggestionCount } }").execute()
                 .path("guideDraft.acceptedSuggestionCount").entity(Integer.class).isEqualTo(1);
@@ -215,9 +216,9 @@ class GuideSuggestionGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyStepIsAudited() {
-        final long first = create(STEERING_GROUP, change("Ett."));
-        final long second = create(STEERING_GROUP, change("Två."));
-        final long third = create(STEERING_GROUP, change("Tre."));
+        final EntityId first = create(STEERING_GROUP, change("Ett."));
+        final EntityId second = create(STEERING_GROUP, change("Två."));
+        final EntityId third = create(STEERING_GROUP, change("Tre."));
 
         execute(SUPER_ADMIN, ACCEPT, Map.of("input", Map.of("id", first, "version", suggestionVersion(first)))).errors().verify();
         execute(SUPER_ADMIN, REJECT, Map.of("input", Map.of("id", second, "version", suggestionVersion(second)))).errors().verify();

@@ -16,10 +16,12 @@
 package nu.fgv.revival.server.audit;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * A record's history over GraphQL: newest first, by name, readable by those who may read the record.
@@ -32,20 +34,20 @@ class AuditGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String REVISIONS = "query($type: AuditedType!, $id: ID!) { revisions(type: $type, id: $id) { "
             + "revisionType modifiedBy source changes { field kind oldValue newValue } } }";
 
-    private long revival;
+    private EntityId revival;
 
     @BeforeEach
     void revival() {
         revival = organisingRevival();
     }
 
-    private long rowVersion(final String table, final long id) {
+    private long rowVersion(final String table, final EntityId id) {
         return jdbcClient.sql("SELECT version FROM " + table + " WHERE id = ?").param(id).query(Long.class).single();
     }
 
     @Test
     void aLogEntrysHistoryShowsWhoChangedWhatByName() {
-        final long row = Long.parseLong(execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
+        final EntityId row = entityId("log_entry", execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "TODO", "text", "Boka RunAn", "owner", Map.of("name", "Vaktmästaren"))))
                 .path("logEntryCreate.id").entity(String.class).get());
 
@@ -69,12 +71,12 @@ class AuditGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         }
         // Someone who cannot see the revival learns nothing, not even that the row exists
         expectError(execute(PLAIN_USER, REVISIONS, Map.of("type", "LOG_ENTRY", "id", row)), "NOT_FOUND");
-        expectError(execute(STEERING_GROUP, REVISIONS, Map.of("type", "LOG_ENTRY", "id", row + 1000)), "NOT_FOUND");
+        expectError(execute(STEERING_GROUP, REVISIONS, Map.of("type", "LOG_ENTRY", "id", UUID.randomUUID())), "NOT_FOUND");
     }
 
     @Test
     void aBudgetLinesHistoryShowsAmountsAndCategoryNames() {
-        final long line = Long.parseLong(execute(DIRECTEUR, "mutation($input: BudgetLineCreateInput!) { budgetLineCreate(input: $input) { id } }",
+        final EntityId line = entityId("budget_line", execute(DIRECTEUR, "mutation($input: BudgetLineCreateInput!) { budgetLineCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "categoryId", "FOOD", "description", "Mat", "unitAmount", "1200")))
                 .path("budgetLineCreate.id").entity(String.class).get());
 
@@ -95,7 +97,7 @@ class AuditGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void newsHistoryIsTheSuperAdminsAndKeptAfterDeleting() {
-        final long news = Long.parseLong(execute(SUPER_ADMIN, "mutation($input: NewsInput!) { newsCreate(input: $input) { id } }",
+        final EntityId news = entityId("news", execute(SUPER_ADMIN, "mutation($input: NewsInput!) { newsCreate(input: $input) { id } }",
                 Map.of("input", Map.of("subject", "Utkast", "text", "Text"))).path("newsCreate.id").entity(String.class).get());
 
         execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { newsDelete(id: $id, version: $version) }",

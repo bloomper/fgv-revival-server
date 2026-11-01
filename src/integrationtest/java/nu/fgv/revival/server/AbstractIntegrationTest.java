@@ -64,6 +64,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -467,9 +468,9 @@ public abstract class AbstractIntegrationTest {
                 INSERT INTO guide_item_type_audit (id, kind, name_sv, name_en, position, retired_at, version, rev, revtype)
                 SELECT id, kind, name_sv, name_en, position, retired_at, version, (SELECT MAX(id) FROM revinfo), 0 FROM guide_item_type""").update();
         jdbcClient.sql("""
-                INSERT INTO event_type_audit (id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                INSERT INTO event_type_audit (id, uuid, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
                     offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at, version, rev, revtype)
-                SELECT id, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
+                SELECT id, uuid, name_sv, name_en, description_sv, description_en, rooms_sv, rooms_en, catering_sv, catering_en,
                     offset_min_days, offset_max_days, days, revival_pays, checklist_template_id, position, retired_at, version,
                     (SELECT MAX(id) FROM revinfo), 0 FROM event_type""").update();
         jdbcClient.sql("""
@@ -525,28 +526,53 @@ public abstract class AbstractIntegrationTest {
         return request.execute();
     }
 
-    protected long createRevival(final long spexId, final int year) {
+    /**
+     * @param table a table with a {@code uuid} column
+     * @param uuid  the external id of one of its rows, as the APIs write it
+     * @return both of the row's ids
+     */
+    protected EntityId entityId(final String table, final String uuid) {
+        return new EntityId(jdbcClient.sql("SELECT id FROM %s WHERE uuid = ?".formatted(table)).param(uuid).query(Long.class).single(), UUID.fromString(uuid));
+    }
+
+    /**
+     * @param query selects {@code id} and {@code uuid} of exactly one row
+     * @return both of the row's ids
+     */
+    protected static EntityId entityId(final JdbcClient.StatementSpec query) {
+        return query.query((rs, _) -> new EntityId(rs.getLong("id"), UUID.fromString(rs.getString("uuid")))).single();
+    }
+
+    /**
+     * @param query selects {@code id} and {@code uuid} of rows
+     * @return both ids of each row
+     */
+    protected static List<EntityId> entityIds(final JdbcClient.StatementSpec query) {
+        return query.query((rs, _) -> new EntityId(rs.getLong("id"), UUID.fromString(rs.getString("uuid")))).list();
+    }
+
+    protected EntityId createRevival(final long spexId, final int year) {
         final String id = graphQl(SUPER_ADMIN)
                 .document("mutation($input: RevivalCreateInput!) { revivalCreate(input: $input) { id } }")
                 .variable("input", Map.of("spexId", spexId, "year", year))
                 .execute()
                 .path("revivalCreate.id").entity(String.class).get();
 
-        return Long.parseLong(id);
+        return entityId("revival", id);
     }
 
-    protected String status(final long revivalId) {
+    protected String status(final EntityId revivalId) {
         return jdbcClient.sql("SELECT status FROM revival WHERE id = ?").param(revivalId).query(String.class).single();
     }
 
-    protected long version(final long revivalId) {
+    protected long version(final EntityId revivalId) {
         return jdbcClient.sql("SELECT version FROM revival WHERE id = ?").param(revivalId).query(Long.class).single();
     }
 
     /**
      * Moves a revival to a status as super admin.
      */
-    protected void setStatus(final long revivalId, final String to) {
+    protected void setStatus(final EntityId revivalId, final String to) {
         final String from = status(revivalId);
 
         if (from.equals(to)) {
@@ -562,14 +588,14 @@ public abstract class AbstractIntegrationTest {
     /**
      * Adds a member as super admin and returns its id.
      */
-    protected long addMember(final long revivalId, final String email, final String role, final List<String> capabilities) {
+    protected EntityId addMember(final EntityId revivalId, final String email, final String role, final List<String> capabilities) {
         final String id = graphQl(SUPER_ADMIN)
                 .document("mutation($input: RevivalMemberAddInput!) { revivalMemberAdd(input: $input) { id } }")
                 .variable("input", Map.of("revivalId", revivalId, "email", email, "role", role, "capabilities", capabilities))
                 .execute()
                 .path("revivalMemberAdd.id").entity(String.class).get();
 
-        return Long.parseLong(id);
+        return entityId("revival_member", id);
     }
 
     /**
@@ -582,16 +608,16 @@ public abstract class AbstractIntegrationTest {
     /**
      * The person id of a user who has logged in.
      */
-    protected long personId(final String email) {
-        return jdbcClient.sql("SELECT id FROM person WHERE email = ?").param(email).query(Long.class).single();
+    protected EntityId personId(final String email) {
+        return entityId(jdbcClient.sql("SELECT id, uuid FROM person WHERE email = ?").param(email));
     }
 
     /**
      * A revival in {@code ORGANISING} with {@link #DIRECTEUR} as directeur and {@link #STEERING_GROUP} in the steering
      * group, both logged in.
      */
-    protected long organisingRevival() {
-        final long revival = createRevival(ALI_BABA, 2028);
+    protected EntityId organisingRevival() {
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
@@ -606,7 +632,7 @@ public abstract class AbstractIntegrationTest {
      * Writes the fictitious v5-layout guide as the draft, straight to the database, and returns the draft's id. Chapter
      * keys are A–J; section and item keys are new UUIDs.
      */
-    protected long draftV5Layout() {
+    protected EntityId draftV5Layout() {
         final java.time.LocalDateTime now = java.time.LocalDateTime.now();
         final long versionId = insert(jdbcClient.sql("""
                         INSERT INTO guide_version (status, intro_sv, created_by, created_at, version)
@@ -645,7 +671,7 @@ public abstract class AbstractIntegrationTest {
             }
         }
         audit(versionId);
-        return versionId;
+        return entityId(jdbcClient.sql("SELECT id, uuid FROM guide_version WHERE id = ?").param(versionId));
     }
 
     /**
@@ -660,21 +686,21 @@ public abstract class AbstractIntegrationTest {
 
         for (final String sql : List.of(
                 """
-                        INSERT INTO guide_version_audit (id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
-                        SELECT id, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
+                        INSERT INTO guide_version_audit (id, uuid, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, rev, revtype)
+                        SELECT id, uuid, status, label, note, intro_sv, intro_en, based_on_id, published_at, published_by, version, :rev, 0 FROM guide_version
                         WHERE id = :versionId
                         """,
                 """
-                        INSERT INTO guide_chapter_audit (id, version_id, `key`, position, title_sv, title_en, version, rev, revtype)
-                        SELECT id, version_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_chapter WHERE version_id = :versionId
+                        INSERT INTO guide_chapter_audit (id, uuid, version_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, uuid, version_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_chapter WHERE version_id = :versionId
                         """,
                 """
-                        INSERT INTO guide_section_audit (id, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
-                        SELECT id, version_id, chapter_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_section WHERE version_id = :versionId
+                        INSERT INTO guide_section_audit (id, uuid, version_id, chapter_id, `key`, position, title_sv, title_en, version, rev, revtype)
+                        SELECT id, uuid, version_id, chapter_id, `key`, position, title_sv, title_en, version, :rev, 0 FROM guide_section WHERE version_id = :versionId
                         """,
                 """
-                        INSERT INTO guide_item_audit (id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, rev, revtype)
-                        SELECT id, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
+                        INSERT INTO guide_item_audit (id, uuid, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, rev, revtype)
+                        SELECT id, uuid, version_id, chapter_id, section_id, `key`, position, type, text_sv, text_en, version, :rev, 0 FROM guide_item
                         WHERE version_id = :versionId
                         """)) {
             jdbcClient.sql(sql).param("rev", rev).param("versionId", versionId).update();
@@ -700,14 +726,14 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
-    protected long guideVersion(final long versionId) {
+    protected long guideVersion(final EntityId versionId) {
         return jdbcClient.sql("SELECT version FROM guide_version WHERE id = ?").param(versionId).query(Long.class).single();
     }
 
     /**
      * Publishes the draft as super admin. The server numbers versions itself, so {@code label} is not sent.
      */
-    protected void publishGuide(final long draftId, final String label) {
+    protected void publishGuide(final EntityId draftId, final String label) {
         graphQl(SUPER_ADMIN)
                 .document("mutation($input: GuideDraftPublishInput!) { guideDraftPublish(input: $input) { id status label } }")
                 .variable("input", Map.of("id", draftId, "version", guideVersion(draftId)))
@@ -718,8 +744,8 @@ public abstract class AbstractIntegrationTest {
     /**
      * Writes and publishes the v5-layout guide as "v1", and returns the version's id.
      */
-    protected long publishedGuide() {
-        final long id = draftV5Layout();
+    protected EntityId publishedGuide() {
+        final EntityId id = draftV5Layout();
 
         publishGuide(id, "v1");
         return id;

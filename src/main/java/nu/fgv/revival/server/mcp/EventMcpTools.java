@@ -17,15 +17,18 @@
 
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.budget.EventTypeBudgetLine;
+import nu.fgv.revival.server.budget.EventTypeBudgetLineDto;
+import nu.fgv.revival.server.budget.EventTypeBudgetLineService;
 import nu.fgv.revival.server.checklist.ChecklistSummaryDto;
 import nu.fgv.revival.server.event.EventDto;
 import nu.fgv.revival.server.event.EventProposalDto;
 import nu.fgv.revival.server.event.EventService;
 import nu.fgv.revival.server.event.EventTypeDto;
 import nu.fgv.revival.server.event.EventTypeService;
-import nu.fgv.revival.server.budget.EventTypeBudgetLineDto;
-import nu.fgv.revival.server.budget.EventTypeBudgetLineService;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.Locales;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -34,9 +37,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A revival's events over MCP, read only: readers of the revival's work, as GraphQL's {@code events} except
@@ -48,6 +51,8 @@ import java.util.Objects;
 @Component
 public class EventMcpTools {
 
+    private final ExternalIds ids;
+
     static final int DEFAULT_LIMIT = 50;
     static final int MAX_LIMIT = 200;
 
@@ -57,7 +62,9 @@ public class EventMcpTools {
     private final McpToolSupport support;
 
     public EventMcpTools(final EventService eventService, final EventTypeService typeService, final EventTypeBudgetLineService typeLineService,
-                         final McpToolSupport support) {
+                         final McpToolSupport support,
+                         final ExternalIds ids) {
+        this.ids = ids;
         this.eventService = eventService;
         this.typeService = typeService;
         this.typeLineService = typeLineService;
@@ -65,7 +72,9 @@ public class EventMcpTools {
     }
 
     private Event written(final EventDto event) {
-        return toMcp(event, event.typeId() == null ? null : typeService.get(event.typeId()), eventService.checklists(List.of(event.id())).get(event.id()));
+        final Long internal = ids.idOf(nu.fgv.revival.server.event.Event.class, event.id());
+
+        return toMcp(event, event.typeId() == null ? null : typeService.get(ids.idOf(nu.fgv.revival.server.event.EventType.class, event.typeId())), eventService.checklists(List.of(internal)).get(internal));
     }
 
     static Event toMcp(final EventDto event, final @Nullable EventTypeDto type, final @Nullable ChecklistSummaryDto checklist) {
@@ -78,7 +87,7 @@ public class EventMcpTools {
             description = "List a revival's events in date order: rehearsal weekends, the show weekend and anything else in its timeline, with each event's checklist. Events from, to or across the given dates.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public Events listEvents(
-            @McpToolParam(description = "A revival you can see") final Long revivalId,
+            @McpToolParam(description = "A revival you can see") final UUID revivalId,
             @McpToolParam(required = false, description = "Events ending on or after this date, yyyy-MM-dd") final @Nullable String from,
             @McpToolParam(required = false, description = "Events starting on or before this date, yyyy-MM-dd") final @Nullable String to,
             @McpToolParam(required = false, description = "Also cancelled events") final @Nullable Boolean includeCancelled,
@@ -86,14 +95,16 @@ public class EventMcpTools {
         return support.call("list_events", () -> {
             final @Nullable LocalDate since = McpToolSupport.date(from);
             final @Nullable LocalDate until = McpToolSupport.date(to);
-            final List<EventDto> events = eventService.listAsWork(revivalId, Boolean.TRUE.equals(includeCancelled)).stream()
+            final List<EventDto> events = eventService.listAsWork(ids.idOf(Revival.class, revivalId), Boolean.TRUE.equals(includeCancelled)).stream()
                     .filter(event -> since == null || !event.endDate().isBefore(since))
                     .filter(event -> until == null || !event.startDate().isAfter(until))
                     .toList();
             final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
             final List<EventDto> shown = events.stream().limit(first).toList();
-            final Map<Long, EventTypeDto> types = typeService.byIds(shown.stream().map(EventDto::typeId).filter(Objects::nonNull).toList());
-            final Map<Long, ChecklistSummaryDto> checklists = eventService.checklists(shown.stream().map(EventDto::id).toList());
+            final Map<UUID, EventTypeDto> types = ids.byUuid(nu.fgv.revival.server.event.EventType.class,
+                    typeService.byIds(ids.idsOf(nu.fgv.revival.server.event.EventType.class, shown.stream().map(EventDto::typeId).filter(Objects::nonNull).distinct().toList())));
+            final Map<UUID, ChecklistSummaryDto> checklists = ids.byUuid(nu.fgv.revival.server.event.Event.class,
+                    eventService.checklists(ids.idsOf(nu.fgv.revival.server.event.Event.class, shown.stream().map(EventDto::id).toList())));
 
             return new Events(shown.stream().map(event -> toMcp(event, types.get(event.typeId()), checklists.get(event.id()))).toList(), events.size());
         });
@@ -103,9 +114,9 @@ public class EventMcpTools {
             description = "Add an event to a revival's timeline, e.g. a rehearsal weekend. From an event type, the title, the number of days and whether the revival pays come from the type, and the type's checklist template gives it a checklist.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public Event createEvent(
-            @McpToolParam(description = "A revival you can work in") final Long revivalId,
+            @McpToolParam(description = "A revival you can work in") final UUID revivalId,
             @McpToolParam(description = "The first day, yyyy-MM-dd") final String startDate,
-            @McpToolParam(required = false, description = "An event type, by id from list_event_types") final @Nullable Long typeId,
+            @McpToolParam(required = false, description = "An event type, by id from list_event_types") final @Nullable UUID typeId,
             @McpToolParam(required = false, description = "The title; required without a type") final @Nullable String title,
             @McpToolParam(required = false, description = "The last day, yyyy-MM-dd") final @Nullable String endDate,
             @McpToolParam(required = false, description = "HH:mm") final @Nullable String startTime,
@@ -113,7 +124,7 @@ public class EventMcpTools {
             @McpToolParam(required = false, description = "Where") final @Nullable String location,
             @McpToolParam(required = false, description = "A description") final @Nullable String description,
             @McpToolParam(required = false, description = "Whether the revival pays for it") final @Nullable Boolean revivalPays) {
-        return support.call("create_event", () -> written(eventService.create(new EventService.NewEvent(revivalId, typeId, title,
+        return support.call("create_event", () -> written(eventService.create(new EventService.NewEvent(ids.idOf(Revival.class, revivalId), ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId), title,
                 Objects.requireNonNull(McpToolSupport.date(startDate)), McpToolSupport.date(endDate), startTime, endTime, location, description, revivalPays),
                 Locales.SWEDISH)));
     }
@@ -122,7 +133,7 @@ public class EventMcpTools {
             description = "Change an event: title, dates, times, location, description or whether the revival pays. Leave out what stays as it is; an empty string clears a time, the location or the description. Its checklist follows the new name and date.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public Event updateEvent(
-            @McpToolParam(description = "The event, by id") final Long eventId,
+            @McpToolParam(description = "The event, by id") final UUID eventId,
             @McpToolParam(required = false, description = "The title") final @Nullable String title,
             @McpToolParam(required = false, description = "yyyy-MM-dd") final @Nullable String startDate,
             @McpToolParam(required = false, description = "yyyy-MM-dd") final @Nullable String endDate,
@@ -132,9 +143,9 @@ public class EventMcpTools {
             @McpToolParam(required = false, description = "A description") final @Nullable String description,
             @McpToolParam(required = false, description = "Whether the revival pays for it") final @Nullable Boolean revivalPays) {
         return support.call("update_event", () -> {
-            final EventDto event = eventService.get(eventId);
+            final EventDto event = eventService.get(ids.idOf(nu.fgv.revival.server.event.Event.class, eventId));
 
-            return written(eventService.update(new EventService.Change(eventId, event.version(), title, McpToolSupport.date(startDate),
+            return written(eventService.update(new EventService.Change(ids.idOf(nu.fgv.revival.server.event.Event.class, eventId), event.version(), title, McpToolSupport.date(startDate),
                     McpToolSupport.date(endDate), blankToNull(startTime), isBlank(startTime), blankToNull(endTime), isBlank(endTime),
                     blankToNull(location), isBlank(location), blankToNull(description), isBlank(description), revivalPays)));
         });
@@ -144,20 +155,20 @@ public class EventMcpTools {
             description = "Cancel an event, or restore a cancelled one. Its checklist is cancelled or restored with it. Events are never deleted.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public Event setEventCancelled(
-            @McpToolParam(description = "The event, by id") final Long eventId,
+            @McpToolParam(description = "The event, by id") final UUID eventId,
             @McpToolParam(description = "true to cancel, false to restore") final Boolean cancelled) {
         return support.call("set_event_cancelled", () -> {
-            final EventDto event = eventService.get(eventId);
+            final EventDto event = eventService.get(ids.idOf(nu.fgv.revival.server.event.Event.class, eventId));
 
-            return written(cancelled ? eventService.cancel(eventId, event.version()) : eventService.restore(eventId, event.version()));
+            return written(cancelled ? eventService.cancel(ids.idOf(nu.fgv.revival.server.event.Event.class, eventId), event.version()) : eventService.restore(ids.idOf(nu.fgv.revival.server.event.Event.class, eventId), event.version()));
         });
     }
 
     @McpTool(name = "list_event_proposals",
             description = "List the events a revival's timeline proposes from its premiere and the event types, with the dates allowed, for those not added yet.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public McpToolSupport.ListResult<EventProposalDto> listEventProposals(@McpToolParam(description = "A revival you can work in") final Long revivalId) {
-        return support.call("list_event_proposals", () -> new McpToolSupport.ListResult<>(eventService.proposals(revivalId)));
+    public McpToolSupport.ListResult<EventProposalDto> listEventProposals(@McpToolParam(description = "A revival you can work in") final UUID revivalId) {
+        return support.call("list_event_proposals", () -> new McpToolSupport.ListResult<>(eventService.proposals(ids.idOf(Revival.class, revivalId))));
     }
 
     @McpTool(name = "list_event_types",
@@ -167,7 +178,8 @@ public class EventMcpTools {
             @McpToolParam(required = false, description = "Also retired ones") final @Nullable Boolean includeRetired) {
         return support.call("list_event_types", () -> {
             final List<EventTypeDto> types = typeService.list(Boolean.TRUE.equals(includeRetired));
-            final Map<Long, List<EventTypeBudgetLineDto>> lines = typeLineService.byTypes(types.stream().map(EventTypeDto::id).toList());
+            final Map<UUID, List<EventTypeBudgetLineDto>> lines = ids.byUuid(nu.fgv.revival.server.event.EventType.class,
+                    typeLineService.byTypes(ids.idsOf(nu.fgv.revival.server.event.EventType.class, types.stream().map(EventTypeDto::id).toList())));
 
             return new McpToolSupport.ListResult<>(types.stream().map(type -> new EventType(type, lines.getOrDefault(type.id(), List.of()))).toList());
         });
@@ -184,19 +196,19 @@ public class EventMcpTools {
             description = "Super admins: replace an event type's definition, and optionally move it to a position in the list (counting from 0).",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public EventTypeDto updateEventType(
-            @McpToolParam(description = "The type, by id") final Long typeId,
+            @McpToolParam(description = "The type, by id") final UUID typeId,
             @McpToolParam(required = false, description = "The whole definition, as in create_event_type") final EventTypeService.@Nullable Definition definition,
             @McpToolParam(required = false, description = "Its place in the list, counting from 0") final @Nullable Integer position) {
         return support.call("update_event_type", () -> {
-            EventTypeDto type = typeService.get(typeId);
+            EventTypeDto type = typeService.get(ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId));
 
             if (definition != null) {
-                type = typeService.update(typeId, type.version(), definition);
+                type = typeService.update(ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId), type.version(), definition);
             }
             if (position != null) {
                 final Long version = type.version();
 
-                type = McpToolSupport.byId(typeService.move(typeId, version, position), EventTypeDto::id, typeId, EventTypeDto.class);
+                type = McpToolSupport.byId(typeService.move(ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId), version, position), EventTypeDto::id, typeId, EventTypeDto.class);
             }
             return type;
         });
@@ -206,12 +218,12 @@ public class EventMcpTools {
             description = "Super admins: retire an event type so it is no longer offered, or restore it. Events of the type keep it.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public EventTypeDto setEventTypeRetired(
-            @McpToolParam(description = "The type, by id") final Long typeId,
+            @McpToolParam(description = "The type, by id") final UUID typeId,
             @McpToolParam(description = "true to retire, false to restore") final Boolean retired) {
         return support.call("set_event_type_retired", () -> {
-            final EventTypeDto type = typeService.get(typeId);
+            final EventTypeDto type = typeService.get(ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId));
 
-            return retired ? typeService.retire(typeId, type.version()) : typeService.restore(typeId, type.version());
+            return retired ? typeService.retire(ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId), type.version()) : typeService.restore(ids.idOfNullable(nu.fgv.revival.server.event.EventType.class, typeId), type.version());
         });
     }
 
@@ -226,14 +238,14 @@ public class EventMcpTools {
             description = "Super admins: replace a budget line an event type proposes.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public EventTypeDto updateEventTypeBudgetLine(
-            @McpToolParam(description = "The line, by id from list_event_types") final Long lineId,
+            @McpToolParam(description = "The line, by id from list_event_types") final UUID lineId,
             @McpToolParam(description = "The whole line, as in create_event_type_budget_line") final EventTypeBudgetLineService.Definition definition) {
         return support.call("update_event_type_budget_line", () -> {
-            final List<Long> types = typeService.list(true).stream().map(EventTypeDto::id).toList();
+            final List<Long> types = ids.idsOf(nu.fgv.revival.server.event.EventType.class, typeService.list(true).stream().map(EventTypeDto::id).toList());
             final EventTypeBudgetLineDto line = McpToolSupport.byId(typeLineService.byTypes(types).values().stream().flatMap(List::stream).toList(),
                     EventTypeBudgetLineDto::id, lineId, EventTypeBudgetLineDto.class);
 
-            return typeLineService.update(lineId, line.version(), definition);
+            return typeLineService.update(ids.idOf(EventTypeBudgetLine.class, lineId), line.version(), definition);
         });
     }
 
@@ -251,10 +263,10 @@ public class EventMcpTools {
     public record EventType(EventTypeDto type, List<EventTypeBudgetLineDto> budgetLines) {
     }
 
-    public record Checklist(Long id, int open, int total) {
+    public record Checklist(UUID id, int open, int total) {
     }
 
-    public record Event(Long id, ChecklistMcpTools.@Nullable Text type, String title, LocalDate startDate,
+    public record Event(UUID id, ChecklistMcpTools.@Nullable Text type, String title, LocalDate startDate,
                         LocalDate endDate,
                         @Nullable String startTime, @Nullable String endTime, @Nullable String location,
                         boolean cancelled,

@@ -21,8 +21,11 @@ import nu.fgv.revival.server.closing.ClosingDtos.SyncFailureDto;
 import nu.fgv.revival.server.closing.ClosingDtos.SyncPreviewDto;
 import nu.fgv.revival.server.closing.ClosingDtos.SyncRunDto;
 import nu.fgv.revival.server.member.PersonRefDto;
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonNames;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalDto;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -32,6 +35,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * No authorization here: the services decide.
@@ -42,35 +46,39 @@ import java.util.Locale;
 @Controller
 public class ClosingGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final SyncService syncService;
     private final ClosingService closingService;
     private final PersonNames personNames;
 
-    public ClosingGraphqlApi(final SyncService syncService, final ClosingService closingService, final PersonNames personNames) {
+    public ClosingGraphqlApi(final SyncService syncService, final ClosingService closingService, final PersonNames personNames, final ExternalIds ids) {
+        this.ids = ids;
         this.syncService = syncService;
         this.closingService = closingService;
         this.personNames = personNames;
     }
 
     @QueryMapping
-    public SyncPreviewDto syncPreview(@Argument final Long revivalId, final Locale locale) {
-        return syncService.preview(revivalId, locale);
+    public SyncPreviewDto syncPreview(@Argument final UUID revivalId, final Locale locale) {
+        return syncService.preview(ids.idOf(Revival.class, revivalId), locale);
     }
 
     @QueryMapping
-    public SyncRunDto syncRun(@Argument final Long id) {
-        return syncService.run(id);
+    public SyncRunDto syncRun(@Argument final UUID id) {
+        return syncService.run(ids.idOf(SyncRun.class, id));
     }
 
     @MutationMapping
-    public SyncRunDto syncStart(@Argument final Long revivalId, @Argument final String previewHash) {
-        return syncService.start(revivalId, previewHash);
+    public SyncRunDto syncStart(@Argument final UUID revivalId, @Argument final String previewHash) {
+        return syncService.start(ids.idOf(Revival.class, revivalId), previewHash);
     }
 
     @SchemaMapping(typeName = "SyncRun", field = "startedBy")
     public @Nullable PersonRefDto startedBy(final SyncRunDto run, final Locale locale) {
         return run.startedById() == null ? null
-                : new PersonRefDto(run.startedById(), personNames.byIds(List.of(run.startedById()), locale).get(run.startedById()));
+                : new PersonRefDto(run.startedById(), personNames.byIds(List.of(ids.idOf(Person.class, run.startedById())), locale)
+                .get(ids.idOf(Person.class, run.startedById())));
     }
 
     @SchemaMapping(typeName = "SyncRun", field = "failures")
@@ -80,6 +88,6 @@ public class ClosingGraphqlApi {
 
     @SchemaMapping(typeName = "Revival", field = "closing")
     public @Nullable ClosingStatusDto closing(final RevivalDto revival) {
-        return closingService.closing(revival.id());
+        return closingService.closing(ids.idOf(Revival.class, revival.id()));
     }
 }

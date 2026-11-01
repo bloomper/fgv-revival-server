@@ -53,6 +53,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,6 +93,7 @@ class MaterialServiceTest {
         final Person person = new Person();
 
         person.setId(20L);
+        person.setUuid(uuid(person.getId()));
         return new Caller(person, Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(role, Set.of())));
     }
 
@@ -107,7 +111,7 @@ class MaterialServiceTest {
         lenient().when(repository.findByRevivalId(REVIVAL_ID)).thenAnswer(invocation -> List.copyOf(materials));
         lenient().when(repository.findById(any())).thenAnswer(invocation ->
                 materials.stream().filter(material -> material.getId().equals(invocation.getArgument(0))).findFirst());
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
         lenient().when(services.recognise(anyString())).thenAnswer(invocation -> Links.recognise(invocation.getArgument(0), TestLinkServices.seeded()));
         lenient().when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("BAND", "Orkester", "Orkester", false),
                 new SpexareDirectory.Position("ENSEMBLE", "Ensemble", "Ensemble", true)));
@@ -122,7 +126,9 @@ class MaterialServiceTest {
         final Material material = new Material();
 
         material.setId(id);
+        material.setUuid(uuid(material.getId()));
         material.setRevivalId(REVIVAL_ID);
+        material.setRevivalUuid(uuidOrNull(material.getRevivalId()));
         material.setTitle(title);
         material.setUrl("https://drive.google.com/" + id);
         material.setCategory(MaterialCategory.OTHER);
@@ -138,6 +144,7 @@ class MaterialServiceTest {
         final Participant participant = new Participant();
 
         participant.setRevivalId(REVIVAL_ID);
+        participant.setRevivalUuid(uuidOrNull(participant.getRevivalId()));
         participant.setKind(kind);
         participant.setPositionTaskId(position);
         when(callerService.current()).thenReturn(caller);

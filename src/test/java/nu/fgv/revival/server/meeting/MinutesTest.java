@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -51,8 +53,10 @@ class MinutesTest {
         final LogEntry entry = new LogEntry();
 
         entry.setId(id);
+        entry.setUuid(uuid(entry.getId()));
         entry.setNumber((int) id);
         entry.setRevivalId(1L);
+        entry.setRevivalUuid(uuidOrNull(entry.getRevivalId()));
         entry.setDate(LocalDate.of(2026, 10, 21));
         entry.setType(type);
         entry.setText("Rad " + id);
@@ -69,6 +73,7 @@ class MinutesTest {
         final Meeting meeting = new Meeting();
 
         meeting.setId(MEETING);
+        meeting.setUuid(uuid(meeting.getId()));
         meeting.setAgendaPoints(new ArrayList<>(List.of("Budget")));
         meeting.setAttendeeIds(new LinkedHashSet<>(List.of(KIM, 12L)));
         meeting.setOthersPresent("Sam från lokalen");
@@ -91,6 +96,7 @@ class MinutesTest {
         todo.setDeadline(LocalDate.of(2026, 11, 1));
         assigned.setOwner(Owner.named("Sam"));
         answer.setAnswersEntryId(1L);
+        answer.setAnswersEntryUuid(uuidOrNull(answer.getAnswersEntryId()));
 
         final Minutes minutes = MinutesBuilder.build(meeting(), List.of(
                 change(7, MeetingEntryChangeKind.CREATED),

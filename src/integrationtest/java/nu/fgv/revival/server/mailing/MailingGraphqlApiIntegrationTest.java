@@ -21,6 +21,7 @@ import jakarta.mail.Multipart;
 import jakarta.mail.Part;
 import jakarta.mail.internet.MimeMessage;
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,10 +67,10 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private MailingReminders reminders;
 
-    private long revival;
-    private long participant;
-    private long helper;
-    private long weekend;
+    private EntityId revival;
+    private EntityId participant;
+    private EntityId helper;
+    private EntityId weekend;
 
     private static Map<String, Object> audience(final String kind) {
         return Map.of("kind", kind);
@@ -108,31 +109,31 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         login(PARTICIPANT);
         execute(PARTICIPANT, "mutation($input: ParticipationRespondInput!) { participationRespond(input: $input) { participant { response } } }",
                 Map.of("input", Map.of("revivalId", revival, "response", "YES", "termsAccepted", true, "registerConsent", false)));
-        weekend = Long.parseLong(execute(DIRECTEUR, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }",
+        weekend = entityId("event", execute(DIRECTEUR, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "title", "Föreställningshelg", "startDate", "2028-05-05", "endDate", "2028-05-06")))
                 .path("eventCreate.id").entity(String.class).get());
         MAIL.reset();
     }
 
-    private long pending(final String kind, final String firstName, final String lastName, final String email) {
-        return Long.parseLong(execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", firstName,
+    private EntityId pending(final String kind, final String firstName, final String lastName, final String email) {
+        return entityId("participant", execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", firstName,
                 "lastName", lastName, "email", email))).path("participantAdd.id").entity(String.class).get());
     }
 
     private void giveSteeringGroup(final String... capabilities) {
-        final Map<String, Object> member = jdbcClient.sql("SELECT id, version FROM revival_member WHERE revival_id = ? AND role = 'STEERING_GROUP'")
+        final Map<String, Object> member = jdbcClient.sql("SELECT uuid AS id, version FROM revival_member WHERE revival_id = ? AND role = 'STEERING_GROUP'")
                 .param(revival).query().singleRow();
 
         execute(DIRECTEUR, "mutation($input: RevivalMemberCapabilitiesInput!) { revivalMemberCapabilitiesSet(input: $input) { id } }",
                 Map.of("input", Map.of("id", member.get("id"), "version", member.get("version"), "capabilities", List.of(capabilities))));
     }
 
-    private long draft(final String user, final Map<String, Object> audience, final String subject) {
-        return Long.parseLong(execute(user, CREATE, Map.of("input", Map.of("revivalId", revival, "audience", audience, "subject", subject,
+    private EntityId draft(final String user, final Map<String, Object> audience, final String subject) {
+        return entityId("mailing", execute(user, CREATE, Map.of("input", Map.of("revivalId", revival, "audience", audience, "subject", subject,
                 "body", "Hej **alla**!\n\n- Biljettkontroll\n- Bålvakt\n\n<script>alert(1)</script>"))).path("mailingCreate.id").entity(String.class).get());
     }
 
-    private long mailingVersion(final long id) {
+    private long mailingVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM mailing WHERE id = ?").param(id).query(Long.class).single();
     }
 
@@ -162,7 +163,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         // Attendees: available on a day of the event, or holding a shift in it
         execute(PARTICIPANT, "mutation($input: AvailabilityInput!) { availabilitySet(input: $input) { participant { id } } }",
                 Map.of("input", Map.of("revivalId", revival, "eventId", weekend, "date", "2028-05-06", "answer", "MAYBE")));
-        final long slot = Long.parseLong(execute(DIRECTEUR, "mutation($input: ShiftSlotInput!) { shiftSlotCreate(input: $input) { id } }",
+        final EntityId slot = entityId("shift_slot", execute(DIRECTEUR, "mutation($input: ShiftSlotInput!) { shiftSlotCreate(input: $input) { id } }",
                 Map.of("input", Map.of("eventId", weekend, "date", "2028-05-05", "startTime", "17:00", "endTime", "19:00", "task", "Kassa", "needed", 1)))
                 .path("shiftSlotCreate.id").entity(String.class).get());
 
@@ -186,7 +187,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(PARTICIPANT, CREATE, Map.of("input", Map.of("revivalId", revival, "audience", audience("CONFIRMED"), "subject", "Hej",
                 "body", "Hej"))), "FORBIDDEN");
 
-        final long id = draft(STEERING_GROUP, audience("CONFIRMED"), "Schema för helgen");
+        final EntityId id = draft(STEERING_GROUP, audience("CONFIRMED"), "Schema för helgen");
 
         execute(STEERING_GROUP, "query($id: ID!) { mailing(id: $id) { canSend status createdBy { displayName } } }", Map.of("id", id))
                 .path("mailing.canSend").entity(Boolean.class).isEqualTo(false)
@@ -235,7 +236,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(jdbcClient.sql("SELECT attempt FROM mailing_recipient").query(Integer.class).single()).isEqualTo(2);
 
         // Lists: newest first, and never an address
-        final long cancelled = draft(DIRECTEUR, audience("HELPERS"), "Till springarna");
+        final EntityId cancelled = draft(DIRECTEUR, audience("HELPERS"), "Till springarna");
 
         execute(DIRECTEUR, "mutation($id: ID!, $v: Int!) { mailingCancel(id: $id, version: $v) { status } }",
                 Map.of("id", cancelled, "v", mailingVersion(cancelled))).path("mailingCancel.status").entity(String.class).isEqualTo("CANCELLED");
@@ -251,7 +252,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void withTheMailServerDownNothingIsSentOrRecorded() {
-        final long id = draft(DIRECTEUR, audience("STEERING_GROUP"), "Möte");
+        final EntityId id = draft(DIRECTEUR, audience("STEERING_GROUP"), "Möte");
 
         MAIL.stop();
         try {
@@ -276,7 +277,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void thePlanShowsDueMailingsDraftsFromThemAndRemindsTheOwnersOnce() {
-        final long rehearsalType = jdbcClient.sql("SELECT id FROM event_type WHERE name_sv = 'Rephelg 2'").query(Long.class).single();
+        final EntityId rehearsalType = entityId(jdbcClient.sql("SELECT id, uuid FROM event_type WHERE name_sv = 'Rephelg 2'"));
         final Map<String, Object> input = new HashMap<>(Map.of("name", Map.of("sv", "Påminn om allergier", "en", "Remind about allergies"),
                 "subject", Map.of("sv", "Allergier"), "body", Map.of("sv", "Fyll i dina allergier."), "audience", "CONFIRMED",
                 "eventTypeId", rehearsalType, "due", Map.of("kind", "DAYS", "amount", -2)));
@@ -298,7 +299,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         // An event of the type two days from now: due tomorrow; the revival has no premiere, so that template has no entry
         final LocalDate start = LocalDate.now().plusDays(3);
-        final long event = Long.parseLong(execute(DIRECTEUR, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }",
+        final EntityId event = entityId("event", execute(DIRECTEUR, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "typeId", rehearsalType, "startDate", start.toString()))).path("eventCreate.id")
                 .entity(String.class).get());
 
@@ -317,7 +318,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM mailing_reminder").query(Integer.class).single()).isEqualTo(1);
 
         // A draft from the entry; sending it ends the entry being due
-        final long id = Long.parseLong(execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("revivalId", revival, "audience", audience("CONFIRMED"),
+        final EntityId id = entityId("mailing", execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("revivalId", revival, "audience", audience("CONFIRMED"),
                 "subject", "Allergier", "body", "Fyll i dina allergier.", "templateId", template, "eventId", event)))
                 .path("mailingCreate.plannedFor.event.id").entity(String.class).isEqualTo(String.valueOf(event))
                 .path("mailingCreate.id").entity(String.class).get());

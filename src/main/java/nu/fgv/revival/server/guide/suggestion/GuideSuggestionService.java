@@ -427,11 +427,11 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
         final String en = suggestion.getProposedTextEn();
 
         return new GuideSuggestionDto(
-                suggestion.getId(),
+                suggestion.getUuid(),
                 suggestion.getKind(),
                 suggestion.getStatus(),
-                new GuideSuggestionDto.Revival(revival.getId(), revival.getSpexId(), revival.getYear()),
-                suggestion.getAuthorId(),
+                new GuideSuggestionDto.Revival(revival.getUuid(), revival.getSpexId(), revival.getYear()),
+                suggestion.getAuthorUuid(),
                 suggestion.getAuthorId().equals(caller.person().getId()),
                 GUIDE_MAPPER.toSummary(madeOn),
                 suggestion.getChapterKey(),
@@ -442,7 +442,7 @@ public class GuideSuggestionService implements DraftSuggestions, GuideDraftServi
                 suggestion.getProposedType(),
                 sv == null && en == null ? null : new GuideSuggestionDto.ProposedText(sv == null ? "" : sv, en),
                 suggestion.getReason(),
-                suggestion.getDecidedBy(),
+                suggestion.getDecidedByUuid(),
                 suggestion.getDecidedAt(),
                 suggestion.getDecisionReason(),
                 publishedIn,

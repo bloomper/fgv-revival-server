@@ -17,6 +17,7 @@ package nu.fgv.revival.server.budget;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
 import nu.fgv.revival.server.Documents;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -51,7 +52,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             + "proposals { event { id } line { id description { sv en } quantityRule } quantity amount } "
             + "scenarios { id name parameters { showTickets } result { income result breakEvenShowTickets } version } } } }";
 
-    private long revival;
+    private EntityId revival;
 
     @BeforeEach
     void revivalWithAFinanceMember() {
@@ -62,9 +63,9 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     /**
      * Gives the steering group member the finance area, as super admin.
      */
-    void giveFinance(final long revivalId, final String email) {
-        final long member = jdbcClient.sql("SELECT m.id FROM revival_member m JOIN person p ON p.id = m.person_id WHERE m.revival_id = ? AND p.email = ?")
-                .params(revivalId, email).query(Long.class).single();
+    void giveFinance(final EntityId revivalId, final String email) {
+        final EntityId member = entityId(jdbcClient.sql("SELECT m.id, m.uuid FROM revival_member m JOIN person p ON p.id = m.person_id WHERE m.revival_id = ? AND p.email = ?")
+                .params(revivalId, email));
         final long memberVersion = jdbcClient.sql("SELECT version FROM revival_member WHERE id = ?").param(member).query(Long.class).single();
 
         execute(SUPER_ADMIN, Documents.MEMBER_CAPABILITIES, Map.of("input", Map.of("id", member, "version", memberVersion,
@@ -72,21 +73,21 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("revivalMemberCapabilitiesSet.capabilities[*].id").entityList(String.class).containsExactly("FINANCE");
     }
 
-    private long createLine(final String user, final Map<String, Object> fields) {
+    private EntityId createLine(final String user, final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("revivalId", revival);
-        return Long.parseLong(execute(user, LINE_CREATE, Map.of("input", input)).path("budgetLineCreate.id").entity(String.class).get());
+        return entityId("budget_line", execute(user, LINE_CREATE, Map.of("input", input)).path("budgetLineCreate.id").entity(String.class).get());
     }
 
-    private long createTransaction(final String user, final Map<String, Object> fields) {
+    private EntityId createTransaction(final String user, final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("revivalId", revival);
-        return Long.parseLong(execute(user, TRANSACTION_CREATE, Map.of("input", input)).path("transactionCreate.id").entity(String.class).get());
+        return entityId("budget_transaction", execute(user, TRANSACTION_CREATE, Map.of("input", input)).path("transactionCreate.id").entity(String.class).get());
     }
 
-    private long version(final String table, final long id) {
+    private long version(final String table, final EntityId id) {
         return jdbcClient.sql("SELECT version FROM " + table + " WHERE id = ?").param(id).query(Long.class).single();
     }
 
@@ -144,14 +145,14 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(STEERING_GROUP, "mutation($input: BudgetSettingsInput!) { budgetSettingsUpdate(input: $input) { revivalId } }",
                 Map.of("input", Map.of("revivalId", revival, "version", 0))), "CONFLICT");
 
-        final long decision = Long.parseLong(execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
+        final EntityId decision = entityId("log_entry", execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "DECISION", "text", "Fyra springare à 1 200 kr")))
                 .path("logEntryCreate.id").entity(String.class).get());
 
         createLine(STEERING_GROUP, Map.of("categoryId", "SHOW_TICKETS", "description", "Biljetter", "quantity", 450, "unitAmount", "180"));
         createLine(DIRECTEUR, Map.of("categoryId", "HELPERS", "description", "Springare", "quantity", 4, "unitAmount", 1200, "logEntryId", decision));
 
-        final long removed = createLine(STEERING_GROUP, Map.of("categoryId", "VENUE", "description", "Lokal", "unitAmount", "12345.67",
+        final EntityId removed = createLine(STEERING_GROUP, Map.of("categoryId", "VENUE", "description", "Lokal", "unitAmount", "12345.67",
                 "comment", "Preliminärt"));
 
         execute(STEERING_GROUP, "mutation($id: ID!, $version: Int!) { budgetLineRemove(id: $id, version: $version) { removed } }",
@@ -176,7 +177,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void eventTypesProposeLinesForTheirEvents() {
-        final long rehearsal = jdbcClient.sql("SELECT id FROM event_type WHERE name_sv = 'Rephelg 1'").query(Long.class).single();
+        final EntityId rehearsal = entityId(jdbcClient.sql("SELECT id, uuid FROM event_type WHERE name_sv = 'Rephelg 1'"));
 
         execute(SUPER_ADMIN, "mutation($input: EventTypeBudgetLineInput!) { eventTypeBudgetLineCreate(input: $input) { id budgetLines { id "
                 + "category { id } description { sv en } quantityRule quantity unitAmount } } }", Map.of("input", Map.of("eventTypeId", rehearsal,
@@ -188,12 +189,12 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 Map.of("input", Map.of("eventTypeId", rehearsal, "categoryId", "FOOD", "description", Map.of("sv", "Mat"), "quantityRule", "FIXED",
                         "quantity", 1, "unitAmount", "1"))), "FORBIDDEN");
 
-        final long typeLine = jdbcClient.sql("SELECT id FROM event_type_budget_line").query(Long.class).single();
-        final long event = Long.parseLong(execute(STEERING_GROUP, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }",
+        final EntityId typeLine = entityId(jdbcClient.sql("SELECT id, uuid FROM event_type_budget_line"));
+        final EntityId event = entityId("event", execute(STEERING_GROUP, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "typeId", rehearsal, "startDate", "2027-12-11"))).path("eventCreate.id").entity(String.class).get());
 
         execute(STEERING_GROUP, BUDGET, Map.of("id", revival))
-                .path("revival.budget.proposals[0].event.id").entity(Long.class).isEqualTo(event)
+                .path("revival.budget.proposals[0].event.id").entity(String.class).isEqualTo(String.valueOf(event))
                 .path("revival.budget.proposals[0].line.description.en").entity(String.class).isEqualTo("Food per participant")
                 .path("revival.budget.proposals[0].quantity").valueIsNull();
 
@@ -214,14 +215,14 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         // Removing the template line leaves the budget line as it is
         execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { eventTypeBudgetLineRemove(id: $id, version: $version) { budgetLines { id } } }",
                 Map.of("id", typeLine, "version", 0)).path("eventTypeBudgetLineRemove.budgetLines").entityList(Object.class).hasSize(0);
-        assertThat(jdbcClient.sql("SELECT event_type_line_id FROM budget_line").query(Long.class).single()).isEqualTo(typeLine);
+        assertThat(jdbcClient.sql("SELECT event_type_line_id FROM budget_line").query(Long.class).single()).isEqualTo(typeLine.id());
     }
 
     @Test
     void transactionsArePaidReimbursedAndCancelled() {
-        final long me = personId(STEERING_GROUP);
-        final long line = createLine(STEERING_GROUP, Map.of("categoryId", "FOOD", "description", "Mat", "quantity", 60, "unitAmount", "120"));
-        final long paid = createTransaction(STEERING_GROUP, Map.of("date", "2027-12-11", "amount", "2350.50", "categoryId", "FOOD",
+        final EntityId me = personId(STEERING_GROUP);
+        final EntityId line = createLine(STEERING_GROUP, Map.of("categoryId", "FOOD", "description", "Mat", "quantity", 60, "unitAmount", "120"));
+        final EntityId paid = createTransaction(STEERING_GROUP, Map.of("date", "2027-12-11", "amount", "2350.50", "categoryId", "FOOD",
                 "description", "Mat till rephelgen", "budgetLineId", line, "paidBy", Map.of("personId", me)));
 
         createTransaction(STEERING_GROUP, Map.of("date", "2027-12-01", "amount", 25200, "categoryId", "SHOW_TICKETS", "description", "Biljetter"));
@@ -233,7 +234,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(OBSERVER, BUDGET, Map.of("id", revival))
                 .path("revival.budget.transactions[0].description").entity(String.class).isEqualTo("Mat till rephelgen")
                 .path("revival.budget.transactions[0].paidBy.person.displayName").entity(String.class).isEqualTo("Stina Styrgrupp")
-                .path("revival.budget.transactions[0].budgetLine.id").entity(Long.class).isEqualTo(line)
+                .path("revival.budget.transactions[0].budgetLine.id").entity(String.class).isEqualTo(String.valueOf(line))
                 .path("revival.budget.totals.actualIncome").entity(String.class).isEqualTo("25200")
                 .path("revival.budget.totals.actualCost").entity(String.class).isEqualTo("2350.50")
                 .path("revival.budget.totals.actualResult").entity(String.class).isEqualTo("22849.50")
@@ -271,7 +272,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("budgetScenarioCalculate.result").entity(String.class).isEqualTo("8000")
                 .path("budgetScenarioCalculate.breakEvenShowTickets").entity(Integer.class).isEqualTo(360);
 
-        final long scenario = Long.parseLong(execute(STEERING_GROUP, "mutation($input: BudgetScenarioSaveInput!) { budgetScenarioSave(input: $input) { id } }",
+        final EntityId scenario = entityId("budget_scenario", execute(STEERING_GROUP, "mutation($input: BudgetScenarioSaveInput!) { budgetScenarioSave(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "name", "Dyrare biljetter", "parameters", Map.of("showTickets", 500))))
                 .path("budgetScenarioSave.id").entity(String.class).get());
 
@@ -291,7 +292,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final String create = "mutation($input: ReferenceRevivalInput!) { referenceRevivalCreate(input: $input) { id label year participants automatic "
                 + "figures { category { id } budgeted actual } version } }";
 
-        final long reference = Long.parseLong(execute(SUPER_ADMIN, create, Map.of("input", Map.of("label", "Nobel 2026", "year", 2026,
+        final EntityId reference = entityId("reference_revival", execute(SUPER_ADMIN, create, Map.of("input", Map.of("label", "Nobel 2026", "year", 2026,
                 "participants", 50, "figures", List.of(Map.of("categoryId", "VENUE", "budgeted", "40000", "actual", "41234.50"),
                         Map.of("categoryId", "SHOW_TICKETS", "actual", "81000")))))
                 .path("referenceRevivalCreate.figures[*].category.id").entityList(String.class).containsExactly("SHOW_TICKETS", "VENUE")
@@ -316,7 +317,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void aDeletedRevivalLeavesItsBudgetAsAnAnonymousReference() {
         createLine(STEERING_GROUP, Map.of("categoryId", "VENUE", "description", "Lokal", "unitAmount", "30000"));
-        final long transaction = createTransaction(STEERING_GROUP, Map.of("date", "2027-12-11", "amount", "1450", "categoryId", "VENUE",
+        final EntityId transaction = createTransaction(STEERING_GROUP, Map.of("date", "2027-12-11", "amount", "1450", "categoryId", "VENUE",
                 "description", "Handpenning", "paidBy", Map.of("name", "Kim Kassör")));
 
         restTestClient().post().uri("/api/transactions/{id}/receipt", transaction)
@@ -339,7 +340,7 @@ class BudgetGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void theChalmersspexDatesAreKeptByTheSuperAdminAndReadByObservers() {
         final String fields = "id date label version";
-        final long date = Long.parseLong(execute(SUPER_ADMIN, "mutation($input: SpexCalendarDateInput!) { spexCalendarDateCreate(input: $input) { "
+        final EntityId date = entityId("spex_calendar_date", execute(SUPER_ADMIN, "mutation($input: SpexCalendarDateInput!) { spexCalendarDateCreate(input: $input) { "
                 + fields + " } }", Map.of("input", Map.of("date", "2027-02-06", "label", "Chalmersspexet: premiär")))
                 .path("spexCalendarDateCreate.id").entity(String.class).get());
 

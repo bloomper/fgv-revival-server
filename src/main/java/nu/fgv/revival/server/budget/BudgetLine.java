@@ -26,11 +26,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
 import nu.fgv.revival.server.util.Amounts;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A line in a revival's budget: what is planned in a category, optionally for an event or after a decision.
@@ -54,8 +58,15 @@ public class BudgetLine extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Column(name = "category_id", nullable = false, length = 36)
     private String categoryId;
@@ -72,14 +83,26 @@ public class BudgetLine extends AbstractAuditable {
     @Column(name = "event_id")
     private @Nullable Long eventId;
 
+    @Formula("(SELECT t.uuid FROM event t WHERE t.id = event_id)")
+    @NotAudited
+    private @Nullable UUID eventUuid;
+
     @Column(name = "log_entry_id")
     private @Nullable Long logEntryId;
+
+    @Formula("(SELECT t.uuid FROM log_entry t WHERE t.id = log_entry_id)")
+    @NotAudited
+    private @Nullable UUID logEntryUuid;
 
     /**
      * The event type's line it was proposed from, as a plain id: the template line may be removed later.
      */
     @Column(name = "event_type_line_id")
     private @Nullable Long eventTypeLineId;
+
+    @Formula("(SELECT t.uuid FROM event_type_budget_line t WHERE t.id = event_type_line_id)")
+    @NotAudited
+    private @Nullable UUID eventTypeLineUuid;
 
     @Column(name = "comment", length = COMMENT_MAX_LENGTH)
     private @Nullable String comment;

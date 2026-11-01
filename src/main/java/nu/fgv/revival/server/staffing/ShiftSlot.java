@@ -26,11 +26,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * A time block on an event day that needs people for a task, e.g. ticket check or punch guard. Times are Swedish time.
@@ -54,6 +56,9 @@ public class ShiftSlot extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;

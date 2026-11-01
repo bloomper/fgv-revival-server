@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 import org.springframework.graphql.test.tester.GraphQlTester;
 
@@ -50,20 +51,20 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String PUBLISH = "mutation($input: GuideDraftPublishInput!) { guideDraftPublish(input: $input) { id } }";
     private static final String DISCARD = "mutation($id: ID!, $version: Int!) { guideDraftDiscard(id: $id, version: $version) }";
 
-    private long id(final String table, final String where, final Object... params) {
-        var sql = jdbcClient.sql("SELECT id FROM " + table + " WHERE " + where + " ORDER BY id LIMIT 1");
+    private EntityId id(final String table, final String where, final Object... params) {
+        var sql = jdbcClient.sql("SELECT id, uuid FROM " + table + " WHERE " + where + " ORDER BY id LIMIT 1");
 
         for (final Object param : params) {
             sql = sql.param(param);
         }
-        return sql.query(Long.class).single();
+        return entityId(sql);
     }
 
-    private long rowVersion(final String table, final long id) {
+    private long rowVersion(final String table, final EntityId id) {
         return jdbcClient.sql("SELECT version FROM " + table + " WHERE id = ?").param(id).query(Long.class).single();
     }
 
-    private String snapshot(final long versionId) {
+    private String snapshot(final EntityId versionId) {
         return String.join("|",
                 jdbcClient.sql("SELECT CONCAT_WS(',', status, label, intro_sv, IFNULL(intro_en,'-'), version) FROM guide_version WHERE id = ?").param(versionId).query(String.class).list().toString(),
                 jdbcClient.sql("SELECT CONCAT_WS(',', id, `key`, position, title_sv, IFNULL(title_en,'-'), version) FROM guide_chapter WHERE version_id = ? ORDER BY id").param(versionId).query(String.class).list().toString(),
@@ -71,7 +72,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 jdbcClient.sql("SELECT CONCAT_WS(',', id, chapter_id, IFNULL(section_id,'-'), `key`, position, type, text_sv, IFNULL(text_en,'-'), version) FROM guide_item WHERE version_id = ? ORDER BY id").param(versionId).query(String.class).list().toString());
     }
 
-    private List<String> chapterKeys(final long versionId) {
+    private List<String> chapterKeys(final EntityId versionId) {
         return jdbcClient.sql("SELECT `key` FROM guide_chapter WHERE version_id = ? ORDER BY position").param(versionId).query(String.class).list();
     }
 
@@ -81,10 +82,10 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aPublishedVersionNeverChanges() {
-        final long published = publishedGuide();
-        final long chapter = id("guide_chapter", "version_id = ? AND `key` = 'B'", published);
-        final long section = id("guide_section", "version_id = ?", published);
-        final long item = id("guide_item", "version_id = ? AND section_id IS NOT NULL", published);
+        final EntityId published = publishedGuide();
+        final EntityId chapter = id("guide_chapter", "version_id = ? AND `key` = 'B'", published);
+        final EntityId section = id("guide_section", "version_id = ?", published);
+        final EntityId item = id("guide_item", "version_id = ? AND section_id IS NOT NULL", published);
         final String before = snapshot(published);
         final Map<String, Object> text = Map.of("sv", "Ändrat", "en", "Changed");
 
@@ -106,13 +107,13 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aDraftIsACopyAndEveryEditStaysInIt() {
-        final long published = publishedGuide();
+        final EntityId published = publishedGuide();
 
         graphQl(SUPER_ADMIN).document(START).execute()
                 .path("guideDraftStart.draft.basedOn.id").entity(String.class).isEqualTo(String.valueOf(published))
                 .path("guideDraftStart.draft.chapters").entityList(Object.class).hasSize(10);
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
         final String before = snapshot(published);
 
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_item WHERE version_id = ?").param(draft).query(Long.class).single())
@@ -120,10 +121,10 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(jdbcClient.sql("SELECT `key` FROM guide_item WHERE version_id = ? ORDER BY `key`").param(draft).query(String.class).list())
                 .isEqualTo(jdbcClient.sql("SELECT `key` FROM guide_item WHERE version_id = ? ORDER BY `key`").param(published).query(String.class).list());
 
-        final long chapterC = id("guide_chapter", "version_id = ? AND `key` = 'C'", draft);
-        final long chapterB = id("guide_chapter", "version_id = ? AND `key` = 'B'", draft);
-        final long kalas = id("guide_section", "version_id = ? AND title_sv = 'Kalaslokal'", draft);
-        final long tip = id("guide_item", "version_id = ? AND section_id = ? AND type = 'TIP'", draft, kalas);
+        final EntityId chapterC = id("guide_chapter", "version_id = ? AND `key` = 'C'", draft);
+        final EntityId chapterB = id("guide_chapter", "version_id = ? AND `key` = 'B'", draft);
+        final EntityId kalas = id("guide_section", "version_id = ? AND title_sv = 'Kalaslokal'", draft);
+        final EntityId tip = id("guide_item", "version_id = ? AND section_id = ? AND type = 'TIP'", draft, kalas);
         final String tipKey = jdbcClient.sql("SELECT `key` FROM guide_item WHERE id = ?").param(tip).query(String.class).single();
 
         // Add a requirement to C, at the start of its leading items
@@ -152,7 +153,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(run(SUPER_ADMIN, SECTION_REMOVE, Map.of("id", kalas, "version", rowVersion("guide_section", kalas))), "BAD_REQUEST");
         final String newKey = run(SUPER_ADMIN, SECTION_CREATE, Map.of("input", Map.of("chapterId", chapterB, "title", Map.of("sv", "Nytt avsnitt"))))
                 .path("guideSectionCreate.key").entity(String.class).get();
-        final long newSection = id("guide_section", "`key` = ? AND version_id = ?", newKey, draft);
+        final EntityId newSection = id("guide_section", "`key` = ? AND version_id = ?", newKey, draft);
 
         run(SUPER_ADMIN, SECTION_MOVE, Map.of("input", Map.of("id", newSection, "version", rowVersion("guide_section", newSection), "chapterId", chapterC, "position", 0)))
                 .path("guideSectionMove.sections[0].key").entity(String.class).isEqualTo(newKey);
@@ -168,7 +169,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(snapshot(published)).isEqualTo(before);
 
         // And the item removed
-        final long removable = id("guide_item", "version_id = ? AND type = 'QUESTION'", draft);
+        final EntityId removable = id("guide_item", "version_id = ? AND type = 'QUESTION'", draft);
 
         run(SUPER_ADMIN, ITEM_REMOVE, Map.of("id", removable, "version", rowVersion("guide_item", removable))).errors().verify();
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_item WHERE id = ?").param(removable).query(Long.class).single()).isZero();
@@ -176,11 +177,11 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void chaptersAreAddedMovedAndRemovedInTheDraft() {
-        final long published = publishedGuide();
+        final EntityId published = publishedGuide();
 
         graphQl(SUPER_ADMIN).document(START).execute();
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
         final String before = snapshot(published);
         final String added = run(SUPER_ADMIN, CHAPTER_CREATE, Map.of("input", Map.of("versionId", draft, "position", 1,
                 "title", Map.of("sv", "Sponsorer", "en", "Sponsors"))))
@@ -192,7 +193,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("guideChapterCreate.items").entityList(Object.class).hasSize(0);
         assertThat(chapterKeys(draft)).hasSize(12).last().isNotIn(GuideTestChapters.KEYS);
 
-        final long chapterJ = id("guide_chapter", "version_id = ? AND `key` = 'J'", draft);
+        final EntityId chapterJ = id("guide_chapter", "version_id = ? AND `key` = 'J'", draft);
 
         run(SUPER_ADMIN, CHAPTER_MOVE, Map.of("input", Map.of("id", chapterJ, "version", rowVersion("guide_chapter", chapterJ), "position", 0)))
                 .path("guideChapterMove.chapters[0].key").entity(String.class).isEqualTo("J");
@@ -200,7 +201,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo(java.util.stream.IntStream.range(0, 12).boxed().toList());
 
         // Removing a chapter takes its sections and items along
-        final long chapterB = id("guide_chapter", "version_id = ? AND `key` = 'B'", draft);
+        final EntityId chapterB = id("guide_chapter", "version_id = ? AND `key` = 'B'", draft);
 
         run(SUPER_ADMIN, CHAPTER_REMOVE, Map.of("id", chapterB, "version", rowVersion("guide_chapter", chapterB))).errors().verify();
         assertThat(chapterKeys(draft)).doesNotContain("B").hasSize(11);
@@ -211,7 +212,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         // The published version is untouched, and a chapter of it cannot be removed
         assertThat(snapshot(published)).isEqualTo(before);
-        final long publishedB = id("guide_chapter", "version_id = ? AND `key` = 'B'", published);
+        final EntityId publishedB = id("guide_chapter", "version_id = ? AND `key` = 'B'", published);
 
         expectError(run(SUPER_ADMIN, CHAPTER_REMOVE, Map.of("id", publishedB, "version", rowVersion("guide_chapter", publishedB))), "BAD_REQUEST");
         expectError(run(SUPER_ADMIN, CHAPTER_CREATE, Map.of("input", Map.of("versionId", published, "title", Map.of("sv", "x")))), "BAD_REQUEST");
@@ -225,7 +226,7 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         graphQl(SUPER_ADMIN).document(START).execute()
                 .path("guideDraftStart.draft.chapters").entityList(Object.class).hasSize(0);
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
 
         expectError(run(SUPER_ADMIN, PUBLISH, Map.of("input", Map.of("id", draft, "version", guideVersion(draft)))), "BAD_REQUEST");
         run(SUPER_ADMIN, CHAPTER_CREATE, Map.of("input", Map.of("versionId", draft, "title", Map.of("sv", "Först")))).errors().verify();
@@ -237,8 +238,8 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         publishedGuide();
         graphQl(SUPER_ADMIN).document(START).execute();
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
-        final long chapter = id("guide_chapter", "version_id = ? AND `key` = 'A'", draft);
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId chapter = id("guide_chapter", "version_id = ? AND `key` = 'A'", draft);
 
         expectError(run(SUPER_ADMIN, ITEM_CREATE, Map.of("input", Map.of("chapterId", chapter, "type", "TIP", "text", Map.of("sv", " ")))), "BAD_REQUEST");
         expectError(run(SUPER_ADMIN, ITEM_CREATE, Map.of("input", Map.of("chapterId", chapter, "type", "TIP", "text", Map.of("sv", "x".repeat(5001))))), "BAD_REQUEST");
@@ -252,8 +253,8 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         publishedGuide();
         graphQl(SUPER_ADMIN).document(START).execute();
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
-        final long item = id("guide_item", "version_id = ?", draft);
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId item = id("guide_item", "version_id = ?", draft);
         final long stale = rowVersion("guide_item", item);
 
         run(SUPER_ADMIN, ITEM_UPDATE, Map.of("input", Map.of("id", item, "version", stale, "type", "TEXT", "text", Map.of("sv", "Först.")))).errors().verify();
@@ -265,9 +266,9 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         publishedGuide();
         graphQl(SUPER_ADMIN).document(START).execute();
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
-        final long chapter = id("guide_chapter", "version_id = ? AND `key` = 'A'", draft);
-        final long item = id("guide_item", "version_id = ?", draft);
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId chapter = id("guide_chapter", "version_id = ? AND `key` = 'A'", draft);
+        final EntityId item = id("guide_item", "version_id = ?", draft);
 
         for (final String user : List.of(OBSERVER, DIRECTEUR, STEERING_GROUP, PLAIN_USER)) {
             expectError(graphQl(user).document(START).execute(), "FORBIDDEN");
@@ -281,12 +282,12 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void editsArePublishingAndDiscardingAreAudited() {
-        final long published = publishedGuide();
+        final EntityId published = publishedGuide();
 
         graphQl(SUPER_ADMIN).document(START).execute();
 
-        final long draft = id("guide_version", "status = 'DRAFT'");
-        final long item = id("guide_item", "version_id = ?", draft);
+        final EntityId draft = id("guide_version", "status = 'DRAFT'");
+        final EntityId item = id("guide_item", "version_id = ?", draft);
 
         run(SUPER_ADMIN, ITEM_UPDATE, Map.of("input", Map.of("id", item, "version", rowVersion("guide_item", item), "type", "TIP", "text", Map.of("sv", "Ny.")))).errors().verify();
         run(SUPER_ADMIN, DISCARD, Map.of("id", draft, "version", guideVersion(draft))).errors().verify();
@@ -299,6 +300,6 @@ class GuideDraftGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         }
         assertThat(jdbcClient.sql("SELECT COUNT(*) FROM guide_item_audit a JOIN revinfo r ON r.id = a.rev WHERE r.operation = 'guideItemUpdate' AND a.id = ?")
                 .param(item).query(Long.class).single()).isPositive();
-        assertThat(published).isPositive();
+        assertThat(published.id()).isPositive();
     }
 }

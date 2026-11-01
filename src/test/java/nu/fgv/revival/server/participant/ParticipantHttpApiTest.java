@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -53,7 +54,7 @@ class ParticipantHttpApiTest extends AbstractApiTest {
         when(participation.swishQr(eq(1L), any(Locale.class))).thenReturn("<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes(StandardCharsets.UTF_8));
 
         mockMvc
-                .perform(get("/api/revivals/{id}/swish-qr", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/revivals/{id}/swish-qr", uuid(1)).header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/svg+xml"))
                 .andExpect(header().string("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox"))

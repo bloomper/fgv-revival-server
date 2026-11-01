@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -82,7 +83,7 @@ class CapabilityServiceTest {
             ids.forEach(id -> capabilities.stream().filter(capability -> capability.getId().equals(id)).forEach(found::add));
             return found;
         });
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
     }
 
     @Test

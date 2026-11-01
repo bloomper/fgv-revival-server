@@ -530,10 +530,10 @@ public class LogEntryService {
         final List<LogEntryDto> dtos = new ArrayList<>(entries.size());
 
         for (final LogEntry entry : entries) {
-            dtos.add(new LogEntryDto(entry.getId(), entry.getRevivalId(), entry.getNumber(), entry.getDate(), entry.getType(),
+            dtos.add(new LogEntryDto(entry.getUuid(), entry.getRevivalUuid(), entry.getNumber(), entry.getDate(), entry.getType(),
                     entry.getText(), entry.getStatus(), owners.get(new OwnerViews.Ref(entry.getRevivalId(), entry.getOwner())),
                     entry.getDeadline(), entry.isOverdue(today), entry.getComment(), entry.getTags().stream().sorted().toList(),
-                    entry.getMeetingId(), entry.getGuideItemKey(), entry.getChecklistItemId(), entry.getEventId(), entry.getAnswersEntryId(),
+                    entry.getMeetingUuid(), entry.getGuideItemKey(), entry.getChecklistItemUuid(), entry.getEventUuid(), entry.getAnswersEntryUuid(),
                     entry.getOrigin(), names.get(entry.getCreatedBy()), entry.getCreatedAt(),
                     entry.getLastModifiedBy() == null ? null : names.get(entry.getLastModifiedBy()), entry.getLastModifiedAt(),
                     entry.getVersion()));

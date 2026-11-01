@@ -17,6 +17,7 @@ package nu.fgv.revival.server.budget;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.budget.BudgetDtos.CategorySummary;
 import nu.fgv.revival.server.budget.BudgetDtos.Line;
 import nu.fgv.revival.server.budget.BudgetDtos.Proposal;
@@ -61,6 +62,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -133,7 +137,7 @@ class BudgetServiceTest {
     }
 
     private static EventDto eventDto(final long id, final @Nullable Long typeId) {
-        return new EventDto(id, REVIVAL_ID, typeId, "Rephelg 1", LocalDate.of(2027, 12, 11), LocalDate.of(2027, 12, 12), null, null, null, null,
+        return new EventDto(uuid(id), uuid(REVIVAL_ID), uuidOrNull(typeId), "Rephelg 1", LocalDate.of(2027, 12, 11), LocalDate.of(2027, 12, 12), null, null, null, null,
                 true, -61, false, 0L);
     }
 
@@ -144,7 +148,7 @@ class BudgetServiceTest {
 
         service = new BudgetService(settingsRepository, lineRepository, transactionRepository, typeLineRepository, categoryService, referenceService,
                 eventRepository, eventService, logEntryRepository, callerService, new BudgetAccess(revivalRepository, accessPolicy), helperCompensation,
-                applicationSettings, TestClocks.at(TODAY));
+                applicationSettings, TestClocks.at(TODAY), TestExternalIds.IDS);
         lenient().when(helperCompensation.total(REVIVAL_ID)).thenAnswer(invocation -> helpers);
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         settings = new BudgetSettings(REVIVAL_ID);
@@ -160,7 +164,7 @@ class BudgetServiceTest {
             return found;
         });
         lenient().when(settingsRepository.findByRevivalId(REVIVAL_ID)).thenAnswer(invocation -> Optional.ofNullable(settings));
-        lenient().when(settingsRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(settingsRepository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
         lenient().when(lineRepository.findByRevivalId(REVIVAL_ID)).thenAnswer(invocation -> List.copyOf(lines));
         lenient().when(lineRepository.findById(any())).thenAnswer(invocation ->
                 lines.stream().filter(line -> line.getId().equals(invocation.getArgument(0))).findFirst());
@@ -169,12 +173,13 @@ class BudgetServiceTest {
 
             if (line.getId() == null) {
                 line.setId(100L + lines.size());
+                line.setUuid(uuid(line.getId()));
                 line.setVersion(0L);
                 lines.add(line);
             } else {
                 line.setVersion(line.getVersion() + 1);
             }
-            return line;
+            return withUuids(line);
         });
         lenient().when(transactionRepository.findByRevivalId(REVIVAL_ID)).thenAnswer(invocation -> List.copyOf(transactions));
         lenient().when(referenceService.all()).thenReturn(List.of());
@@ -184,6 +189,7 @@ class BudgetServiceTest {
         final BudgetLine line = new BudgetLine();
 
         line.setId(10L + lines.size());
+        line.setUuid(uuid(line.getId()));
         line.setRevivalId(REVIVAL_ID);
         line.setCategoryId(category);
         line.setDescription("Rad " + lines.size());
@@ -198,7 +204,9 @@ class BudgetServiceTest {
         final BudgetTransaction transaction = new BudgetTransaction();
 
         transaction.setId(50L + transactions.size());
+        transaction.setUuid(uuid(transaction.getId()));
         transaction.setRevivalId(REVIVAL_ID);
+        transaction.setRevivalUuid(uuidOrNull(transaction.getRevivalId()));
         transaction.setDate(TODAY);
         transaction.setCategoryId(category);
         transaction.setDescription("Transaktion");
@@ -213,8 +221,11 @@ class BudgetServiceTest {
         final Event event = new Event();
 
         event.setId(id);
+        event.setUuid(uuid(event.getId()));
         event.setRevivalId(revivalId);
+        event.setRevivalUuid(uuidOrNull(event.getRevivalId()));
         event.setTypeId(typeId);
+        event.setTypeUuid(uuidOrNull(event.getTypeId()));
         when(eventRepository.findById(id)).thenReturn(Optional.of(event));
         return event;
     }
@@ -223,7 +234,9 @@ class BudgetServiceTest {
         final EventTypeBudgetLine line = new EventTypeBudgetLine();
 
         line.setId(id);
+        line.setUuid(uuid(line.getId()));
         line.setEventTypeId(REHEARSAL_TYPE);
+        line.setEventTypeUuid(uuidOrNull(line.getEventTypeId()));
         line.setCategoryId("FOOD");
         line.setDescriptionSv("Mat");
         line.setDescriptionEn("Food");
@@ -368,16 +381,19 @@ class BudgetServiceTest {
         final LogEntry elsewhere = new LogEntry();
 
         decision.setRevivalId(REVIVAL_ID);
+        decision.setRevivalUuid(uuidOrNull(decision.getRevivalId()));
         decision.setType(LogEntryType.DECISION);
         todo.setRevivalId(REVIVAL_ID);
+        todo.setRevivalUuid(uuidOrNull(todo.getRevivalId()));
         todo.setType(LogEntryType.TODO);
         elsewhere.setRevivalId(OTHER_REVIVAL);
+        elsewhere.setRevivalUuid(uuidOrNull(elsewhere.getRevivalId()));
         elsewhere.setType(LogEntryType.DECISION);
         when(logEntryRepository.findById(1L)).thenReturn(Optional.of(decision));
         when(logEntryRepository.findById(2L)).thenReturn(Optional.of(todo));
         when(logEntryRepository.findById(3L)).thenReturn(Optional.of(elsewhere));
 
-        assertThat(service.createLine(newLine("HELPERS", null, 1L, null)).logEntryId()).isEqualTo(1L);
+        assertThat(service.createLine(newLine("HELPERS", null, 1L, null)).logEntryId()).isEqualTo(uuid(1));
         assertThatThrownBy(() -> service.createLine(newLine("HELPERS", null, 2L, null)))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.budget.line.decision");
         assertThatThrownBy(() -> service.createLine(newLine("HELPERS", null, 3L, null)))
@@ -389,7 +405,7 @@ class BudgetServiceTest {
         event(5L, REVIVAL_ID, null);
         event(6L, OTHER_REVIVAL, null);
 
-        assertThat(service.createLine(newLine("FOOD", 5L, null, null)).eventId()).isEqualTo(5L);
+        assertThat(service.createLine(newLine("FOOD", 5L, null, null)).eventId()).isEqualTo(uuid(5));
         assertThatThrownBy(() -> service.createLine(newLine("FOOD", 6L, null, null)))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.budget.line.event");
     }
@@ -404,16 +420,16 @@ class BudgetServiceTest {
 
         final Line added = service.createLine(newLine("FOOD", 5L, null, 7L));
 
-        assertThat(added.eventTypeLineId()).isEqualTo(7L);
+        assertThat(added.eventTypeLineId()).isEqualTo(uuid(7));
         assertThatThrownBy(() -> service.createLine(newLine("FOOD", 5L, null, 7L)))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.budget.line.proposalAdded");
 
-        service.removeLine(added.id(), 0L);
+        service.removeLine(TestExternalIds.internal(added.id()), 0L);
         final Line again = service.createLine(newLine("FOOD", 5L, null, 7L));
 
-        assertThatThrownBy(() -> service.restoreLine(added.id(), 1L))
+        assertThatThrownBy(() -> service.restoreLine(TestExternalIds.internal(added.id()), 1L))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.budget.line.proposalAdded");
-        assertThat(again.eventTypeLineId()).isEqualTo(7L);
+        assertThat(again.eventTypeLineId()).isEqualTo(uuid(7));
     }
 
     @Test
@@ -500,9 +516,9 @@ class BudgetServiceTest {
         line("FOOD", "60", "100");
         transaction("SPONSORSHIP", "5000", Owner.none());
         when(referenceService.all()).thenReturn(List.of(
-                new ReferenceRevivalDto(1L, "Nobel 2026", 2026, 50, null, false,
+                new ReferenceRevivalDto(uuid(1), "Nobel 2026", 2026, 50, null, false,
                         List.of(new ReferenceRevivalDto.Figure("FOOD", kr("6000"), kr("6421"))), 0L),
-                new ReferenceRevivalDto(2L, "Snorre 2019", 2019, null, null, false,
+                new ReferenceRevivalDto(uuid(2), "Snorre 2019", 2019, null, null, false,
                         List.of(new ReferenceRevivalDto.Figure("FOOD", null, kr("4000"))), 0L)));
 
         final List<CategorySummary> summaries = service.categories(REVIVAL_ID);
@@ -532,10 +548,11 @@ class BudgetServiceTest {
         when(typeLineRepository.findByEventTypeIdInOrderByPositionAscIdAsc(any())).thenReturn(List.of(perParticipant, fixed));
         line("FOOD", "1", "1500").setEventId(9L);
         lines.getLast().setEventTypeLineId(8L);
+        withUuids(lines.getLast());
 
         List<Proposal> proposals = service.proposals(REVIVAL_ID);
 
-        assertThat(proposals).extracting(proposal -> proposal.event().id() + "/" + proposal.line().id()).containsExactly("5/7", "5/8", "9/7");
+        assertThat(proposals).extracting(proposal -> TestExternalIds.internal(proposal.event().id()) + "/" + TestExternalIds.internal(proposal.line().id())).containsExactly("5/7", "5/8", "9/7");
         assertThat(proposals.getFirst().quantity()).isNull();
         assertThat(proposals.getFirst().amount()).isNull();
         assertThat(proposals.get(1).quantity()).isEqualTo(2.0);

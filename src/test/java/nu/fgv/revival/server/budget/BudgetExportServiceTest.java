@@ -50,6 +50,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -133,22 +134,22 @@ class BudgetExportServiceTest {
         lenient().when(budgetService.totals(REVIVAL_ID)).thenReturn(new BudgetDtos.Totals(kr("90000"), kr("6000"), kr("84000"), kr("25200"),
                 kr("2350.50"), kr("22849.50"), kr("2350.50"), 1, 1));
         lenient().when(budgetService.lines(REVIVAL_ID, false)).thenReturn(List.of(
-                new BudgetDtos.Line(1L, REVIVAL_ID, "SHOW_TICKETS", "Biljetter", 500, kr("180"), kr("90000"), null, null, null, null, false, 0L),
-                new BudgetDtos.Line(2L, REVIVAL_ID, "FOOD", "Mat under rephelgen", 40, kr("150"), kr("6000"), 9L, null, 7L, null, false, 0L)));
+                new BudgetDtos.Line(uuid(1), uuid(REVIVAL_ID), "SHOW_TICKETS", "Biljetter", 500, kr("180"), kr("90000"), null, null, null, null, false, 0L),
+                new BudgetDtos.Line(uuid(2), uuid(REVIVAL_ID), "FOOD", "Mat under rephelgen", 40, kr("150"), kr("6000"), uuid(9), null, uuid(7), null, false, 0L)));
         lenient().when(transactionService.list(REVIVAL_ID, false)).thenReturn(List.of(
-                new BudgetDtos.Transaction(11L, REVIVAL_ID, LocalDate.of(2028, 2, 1), kr("2350.50"), "FOOD", "Mat", null, Owner.member(20L), false,
+                new BudgetDtos.Transaction(uuid(11), uuid(REVIVAL_ID), LocalDate.of(2028, 2, 1), kr("2350.50"), "FOOD", "Mat", null, Owner.member(20L), false,
                         null, null, false, 1L),
-                new BudgetDtos.Transaction(12L, REVIVAL_ID, LocalDate.of(2028, 2, 10), kr("25200"), "SHOW_TICKETS", "Biljettförsäljning", null,
+                new BudgetDtos.Transaction(uuid(12), uuid(REVIVAL_ID), LocalDate.of(2028, 2, 10), kr("25200"), "SHOW_TICKETS", "Biljettförsäljning", null,
                         Owner.none(), false, null, new BudgetDtos.Receipt("nortic.pdf", Receipts.PDF, 1234, Instant.EPOCH), false, 0L)));
         lenient().when(categoryService.all()).thenReturn(TestBudgetCategories.seeded());
-        lenient().when(eventService.list(anyLong(), eq(true))).thenReturn(List.of(new EventDto(9L, REVIVAL_ID, 3L, "Rephelg 1",
+        lenient().when(eventService.list(anyLong(), eq(true))).thenReturn(List.of(new EventDto(uuid(9), uuid(REVIVAL_ID), uuid(3), "Rephelg 1",
                 LocalDate.of(2027, 12, 11), LocalDate.of(2027, 12, 12), null, null, null, null, true, -61, false, 0L)));
         lenient().when(ownerViews.toDtos(any(), any())).thenAnswer(invocation -> {
             final Map<OwnerViews.Ref, OwnerDto> owners = new HashMap<>();
 
             for (final OwnerViews.Ref ref : invocation.<Collection<OwnerViews.Ref>>getArgument(0)) {
                 if (ref.owner().isSet()) {
-                    owners.put(ref, new OwnerDto(new OwnerDto.OwnerPersonDto(20L, "Stina Styrgrupp", true), null));
+                    owners.put(ref, new OwnerDto(new OwnerDto.OwnerPersonDto(uuid(20), "Stina Styrgrupp", true), null));
                 }
             }
             return owners;

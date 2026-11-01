@@ -21,18 +21,20 @@ import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code ChecklistTemplateSummary}.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistTemplateSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
+public record ChecklistTemplateSummaryDto(UUID id, ChecklistKind kind, @Nullable String chapterKey,
                                           GuideVersionView.@Nullable Text name,
                                           boolean retired) {
 
     public static ChecklistTemplateSummaryDto of(final ChecklistTemplate template) {
-        return new ChecklistTemplateSummaryDto(template.getId(), template.getKind(), template.getChapterKey(), name(template), template.isRetired());
+        return new ChecklistTemplateSummaryDto(template.getUuid(), template.getKind(), template.getChapterKey(), name(template), template.isRetired());
     }
 
     static GuideVersionView.@Nullable Text name(final ChecklistTemplate template) {

@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.TestCallers;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.spex.SpexDto;
@@ -44,11 +45,13 @@ import java.util.Map;
 import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -82,12 +85,12 @@ class RevivalServiceTest {
     private RevivalService service;
 
     private static RevivalUpdateDto details(final LocalDate premiere, final List<LocalDate> showDates) {
-        return new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, premiere, null,
+        return new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, null, premiere, null,
                 showDates == null ? null : showDates.stream().map(date -> new RevivalShowDto(date, null, null)).toList(), null);
     }
 
     private static RevivalUpdateDto shows(final RevivalShowDto... shows) {
-        return new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, null, List.of(shows), null);
+        return new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, null, null, null, List.of(shows), null);
     }
 
     private static RevivalShowDto show(final int day, final String venue) {
@@ -101,11 +104,11 @@ class RevivalServiceTest {
     @BeforeEach
     void setUp() {
         service = new RevivalService(repository, statusChangeRepository, callerService, new AccessPolicy(), spexService, guideVersions, events, deletion, anonymization,
-                Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC));
-        lenient().when(spexService.requireOriginal(anyLong())).thenAnswer(invocation -> new SpexDto(invocation.getArgument(0), "Ali Baba", 1956, true));
+                Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC), TestExternalIds.IDS);
+        lenient().when(spexService.requireOriginal(anyString())).thenAnswer(invocation -> new SpexDto(invocation.getArgument(0), "Ali Baba", 1956, true));
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(spexService.findTitles(anyCollection())).thenReturn(Map.of(1L, new SpexDto(1L, "Ali Baba", 1956, true)));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
+        lenient().when(spexService.findTitles(anyCollection())).thenReturn(Map.of("1", new SpexDto("1", "Ali Baba", 1956, true)));
     }
 
     @Test
@@ -114,10 +117,11 @@ class RevivalServiceTest {
             final Revival revival = invocation.getArgument(0);
 
             revival.setId(7L);
-            return revival;
+            revival.setUuid(uuid(revival.getId()));
+            return withUuids(revival);
         });
 
-        service.create(new RevivalCreateDto(1L, 2028, null));
+        service.create(new RevivalCreateDto("1", 2028, null));
 
         final var order = inOrder(events, guideVersions);
 
@@ -127,10 +131,10 @@ class RevivalServiceTest {
 
     @Test
     void createSetsProposed() {
-        final RevivalDto created = service.create(new RevivalCreateDto(1L, 2028, null));
+        final RevivalDto created = service.create(new RevivalCreateDto("1", 2028, null));
 
         assertThat(created.status()).isEqualTo(RevivalStatus.PROPOSED);
-        verify(spexService).requireOriginal(1L);
+        verify(spexService).requireOriginal("1");
         verify(guideVersions).pinToLatest(any(), any());
     }
 
@@ -138,38 +142,38 @@ class RevivalServiceTest {
     void createNeedsSuperAdmin() {
         when(callerService.current()).thenReturn(TestCallers.observer());
 
-        assertThatThrownBy(() -> service.create(new RevivalCreateDto(1L, 2028, null))).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.create(new RevivalCreateDto("1", 2028, null))).isInstanceOf(AccessDeniedException.class);
         verify(repository, never()).saveAndFlush(any());
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1947, 2101})
     void theYearMustBeBetween1948And2100(final int year) {
-        assertThatThrownBy(() -> service.create(new RevivalCreateDto(1L, year, null))).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.create(new RevivalCreateDto("1", year, null))).isInstanceOf(BadRequestException.class);
     }
 
     @Test
     void theYearMustNotBeBeforeTheOriginalNorThisYear() {
-        when(spexService.requireOriginal(2L)).thenReturn(new SpexDto(2L, "Framtiden", 2027, true));
+        when(spexService.requireOriginal("2")).thenReturn(new SpexDto("2", "Framtiden", 2027, true));
 
-        assertThatThrownBy(() -> service.create(new RevivalCreateDto(2L, 2026, null))).hasMessageContaining("error.revival.year.beforeOriginal");
-        assertThatThrownBy(() -> service.create(new RevivalCreateDto(1L, 2025, null))).hasMessageContaining("error.revival.year.past");
-        assertThat(service.create(new RevivalCreateDto(1L, 2026, null)).year()).isEqualTo(2026);
+        assertThatThrownBy(() -> service.create(new RevivalCreateDto("2", 2026, null))).hasMessageContaining("error.revival.year.beforeOriginal");
+        assertThatThrownBy(() -> service.create(new RevivalCreateDto("1", 2025, null))).hasMessageContaining("error.revival.year.past");
+        assertThat(service.create(new RevivalCreateDto("1", 2026, null)).year()).isEqualTo(2026);
     }
 
     @Test
     void aRevivalAlreadyPlayedMayBeInThePastButNotBeforeTheOriginal() {
-        when(spexService.requireOriginal(2L)).thenReturn(new SpexDto(2L, "Framtiden", 2020, true));
+        when(spexService.requireOriginal("2")).thenReturn(new SpexDto("2", "Framtiden", 2020, true));
 
-        assertThat(service.create(new RevivalCreateDto(1L, 2019, true)).year()).isEqualTo(2019);
-        assertThatThrownBy(() -> service.create(new RevivalCreateDto(2L, 2019, true))).hasMessageContaining("error.revival.year.beforeOriginal");
+        assertThat(service.create(new RevivalCreateDto("1", 2019, true)).year()).isEqualTo(2019);
+        assertThatThrownBy(() -> service.create(new RevivalCreateDto("2", 2019, true))).hasMessageContaining("error.revival.year.beforeOriginal");
     }
 
     @Test
     void aSpexHasAtMostOneRevivalAYear() {
-        when(repository.existsBySpexIdAndYearAndIdNot(1L, 2028, -1L)).thenReturn(true);
+        when(repository.existsBySpexIdAndYearAndIdNot("1", 2028, -1L)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(new RevivalCreateDto(1L, 2028, null))).hasMessageContaining("error.revival.duplicate");
+        assertThatThrownBy(() -> service.create(new RevivalCreateDto("1", 2028, null))).hasMessageContaining("error.revival.duplicate");
     }
 
     @Test
@@ -180,11 +184,11 @@ class RevivalServiceTest {
         revival.getShows().clear();
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 1955, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, 1955, null, null, null, null)))
                 .hasMessageContaining("error.revival.year.beforeOriginal");
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2020, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, 2020, null, null, null, null)))
                 .hasMessageContaining("error.revival.year.past");
-        assertThat(service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2020, null, null, null, true)).year()).isEqualTo(2020);
+        assertThat(service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, 2020, null, null, null, true)).year()).isEqualTo(2020);
     }
 
     @Test
@@ -196,7 +200,7 @@ class RevivalServiceTest {
         revival.getShows().clear();
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
 
-        assertThat(service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2019, null, null, null, null)).year()).isEqualTo(2019);
+        assertThat(service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, 2019, null, null, null, null)).year()).isEqualTo(2019);
     }
 
     @Test
@@ -236,7 +240,7 @@ class RevivalServiceTest {
     void showsAreRefusedWithoutAPremiere() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, null, null, true, List.of(new RevivalShowDto(LocalDate.of(2028, 3, 1), null, "Kårhuset")), null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, null, null, true, List.of(new RevivalShowDto(LocalDate.of(2028, 3, 1), null, "Kårhuset")), null)))
                 .isInstanceOf(BadRequestException.class);
     }
 
@@ -316,16 +320,16 @@ class RevivalServiceTest {
     void changingTheSpexChecksItIsAnOriginal() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
-        service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, 2L, null, null, null, null, null));
+        service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, "2", null, null, null, null, null));
 
-        verify(spexService).requireOriginal(2L);
+        verify(spexService).requireOriginal("2");
     }
 
     @Test
     void aStaleVersionIsAConflict() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.OPEN)));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 2L, null, 2029, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 2L, null, 2029, null, null, null, null)))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -336,7 +340,7 @@ class RevivalServiceTest {
 
         service.update(details(LocalDate.of(2028, 2, 11), null));
 
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2029, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, 2029, null, null, null, null)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -344,7 +348,7 @@ class RevivalServiceTest {
     void aSuperAdminStatusChangeIsRecorded() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.SETTLING)));
 
-        final RevivalDto changed = service.changeStatus(new RevivalStatusChangeDto(REVIVAL_ID, RevivalStatus.SETTLING, RevivalStatus.APPROVED));
+        final RevivalDto changed = service.changeStatus(new RevivalStatusChangeDto(uuid(REVIVAL_ID), RevivalStatus.SETTLING, RevivalStatus.APPROVED));
         final ArgumentCaptor<RevivalStatusChange> change = ArgumentCaptor.forClass(RevivalStatusChange.class);
 
         assertThat(changed.status()).isEqualTo(RevivalStatus.APPROVED);
@@ -358,7 +362,7 @@ class RevivalServiceTest {
     void aStaleFromIsAConflict() {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.ORGANISING)));
 
-        assertThatThrownBy(() -> service.changeStatus(new RevivalStatusChangeDto(REVIVAL_ID, RevivalStatus.APPROVED, RevivalStatus.ORGANISING)))
+        assertThatThrownBy(() -> service.changeStatus(new RevivalStatusChangeDto(uuid(REVIVAL_ID), RevivalStatus.APPROVED, RevivalStatus.ORGANISING)))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -367,9 +371,9 @@ class RevivalServiceTest {
         when(repository.findById(REVIVAL_ID)).thenReturn(Optional.of(TestCallers.revival(RevivalStatus.ARCHIVED)));
 
         assertThatThrownBy(() -> service.update(details(LocalDate.of(2028, 2, 11), null))).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(REVIVAL_ID, 3L, null, 2029, null, null, null, null)))
+        assertThatThrownBy(() -> service.update(new RevivalUpdateDto(uuid(REVIVAL_ID), 3L, null, 2029, null, null, null, null)))
                 .isInstanceOf(AccessDeniedException.class);
-        assertThat(service.changeStatus(new RevivalStatusChangeDto(REVIVAL_ID, RevivalStatus.ARCHIVED, RevivalStatus.SETTLING)).status())
+        assertThat(service.changeStatus(new RevivalStatusChangeDto(uuid(REVIVAL_ID), RevivalStatus.ARCHIVED, RevivalStatus.SETTLING)).status())
                 .isEqualTo(RevivalStatus.SETTLING);
     }
 

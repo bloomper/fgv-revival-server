@@ -22,6 +22,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code ChecklistTemplate}, with its items that are not retired, in order.
@@ -29,12 +30,12 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistTemplateDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
+public record ChecklistTemplateDto(UUID id, ChecklistKind kind, @Nullable String chapterKey,
                                    GuideVersionView.@Nullable Text name, boolean retired,
                                    List<ChecklistTemplateItemDto> items, Long version) {
 
     public static ChecklistTemplateDto of(final ChecklistTemplate template, final List<ChecklistTemplateItem> items) {
-        return new ChecklistTemplateDto(template.getId(), template.getKind(), template.getChapterKey(), ChecklistTemplateSummaryDto.name(template),
+        return new ChecklistTemplateDto(template.getUuid(), template.getKind(), template.getChapterKey(), ChecklistTemplateSummaryDto.name(template),
                 template.isRetired(), items.stream().map(ChecklistTemplateItemDto::of).toList(), template.getVersion());
     }
 }

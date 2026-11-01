@@ -19,11 +19,13 @@ package nu.fgv.revival.server.member;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code OwnerInput}: a member's person id or a free-text name, or neither to clear the owner.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record OwnerInputDto(@Nullable Long personId, @Nullable String name) {
+public record OwnerInputDto(@Nullable UUID personId, @Nullable String name) {
 }

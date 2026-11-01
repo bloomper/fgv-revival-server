@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's closing types (closing.graphqls).
@@ -36,7 +37,7 @@ public final class ClosingDtos {
     private ClosingDtos() {
     }
 
-    public record SyncPreviewDto(Long revivalId, String hash, boolean spexregisterRevivalExists,
+    public record SyncPreviewDto(UUID revivalId, String hash, boolean spexregisterRevivalExists,
                                  List<SyncParticipantPreviewDto> participants,
                                  List<ParticipantRef> excluded, @Nullable Integer membershipYear,
                                  @Nullable SyncRunDto lastRun) {
@@ -51,12 +52,12 @@ public final class ClosingDtos {
     /**
      * A run; {@code done} counts steps written or found, {@code startedBy} is a person id the GraphQL layer resolves.
      */
-    public record SyncRunDto(Long id, Long revivalId, SyncRunStatus status, @Nullable Long startedById,
+    public record SyncRunDto(UUID id, UUID revivalId, SyncRunStatus status, @Nullable UUID startedById,
                              Instant startedAt, @Nullable Instant finishedAt,
                              int total, int done, int failed) {
 
         static SyncRunDto of(final SyncRun run, final List<SyncStep> steps) {
-            return new SyncRunDto(run.getId(), run.getRevivalId(), run.getStatus(), run.getStartedBy(), run.getStartedAt(), run.getFinishedAt(),
+            return new SyncRunDto(run.getUuid(), run.getRevivalUuid(), run.getStatus(), run.getStartedByUuid(), run.getStartedAt(), run.getFinishedAt(),
                     steps.size(), (int) steps.stream().filter(step -> step.getStatus().isComplete()).count(),
                     (int) steps.stream().filter(step -> step.getStatus() == SyncStepStatus.FAILED).count());
         }

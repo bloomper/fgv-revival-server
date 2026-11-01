@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -86,7 +87,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void aDeletedRevivalIsGoneWithEverythingThatBelongsToIt() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             addMember(id, DIRECTEUR, "DIRECTEUR", List.of());
             execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { revivalDelete(id: $id, version: $version) }", Map.of("id", id, "version", version(id)))
@@ -99,7 +100,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void coreFieldsCanBeUpdated() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL, "year", 2029)))
                     .path("revivalUpdate.title").entity(String.class).isEqualTo("Nobel 2029")
@@ -109,7 +110,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void anyStatusCanBeSetIncludingBackwards() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             for (final String[] step : List.of(
                     new String[]{"PROPOSED", "APPROVED"},
@@ -125,7 +126,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void statusHistoryListsEveryChangeWithWhoAndWhen() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             setStatus(id, "APPROVED");
             setStatus(id, "REJECTED");
@@ -141,7 +142,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void revisionsRecordTheKeycloakSubjectNeverAnEmail() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             setStatus(id, "APPROVED");
             addMember(id, "ny-directeur" + DOMAIN, "DIRECTEUR", List.of());
@@ -156,7 +157,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void aDirecteurCanBeAppointedWaitingAndRemoved() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             setStatus(id, "APPROVED");
 
@@ -176,7 +177,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void theSameEmailTwiceIsRefused() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             addMember(id, "dubbel" + DOMAIN, "DIRECTEUR", List.of());
 
@@ -185,7 +186,7 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         @Test
         void participantsCannotBeAdded() {
-            final long id = createRevival(ALI_BABA, 2028);
+            final EntityId id = createRevival(ALI_BABA, 2028);
 
             expectError(execute(SUPER_ADMIN, MEMBER_ADD, Map.of("input", Map.of("revivalId", id, "email", "p" + DOMAIN, "role", "PARTICIPANT"))), "BAD_REQUEST");
         }
@@ -197,8 +198,8 @@ class RevivalAdminGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     @Nested
     class Refusals {
 
-        private long id;
-        private long directeurMemberId;
+        private EntityId id;
+        private EntityId directeurMemberId;
 
         @BeforeEach
         void setUp() {

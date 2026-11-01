@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.audit.AuditContext;
+import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
@@ -26,6 +27,7 @@ import nu.fgv.revival.server.spex.SpexService;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
@@ -45,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static nu.fgv.revival.server.revival.RevivalMapper.REVIVAL_MAPPER;
@@ -59,6 +62,8 @@ import static org.springframework.util.StringUtils.hasText;
  */
 @Service
 public class RevivalService {
+
+    private final ExternalIds ids;
 
     static final int MIN_YEAR = 1948;
     static final int MAX_YEAR = 2100;
@@ -90,7 +95,9 @@ public class RevivalService {
                           final ApplicationEventPublisher events,
                           final RevivalDeletion deletion,
                           final RevivalAnonymization anonymization,
-                          final Clock clock) {
+                          final Clock clock,
+                          final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.statusChangeRepository = statusChangeRepository;
         this.callerService = callerService;
@@ -205,7 +212,7 @@ public class RevivalService {
         }
 
         final List<Revival> revivals = repository.findAll(specification, NEWEST_FIRST);
-        final Map<Long, SpexDto> spexById = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
+        final Map<String, SpexDto> spexById = spexService.findTitles(revivals.stream().map(Revival::getSpexId).toList());
         final List<GuideVersionSummaryDto> published = guideVersions.published();
 
         return revivals.stream().map(revival -> toDto(caller, revival, spexById.get(revival.getSpexId()), published)).toList();
@@ -224,15 +231,15 @@ public class RevivalService {
             throw new ConflictException("error.guide.version.conflict");
         }
 
-        final Map<Long, GuideVersionSummaryDto> published = guideVersions.published().stream()
+        final Map<UUID, GuideVersionSummaryDto> published = guideVersions.published().stream()
                 .collect(java.util.stream.Collectors.toMap(GuideVersionSummaryDto::id, version -> version));
-        final GuideVersionSummaryDto target = published.get(toVersionId);
+        final GuideVersionSummaryDto target = published.get(ids.uuidOf(GuideVersion.class, toVersionId));
 
         if (target == null || target.publishedAt() == null) {
             throw new BadRequestException("error.guide.version.notPublished");
         }
 
-        final GuideVersionSummaryDto current = fromVersionId == null ? null : published.get(fromVersionId);
+        final GuideVersionSummaryDto current = fromVersionId == null ? null : published.get(ids.uuidOf(GuideVersion.class, fromVersionId));
 
         accessPolicy.requireGuideVersionChange(caller, revival, current == null ? null : current.publishedAt(), target.publishedAt());
         AuditContext.operation("revivalGuideVersionChange");
@@ -312,7 +319,7 @@ public class RevivalService {
     @Transactional
     public RevivalDto update(final RevivalUpdateDto dto) {
         final Caller caller = callerService.current();
-        final Revival revival = visible(caller, dto.id());
+        final Revival revival = visible(caller, ids.idOf(Revival.class, dto.id()));
 
         if (dto.changesCore()) {
             accessPolicy.requireEditCore(caller, revival);
@@ -330,7 +337,7 @@ public class RevivalService {
         AuditContext.operation("revivalUpdate");
 
         if (dto.changesCore()) {
-            final Long spexId = dto.spexId() != null ? dto.spexId() : revival.getSpexId();
+            final String spexId = dto.spexId() != null ? dto.spexId() : revival.getSpexId();
             final SpexDto spex = spexService.requireOriginal(spexId);
             final Integer year = validYear(dto.year() != null ? dto.year() : revival.getYear(), spex);
 
@@ -407,7 +414,7 @@ public class RevivalService {
     @Transactional
     public RevivalDto changeStatus(final RevivalStatusChangeDto dto) {
         final Caller caller = callerService.current();
-        final Revival revival = visible(caller, dto.id());
+        final Revival revival = visible(caller, ids.idOf(Revival.class, dto.id()));
 
         if (revival.getStatus() != dto.from()) {
             throw new ConflictException("error.revival.status.conflict");
@@ -431,7 +438,7 @@ public class RevivalService {
         return toDto(caller, saved);
     }
 
-    private void requireUnique(final Long spexId, final Integer year, final @Nullable Long id) {
+    private void requireUnique(final String spexId, final Integer year, final @Nullable Long id) {
         if (repository.existsBySpexIdAndYearAndIdNot(spexId, year, id == null ? -1L : id)) {
             throw new BadRequestException("error.revival.duplicate", year);
         }

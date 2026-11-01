@@ -27,10 +27,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * A line an event type proposes for the budget of a revival with an event of the type, e.g. food per
@@ -51,8 +55,15 @@ public class EventTypeBudgetLine extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "event_type_id", nullable = false, updatable = false)
     private Long eventTypeId;
+
+    @Formula("(SELECT t.uuid FROM event_type t WHERE t.id = event_type_id)")
+    @NotAudited
+    private @Nullable UUID eventTypeUuid;
 
     @Column(name = "category_id", nullable = false, length = 36)
     private String categoryId;

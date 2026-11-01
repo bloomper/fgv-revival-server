@@ -16,13 +16,14 @@
 package nu.fgv.revival.server.material;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
@@ -51,8 +52,8 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String MY_MATERIALS = "query($id: ID!) { myParticipation(revivalId: $id) { materials { title service { id } } } }";
     private static final String SERVICES = "query($all: Boolean) { linkServices(includeRetired: $all) { id name { sv en } hosts homeUrl position retired inUse version } }";
 
-    private long revival;
-    private long participant;
+    private EntityId revival;
+    private EntityId participant;
 
     private static Map<String, Object> material(final String title, final String url, final String visibility, final Object... extra) {
         final Map<String, Object> input = new HashMap<>(Map.of("title", title, "url", url, "category", "SCRIPT", "visibility", visibility));
@@ -80,15 +81,15 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         setPosition("BAND");
     }
 
-    private long pending(final String kind, final String firstName, final String lastName, final String email) {
-        return Long.parseLong(execute(STEERING_GROUP, "mutation($input: ParticipantAddInput!) { participantAdd(input: $input) { id } }",
+    private EntityId pending(final String kind, final String firstName, final String lastName, final String email) {
+        return entityId("participant", execute(STEERING_GROUP, "mutation($input: ParticipantAddInput!) { participantAdd(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", firstName, "lastName", lastName, "email", email)))
                 .path("participantAdd.id").entity(String.class).get());
     }
 
-    private void invite(final long... ids) {
+    private void invite(final EntityId... ids) {
         execute(STEERING_GROUP, "mutation($input: ParticipantsInviteInput!) { participantsInvite(input: $input) { invited { id } } }",
-                Map.of("input", Map.of("revivalId", revival, "participantIds", Arrays.stream(ids).boxed().toList(), "language", "sv")))
+                Map.of("input", Map.of("revivalId", revival, "participantIds", List.of(ids), "language", "sv")))
                 .path("participantsInvite.invited").entityList(Object.class).hasSize(ids.length);
     }
 
@@ -112,7 +113,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     private long materialVersion(final String id) {
-        return jdbcClient.sql("SELECT version FROM material WHERE id = ?").param(Long.parseLong(id)).query(Long.class).single();
+        return jdbcClient.sql("SELECT version FROM material WHERE uuid = ?").param(id).query(Long.class).single();
     }
 
     private List<String> titles(final String user) {
@@ -204,7 +205,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     void theInventoryHasOwnersStatusesAndMaterials() {
         final String script = execute(STEERING_GROUP, CREATE, Map.of("input", create(material("Manus", "https://docs.google.com/d/x", "PARTICIPANTS"))))
                 .path("materialCreate.id").entity(String.class).get();
-        final long directeur = personId(DIRECTEUR);
+        final EntityId directeur = personId(DIRECTEUR);
         final String crown = execute(STEERING_GROUP, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Kungakrona", "kind", "PROPS",
                 "status", "BUILD", "owner", Map.of("personId", directeur))))
                 .path("inventoryItemCreate.quantity").entity(Integer.class).isEqualTo(1)
@@ -221,7 +222,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(STEERING_GROUP, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", " ", "kind", "WIG", "status", "HAVE"))),
                 "BAD_REQUEST");
         expectError(execute(STEERING_GROUP, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Fel", "kind", "WIG", "status", "HAVE",
-                "materialId", 999_999))), "BAD_REQUEST");
+                "materialId", UUID.randomUUID()))), "NOT_FOUND");
         expectError(execute(SUPER_ADMIN, ITEM_CREATE, Map.of("input", Map.of("revivalId", revival, "name", "Nej", "kind", "WIG", "status", "HAVE"))),
                 "FORBIDDEN");
 
@@ -231,7 +232,7 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(PARTICIPANT, INVENTORY, Map.of("id", revival)), "FORBIDDEN");
         expectError(execute(HELPER, INVENTORY, Map.of("id", revival)), "FORBIDDEN");
 
-        final long version = jdbcClient.sql("SELECT version FROM inventory_item WHERE id = ?").param(Long.parseLong(crown)).query(Long.class).single();
+        final long version = jdbcClient.sql("SELECT version FROM inventory_item WHERE uuid = ?").param(crown).query(Long.class).single();
 
         execute(STEERING_GROUP, "mutation($id: ID!, $v: Int!, $input: InventoryItemInput!) { inventoryItemUpdate(id: $id, version: $v, input: $input) { "
                 + ITEM_FIELDS + " } }", Map.of("id", crown, "v", version, "input", Map.of("name", "Kungakrona", "kind", "PROPS", "status", "HAVE",

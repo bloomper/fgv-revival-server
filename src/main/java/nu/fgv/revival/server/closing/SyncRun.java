@@ -28,11 +28,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * One run of the participation sync to Spexregister: who started it, from which preview, and how it ended.
@@ -53,11 +56,22 @@ public class SyncRun extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
 
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
+
     @Column(name = "started_by")
     private @Nullable Long startedBy;
+
+    @Formula("(SELECT t.uuid FROM person t WHERE t.id = started_by)")
+    @NotAudited
+    private @Nullable UUID startedByUuid;
 
     @Column(name = "started_at", nullable = false)
     private Instant startedAt;

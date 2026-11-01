@@ -17,7 +17,9 @@
 
 package nu.fgv.revival.server.member;
 
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonNames;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -41,10 +44,13 @@ import java.util.stream.Collectors;
 @Component
 public class OwnerViews {
 
+    private final ExternalIds ids;
+
     private final OwnerResolver ownerResolver;
     private final PersonNames personNames;
 
-    public OwnerViews(final OwnerResolver ownerResolver, final PersonNames personNames) {
+    public OwnerViews(final OwnerResolver ownerResolver, final PersonNames personNames, final ExternalIds ids) {
+        this.ids = ids;
         this.ownerResolver = ownerResolver;
         this.personNames = personNames;
     }
@@ -57,6 +63,7 @@ public class OwnerViews {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         final Map<Long, String> names = personIds.isEmpty() ? Map.of() : personNames.byIds(personIds, locale);
+        final Map<Long, UUID> uuids = ids.uuidsOf(Person.class, personIds);
         final Map<Ref, @Nullable OwnerDto> result = new HashMap<>();
 
         for (final Ref ref : refs) {
@@ -65,7 +72,7 @@ public class OwnerViews {
             if (owner.getPersonId() != null) {
                 final Map<Long, @Nullable String> members = active.computeIfAbsent(ref.revivalId(), ownerResolver::checklistOwners);
 
-                result.put(ref, new OwnerDto(new OwnerDto.OwnerPersonDto(owner.getPersonId(), names.get(owner.getPersonId()),
+                result.put(ref, new OwnerDto(new OwnerDto.OwnerPersonDto(uuids.get(owner.getPersonId()), names.get(owner.getPersonId()),
                         members.containsKey(owner.getPersonId())), null));
             } else if (owner.getName() != null) {
                 result.put(ref, new OwnerDto(null, owner.getName()));

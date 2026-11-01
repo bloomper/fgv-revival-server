@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.staffing;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -59,11 +60,11 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             }""";
     private static final String RESPOND = "mutation($input: ParticipationRespondInput!) { participationRespond(input: $input) { participant { response } } }";
 
-    private long revival;
-    private long weekend;
-    private long rehearsal;
-    private long participant;
-    private long helper;
+    private EntityId revival;
+    private EntityId weekend;
+    private EntityId rehearsal;
+    private EntityId participant;
+    private EntityId helper;
 
     @BeforeEach
     void openRevivalWithAParticipantAndAHelper() {
@@ -79,27 +80,27 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         login(HELPER);
     }
 
-    private long event(final String title, final String start, final String end, final String location) {
+    private EntityId event(final String title, final String start, final String end, final String location) {
         final Map<String, Object> input = new HashMap<>(Map.of("revivalId", revival, "title", title, "startDate", start, "endDate", end));
 
         if (location != null) {
             input.put("location", location);
         }
-        return Long.parseLong(execute(DIRECTEUR, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }", Map.of("input", input))
+        return entityId("event", execute(DIRECTEUR, "mutation($input: EventCreateInput!) { eventCreate(input: $input) { id } }", Map.of("input", input))
                 .path("eventCreate.id").entity(String.class).get());
     }
 
-    private long pending(final String kind, final String firstName, final String lastName, final String email) {
-        return Long.parseLong(execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", firstName,
+    private EntityId pending(final String kind, final String firstName, final String lastName, final String email) {
+        return entityId("participant", execute(STEERING_GROUP, ADD, Map.of("input", Map.of("revivalId", revival, "kind", kind, "firstName", firstName,
                 "lastName", lastName, "email", email))).path("participantAdd.id").entity(String.class).get());
     }
 
-    private Map<String, Object> slot(final long event, final String date, final String start, final String end, final String task, final int needed) {
+    private Map<String, Object> slot(final EntityId event, final String date, final String start, final String end, final String task, final int needed) {
         return Map.of("eventId", event, "date", date, "startTime", start, "endTime", end, "task", task, "needed", needed);
     }
 
-    private long createSlot(final Map<String, Object> input) {
-        return Long.parseLong(execute(DIRECTEUR, CREATE, Map.of("input", input)).path("shiftSlotCreate.id").entity(String.class).get());
+    private EntityId createSlot(final Map<String, Object> input) {
+        return entityId("shift_slot", execute(DIRECTEUR, CREATE, Map.of("input", input)).path("shiftSlotCreate.id").entity(String.class).get());
     }
 
     private void answerYes(final String user) {
@@ -107,7 +108,7 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("participationRespond.participant.response").entity(String.class).isEqualTo("YES");
     }
 
-    private long slotVersion(final long id) {
+    private long slotVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM shift_slot WHERE id = ?").param(id).query(Long.class).single();
     }
 
@@ -121,10 +122,10 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         expectError(execute(DIRECTEUR, CREATE, Map.of("input", slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 0))), "BAD_REQUEST");
         expectError(execute(DIRECTEUR, CREATE, Map.of("input", slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 101))), "BAD_REQUEST");
 
-        final long id = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
+        final EntityId id = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
 
         // A steering group member with STAFFING writes too
-        final Map<String, Object> member = jdbcClient.sql("SELECT id, version FROM revival_member WHERE revival_id = ? AND role = 'STEERING_GROUP'")
+        final Map<String, Object> member = jdbcClient.sql("SELECT uuid AS id, version FROM revival_member WHERE revival_id = ? AND role = 'STEERING_GROUP'")
                 .param(revival).query().singleRow();
 
         execute(DIRECTEUR, "mutation($input: RevivalMemberCapabilitiesInput!) { revivalMemberCapabilitiesSet(input: $input) { id } }",
@@ -157,8 +158,8 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aParticipantAnswersForTheDaysAndSignsUp() {
-        final long tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 1));
-        final long drinks = createSlot(slot(weekend, "2028-05-05", "18:00", "20:00", "Sälja dryckesbiljetter", 2));
+        final EntityId tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 1));
+        final EntityId drinks = createSlot(slot(weekend, "2028-05-05", "18:00", "20:00", "Sälja dryckesbiljetter", 2));
 
         // Before answering yes or maybe there is nothing to sign up for
         execute(PARTICIPANT, MINE, Map.of("id", revival)).path("myParticipation.openShifts").entityList(Object.class).hasSize(0)
@@ -215,8 +216,8 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aHelperSeesOnlyTheirShiftsAndIsPaidForThem() {
-        final long tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
-        final long punch = createSlot(slot(weekend, "2028-05-06", "21:00", "23:00", "Bålvakt", 1));
+        final EntityId tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
+        final EntityId punch = createSlot(slot(weekend, "2028-05-06", "21:00", "23:00", "Bålvakt", 1));
 
         execute(HELPER, MINE, Map.of("id", revival)).path("myParticipation.events").entityList(Object.class).hasSize(0)
                 .path("myParticipation.openShifts").entityList(Object.class).hasSize(0);
@@ -259,7 +260,7 @@ class StaffingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void mcpListsTheSlotsWithoutNamesAndTheRevivalCanStillBeDeleted() {
-        final long tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
+        final EntityId tickets = createSlot(slot(weekend, "2028-05-05", "17:00", "19:00", "Biljettkontroll", 2));
 
         answerYes(PARTICIPANT);
         execute(PARTICIPANT, SIGN_UP, Map.of("slot", tickets));

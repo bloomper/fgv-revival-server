@@ -20,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * One revision of a record: who changed it, when, from where, and what.
@@ -30,7 +31,7 @@ import java.util.List;
 public record RevisionDto(
         Long revision,
         AuditedType type,
-        Long entityId,
+        UUID entityId,
         RevisionType revisionType,
         Instant modifiedAt,
         String modifiedBy,

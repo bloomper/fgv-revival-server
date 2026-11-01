@@ -20,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * A member as GraphQL's {@code RevivalMember}. {@code email} is filled only for callers who may see it.
@@ -27,7 +28,7 @@ import java.util.Set;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalMemberDto(Long id,
+public record RevivalMemberDto(UUID id,
                                RevivalRole role,
                                Set<String> capabilities,
                                MemberState state,

@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * A checklist item as GraphQL's {@code ChecklistItem}. A required item's text is the guide's, in the revival's pinned
@@ -32,7 +33,7 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistItemDto(Long id,
+public record ChecklistItemDto(UUID id,
                                ChecklistSummaryDto checklist,
                                boolean required,
                                GuideVersionView.Text text,

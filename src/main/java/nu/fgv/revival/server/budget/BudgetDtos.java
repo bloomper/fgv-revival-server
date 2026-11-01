@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The GraphQL types of a revival's budget (budget.graphqls). Categories, events, decisions and payers are resolved
@@ -40,7 +41,7 @@ public final class BudgetDtos {
      * GraphQL's {@code Budget}: only handed out to callers who read the revival's budget; its fields are resolved by
      * the services, which check again.
      */
-    public record Budget(Long revivalId) {
+    public record Budget(UUID revivalId) {
     }
 
     public record Settings(@Nullable Integer participantsPlanned, @Nullable BigDecimal participationFee,
@@ -54,15 +55,15 @@ public final class BudgetDtos {
         }
     }
 
-    public record Line(Long id, Long revivalId, String categoryId, String description, double quantity,
+    public record Line(UUID id, UUID revivalId, String categoryId, String description, double quantity,
                        BigDecimal unitAmount, BigDecimal amount,
-                       @Nullable Long eventId, @Nullable Long logEntryId, @Nullable Long eventTypeLineId,
+                       @Nullable UUID eventId, @Nullable UUID logEntryId, @Nullable UUID eventTypeLineId,
                        @Nullable String comment, boolean removed,
                        Long version) {
 
         static Line of(final BudgetLine line) {
-            return new Line(line.getId(), line.getRevivalId(), line.getCategoryId(), line.getDescription(), line.getQuantity().doubleValue(),
-                    line.getUnitAmount(), line.amount(), line.getEventId(), line.getLogEntryId(), line.getEventTypeLineId(), line.getComment(),
+            return new Line(line.getUuid(), line.getRevivalUuid(), line.getCategoryId(), line.getDescription(), line.getQuantity().doubleValue(),
+                    line.getUnitAmount(), line.amount(), line.getEventUuid(), line.getLogEntryUuid(), line.getEventTypeLineUuid(), line.getComment(),
                     line.isRemoved(), line.getVersion() == null ? 0L : line.getVersion());
         }
     }
@@ -70,15 +71,15 @@ public final class BudgetDtos {
     /**
      * GraphQL's {@code Transaction}. {@code payer} is resolved to {@code paidBy}.
      */
-    public record Transaction(Long id, Long revivalId, LocalDate date, BigDecimal amount, String categoryId,
+    public record Transaction(UUID id, UUID revivalId, LocalDate date, BigDecimal amount, String categoryId,
                               String description,
-                              @Nullable Long budgetLineId, Owner payer, boolean reimbursed,
+                              @Nullable UUID budgetLineId, Owner payer, boolean reimbursed,
                               @Nullable Instant reimbursedAt,
                               @Nullable Receipt receipt, boolean cancelled, Long version) {
 
         static Transaction of(final BudgetTransaction transaction) {
-            return new Transaction(transaction.getId(), transaction.getRevivalId(), transaction.getDate(), transaction.getAmount(),
-                    transaction.getCategoryId(), transaction.getDescription(), transaction.getBudgetLineId(), transaction.paidBy(),
+            return new Transaction(transaction.getUuid(), transaction.getRevivalUuid(), transaction.getDate(), transaction.getAmount(),
+                    transaction.getCategoryId(), transaction.getDescription(), transaction.getBudgetLineUuid(), transaction.paidBy(),
                     transaction.isReimbursed(), transaction.getReimbursedAt(), Receipt.of(transaction), transaction.isCancelled(),
                     transaction.getVersion() == null ? 0L : transaction.getVersion());
         }
@@ -117,7 +118,7 @@ public final class BudgetDtos {
                            @Nullable BigDecimal amount) {
     }
 
-    public record Scenario(Long id, Long revivalId, String name, ScenarioParameters parameters,
+    public record Scenario(UUID id, UUID revivalId, String name, ScenarioParameters parameters,
                            ScenarioResultDto result, Long version) {
     }
 }

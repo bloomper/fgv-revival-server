@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -67,7 +68,7 @@ class RevivalVisibilityIntegrationTest extends AbstractIntegrationTest {
     @ParameterizedTest(name = "{0} in {1} sees it: {2}")
     @MethodSource("combinations")
     void graphQlAndMcpMatchTheVisibilityTable(final String role, final String status, final boolean visible) {
-        final long id = createRevival(ALI_BABA, 2028);
+        final EntityId id = createRevival(ALI_BABA, 2028);
         final String user = USERS.get(role);
 
         addMember(id, DIRECTEUR, "DIRECTEUR", List.of());

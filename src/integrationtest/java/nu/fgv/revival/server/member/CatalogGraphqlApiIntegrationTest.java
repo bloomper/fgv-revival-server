@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.member;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -56,7 +57,7 @@ class CatalogGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aNewCapabilityCanBeHeldThenRetiredButNotDeletedWhileInUse() {
-        final long revival = createRevival(ALI_BABA, 2028);
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
 
@@ -110,8 +111,8 @@ class CatalogGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aNewItemTypeKeepsItsKind() {
-        final long draft = draftV5Layout();
-        final long chapter = jdbcClient.sql("SELECT id FROM guide_chapter WHERE version_id = ? ORDER BY position LIMIT 1").param(draft).query(Long.class).single();
+        final EntityId draft = draftV5Layout();
+        final EntityId chapter = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_chapter WHERE version_id = ? ORDER BY position LIMIT 1").param(draft));
         final String id = execute(SUPER_ADMIN, TYPE_CREATE, Map.of("input", Map.of("kind", "REQUIREMENT", "name", Map.of("sv", "Myndighetskrav"))))
                 .path("guideItemTypeCreate.kind").entity(String.class).isEqualTo("REQUIREMENT")
                 .path("guideItemTypeCreate.id").entity(String.class).get();

@@ -23,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A row as GraphQL's {@code LogEntry}. People are display names; {@code overdue} is computed for today in Sweden.
@@ -30,8 +31,8 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record LogEntryDto(Long id,
-                          Long revivalId,
+public record LogEntryDto(UUID id,
+                          UUID revivalId,
                           int number,
                           LocalDate date,
                           LogEntryType type,
@@ -42,11 +43,11 @@ public record LogEntryDto(Long id,
                           boolean overdue,
                           @Nullable String comment,
                           List<String> tags,
-                          @Nullable Long meetingId,
+                          @Nullable UUID meetingId,
                           @Nullable String guideItemKey,
-                          @Nullable Long checklistItemId,
-                          @Nullable Long eventId,
-                          @Nullable Long answersEntryId,
+                          @Nullable UUID checklistItemId,
+                          @Nullable UUID eventId,
+                          @Nullable UUID answersEntryId,
                           LogEntryOrigin origin,
                           @Nullable String createdBy,
                           Instant createdAt,

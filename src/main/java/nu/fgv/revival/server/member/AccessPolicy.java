@@ -293,13 +293,13 @@ public class AccessPolicy {
     public List<GuideVersionSummaryDto> guideVersionsAllowed(final Caller caller, final Revival revival,
                                                              final List<GuideVersionSummaryDto> published) {
         final Instant current = published.stream()
-                .filter(version -> version.id().equals(revival.getGuideVersionId()))
+                .filter(version -> version.id().equals(revival.getGuideVersionUuid()))
                 .map(GuideVersionSummaryDto::publishedAt)
                 .findFirst()
                 .orElse(null);
 
         return published.stream()
-                .filter(version -> version.publishedAt() != null && !version.id().equals(revival.getGuideVersionId()))
+                .filter(version -> version.publishedAt() != null && !version.id().equals(revival.getGuideVersionUuid()))
                 .filter(version -> canChangeGuideVersion(caller, revival, current, version.publishedAt()))
                 .toList();
     }
@@ -652,7 +652,7 @@ public class AccessPolicy {
 
     public RevivalPermissionsDto permissions(final Caller caller, final Revival revival, final List<GuideVersionSummaryDto> published) {
         return new RevivalPermissionsDto(
-                revival.getId(),
+                revival.getUuid(),
                 canEditCore(caller, revival),
                 canEditDetails(caller, revival),
                 allowedStatuses(caller, revival),

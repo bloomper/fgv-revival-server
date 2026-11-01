@@ -23,6 +23,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A revival's state at a glance for MCP's get_revival_status.
@@ -35,7 +36,7 @@ public record RevivalStatusDto(Summary revival,
                                List<ChecklistItemDto> overdueChecklistItems,
                                List<OpenRequirements> openRequirements) {
 
-    public record Summary(Long id, String title, Integer year, RevivalStatus status) {
+    public record Summary(UUID id, String title, Integer year, RevivalStatus status) {
     }
 
     public record OpenRequirements(String chapterKey, GuideVersionView.@Nullable Text chapterTitle, int open,

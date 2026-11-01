@@ -20,6 +20,7 @@ import nu.fgv.revival.server.guide.GuideChanges;
 import nu.fgv.revival.server.guide.GuideItemKind;
 import nu.fgv.revival.server.guide.GuideSearch;
 import nu.fgv.revival.server.guide.GuideService;
+import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestion;
@@ -27,7 +28,9 @@ import nu.fgv.revival.server.guide.suggestion.GuideSuggestionDto;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionKind;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionService;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionStatus;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -36,6 +39,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * MCP tools for the guide. Output never names a person.
@@ -46,6 +50,8 @@ import java.util.List;
 @Component
 public class GuideMcpTools {
 
+    private final ExternalIds ids;
+
     static final int DEFAULT_LIMIT = 20;
     static final int MAX_LIMIT = 50;
 
@@ -53,7 +59,8 @@ public class GuideMcpTools {
     private final GuideSuggestionService suggestionService;
     private final McpToolSupport support;
 
-    public GuideMcpTools(final GuideService guideService, final GuideSuggestionService suggestionService, final McpToolSupport support) {
+    public GuideMcpTools(final GuideService guideService, final GuideSuggestionService suggestionService, final McpToolSupport support, final ExternalIds ids) {
+        this.ids = ids;
         this.guideService = guideService;
         this.suggestionService = suggestionService;
         this.support = support;
@@ -74,12 +81,12 @@ public class GuideMcpTools {
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public SearchResult searchGuide(
             @McpToolParam(description = "Word or phrase, at least 2 characters") final String query,
-            @McpToolParam(required = false, description = "A revival you can see") final @Nullable Long revivalId,
+            @McpToolParam(required = false, description = "A revival you can see") final @Nullable UUID revivalId,
             @McpToolParam(required = false, description = "1-50, default 20") final @Nullable Integer limit) {
         return support.call("search_guide", () -> {
-            final GuideVersionView version = version(revivalId);
+            final GuideVersionView version = version(ids.idOfNullable(Revival.class, revivalId));
             final int first = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, 1, MAX_LIMIT);
-            final GuideService.SearchResult result = guideService.search(version.id(), query, first);
+            final GuideService.SearchResult result = guideService.search(ids.idOf(GuideVersion.class, version.id()), query, first);
 
             return new SearchResult(Version.of(result.version()), result.hits().stream().map(Hit::of).toList());
         });
@@ -91,9 +98,9 @@ public class GuideMcpTools {
     public SectionResult getGuideSection(
             @McpToolParam(description = "The chapter's number, counting from 1, or its key from search_guide") final String chapter,
             @McpToolParam(required = false, description = "A section key from search_guide. Without it, the whole chapter.") final @Nullable String sectionKey,
-            @McpToolParam(required = false, description = "A revival you can see") final @Nullable Long revivalId) {
+            @McpToolParam(required = false, description = "A revival you can see") final @Nullable UUID revivalId) {
         return support.call("get_guide_section", () -> {
-            final GuideVersionView version = version(revivalId);
+            final GuideVersionView version = version(ids.idOfNullable(Revival.class, revivalId));
             final GuideVersionView.Chapter found = McpToolSupport.chapter(version, chapter);
 
             if (sectionKey == null) {
@@ -114,7 +121,7 @@ public class GuideMcpTools {
             description = "Suggest a change to the revival guide on behalf of your revival: new text or type for an item, removing an item, or a new item in a chapter or section. The super admin decides; nothing in the guide changes now.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public SuggestionResult suggestGuideChange(
-            @McpToolParam(description = "The revival you suggest from") final Long revivalId,
+            @McpToolParam(description = "The revival you suggest from") final UUID revivalId,
             @McpToolParam(description = "CHANGE, REMOVE or ADD") final GuideSuggestionKind kind,
             @McpToolParam(required = false, description = "CHANGE, REMOVE: the item's key from search_guide or get_guide_section") final @Nullable String itemKey,
             @McpToolParam(required = false, description = "ADD: the chapter's number, counting from 1, or its key") final @Nullable String chapter,
@@ -124,10 +131,10 @@ public class GuideMcpTools {
             @McpToolParam(required = false, description = "English text, Markdown") final @Nullable String textEn,
             @McpToolParam(required = false, description = "Why; required for CHANGE and REMOVE") final @Nullable String reason) {
         return support.call("suggest_guide_change", () -> {
-            final GuideVersionView version = version(revivalId);
+            final GuideVersionView version = version(ids.idOfNullable(Revival.class, revivalId));
             final String chapterKey = chapter == null || chapter.isBlank() ? null : McpToolSupport.chapter(version, chapter).key();
             final GuideSuggestionDto created = suggestionService.create(new GuideSuggestionService.Proposal(
-                    revivalId, version.id(), kind, itemKey, chapterKey, sectionKey, type, textSv, textEn, reason));
+                    ids.idOfNullable(Revival.class, revivalId), ids.idOf(GuideVersion.class, version.id()), kind, itemKey, chapterKey, sectionKey, type, textSv, textEn, reason));
 
             return new SuggestionResult(created.id(), created.status(), created.kind(), new Version(version.id(), version.label(), version.publishedAt()));
         });
@@ -144,36 +151,36 @@ public class GuideMcpTools {
             description = "What changed in the guide between two versions: chapters, sections and items added, changed, moved or removed.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public GuideChanges.Result getGuideChanges(
-            @McpToolParam(description = "The older version, by id from list_guide_versions") final Long fromVersionId,
-            @McpToolParam(description = "The newer version, by id") final Long toVersionId) {
-        return support.call("get_guide_changes", () -> guideService.changes(fromVersionId, toVersionId));
+            @McpToolParam(description = "The older version, by id from list_guide_versions") final UUID fromVersionId,
+            @McpToolParam(description = "The newer version, by id") final UUID toVersionId) {
+        return support.call("get_guide_changes", () -> guideService.changes(ids.idOf(GuideVersion.class, fromVersionId), ids.idOf(GuideVersion.class, toVersionId)));
     }
 
     @McpTool(name = "list_guide_suggestions",
             description = "List suggested changes to the guide you can see: a revival's own, or as a super admin all of them. Status OPEN, ACCEPTED, REJECTED or WITHDRAWN.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
     public McpToolSupport.ListResult<Suggestion> listGuideSuggestions(
-            @McpToolParam(required = false, description = "Only this revival's") final @Nullable Long revivalId,
+            @McpToolParam(required = false, description = "Only this revival's") final @Nullable UUID revivalId,
             @McpToolParam(required = false, description = "Only these statuses") final @Nullable List<GuideSuggestionStatus> status) {
-        return support.call("list_guide_suggestions", () -> new McpToolSupport.ListResult<>(suggestionService.findVisible(status, revivalId).stream()
+        return support.call("list_guide_suggestions", () -> new McpToolSupport.ListResult<>(suggestionService.findVisible(status, ids.idOfNullable(Revival.class, revivalId)).stream()
                 .map(Suggestion::of).toList()));
     }
 
     @McpTool(name = "withdraw_guide_suggestion",
             description = "Withdraw an open suggestion you made.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
-    public Suggestion withdrawGuideSuggestion(@McpToolParam(description = "The suggestion, by id") final Long suggestionId) {
-        return support.call("withdraw_guide_suggestion", () -> Suggestion.of(suggestionService.withdraw(suggestionId, suggestion(suggestionId).version())));
+    public Suggestion withdrawGuideSuggestion(@McpToolParam(description = "The suggestion, by id") final UUID suggestionId) {
+        return support.call("withdraw_guide_suggestion", () -> Suggestion.of(suggestionService.withdraw(ids.idOf(GuideSuggestion.class, suggestionId), suggestion(suggestionId).version())));
     }
 
-    GuideSuggestionDto suggestion(final Long suggestionId) {
+    GuideSuggestionDto suggestion(final UUID suggestionId) {
         return McpToolSupport.byId(suggestionService.findVisible(null, null), GuideSuggestionDto::id, suggestionId, GuideSuggestion.class);
     }
 
     /**
      * A suggestion as list_guide_suggestions returns it: no people.
      */
-    public record Suggestion(Long id, GuideSuggestionKind kind, GuideSuggestionStatus status, Long revivalId, boolean mine, @Nullable String madeOn,
+    public record Suggestion(UUID id, GuideSuggestionKind kind, GuideSuggestionStatus status, UUID revivalId, boolean mine, @Nullable String madeOn,
                              String chapterKey, @Nullable String sectionKey, @Nullable String itemKey, @Nullable String proposedType,
                              @Nullable Text proposedText, @Nullable String reason, @Nullable Instant decidedAt, @Nullable String decisionReason,
                              Instant createdAt) {
@@ -193,7 +200,7 @@ public class GuideMcpTools {
         }
     }
 
-    public record Version(Long id, @Nullable String label, @Nullable Instant publishedAt) {
+    public record Version(UUID id, @Nullable String label, @Nullable Instant publishedAt) {
 
         static Version of(final GuideVersionView version) {
             return new Version(version.id(), version.label(), version.publishedAt());
@@ -236,6 +243,6 @@ public class GuideMcpTools {
                                 List<Section> sections) {
     }
 
-    public record SuggestionResult(Long id, GuideSuggestionStatus status, GuideSuggestionKind kind, Version version) {
+    public record SuggestionResult(UUID id, GuideSuggestionStatus status, GuideSuggestionKind kind, Version version) {
     }
 }

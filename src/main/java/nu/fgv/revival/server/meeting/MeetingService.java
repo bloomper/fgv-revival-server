@@ -28,12 +28,14 @@ import nu.fgv.revival.server.member.OwnerViews;
 import nu.fgv.revival.server.member.PersonRefDto;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.person.PersonNames;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -63,6 +66,8 @@ import java.util.stream.Stream;
  */
 @Service
 public class MeetingService {
+
+    private final ExternalIds ids;
 
     private final MeetingRepository repository;
     private final MeetingEntryChangeRepository changeRepository;
@@ -84,7 +89,9 @@ public class MeetingService {
                           final OwnerResolver ownerResolver,
                           final OwnerViews ownerViews,
                           final PersonNames personNames,
-                          final Clock clock) {
+                          final Clock clock,
+                          final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.changeRepository = changeRepository;
         this.revivalRepository = revivalRepository;
@@ -336,9 +343,10 @@ public class MeetingService {
         }
 
         final Map<Long, String> names = people.isEmpty() ? Map.of() : personNames.byIds(people, locale);
-        final Function<Long, PersonRefDto> person = id -> new PersonRefDto(id, names.get(id));
+        final Map<Long, UUID> uuids = ids.uuidsOf(Person.class, people);
+        final Function<Long, PersonRefDto> person = id -> new PersonRefDto(uuids.get(id), names.get(id));
 
-        return new MeetingDto(meeting.getId(), meeting.getRevivalId(), meeting.getDate(), meeting.getTitle(), meeting.getStatus(),
+        return new MeetingDto(meeting.getUuid(), meeting.getRevivalUuid(), meeting.getDate(), meeting.getTitle(), meeting.getStatus(),
                 meeting.getAttendeeIds().stream().map(person).toList(), meeting.getOthersPresent(), List.copyOf(meeting.getAgendaPoints()),
                 meeting.getRecorderPersonId() == null ? null : person.apply(meeting.getRecorderPersonId()), meeting.getStartedAt(),
                 meeting.getClosedAt(), minutes == null ? null : minutes(meeting.getRevivalId(), minutes, person, locale), meeting.getVersion());
@@ -350,8 +358,10 @@ public class MeetingService {
                 .map(row -> new OwnerViews.Ref(revivalId, owner(row)))
                 .collect(Collectors.toSet());
         final Map<OwnerViews.Ref, @Nullable OwnerDto> owners = ownerViews.toDtos(refs, locale);
+        final Map<Long, UUID> entries = ids.uuidsOf(LogEntry.class, Stream.of(minutes.decisions(), minutes.todos(), minutes.questions(), minutes.closed())
+                .flatMap(List::stream).map(Minutes.Row::entryId).collect(Collectors.toSet()));
         final Function<List<Minutes.Row>, List<MeetingDto.RowDto>> rows = list -> list.stream()
-                .map(row -> new MeetingDto.RowDto(row.entryId(), row.number(), row.type(), row.text(),
+                .map(row -> new MeetingDto.RowDto(entries.get(row.entryId()), row.number(), row.type(), row.text(),
                         owners.get(new OwnerViews.Ref(revivalId, owner(row))), row.deadline(), row.status()))
                 .toList();
 

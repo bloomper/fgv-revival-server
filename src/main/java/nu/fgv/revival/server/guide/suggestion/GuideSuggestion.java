@@ -28,10 +28,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A proposed change to a published version, made from one revival. Never deleted.
@@ -51,11 +55,18 @@ public class GuideSuggestion extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
 
     @Column(name = "author_id", nullable = false, updatable = false)
     private Long authorId;
+
+    @Formula("(SELECT t.uuid FROM person t WHERE t.id = author_id)")
+    @NotAudited
+    private @Nullable UUID authorUuid;
 
     @Column(name = "version_id", nullable = false, updatable = false)
     private Long versionId;
@@ -91,6 +102,10 @@ public class GuideSuggestion extends AbstractAuditable {
 
     @Column(name = "decided_by")
     private @Nullable Long decidedBy;
+
+    @Formula("(SELECT t.uuid FROM person t WHERE t.id = decided_by)")
+    @NotAudited
+    private @Nullable UUID decidedByUuid;
 
     @Column(name = "decided_at")
     private @Nullable Instant decidedAt;

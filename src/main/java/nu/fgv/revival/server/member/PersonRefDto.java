@@ -19,11 +19,13 @@ package nu.fgv.revival.server.member;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * A person as GraphQL's {@code PersonRef}: by display name, never by email.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record PersonRefDto(Long id, @Nullable String displayName) {
+public record PersonRefDto(UUID id, @Nullable String displayName) {
 }

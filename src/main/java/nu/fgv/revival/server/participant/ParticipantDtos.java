@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The GraphQL types of participants (participant.graphqls).
@@ -40,10 +41,10 @@ public final class ParticipantDtos {
      * A participant as the caller may see them: contact details only for readers of participants, dietary needs only
      * with {@code CATERING} or for themselves.
      */
-    public record ParticipantDto(Long id,
-                                 Long revivalId,
+    public record ParticipantDto(UUID id,
+                                 UUID revivalId,
                                  ParticipantKind kind,
-                                 @Nullable Long spexareId,
+                                 @Nullable String spexareId,
                                  String firstName,
                                  String lastName,
                                  @Nullable String nickName,
@@ -73,7 +74,7 @@ public final class ParticipantDtos {
                                  Long version) {
     }
 
-    public record SpexareCandidate(Long spexareId, String firstName, String lastName, @Nullable String nickName,
+    public record SpexareCandidate(String spexareId, String firstName, String lastName, @Nullable String nickName,
                                    @Nullable String graduation,
                                    List<String> history, boolean added) {
     }
@@ -105,7 +106,7 @@ public final class ParticipantDtos {
                          int feesPaid, int feesUnpaid, int helpers) {
     }
 
-    public record ReferralDto(Long id, String name, @Nullable String contact, @Nullable String comment,
+    public record ReferralDto(UUID id, String name, @Nullable String contact, @Nullable String comment,
                               @Nullable String referredBy,
                               Instant createdAt) {
     }

@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -63,6 +64,7 @@ class AccessPolicyTest {
         final Map<Long, RevivalRoleAssignment> revivalRoles = new HashMap<>();
 
         person.setId(10L);
+        person.setUuid(uuid(person.getId()));
         switch (role) {
             case "SUPER_ADMIN" -> globalRoles.add(GlobalRole.SUPER_ADMIN);
             case "OBSERVER" -> globalRoles.add(GlobalRole.OBSERVER);
@@ -84,6 +86,7 @@ class AccessPolicyTest {
         final Revival revival = new Revival();
 
         revival.setId(id);
+        revival.setUuid(uuid(revival.getId()));
         revival.setStatus(status);
         return revival;
     }

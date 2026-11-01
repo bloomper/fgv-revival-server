@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,20 +65,20 @@ class MinutesMailerTest {
     }
 
     private static MeetingDto meeting(final String title, final List<MeetingDto.RowDto> todos) {
-        final OwnerDto kim = new OwnerDto(new OwnerDto.OwnerPersonDto(11L, "Kim Svensson", true), null);
+        final OwnerDto kim = new OwnerDto(new OwnerDto.OwnerPersonDto(uuid(11), "Kim Svensson", true), null);
         final MeetingDto.MinutesDto minutes = new MeetingDto.MinutesDto(
-                List.of(new MeetingDto.RowDto(7L, 7, LogEntryType.DECISION, "Vi spelar i RunAn", kim, null, LogEntryStatus.OPEN)),
-                todos, List.of(), List.of(new MeetingDto.RowDto(2L, 2, LogEntryType.TODO, "Boka lokal", null, null, LogEntryStatus.DONE)),
-                List.of("Budget"), List.of(new PersonRefDto(11L, "Kim Svensson"), new PersonRefDto(12L, "Stina Styrgrupp")),
-                "Sam från lokalen", new PersonRefDto(12L, "Stina Styrgrupp"));
+                List.of(new MeetingDto.RowDto(uuid(7), 7, LogEntryType.DECISION, "Vi spelar i RunAn", kim, null, LogEntryStatus.OPEN)),
+                todos, List.of(), List.of(new MeetingDto.RowDto(uuid(2), 2, LogEntryType.TODO, "Boka lokal", null, null, LogEntryStatus.DONE)),
+                List.of("Budget"), List.of(new PersonRefDto(uuid(11), "Kim Svensson"), new PersonRefDto(uuid(12), "Stina Styrgrupp")),
+                "Sam från lokalen", new PersonRefDto(uuid(12), "Stina Styrgrupp"));
 
-        return new MeetingDto(5L, 1L, LocalDate.of(2026, 10, 21), title, MeetingStatus.CLOSED, List.of(), null, List.of(), null, null, null,
+        return new MeetingDto(uuid(5), uuid(1), LocalDate.of(2026, 10, 21), title, MeetingStatus.CLOSED, List.of(), null, List.of(), null, null, null,
                 minutes, 3L);
     }
 
     @Test
     void writesTheSwedishMessage() {
-        final SimpleMailMessage message = mailer.message(meeting("Direktionsmöte 4", List.of(new MeetingDto.RowDto(8L, 8, LogEntryType.TODO,
+        final SimpleMailMessage message = mailer.message(meeting("Direktionsmöte 4", List.of(new MeetingDto.RowDto(uuid(8), 8, LogEntryType.TODO,
                 "Skicka offert", new OwnerDto(null, "Sam"), LocalDate.of(2026, 11, 1), LogEntryStatus.OPEN))), context, Locale.of("sv"), "kim@example.org");
 
         assertThat(message.getFrom()).isEqualTo("noreply@example.org");
@@ -99,7 +100,7 @@ class MinutesMailerTest {
                 Avslutat på mötet
                 #2 Boka lokal (klar)
                 
-                Öppna mötet: https://revival.example.org/revivals/1/meetings/5
+                Öppna mötet: https://revival.example.org/revivals/00000000-0000-7000-8000-000000000001/meetings/00000000-0000-7000-8000-000000000005
                 
                 Skickat av Stina Styrgrupp från Nyuppsättning.""");
     }

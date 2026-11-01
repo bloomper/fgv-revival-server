@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -69,8 +70,10 @@ public class ParticipantDirectory {
         final List<ParticipantDto> dtos = views.toDtos(participants.stream().distinct().toList(),
                 new ParticipantViews.Options(false, false, false, actingPerson, locale));
 
-        return dtos.stream().collect(Collectors.toMap(ParticipantDto::id,
-                dto -> new Named(dto.id(), (dto.firstName() + " " + dto.lastName()).strip(), dto.kind(), dto.position()),
+        final Map<UUID, Long> internal = participants.stream().collect(Collectors.toMap(Participant::getUuid, Participant::getId, (first, _) -> first));
+
+        return dtos.stream().collect(Collectors.toMap(dto -> internal.get(dto.id()),
+                dto -> new Named(internal.get(dto.id()), dto.id(), (dto.firstName() + " " + dto.lastName()).strip(), dto.kind(), dto.position()),
                 (first, _) -> first));
     }
 
@@ -84,7 +87,7 @@ public class ParticipantDirectory {
             return Map.of();
         }
 
-        final Map<Long, SpexregisterClient.Spexare> people = views.people(participants, actingPerson, true);
+        final Map<String, SpexregisterClient.Spexare> people = views.people(participants, actingPerson, true);
         final Map<Long, PendingPerson> pending = pendingRepository.findByParticipantIdIn(participants.stream().map(Participant::getId).toList())
                 .stream().collect(Collectors.toMap(PendingPerson::getParticipantId, Function.identity()));
         final Map<Long, String> emails = new HashMap<>();
@@ -103,7 +106,7 @@ public class ParticipantDirectory {
     /**
      * A participant by name and position only.
      */
-    public record Named(Long id, String displayName, ParticipantKind kind,
+    public record Named(Long id, UUID uuid, String displayName, ParticipantKind kind,
                         SpexareDirectory.@Nullable Position position) {
     }
 }

@@ -26,6 +26,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The GraphQL types of mailings and the mailing plan (mailing.graphqls). Recipients by name only, never an address.
@@ -51,26 +52,26 @@ public final class MailingDtos {
     /**
      * A mailing; {@code plannedFor} is resolved from the template and plan event ids.
      */
-    public record MailingDto(Long id, Long revivalId, MailingAudience audience, String subject, String body,
+    public record MailingDto(UUID id, UUID revivalId, MailingAudience audience, String subject, String body,
                              MailingStatus status,
-                             @Nullable Long templateId, @Nullable Long planEventId, @Nullable PersonRefDto createdBy,
+                             @Nullable UUID templateId, @Nullable UUID planEventId, @Nullable PersonRefDto createdBy,
                              Instant createdAt,
                              @Nullable PersonRefDto sentBy, @Nullable Instant sentAt,
                              List<MailingRecipientDto> recipients, boolean canSend,
                              Long version) {
     }
 
-    public record MailingTemplateDto(Long id, GuideVersionView.Text name, GuideVersionView.Text subject,
+    public record MailingTemplateDto(UUID id, GuideVersionView.Text name, GuideVersionView.Text subject,
                                      GuideVersionView.Text body,
-                                     MailingAudienceKind audience, @Nullable Long eventTypeId, RelativeDeadline due,
+                                     MailingAudienceKind audience, @Nullable UUID eventTypeId, RelativeDeadline due,
                                      int position, boolean retired,
                                      Long version) {
 
         static MailingTemplateDto of(final MailingTemplate template) {
-            return new MailingTemplateDto(template.getId(), GuideVersionView.Text.plain(template.getNameSv(), template.getNameEn()),
+            return new MailingTemplateDto(template.getUuid(), GuideVersionView.Text.plain(template.getNameSv(), template.getNameEn()),
                     GuideVersionView.Text.plain(template.getSubjectSv(), template.getSubjectEn()),
                     new GuideVersionView.Text(template.getBodySv(), template.getBodyEn(), template.getBodySv(), template.getBodyEn()),
-                    template.getAudienceKind(), template.getEventTypeId(), template.getDue(), template.getPosition(), template.isRetired(),
+                    template.getAudienceKind(), template.getEventTypeUuid(), template.getDue(), template.getPosition(), template.isRetired(),
                     template.getVersion() == null ? 0L : template.getVersion());
         }
     }

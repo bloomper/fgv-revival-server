@@ -30,10 +30,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A planned mailing in the super admin's mailing plan: due relative to each event of a
@@ -56,6 +60,9 @@ public class MailingTemplate extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "name_sv", nullable = false, length = NAME_MAX_LENGTH)
     private String nameSv;
@@ -84,6 +91,10 @@ public class MailingTemplate extends AbstractAuditable {
      */
     @Column(name = "event_type_id")
     private @Nullable Long eventTypeId;
+
+    @Formula("(SELECT t.uuid FROM event_type t WHERE t.id = event_type_id)")
+    @NotAudited
+    private @Nullable UUID eventTypeUuid;
 
     @Embedded
     private RelativeDeadline due;

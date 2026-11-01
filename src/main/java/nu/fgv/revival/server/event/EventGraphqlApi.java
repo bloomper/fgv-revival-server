@@ -19,8 +19,10 @@ package nu.fgv.revival.server.event;
 
 import nu.fgv.revival.server.checklist.ChecklistDto;
 import nu.fgv.revival.server.checklist.ChecklistSummaryDto;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalDto;
 import nu.fgv.revival.server.revival.RevivalWorkSummaryDto;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
@@ -35,6 +37,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A revival's events over GraphQL (event.graphqls).
@@ -45,51 +48,54 @@ import java.util.Objects;
 @Controller
 public class EventGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final EventService service;
     private final EventTypeService typeService;
 
-    public EventGraphqlApi(final EventService service, final EventTypeService typeService) {
+    public EventGraphqlApi(final EventService service, final EventTypeService typeService, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
         this.typeService = typeService;
     }
 
     @QueryMapping
-    public List<EventDto> events(@Argument final Long revivalId, @Argument final @Nullable Boolean includeCancelled) {
-        return service.list(revivalId, Boolean.TRUE.equals(includeCancelled));
+    public List<EventDto> events(@Argument final UUID revivalId, @Argument final @Nullable Boolean includeCancelled) {
+        return service.list(ids.idOf(Revival.class, revivalId), Boolean.TRUE.equals(includeCancelled));
     }
 
     @QueryMapping
-    public EventDto event(@Argument final Long id) {
-        return service.get(id);
+    public EventDto event(@Argument final UUID id) {
+        return service.get(ids.idOf(Event.class, id));
     }
 
     @MutationMapping
     public EventDto eventCreate(@Argument final EventCreateInput input, final Locale locale) {
-        return service.create(new EventService.NewEvent(input.revivalId(), input.typeId(), input.title(), input.startDate(), input.endDate(),
+        return service.create(new EventService.NewEvent(ids.idOf(Revival.class, input.revivalId()), ids.idOfNullable(EventType.class, input.typeId()), input.title(), input.startDate(), input.endDate(),
                 input.startTime(), input.endTime(), input.location(), input.description(), input.revivalPays()), locale);
     }
 
     @MutationMapping
     public EventDto eventUpdate(@Argument final EventUpdateInput input) {
-        return service.update(new EventService.Change(input.id(), input.version(), input.title(), input.startDate(), input.endDate(),
+        return service.update(new EventService.Change(ids.idOf(Event.class, input.id()), input.version(), input.title(), input.startDate(), input.endDate(),
                 input.startTime(), Boolean.TRUE.equals(input.clearStartTime()), input.endTime(), Boolean.TRUE.equals(input.clearEndTime()),
                 input.location(), Boolean.TRUE.equals(input.clearLocation()), input.description(), Boolean.TRUE.equals(input.clearDescription()),
                 input.revivalPays()));
     }
 
     @MutationMapping
-    public EventDto eventCancel(@Argument final Long id, @Argument final Long version) {
-        return service.cancel(id, version);
+    public EventDto eventCancel(@Argument final UUID id, @Argument final Long version) {
+        return service.cancel(ids.idOf(Event.class, id), version);
     }
 
     @MutationMapping
-    public EventDto eventRestore(@Argument final Long id, @Argument final Long version) {
-        return service.restore(id, version);
+    public EventDto eventRestore(@Argument final UUID id, @Argument final Long version) {
+        return service.restore(ids.idOf(Event.class, id), version);
     }
 
     @BatchMapping(typeName = "Event", field = "type")
     public Map<EventDto, EventTypeDto> type(final List<EventDto> events) {
-        final Map<Long, EventTypeDto> types = typeService.byIds(events.stream().map(EventDto::typeId).filter(Objects::nonNull).toList());
+        final Map<UUID, EventTypeDto> types = ids.byUuid(EventType.class, typeService.byIds(ids.idsOf(EventType.class, events.stream().map(EventDto::typeId).filter(Objects::nonNull).distinct().toList())));
         final Map<EventDto, EventTypeDto> result = new HashMap<>();
 
         events.stream().filter(event -> event.typeId() != null && types.containsKey(event.typeId()))
@@ -99,7 +105,7 @@ public class EventGraphqlApi {
 
     @BatchMapping(typeName = "Event", field = "checklist")
     public Map<EventDto, ChecklistSummaryDto> checklist(final List<EventDto> events) {
-        final Map<Long, ChecklistSummaryDto> checklists = service.checklists(events.stream().map(EventDto::id).toList());
+        final Map<UUID, ChecklistSummaryDto> checklists = ids.byUuid(Event.class, service.checklists(ids.idsOf(Event.class, events.stream().map(EventDto::id).toList())));
         final Map<EventDto, ChecklistSummaryDto> result = new HashMap<>();
 
         events.stream().filter(event -> checklists.containsKey(event.id())).forEach(event -> result.put(event, checklists.get(event.id())));
@@ -108,27 +114,27 @@ public class EventGraphqlApi {
 
     @SchemaMapping(typeName = "Revival", field = "eventProposals")
     public List<EventProposalDto> eventProposals(final RevivalDto revival) {
-        return service.proposals(revival.id());
+        return service.proposals(ids.idOf(Revival.class, revival.id()));
     }
 
     @SchemaMapping(typeName = "RevivalWorkSummary", field = "upcomingEvents")
     public List<EventDto> upcomingEvents(final RevivalWorkSummaryDto summary) {
-        return service.upcoming(summary.revivalId());
+        return service.upcoming(ids.idOf(Revival.class, summary.revivalId()));
     }
 
     @SchemaMapping(typeName = "Checklist", field = "event")
     public @Nullable EventDto checklistEvent(final ChecklistDto checklist) {
-        return checklist.eventId() == null ? null : service.get(checklist.eventId());
+        return checklist.eventId() == null ? null : service.get(ids.idOf(Event.class, checklist.eventId()));
     }
 
-    public record EventCreateInput(Long revivalId, @Nullable Long typeId, @Nullable String title, LocalDate startDate,
+    public record EventCreateInput(UUID revivalId, @Nullable UUID typeId, @Nullable String title, LocalDate startDate,
                                    @Nullable LocalDate endDate,
                                    @Nullable String startTime, @Nullable String endTime, @Nullable String location,
                                    @Nullable String description,
                                    @Nullable Boolean revivalPays) {
     }
 
-    public record EventUpdateInput(Long id, Long version, @Nullable String title, @Nullable LocalDate startDate,
+    public record EventUpdateInput(UUID id, Long version, @Nullable String title, @Nullable LocalDate startDate,
                                    @Nullable LocalDate endDate,
                                    @Nullable String startTime, @Nullable Boolean clearStartTime,
                                    @Nullable String endTime,

@@ -20,6 +20,7 @@ package nu.fgv.revival.server.meeting;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code MeetingSummary}.
@@ -27,9 +28,9 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record MeetingSummaryDto(Long id, LocalDate date, @Nullable String title, MeetingStatus status) {
+public record MeetingSummaryDto(UUID id, LocalDate date, @Nullable String title, MeetingStatus status) {
 
     static MeetingSummaryDto of(final Meeting meeting) {
-        return new MeetingSummaryDto(meeting.getId(), meeting.getDate(), meeting.getTitle(), meeting.getStatus());
+        return new MeetingSummaryDto(meeting.getUuid(), meeting.getDate(), meeting.getTitle(), meeting.getStatus());
     }
 }

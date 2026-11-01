@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static nu.fgv.revival.server.Documents.REVIVAL;
 import static nu.fgv.revival.server.Documents.REVIVALS;
@@ -39,9 +41,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
-    private long own;
-    private long other;
-    private long proposed;
+    private EntityId own;
+    private EntityId other;
+    private EntityId proposed;
 
     private static Map<String, Object> show(final String date, final @Nullable String venue) {
         return show(date, null, venue);
@@ -67,7 +69,7 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
         addMember(proposed, DIRECTEUR, "DIRECTEUR", List.of());
     }
 
-    private Map<String, Object> details(final long id, final String premiere, final List<String> showDates) {
+    private Map<String, Object> details(final EntityId id, final String premiere, final List<String> showDates) {
         return Map.of("input", Map.of("id", id, "version", version(id), "premiereDate", premiere,
                 "shows", showDates.stream().map(date -> Map.of("date", date, "venue", "Chalmers kårhus")).toList()));
     }
@@ -77,7 +79,7 @@ class RevivalDirecteurGraphqlApiIntegrationTest extends AbstractIntegrationTest 
         execute(DIRECTEUR, REVIVALS, Map.of()).path("revivals[*].id").entityList(String.class).containsExactly(String.valueOf(own));
         expectError(execute(DIRECTEUR, REVIVAL, Map.of("id", other)), "NOT_FOUND");
         expectError(execute(DIRECTEUR, REVIVAL, Map.of("id", proposed)), "NOT_FOUND");
-        expectError(execute(DIRECTEUR, REVIVAL, Map.of("id", 999_999)), "NOT_FOUND");
+        expectError(execute(DIRECTEUR, REVIVAL, Map.of("id", UUID.randomUUID())), "NOT_FOUND");
     }
 
     @Test

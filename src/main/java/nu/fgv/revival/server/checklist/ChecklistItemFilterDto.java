@@ -19,6 +19,8 @@ package nu.fgv.revival.server.checklist;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code ChecklistItemFilter}: every given filter must match.
  *
@@ -26,7 +28,7 @@ import org.jspecify.annotations.Nullable;
  * @since 1.0
  */
 public record ChecklistItemFilterDto(@Nullable Boolean mine, @Nullable Boolean open, @Nullable Boolean overdue,
-                                     @Nullable Long checklistId,
+                                     @Nullable UUID checklistId,
                                      @Nullable Boolean requiredOnly) {
 
     public static ChecklistItemFilterDto none() {

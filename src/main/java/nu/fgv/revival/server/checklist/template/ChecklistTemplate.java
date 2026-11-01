@@ -30,11 +30,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A super admin's checklist template for a guide chapter or an event kind. Retired, never deleted, so checklist items
@@ -56,6 +58,9 @@ public class ChecklistTemplate extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "kind", nullable = false, updatable = false, length = 8)

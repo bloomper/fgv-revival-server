@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -99,6 +100,7 @@ class RevivalAnonymizationTest {
         final Revival revival = new Revival();
 
         revival.setId(1L);
+        revival.setUuid(uuid(revival.getId()));
         revival.setStatus(RevivalStatus.ARCHIVED);
         when(statusChangeRepository.findByRevivalIdOrderByChangedAtDescIdDesc(1L)).thenReturn(List.of(
                 change(RevivalStatus.ARCHIVED, "2026-03-01T10:00:00Z"),
@@ -116,6 +118,7 @@ class RevivalAnonymizationTest {
         final Revival revival = new Revival();
 
         revival.setId(1L);
+        revival.setUuid(uuid(revival.getId()));
         revival.setStatus(RevivalStatus.SETTLING);
 
         assertThat(anonymization.automaticOn(revival)).isEmpty();

@@ -15,9 +15,12 @@
  */
 package nu.fgv.revival.server.mcp;
 
+import nu.fgv.revival.server.meeting.Meeting;
 import nu.fgv.revival.server.meeting.MeetingDto;
 import nu.fgv.revival.server.meeting.MeetingService;
 import nu.fgv.revival.server.meeting.MeetingSummaryDto;
+import nu.fgv.revival.server.revival.Revival;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A revival's steering group meetings over MCP. Attendees are directeurs and steering group members, given by name;
@@ -38,10 +42,13 @@ import java.util.Objects;
 @Component
 public class MeetingMcpTools {
 
+    private final ExternalIds ids;
+
     private final MeetingService meetingService;
     private final McpToolSupport support;
 
-    public MeetingMcpTools(final MeetingService meetingService, final McpToolSupport support) {
+    public MeetingMcpTools(final MeetingService meetingService, final McpToolSupport support, final ExternalIds ids) {
+        this.ids = ids;
         this.meetingService = meetingService;
         this.support = support;
     }
@@ -49,46 +56,46 @@ public class MeetingMcpTools {
     @McpTool(name = "list_meetings",
             description = "List a revival's steering group meetings, newest first: date, title and status (PLANNED, IN_PROGRESS, CLOSED or CANCELLED).",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public McpToolSupport.ListResult<MeetingSummaryDto> listMeetings(@McpToolParam(description = "A revival you can see") final Long revivalId) {
-        return support.call("list_meetings", () -> new McpToolSupport.ListResult<>(meetingService.list(revivalId)));
+    public McpToolSupport.ListResult<MeetingSummaryDto> listMeetings(@McpToolParam(description = "A revival you can see") final UUID revivalId) {
+        return support.call("list_meetings", () -> new McpToolSupport.ListResult<>(meetingService.list(ids.idOf(Revival.class, revivalId))));
     }
 
     @McpTool(name = "get_meeting",
             description = "Get a meeting: its date, title, status, attendees, others present, agenda and, once closed, its minutes.",
             annotations = @McpAnnotations(readOnlyHint = true, destructiveHint = false, openWorldHint = false))
-    public MeetingDto getMeeting(@McpToolParam(description = "The meeting, by id from list_meetings") final Long meetingId) {
-        return support.call("get_meeting", () -> meetingService.get(meetingId, Locale.ENGLISH));
+    public MeetingDto getMeeting(@McpToolParam(description = "The meeting, by id from list_meetings") final UUID meetingId) {
+        return support.call("get_meeting", () -> meetingService.get(ids.idOf(Meeting.class, meetingId), Locale.ENGLISH));
     }
 
     @McpTool(name = "create_meeting",
             description = "Plan a steering group meeting: a date, an optional title, who attends, who else is there and the agenda.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public MeetingDto createMeeting(
-            @McpToolParam(description = "A revival you can work in") final Long revivalId,
+            @McpToolParam(description = "A revival you can work in") final UUID revivalId,
             @McpToolParam(description = "yyyy-MM-dd") final String date,
             @McpToolParam(required = false, description = "A title") final @Nullable String title,
             @McpToolParam(required = false, description = "Directeurs and steering group members attending, by display name or me") final @Nullable List<String> attendees,
             @McpToolParam(required = false, description = "Anyone else there, as free text") final @Nullable String othersPresent,
             @McpToolParam(required = false, description = "The agenda points in order") final @Nullable List<String> agenda) {
-        return support.call("create_meeting", () -> meetingService.create(new MeetingService.Plan(revivalId, Objects.requireNonNull(McpToolSupport.date(date)),
-                title, support.members(revivalId, attendees), othersPresent, agenda), Locale.ENGLISH));
+        return support.call("create_meeting", () -> meetingService.create(new MeetingService.Plan(ids.idOf(Revival.class, revivalId), Objects.requireNonNull(McpToolSupport.date(date)),
+                title, support.members(ids.idOf(Revival.class, revivalId), attendees), othersPresent, agenda), Locale.ENGLISH));
     }
 
     @McpTool(name = "update_meeting",
             description = "Change a meeting's date, title, attendees, others present or agenda. Leave out what stays as it is; attendees and agenda replace the current ones.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public MeetingDto updateMeeting(
-            @McpToolParam(description = "The meeting, by id") final Long meetingId,
+            @McpToolParam(description = "The meeting, by id") final UUID meetingId,
             @McpToolParam(required = false, description = "yyyy-MM-dd") final @Nullable String date,
             @McpToolParam(required = false, description = "A title") final @Nullable String title,
             @McpToolParam(required = false, description = "Directeurs and steering group members attending, by display name or me") final @Nullable List<String> attendees,
             @McpToolParam(required = false, description = "Anyone else there, as free text") final @Nullable String othersPresent,
             @McpToolParam(required = false, description = "The agenda points in order") final @Nullable List<String> agenda) {
         return support.call("update_meeting", () -> {
-            final MeetingDto meeting = meetingService.get(meetingId, Locale.ENGLISH);
+            final MeetingDto meeting = meetingService.get(ids.idOf(Meeting.class, meetingId), Locale.ENGLISH);
 
-            return meetingService.update(new MeetingService.Change(meetingId, meeting.version(), McpToolSupport.date(date), title,
-                    support.members(meeting.revivalId(), attendees), othersPresent, agenda), Locale.ENGLISH);
+            return meetingService.update(new MeetingService.Change(ids.idOf(Meeting.class, meetingId), meeting.version(), McpToolSupport.date(date), title,
+                    support.members(ids.idOf(Revival.class, meeting.revivalId()), attendees), othersPresent, agenda), Locale.ENGLISH);
         });
     }
 
@@ -96,15 +103,15 @@ public class MeetingMcpTools {
             description = "Start a planned meeting (rows created or changed while it is in progress are recorded in its minutes), close one in progress, or cancel a planned one. Meetings are never deleted.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
     public MeetingDto changeMeetingState(
-            @McpToolParam(description = "The meeting, by id") final Long meetingId,
+            @McpToolParam(description = "The meeting, by id") final UUID meetingId,
             @McpToolParam(description = "START, CLOSE or CANCEL") final Action action) {
         return support.call("change_meeting_state", () -> {
-            final MeetingDto meeting = meetingService.get(meetingId, Locale.ENGLISH);
+            final MeetingDto meeting = meetingService.get(ids.idOf(Meeting.class, meetingId), Locale.ENGLISH);
 
             return switch (action) {
-                case START -> meetingService.start(meetingId, meeting.version(), Locale.ENGLISH);
-                case CLOSE -> meetingService.close(meetingId, meeting.version(), Locale.ENGLISH);
-                case CANCEL -> meetingService.cancel(meetingId, meeting.version(), Locale.ENGLISH);
+                case START -> meetingService.start(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
+                case CLOSE -> meetingService.close(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
+                case CANCEL -> meetingService.cancel(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
             };
         });
     }

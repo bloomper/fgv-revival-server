@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -95,19 +96,19 @@ class GuidePdfServiceTest {
             final List<GuideVersionView.Item> items = new ArrayList<>();
 
             if (key.equals("A")) {
-                items.add(new GuideVersionView.Item(1L, "a1", key, null, "REQUIREMENT", GuideItemKind.REQUIREMENT,
+                items.add(new GuideVersionView.Item(uuid(1), "a1", key, null, "REQUIREMENT", GuideItemKind.REQUIREMENT,
                         text("Godkänn av **JK** och [FGV](https://fgv.example.org).", "Approved by **JK** and [FGV](https://fgv.example.org)."), 0L));
-                items.add(new GuideVersionView.Item(2L, "a2", key, null, "TEXT", GuideItemKind.TEXT, text("Löptext på svenska – med åäö é.", null), 0L));
+                items.add(new GuideVersionView.Item(uuid(2), "a2", key, null, "TEXT", GuideItemKind.TEXT, text("Löptext på svenska – med åäö é.", null), 0L));
                 items.addAll(extraItems);
             }
-            chapters.add(new GuideVersionView.Chapter((long) GuideTestChapters.KEYS.indexOf(key), key, GuideVersionView.Text.plain("Kapitel " + key, key.equals("A") ? "Chapter A" : null),
+            chapters.add(new GuideVersionView.Chapter(uuid(GuideTestChapters.KEYS.indexOf(key)), key, GuideVersionView.Text.plain("Kapitel " + key, key.equals("A") ? "Chapter A" : null),
                     items,
-                    key.equals("B") ? List.of(new GuideVersionView.Section(20L, "kalas", key, GuideVersionView.Text.plain("Kalaslokal", null), List.of(
-                            new GuideVersionView.Item(3L, "b1", key, "kalas", "TIP", GuideItemKind.TIP, text("Kontrollera sprittillstånd.\n\n- en punkt\n- två", null), 0L),
-                            new GuideVersionView.Item(4L, "b2", key, "kalas", "QUESTION", GuideItemKind.QUESTION, text("Vilka datum?", null), 0L)), 0L)) : List.of(),
+                    key.equals("B") ? List.of(new GuideVersionView.Section(uuid(20), "kalas", key, GuideVersionView.Text.plain("Kalaslokal", null), List.of(
+                            new GuideVersionView.Item(uuid(3), "b1", key, "kalas", "TIP", GuideItemKind.TIP, text("Kontrollera sprittillstånd.\n\n- en punkt\n- två", null), 0L),
+                            new GuideVersionView.Item(uuid(4), "b2", key, "kalas", "QUESTION", GuideItemKind.QUESTION, text("Vilka datum?", null), 0L)), 0L)) : List.of(),
                     0L));
         }
-        return new GuideVersionView(1L, status, status == GuideVersionStatus.PUBLISHED ? "v5" : null, null,
+        return new GuideVersionView(uuid(1), status, status == GuideVersionStatus.PUBLISHED ? "v5" : null, null,
                 status == GuideVersionStatus.PUBLISHED ? Instant.parse("2026-11-02T10:00:00Z") : null, null, null, 0L,
                 text("Välkommen till guiden.", null), chapters);
     }
@@ -189,7 +190,7 @@ class GuidePdfServiceTest {
     @Test
     void swedishCharactersRenderAndOthersBecomeAQuestionMark() throws IOException {
         final String text = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of(
-                new GuideVersionView.Item(9L, "a9", "A", null, "TEXT", GuideItemKind.TEXT, text("Pil → och emoji 🎭.", null), 0L))), SWEDISH, null));
+                new GuideVersionView.Item(uuid(9), "a9", "A", null, "TEXT", GuideItemKind.TEXT, text("Pil → och emoji 🎭.", null), 0L))), SWEDISH, null));
 
         assertThat(text).contains("åäö é").contains("–");
         assertThat(GuideMarkdown.pdfSafe("Pil → och emoji 🎭.")).isEqualTo("Pil ? och emoji ?.");
@@ -200,7 +201,7 @@ class GuidePdfServiceTest {
         try (final ServerSocket socket = new ServerSocket(0)) {
             final String image = "![bild](http://127.0.0.1:%d/x.png)".formatted(socket.getLocalPort());
             final String text = allText(service.render(version(GuideVersionStatus.PUBLISHED, List.of(
-                    new GuideVersionView.Item(9L, "a9", "A", null, "TEXT", GuideItemKind.TEXT,
+                    new GuideVersionView.Item(uuid(9), "a9", "A", null, "TEXT", GuideItemKind.TEXT,
                             text("# En rubrik\n\n`kod` och <b>html</b>\n\nFöre " + image + " efter.", null), 0L))), SWEDISH, null));
 
             assertThat(text).contains("En rubrik", "kod", "<b>html</b>", "Före", "efter.");
@@ -221,7 +222,7 @@ class GuidePdfServiceTest {
 
         for (int index = 0; index < 150; index++) {
             paragraph.put(index, "Punkt %d med **fetstil**, *kursiv* och en [länk](https://example.org/%d). ".formatted(index, index).repeat(4));
-            many.add(new GuideVersionView.Item(100L + index, "k" + index, "A", null, "TIP", GuideItemKind.TIP, text(paragraph.get(index), null), 0L));
+            many.add(new GuideVersionView.Item(uuid(100L + index), "k" + index, "A", null, "TIP", GuideItemKind.TIP, text(paragraph.get(index), null), 0L));
         }
 
         final Instant start = Instant.now();

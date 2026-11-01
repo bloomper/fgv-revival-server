@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.person;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -45,7 +46,7 @@ class WaitingMemberIntegrationTest extends AbstractIntegrationTest {
             createUser(realm(admin), email, "Vera", "Väntande", CLIENT_ID, List.of("USER"));
         }
 
-        final long id = createRevival(ALI_BABA, 2028);
+        final EntityId id = createRevival(ALI_BABA, 2028);
 
         setStatus(id, "APPROVED");
         addMember(id, "VANTANDE" + DOMAIN.toUpperCase(), "DIRECTEUR", List.of());
@@ -74,7 +75,7 @@ class WaitingMemberIntegrationTest extends AbstractIntegrationTest {
                 user.setEmailVerified(false);
                 realm.users().get(userId).update(user);
 
-                final long id = createRevival(ALI_BABA, 2028);
+                final EntityId id = createRevival(ALI_BABA, 2028);
 
                 setStatus(id, "APPROVED");
                 addMember(id, email, "DIRECTEUR", List.of());
@@ -101,7 +102,7 @@ class WaitingMemberIntegrationTest extends AbstractIntegrationTest {
             userId = createUser(realm(admin), email, "Bo", "Byter", CLIENT_ID, List.of("USER"));
         }
 
-        final long id = createRevival(ALI_BABA, 2028);
+        final EntityId id = createRevival(ALI_BABA, 2028);
 
         setStatus(id, "APPROVED");
         addMember(id, email, "DIRECTEUR", List.of());

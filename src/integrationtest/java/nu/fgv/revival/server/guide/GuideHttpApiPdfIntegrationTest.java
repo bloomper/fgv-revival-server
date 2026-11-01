@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openpdf.text.pdf.PdfReader;
@@ -38,8 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
 
-    private long version;
-    private long revival;
+    private EntityId version;
+    private EntityId revival;
 
     private static String firstPage(final byte[] pdf) throws IOException {
         return new PdfTextExtractor(new PdfReader(pdf)).getTextFromPage(1);
@@ -101,7 +102,7 @@ class GuideHttpApiPdfIntegrationTest extends AbstractIntegrationTest {
     void theDraftIsOnlyForSuperAdmins() {
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute();
 
-        final long draft = jdbcClient.sql("SELECT id FROM guide_version WHERE status = 'DRAFT'").query(Long.class).single();
+        final EntityId draft = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_version WHERE status = 'DRAFT'"));
 
         get(SUPER_ADMIN, "/api/guide/versions/" + draft + "/pdf", "sv")
                 .expectStatus().isOk()

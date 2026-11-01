@@ -19,6 +19,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code EventTypeBudgetLine}; its category is resolved from the id.
@@ -26,12 +27,12 @@ import java.math.BigDecimal;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record EventTypeBudgetLineDto(Long id, Long eventTypeId, String categoryId, GuideVersionView.Text description,
+public record EventTypeBudgetLineDto(UUID id, UUID eventTypeId, String categoryId, GuideVersionView.Text description,
                                      BudgetLineQuantity quantityRule, @Nullable Double quantity, BigDecimal unitAmount,
                                      Long version) {
 
     static EventTypeBudgetLineDto of(final EventTypeBudgetLine line) {
-        return new EventTypeBudgetLineDto(line.getId(), line.getEventTypeId(), line.getCategoryId(),
+        return new EventTypeBudgetLineDto(line.getUuid(), line.getEventTypeUuid(), line.getCategoryId(),
                 GuideVersionView.Text.plain(line.getDescriptionSv(), line.getDescriptionEn()), line.getQuantityRule(),
                 line.getQuantity() == null ? null : line.getQuantity().doubleValue(), line.getUnitAmount(),
                 line.getVersion() == null ? 0L : line.getVersion());
