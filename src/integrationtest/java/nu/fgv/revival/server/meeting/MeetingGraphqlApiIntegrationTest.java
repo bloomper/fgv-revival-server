@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.meeting;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,44 +54,44 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String ROW = "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id number } }";
     private static final String UPDATE = "mutation($input: LogEntryUpdateInput!) { logEntryUpdate(input: $input) { id } }";
 
-    private long revival;
+    private EntityId revival;
 
     @BeforeEach
     void revival() {
         revival = organisingRevival();
     }
 
-    long createMeeting(final String user, final Map<String, Object> fields) {
+    EntityId createMeeting(final String user, final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("revivalId", revival);
         input.putIfAbsent("date", LocalDate.now().toString());
-        return Long.parseLong(execute(user, CREATE, Map.of("input", input)).path("meetingCreate.id").entity(String.class).get());
+        return entityId("meeting", execute(user, CREATE, Map.of("input", input)).path("meetingCreate.id").entity(String.class).get());
     }
 
-    long meetingVersion(final long id) {
+    long meetingVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM meeting WHERE id = ?").param(id).query(Long.class).single();
     }
 
-    private long row(final Map<String, Object> fields) {
+    private EntityId row(final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("revivalId", revival);
-        return Long.parseLong(execute(STEERING_GROUP, ROW, Map.of("input", input)).path("logEntryCreate.id").entity(String.class).get());
+        return entityId("log_entry", execute(STEERING_GROUP, ROW, Map.of("input", input)).path("logEntryCreate.id").entity(String.class).get());
     }
 
-    private long rowVersion(final long id) {
+    private long rowVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM log_entry WHERE id = ?").param(id).query(Long.class).single();
     }
 
     @Test
     void aFullMeetingProducesMinutesOfWhatHappenedInIt() {
-        final long stina = personId(STEERING_GROUP);
-        final long dana = personId(DIRECTEUR);
-        final long toClose = row(Map.of("type", "TODO", "text", "Boka RunAn", "owner", Map.of("personId", stina)));
-        final long toAssign = row(Map.of("type", "TODO", "text", "Ring kåren", "owner", Map.of("name", "Sam")));
-        final long untouched = row(Map.of("type", "DECISION", "text", "Spexpengen är 1500 kr", "status", "DONE"));
-        final long meeting = createMeeting(STEERING_GROUP, Map.of("title", "Direktionsmöte 4", "attendeeIds", List.of(stina, dana),
+        final EntityId stina = personId(STEERING_GROUP);
+        final EntityId dana = personId(DIRECTEUR);
+        final EntityId toClose = row(Map.of("type", "TODO", "text", "Boka RunAn", "owner", Map.of("personId", stina)));
+        final EntityId toAssign = row(Map.of("type", "TODO", "text", "Ring kåren", "owner", Map.of("name", "Sam")));
+        final EntityId untouched = row(Map.of("type", "DECISION", "text", "Spexpengen är 1500 kr", "status", "DONE"));
+        final EntityId meeting = createMeeting(STEERING_GROUP, Map.of("title", "Direktionsmöte 4", "attendeeIds", List.of(stina, dana),
                 "othersPresent", "Sam från lokalen", "agendaPoints", List.of("Budget")));
 
         execute(STEERING_GROUP, "query($id: ID!) { meeting(id: $id) { openEntries { number } agendaPoints status } }", Map.of("id", meeting))
@@ -106,7 +107,7 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 "owner", Map.of("personId", dana))));
         row(Map.of("type", "DECISION", "text", "Vi spelar i RunAn", "meetingId", meeting, "owner", Map.of("personId", dana)));
         row(Map.of("type", "QUESTION", "text", "Var har vi kalaset?", "meetingId", meeting));
-        final long unowned = row(Map.of("type", "TODO", "text", "Skicka offert", "meetingId", meeting, "deadline", "2026-11-01"));
+        final EntityId unowned = row(Map.of("type", "TODO", "text", "Skicka offert", "meetingId", meeting, "deadline", "2026-11-01"));
         // Changed outside the meeting: not in the minutes
         execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", untouched, "version", rowVersion(untouched), "comment", "Beslutat i maj")));
 
@@ -135,13 +136,13 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, UPDATE, Map.of("input", Map.of("id", unowned, "version", rowVersion(unowned), "text", "Annan text")));
         execute(OBSERVER, "query($id: ID!) { meeting(id: $id) { minutes { todos { number } } } }", Map.of("id", meeting))
                 .path("meeting.minutes.todos[*].number").entityList(Integer.class).containsExactly(2, 6);
-        execute(STEERING_GROUP, "query($id: ID!) { logEntries(revivalId: $id, filter: {meetingId: %d}) { number } }".formatted(meeting),
+        execute(STEERING_GROUP, "query($id: ID!) { logEntries(revivalId: $id, filter: {meetingId: \"%s\"}) { number } }".formatted(meeting),
                 Map.of("id", revival)).path("logEntries[*].number").entityList(Integer.class).containsExactly(4, 5, 6);
     }
 
     @Test
     void aWaitingToDoWithoutOwnerBlocksClosingButADoneOneDoesNot() {
-        final long meeting = createMeeting(STEERING_GROUP, Map.of());
+        final EntityId meeting = createMeeting(STEERING_GROUP, Map.of());
 
         row(Map.of("type", "TODO", "text", "Väntar på svar", "status", "WAITING"));
         row(Map.of("type", "TODO", "text", "Klar", "status", "DONE"));
@@ -153,7 +154,7 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void rowChangesNeedAMeetingInProgressInTheSameRevival() {
-        final long planned = createMeeting(STEERING_GROUP, Map.of());
+        final EntityId planned = createMeeting(STEERING_GROUP, Map.of());
 
         expectError(execute(STEERING_GROUP, ROW, Map.of("input", Map.of("revivalId", revival, "type", "TODO", "text", "x", "meetingId", planned))),
                 "BAD_REQUEST");
@@ -161,14 +162,14 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void onlyOneMeetingIsInProgressEvenWhenStartedAtTheSameTime() throws Exception {
-        final long first = createMeeting(STEERING_GROUP, Map.of());
-        final long second = createMeeting(DIRECTEUR, Map.of());
+        final EntityId first = createMeeting(STEERING_GROUP, Map.of());
+        final EntityId second = createMeeting(DIRECTEUR, Map.of());
         final CountDownLatch start = new CountDownLatch(1);
         final List<Callable<Boolean>> tasks = new ArrayList<>();
 
         token(STEERING_GROUP);
         token(DIRECTEUR);
-        for (final long meeting : List.of(first, second)) {
+        for (final EntityId meeting : List.of(first, second)) {
             final long version = meetingVersion(meeting);
 
             tasks.add(() -> {
@@ -194,7 +195,7 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aPlannedMeetingIsCancelledAndKept() {
-        final long meeting = createMeeting(STEERING_GROUP, Map.of());
+        final EntityId meeting = createMeeting(STEERING_GROUP, Map.of());
 
         execute(DIRECTEUR, CANCEL, Map.of("id", meeting, "version", meetingVersion(meeting)))
                 .path("meetingCancel.status").entity(String.class).isEqualTo("CANCELLED");
@@ -204,7 +205,7 @@ class MeetingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void superAdminsAndObserversReadButNeverChange() {
-        final long meeting = createMeeting(STEERING_GROUP, Map.of());
+        final EntityId meeting = createMeeting(STEERING_GROUP, Map.of());
 
         for (final String user : List.of(SUPER_ADMIN, OBSERVER)) {
             execute(user, "query($id: ID!) { meeting(id: $id) { status } }", Map.of("id", meeting)).path("meeting.status").entity(String.class)

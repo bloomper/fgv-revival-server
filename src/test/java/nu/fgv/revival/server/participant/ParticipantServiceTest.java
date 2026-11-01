@@ -57,6 +57,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -113,9 +116,11 @@ class ParticipantServiceTest {
         final Participant participant = new Participant();
 
         participant.setId(id);
+        participant.setUuid(uuid(participant.getId()));
         participant.setRevivalId(REVIVAL_ID);
+        participant.setRevivalUuid(uuidOrNull(participant.getRevivalId()));
         participant.setKind(kind);
-        participant.setSpexareId(spexareId);
+        participant.setSpexareId(spexareId == null ? null : String.valueOf(spexareId));
         participant.setVersion(2L);
         return participant;
     }
@@ -144,9 +149,10 @@ class ParticipantServiceTest {
 
             if (participant.getId() == null) {
                 participant.setId(50L);
+                participant.setUuid(uuid(participant.getId()));
                 participant.setVersion(0L);
             }
-            return participant;
+            return withUuids(participant);
         });
         when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("ROLE", "Roll", "Ensemble", true),
                 new SpexareDirectory.Position("TRUMPET", "Trumpet", "Orkester", false)));
@@ -175,16 +181,16 @@ class ParticipantServiceTest {
 
     @Test
     void aSpexareMustExistNotBeDeceasedNorBeAddedTwice() {
-        final ParticipantService.NewParticipant input = new ParticipantService.NewParticipant(REVIVAL_ID, ParticipantKind.PARTICIPANT, 7L,
+        final ParticipantService.NewParticipant input = new ParticipantService.NewParticipant(REVIVAL_ID, ParticipantKind.PARTICIPANT, "7",
                 null, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.add(input, EN)).hasFieldOrPropertyWithValue("detailMessageCode", "error.participant.spexare.notFound");
 
-        when(directory.byId(eq(7L), anyString())).thenReturn(new SpexregisterClient.Spexare("7", "Anna", "Andersson", null, null, true, null, null, null));
+        when(directory.byId(eq("7"), anyString())).thenReturn(new SpexregisterClient.Spexare("7", "Anna", "Andersson", null, null, true, null, null, null));
         assertThatThrownBy(() -> service.add(input, EN)).hasFieldOrPropertyWithValue("detailMessageCode", "error.participant.spexare.deceased");
 
-        when(directory.byId(eq(7L), anyString())).thenReturn(new SpexregisterClient.Spexare("7", "Anna", "Andersson", null, null, false, null, null, null));
-        when(repository.existsByRevivalIdAndSpexareIdAndRemovedAtIsNull(REVIVAL_ID, 7L)).thenReturn(true);
+        when(directory.byId(eq("7"), anyString())).thenReturn(new SpexregisterClient.Spexare("7", "Anna", "Andersson", null, null, false, null, null, null));
+        when(repository.existsByRevivalIdAndSpexareIdAndRemovedAtIsNull(REVIVAL_ID, "7")).thenReturn(true);
         assertThatThrownBy(() -> service.add(input, EN)).hasFieldOrPropertyWithValue("detailMessageCode", "error.participant.duplicate");
         verify(repository, never()).saveAndFlush(any());
     }
@@ -270,6 +276,7 @@ class ParticipantServiceTest {
         final DietaryNeed need = new DietaryNeed();
 
         member.setId(30L);
+        member.setUuid(uuid(member.getId()));
         member.setRole(RevivalRole.PARTICIPANT);
         member.setPendingEmail("pia@example.org");
         pending.setMemberId(30L);
@@ -311,7 +318,7 @@ class ParticipantServiceTest {
 
     @Test
     void settingsAreValidatedAndVersioned() {
-        when(settingsRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(settingsRepository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
 
         assertThatThrownBy(() -> service.updateSettings(new ParticipantService.SettingsChange(REVIVAL_ID, 1L, null, null, null)))
                 .isInstanceOf(ConflictException.class);
@@ -332,6 +339,7 @@ class ParticipantServiceTest {
         final Referral referral = new Referral();
 
         referral.setId(5L);
+        referral.setUuid(uuid(referral.getId()));
         referral.setRevivalId(REVIVAL_ID);
         referral.setName("Anna Maria Andersson");
         referral.setContact("Anna@Example.org");
@@ -360,6 +368,7 @@ class ParticipantServiceTest {
         paid.setResponse(ParticipantResponse.YES);
         paid.setFeePaidAt(java.time.Instant.now());
         waiting.setId(30L);
+        waiting.setUuid(uuid(waiting.getId()));
         waiting.setRole(RevivalRole.PARTICIPANT);
         waiting.setPendingEmail("x@example.org");
         yes.setMemberId(30L);

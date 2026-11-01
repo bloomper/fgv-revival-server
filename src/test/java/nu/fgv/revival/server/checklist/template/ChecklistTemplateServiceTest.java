@@ -54,6 +54,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -102,9 +105,9 @@ class ChecklistTemplateServiceTest {
                 new AccessPolicy(), mock(CapabilityService.class), TestClocks.at(LocalDate.of(2026, 10, 21)));
         as(TestCallers.superAdmin());
         lenient().when(guideAccess.callerRevivals(any())).thenReturn(List.of());
-        lenient().when(templateRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(itemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(itemRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(templateRepository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
+        lenient().when(itemRepository.save(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
+        lenient().when(itemRepository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
         lenient().when(itemRepository.findByTemplateIdAndRetiredAtIsNullOrderByPositionAscIdAsc(any()))
                 .thenAnswer(invocation -> items.stream().filter(item -> !item.isRetired()).toList());
     }
@@ -114,12 +117,13 @@ class ChecklistTemplateServiceTest {
      */
     private GuideVersionView latestWithChapters(final String... keys) {
         final GuideVersion latest = new GuideVersion();
-        final GuideVersionView view = new GuideVersionView(1L, GuideVersionStatus.PUBLISHED, "v1", null, null, null, null, 0L,
+        final GuideVersionView view = new GuideVersionView(uuid(1), GuideVersionStatus.PUBLISHED, "v1", null, null, null, null, 0L,
                 GuideVersionView.Text.plain("", null), java.util.Arrays.stream(keys)
-                .map(key -> new GuideVersionView.Chapter((long) key.hashCode(), key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L))
+                .map(key -> new GuideVersionView.Chapter(uuid(key.hashCode()), key, GuideVersionView.Text.plain("Kapitel " + key, null), List.of(), List.of(), 0L))
                 .toList());
 
         latest.setId(1L);
+        latest.setUuid(uuid(latest.getId()));
         lenient().when(versionRepository.findFirstByStatusOrderByPublishedAtDescIdDesc(GuideVersionStatus.PUBLISHED)).thenReturn(Optional.of(latest));
         lenient().when(guideVersionViews.find(1L)).thenReturn(view);
         return view;
@@ -133,6 +137,7 @@ class ChecklistTemplateServiceTest {
         final ChecklistTemplate template = new ChecklistTemplate();
 
         template.setId(5L);
+        template.setUuid(uuid(template.getId()));
         template.setKind(kind);
         template.setChapterKey(kind == ChecklistKind.CHAPTER ? "B" : null);
         template.setNameSv(kind == ChecklistKind.EVENT ? "Rephelg" : null);
@@ -145,7 +150,9 @@ class ChecklistTemplateServiceTest {
         final ChecklistTemplateItem item = new ChecklistTemplateItem();
 
         item.setId(id);
+        item.setUuid(uuid(item.getId()));
         item.setTemplateId(5L);
+        item.setTemplateUuid(uuidOrNull(item.getTemplateId()));
         item.setPosition(position);
         item.setTextSv("Punkt " + id);
         item.setVersion(0L);
@@ -234,18 +241,21 @@ class ChecklistTemplateServiceTest {
             final ChecklistTemplate first = new ChecklistTemplate();
 
             event.setId(1L);
+            event.setUuid(uuid(event.getId()));
             event.setKind(ChecklistKind.EVENT);
             event.setNameSv("Rephelg");
             second.setId(2L);
+            second.setUuid(uuid(second.getId()));
             second.setKind(ChecklistKind.CHAPTER);
             second.setChapterKey("B");
             first.setId(3L);
+            first.setUuid(uuid(first.getId()));
             first.setKind(ChecklistKind.CHAPTER);
             first.setChapterKey("A");
             latestWithChapters("A", "B");
             when(templateRepository.findByRetiredAtIsNullOrderByNameSvAscIdAsc()).thenReturn(List.of(event, second, first));
 
-            assertThat(service.list(false)).extracting(ChecklistTemplateDto::id).containsExactly(3L, 2L, 1L);
+            assertThat(service.list(false)).extracting(ChecklistTemplateDto::id).containsExactly(uuid(3), uuid(2), uuid(1));
         }
 
         @Test
@@ -389,7 +399,7 @@ class ChecklistTemplateServiceTest {
             final ChecklistTemplateDto template = service.retireItem(1L, 0L);
 
             assertThat(first.getRetiredAt()).isNotNull();
-            assertThat(template.items()).extracting(ChecklistTemplateItemDto::id).containsExactly(2L);
+            assertThat(template.items()).extracting(ChecklistTemplateItemDto::id).containsExactly(uuid(2));
             assertThat(items.get(1).getPosition()).isZero();
         }
 
@@ -423,7 +433,7 @@ class ChecklistTemplateServiceTest {
 
             when(itemRepository.findByTemplateIdAndRetiredAtIsNotNullOrderByRetiredAtDescIdDesc(5L)).thenReturn(List.of(retired));
 
-            assertThat(service.retiredItems(5L)).extracting(ChecklistTemplateItemDto::id).containsExactly(1L);
+            assertThat(service.retiredItems(5L)).extracting(ChecklistTemplateItemDto::id).containsExactly(uuid(1));
 
             as(TestCallers.observer());
             assertThat(service.retiredItems(5L)).isEmpty();

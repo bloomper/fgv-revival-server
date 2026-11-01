@@ -21,6 +21,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code ChecklistSummary}, with its open, overdue and total item counts.
@@ -28,9 +29,9 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistSummaryDto(Long id, ChecklistKind kind, @Nullable String chapterKey,
+public record ChecklistSummaryDto(UUID id, ChecklistKind kind, @Nullable String chapterKey,
                                   GuideVersionView.@Nullable Text chapterTitle, @Nullable String name,
                                   @Nullable LocalDate date,
                                   boolean cancelled, int openCount, int overdueCount, int totalCount,
-                                  @Nullable Long eventId) {
+                                  @Nullable UUID eventId) {
 }

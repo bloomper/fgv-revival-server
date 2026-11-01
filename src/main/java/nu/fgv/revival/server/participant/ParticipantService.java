@@ -54,6 +54,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -120,7 +121,7 @@ public class ParticipantService {
     /**
      * "Title year" for each spex they took part in, newest first; only the given family's when there is one.
      */
-    static List<String> history(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable Set<Long> family) {
+    static List<String> history(final SpexregisterClient.@Nullable Spexare spexare, final @Nullable Set<String> family) {
         if (spexare == null) {
             return List.of();
         }
@@ -133,8 +134,8 @@ public class ParticipantService {
     }
 
     private static SpexareCandidate candidate(final SpexregisterClient.Spexare spexare, final SpexregisterClient.@Nullable Spexare detailed,
-                                              final @Nullable Set<Long> family, final boolean added) {
-        return new SpexareCandidate(Long.valueOf(spexare.id()), spexare.firstName(), spexare.lastName(), ParticipantViews.blankToNull(spexare.nickName()),
+                                              final @Nullable Set<String> family, final boolean added) {
+        return new SpexareCandidate(spexare.id(), spexare.firstName(), spexare.lastName(), ParticipantViews.blankToNull(spexare.nickName()),
                 ParticipantViews.blankToNull(spexare.graduation()), history(detailed, family), added);
     }
 
@@ -222,15 +223,15 @@ public class ParticipantService {
         final Caller caller = callerService.current();
         final Revival revival = access.writable(caller, revivalId);
         final String acting = ActingPerson.of(caller);
-        final Set<Long> added = addedSpexare(revivalId);
+        final Set<String> added = addedSpexare(revivalId);
         final List<SpexregisterClient.Spexare> listed = directory.bySpex(revival.getSpexId(), acting).stream()
-                .filter(spexare -> !spexare.isDeceased() && !added.contains(Long.valueOf(spexare.id())))
+                .filter(spexare -> !spexare.isDeceased() && !added.contains(spexare.id()))
                 .toList();
-        final Set<Long> family = directory.family(revival.getSpexId());
-        final Map<Long, SpexregisterClient.Spexare> detailed = directory.byIds(listed.stream().map(spexare -> Long.valueOf(spexare.id())).toList(), acting);
+        final Set<String> family = directory.family(revival.getSpexId());
+        final Map<String, SpexregisterClient.Spexare> detailed = directory.byIds(listed.stream().map(spexare -> spexare.id()).toList(), acting);
 
         return listed.stream()
-                .map(spexare -> candidate(spexare, detailed.get(Long.valueOf(spexare.id())), family, false))
+                .map(spexare -> candidate(spexare, detailed.get(spexare.id()), family, false))
                 .sorted(Comparator.comparing((SpexareCandidate candidate) -> candidate.lastName().toLowerCase(Locale.ROOT))
                         .thenComparing(candidate -> candidate.firstName().toLowerCase(Locale.ROOT)))
                 .toList();
@@ -253,19 +254,19 @@ public class ParticipantService {
         }
 
         final String acting = ActingPerson.of(caller);
-        final Set<Long> added = addedSpexare(revivalId);
+        final Set<String> added = addedSpexare(revivalId);
         final List<SpexregisterClient.Spexare> found = directory.search(trimmed, acting).stream()
                 .filter(spexare -> !spexare.isDeceased())
                 .limit(MAX_SEARCH_RESULTS)
                 .toList();
-        final Map<Long, SpexregisterClient.Spexare> detailed = directory.byIds(found.stream().map(spexare -> Long.valueOf(spexare.id())).toList(), acting);
+        final Map<String, SpexregisterClient.Spexare> detailed = directory.byIds(found.stream().map(spexare -> spexare.id()).toList(), acting);
 
         return found.stream()
-                .map(spexare -> candidate(spexare, detailed.get(Long.valueOf(spexare.id())), null, added.contains(Long.valueOf(spexare.id()))))
+                .map(spexare -> candidate(spexare, detailed.get(spexare.id()), null, added.contains(spexare.id())))
                 .toList();
     }
 
-    private Set<Long> addedSpexare(final Long revivalId) {
+    private Set<String> addedSpexare(final Long revivalId) {
         return repository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revivalId).stream()
                 .map(Participant::getSpexareId)
                 .filter(Objects::nonNull)
@@ -323,7 +324,7 @@ public class ParticipantService {
      * most {@value #MAX_BULK} per call.
      */
     @Transactional
-    public List<ParticipantDto> addSpexare(final Long revivalId, final List<Long> spexareIds, final Locale locale) {
+    public List<ParticipantDto> addSpexare(final Long revivalId, final List<String> spexareIds, final Locale locale) {
         final Caller caller = callerService.current();
         final Revival revival = access.writable(caller, revivalId);
 
@@ -332,11 +333,11 @@ public class ParticipantService {
         }
         AuditContext.operation("participantsAddSpexare");
 
-        final Set<Long> added = addedSpexare(revivalId);
-        final Map<Long, SpexregisterClient.Spexare> known = directory.byIds(spexareIds, ActingPerson.of(caller));
+        final Set<String> added = addedSpexare(revivalId);
+        final Map<String, SpexregisterClient.Spexare> known = directory.byIds(spexareIds, ActingPerson.of(caller));
         final List<Participant> created = new ArrayList<>();
 
-        for (final Long spexareId : new java.util.LinkedHashSet<>(spexareIds)) {
+        for (final String spexareId : new java.util.LinkedHashSet<>(spexareIds)) {
             final SpexregisterClient.Spexare spexare = known.get(spexareId);
 
             if (spexare == null || spexare.isDeceased() || !added.add(spexareId)) {
@@ -520,7 +521,7 @@ public class ParticipantService {
         }
     }
 
-    private Long requireAddable(final Long revivalId, final Long spexareId, final String acting) {
+    private String requireAddable(final Long revivalId, final String spexareId, final String acting) {
         final SpexregisterClient.Spexare spexare = directory.byId(spexareId, acting);
 
         if (spexare == null) {
@@ -688,14 +689,15 @@ public class ParticipantService {
         }
 
         final List<Participant> referrers = repository.findAllById(referrals.stream().map(Referral::getReferredByParticipantId).collect(Collectors.toSet()));
-        final Map<Long, ParticipantDto> names = views.toDtos(referrers,
+        final Map<Long, UUID> referrerUuids = referrers.stream().collect(Collectors.toMap(Participant::getId, Participant::getUuid));
+        final Map<UUID, ParticipantDto> names = views.toDtos(referrers,
                         new ParticipantViews.Options(false, false, false, ActingPerson.of(caller), locale)).stream()
                 .collect(Collectors.toMap(ParticipantDto::id, dto -> dto));
 
         return referrals.stream().map(referral -> {
-            final ParticipantDto referrer = names.get(referral.getReferredByParticipantId());
+            final ParticipantDto referrer = names.get(referrerUuids.get(referral.getReferredByParticipantId()));
 
-            return new ReferralDto(referral.getId(), referral.getName(), referral.getContact(), referral.getComment(),
+            return new ReferralDto(referral.getUuid(), referral.getName(), referral.getContact(), referral.getComment(),
                     referrer == null ? null : (referrer.firstName() + " " + referrer.lastName()).strip(), referral.getCreatedAt());
         }).toList();
     }
@@ -749,7 +751,7 @@ public class ParticipantService {
     /**
      * A new participant: a spexare, or a pending person by name with email or phone.
      */
-    public record NewParticipant(Long revivalId, ParticipantKind kind, @Nullable Long spexareId,
+    public record NewParticipant(Long revivalId, ParticipantKind kind, @Nullable String spexareId,
                                  @Nullable String firstName,
                                  @Nullable String lastName, @Nullable String email, @Nullable String phone,
                                  @Nullable String positionId,

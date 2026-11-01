@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.member;
 
 import nu.fgv.revival.server.TestCallers;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.person.UserDirectory;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
@@ -40,6 +41,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -85,7 +87,7 @@ class AccessRequestMailerTest {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setFallbackToSystemLocale(false);
         mailer = new AccessRequestMailer(mailSenderProvider, messageSource, directory, revivalRepository, titles, "noreply@example.org",
-                "https://revival.example.org/");
+                "https://revival.example.org/", TestExternalIds.IDS);
 
         final Revival revival = TestCallers.revival(RevivalStatus.ORGANISING);
 
@@ -113,7 +115,7 @@ class AccessRequestMailerTest {
                     .contains("created an FGV account for ny@example.org")
                     .contains("role USER on the client fgv-revival")
                     .contains("https://auth.example.org/admin/master/console/#/fgv/users/kc-1/role-mapping")
-                    .contains("https://revival.example.org/revivals/" + REVIVAL_ID);
+                    .contains("https://revival.example.org/revivals/" + uuid(REVIVAL_ID));
         });
         assertThat(sent.getAllValues().getLast()).satisfies(message -> {
             assertThat(message.getTo()).containsExactly("sven@example.org");

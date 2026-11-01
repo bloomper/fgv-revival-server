@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -48,14 +49,14 @@ class EventProposalsTest {
             type(7, "Kortafton", 7, 90, 1));
 
     private static EventTypeDto type(final long id, final String name, final @Nullable Integer min, final @Nullable Integer max, final int days) {
-        return new EventTypeDto(id, GuideVersionView.Text.plain(name, null), null, null, null, min, max, days, false, null, (int) id, false, 0L);
+        return new EventTypeDto(uuid(id), GuideVersionView.Text.plain(name, null), null, null, null, min, max, days, false, null, (int) id, false, 0L);
     }
 
     @Test
     void everyTypeWithOffsetsIsProposedInDateOrder() {
         final List<EventProposalDto> proposals = EventProposals.propose(PREMIERE, TIMELINE, Set.of());
 
-        assertThat(proposals).extracting(proposal -> proposal.type().id()).containsExactly(2L, 3L, 4L, 5L, 6L, 7L);
+        assertThat(proposals).extracting(proposal -> proposal.type().id()).containsExactly(uuid(2), uuid(3), uuid(4), uuid(5), uuid(6), uuid(7));
         assertThat(proposals).extracting(EventProposalDto::startDate).isSorted();
     }
 
@@ -108,13 +109,13 @@ class EventProposalsTest {
 
     @Test
     void typesWithAnEventOrRetiredOrWithoutOffsetsAreNotProposed() {
-        final EventTypeDto retired = new EventTypeDto(8L, GuideVersionView.Text.plain("Gammal", null), null, null, null, -10, -5, 1, false, null, 8,
+        final EventTypeDto retired = new EventTypeDto(uuid(8), GuideVersionView.Text.plain("Gammal", null), null, null, null, -10, -5, 1, false, null, 8,
                 true, 0L);
         final List<EventTypeDto> types = new ArrayList<>(TIMELINE);
 
         types.add(retired);
-        assertThat(EventProposals.propose(PREMIERE, types, Set.of(3L, 6L))).extracting(proposal -> proposal.type().id())
-                .containsExactly(2L, 4L, 5L, 7L);
+        assertThat(EventProposals.propose(PREMIERE, types, Set.of(uuid(3), uuid(6)))).extracting(proposal -> proposal.type().id())
+                .containsExactly(uuid(2), uuid(4), uuid(5), uuid(7));
     }
 
     @Test

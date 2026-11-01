@@ -66,7 +66,7 @@ public class BudgetScenarioService {
     }
 
     private static Scenario of(final BudgetScenario scenario, final BudgetService.Baseline baseline) {
-        return new Scenario(scenario.getId(), scenario.getRevivalId(), scenario.getName(), scenario.getParameters(),
+        return new Scenario(scenario.getUuid(), scenario.getRevivalUuid(), scenario.getName(), scenario.getParameters(),
                 calculate(baseline, scenario.getParameters()), scenario.getVersion() == null ? 0L : scenario.getVersion());
     }
 

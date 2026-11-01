@@ -58,6 +58,9 @@ import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.PERSON_ID;
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -108,7 +111,9 @@ class CalendarFeedServiceTest {
         final Event event = new Event();
 
         event.setId(id);
+        event.setUuid(uuid(event.getId()));
         event.setRevivalId(REVIVAL_ID);
+        event.setRevivalUuid(uuidOrNull(event.getRevivalId()));
         event.setTitle(title);
         event.setStartDate(date);
         event.setEndDate(date.plusDays(1));
@@ -122,7 +127,9 @@ class CalendarFeedServiceTest {
         final Meeting meeting = new Meeting();
 
         meeting.setId(id);
+        meeting.setUuid(uuid(meeting.getId()));
         meeting.setRevivalId(REVIVAL_ID);
+        meeting.setRevivalUuid(uuidOrNull(meeting.getRevivalId()));
         meeting.setDate(TODAY.plusDays(id));
         meeting.setStatus(status);
         meeting.setCreatedAt(Instant.parse("2027-10-01T00:00:00Z"));
@@ -150,13 +157,14 @@ class CalendarFeedServiceTest {
         lenient().when(personRepository.findById(PERSON_ID)).thenReturn(Optional.of(person));
         lenient().when(callerService.forPerson(person)).thenReturn(TestCallers.steeringGroup());
         lenient().when(titles.ofCached(any(), any())).thenReturn("Ali Baba 2028");
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
     }
 
     private CalendarFeed feed(final String token) {
         final CalendarFeed feed = new CalendarFeed();
 
         feed.setId(1L);
+        feed.setUuid(uuid(feed.getId()));
         feed.setRevivalId(REVIVAL_ID);
         feed.setPersonId(PERSON_ID);
         feed.setTokenHash(CalendarFeedService.hash(token));
@@ -234,6 +242,7 @@ class CalendarFeedServiceTest {
         final RevivalShow show = new RevivalShow();
 
         show.setId(3L);
+        show.setUuid(uuid(show.getId()));
         show.setRevival(revival);
         show.setDate(LocalDate.of(2028, 2, 10));
         show.setTime(LocalTime.of(19, 0));
@@ -250,16 +259,16 @@ class CalendarFeedServiceTest {
         final String ics = service.render(token(), Locale.of("sv")).orElseThrow();
 
         assertThat(ics).contains("X-WR-CALNAME:Ali Baba 2028\r\n")
-                .contains("UID:event-12@nyuppsattning.fgv.nu\r\nDTSTAMP:20271001T000000Z\r\nDTSTART;VALUE=DATE:20271211\r\nDTEND;VALUE=DATE:20271213\r\n")
+                .contains("UID:event-00000000-0000-7000-8000-00000000000c@nyuppsattning.fgv.nu\r\nDTSTAMP:20271001T000000Z\r\nDTSTART;VALUE=DATE:20271211\r\nDTEND;VALUE=DATE:20271213\r\n")
                 // 12:00 in Stockholm is 11:00 UTC, and an event without an end time lasts two hours
-                .contains("UID:event-13@nyuppsattning.fgv.nu\r\nDTSTAMP:20271001T000000Z\r\nDTSTART:20271112T110000Z\r\nDTEND:20271112T130000Z\r\n")
-                .doesNotContain("event-14@")
-                .contains("UID:show-3@nyuppsattning.fgv.nu").contains("DTSTART:20280210T180000Z\r\nDTEND:20280210T203000Z\r\n")
+                .contains("UID:event-00000000-0000-7000-8000-00000000000d@nyuppsattning.fgv.nu\r\nDTSTAMP:20271001T000000Z\r\nDTSTART:20271112T110000Z\r\nDTEND:20271112T130000Z\r\n")
+                .doesNotContain("event-00000000-0000-7000-8000-00000000000e@")
+                .contains("UID:show-00000000-0000-7000-8000-000000000003@nyuppsattning.fgv.nu").contains("DTSTART:20280210T180000Z\r\nDTEND:20280210T203000Z\r\n")
                 .contains("SUMMARY:Ali Baba 2028: Föreställning\r\nLOCATION:Kårhuset\r\n")
-                .contains("UID:meeting-2@nyuppsattning.fgv.nu").contains("SUMMARY:Direktionsmöte\r\n")
-                .doesNotContain("meeting-1@")
+                .contains("UID:meeting-00000000-0000-7000-8000-000000000002@nyuppsattning.fgv.nu").contains("SUMMARY:Direktionsmöte\r\n")
+                .doesNotContain("meeting-00000000-0000-7000-8000-000000000001@")
                 .doesNotContain("kim@example.org").doesNotContain("Kim");
-        assertThat(ics.indexOf("event-13@")).isLessThan(ics.indexOf("event-12@"));
+        assertThat(ics.indexOf("event-00000000-0000-7000-8000-00000000000d@")).isLessThan(ics.indexOf("event-00000000-0000-7000-8000-00000000000c@"));
         assertThat(service.render(token(), Locale.ENGLISH).orElseThrow()).contains("SUMMARY:Ali Baba 2028: Show\r\n")
                 .contains("SUMMARY:Steering group meeting\r\n");
     }

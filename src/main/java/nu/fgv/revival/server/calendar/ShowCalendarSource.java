@@ -70,7 +70,7 @@ class ShowCalendarSource implements CalendarSource {
 
                         when = new CalendarEntry.Timed(start, start.plus(DEFAULT_LENGTH));
                     }
-                    return new CalendarEntry(CalendarEntry.uid("show", show.getId()), summary, show.getVenue(), null, when, stamp);
+                    return new CalendarEntry(CalendarEntry.uid("show", show.getUuid()), summary, show.getVenue(), null, when, stamp);
                 })
                 .toList();
     }

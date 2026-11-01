@@ -29,12 +29,16 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Money that came in or went out: income or cost by its category's kind. A cost may have
@@ -58,8 +62,15 @@ public class BudgetTransaction extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Column(name = "date", nullable = false)
     private LocalDate date;
@@ -75,6 +86,10 @@ public class BudgetTransaction extends AbstractAuditable {
 
     @Column(name = "budget_line_id")
     private @Nullable Long budgetLineId;
+
+    @Formula("(SELECT t.uuid FROM budget_line t WHERE t.id = budget_line_id)")
+    @NotAudited
+    private @Nullable UUID budgetLineUuid;
 
     @Embedded
     @AttributeOverrides({

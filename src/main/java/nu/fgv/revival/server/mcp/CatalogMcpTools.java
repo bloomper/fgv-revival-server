@@ -82,7 +82,7 @@ public class CatalogMcpTools {
     }
 
     private CatalogEntry entry(final Catalog catalog, final String id) {
-        return McpToolSupport.byId(List.copyOf(service(catalog).list(true)), CatalogEntry::getId, id, CatalogEntry.class);
+        return McpToolSupport.byCode(List.copyOf(service(catalog).list(true)), CatalogEntry::getId, id, CatalogEntry.class);
     }
 
     private static <T> T required(final @Nullable T value, final String what) {

@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -49,7 +50,7 @@ class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         final List<String> ids = new ArrayList<>();
 
         for (final String status : STATUSES) {
-            final long id = createRevival(ALI_BABA, 2028 + ids.size());
+            final EntityId id = createRevival(ALI_BABA, 2028 + ids.size());
 
             addMember(id, DIRECTEUR, "DIRECTEUR", List.of());
             setStatus(id, status);
@@ -65,11 +66,11 @@ class RevivalObserverGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyMutationIsRefused() {
-        final long id = createRevival(ALI_BABA, 2028);
+        final EntityId id = createRevival(ALI_BABA, 2028);
 
         setStatus(id, "ORGANISING");
 
-        final long steeringGroupMember = addMember(id, STEERING_GROUP, "STEERING_GROUP", List.of());
+        final EntityId steeringGroupMember = addMember(id, STEERING_GROUP, "STEERING_GROUP", List.of());
 
         expectError(execute(OBSERVER, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2028))), "FORBIDDEN");
         expectError(execute(OBSERVER, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "shows", List.of(Map.of("date", "2028-03-01", "venue", "X"))))), "FORBIDDEN");

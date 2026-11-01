@@ -19,6 +19,7 @@ package nu.fgv.revival.server.meeting;
 
 import jakarta.mail.internet.MimeMessage;
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,8 +47,8 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
             + "sentBy { displayName } recipients { person { displayName } status } } }";
     private static final String RETRY = "mutation($id: ID!) { minutesEmailRetry(emailId: $id) { id recipients { person { displayName } status } } }";
 
-    private long revival;
-    private long meeting;
+    private EntityId revival;
+    private EntityId meeting;
 
     private static List<String> recipients() throws Exception {
         return Arrays.stream(MAIL.getReceivedMessages()).map(message -> {
@@ -62,10 +64,10 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
     void closedMeeting() {
         revival = organisingRevival();
         addMember(revival, "waiting" + DOMAIN, "STEERING_GROUP", List.of());
-        final long removed = addMember(revival, OBSERVER, "STEERING_GROUP", List.of());
+        final EntityId removed = addMember(revival, OBSERVER, "STEERING_GROUP", List.of());
 
         graphQl(SUPER_ADMIN).document("mutation($id: ID!) { revivalMemberRemove(id: $id) }").variable("id", removed).execute();
-        meeting = Long.parseLong(execute(STEERING_GROUP, MeetingGraphqlApiIntegrationTest.CREATE,
+        meeting = entityId("meeting", execute(STEERING_GROUP, MeetingGraphqlApiIntegrationTest.CREATE,
                 Map.of("input", Map.of("revivalId", revival, "date", LocalDate.now().toString(), "title", "Direktionsmöte 4")))
                 .path("meetingCreate.id").entity(String.class).get());
         execute(STEERING_GROUP, MeetingGraphqlApiIntegrationTest.START, Map.of("id", meeting, "version", version()));
@@ -96,7 +98,7 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(message.getSubject()).isEqualTo("Minutes: Ali Baba 2028, Direktionsmöte 4");
         assertThat(message.getContent().toString()).contains("Decisions").contains("#1 Vi spelar i RunAn")
-                .contains("http://localhost:3001/revivals/%d/meetings/%d".formatted(revival, meeting));
+                .contains("http://localhost:3001/revivals/%s/meetings/%s".formatted(revival, meeting));
         assertThat(message.getRecipients(jakarta.mail.Message.RecipientType.CC)).isNull();
         assertThat(message.getRecipients(jakarta.mail.Message.RecipientType.BCC)).isNull();
         execute(STEERING_GROUP, "query($id: ID!) { meeting(id: $id) { emails { recipients { status } } } }", Map.of("id", meeting))
@@ -113,7 +115,7 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aFailedRecipientIsShownAndCanBeSentToAgain() throws Exception {
-        final long stina = personId(STEERING_GROUP);
+        final EntityId stina = personId(STEERING_GROUP);
 
         jdbcClient.sql("UPDATE person SET email = 'inte en adress' WHERE id = ?").param(stina).update();
 
@@ -138,7 +140,7 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aRetryNeedsSomeoneToSendToAndRevealsNothingToOutsiders() {
-        final long stina = personId(STEERING_GROUP);
+        final EntityId stina = personId(STEERING_GROUP);
 
         jdbcClient.sql("UPDATE person SET email = 'inte en adress' WHERE id = ?").param(stina).update();
 
@@ -152,7 +154,7 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
         login(PLAIN_USER);
         final List<String> messages = new ArrayList<>();
 
-        for (final String id : List.of(emailId, "999999")) {
+        for (final String id : List.of(emailId, UUID.randomUUID().toString())) {
             execute(PLAIN_USER, RETRY, Map.of("id", id)).errors().satisfy(errors -> messages.add(errors.getFirst().getMessage()));
         }
         assertThat(messages).hasSize(2).allSatisfy(message -> assertThat(message).isEqualTo(messages.getFirst()));
@@ -187,7 +189,7 @@ class MinutesEmailIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void onlyAClosedMeetingIsSentAndOnlyByThoseWhoWriteTheLog() {
-        final long planned = Long.parseLong(execute(STEERING_GROUP, MeetingGraphqlApiIntegrationTest.CREATE,
+        final EntityId planned = entityId("meeting", execute(STEERING_GROUP, MeetingGraphqlApiIntegrationTest.CREATE,
                 Map.of("input", Map.of("revivalId", revival, "date", LocalDate.now().toString()))).path("meetingCreate.id").entity(String.class).get());
 
         expectError(execute(DIRECTEUR, SEND, Map.of("input", Map.of("meetingId", planned, "language", "sv"))), "BAD_REQUEST");

@@ -24,9 +24,9 @@ import org.jspecify.annotations.Nullable;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record SpexDto(Long id, @Nullable String title, @Nullable Integer year, boolean available) {
+public record SpexDto(String id, @Nullable String title, @Nullable Integer year, boolean available) {
 
-    public static SpexDto unavailable(final Long id) {
+    public static SpexDto unavailable(final String id) {
         return new SpexDto(id, null, null, false);
     }
 }

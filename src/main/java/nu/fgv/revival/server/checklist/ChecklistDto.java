@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A checklist as GraphQL's {@code Checklist}. A chapter checklist's title and tips come from the pinned guide version.
@@ -29,15 +30,15 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistDto(Long id,
-                           Long revivalId,
+public record ChecklistDto(UUID id,
+                           UUID revivalId,
                            ChecklistKind kind,
                            @Nullable String chapterKey,
                            GuideVersionView.@Nullable Text chapterTitle,
                            @Nullable String name,
                            @Nullable LocalDate date,
-                           @Nullable Long templateId,
-                           @Nullable Long eventId,
+                           @Nullable UUID templateId,
+                           @Nullable UUID eventId,
                            boolean cancelled,
                            List<ChecklistItemDto> items,
                            List<GuideVersionView.Item> tips,

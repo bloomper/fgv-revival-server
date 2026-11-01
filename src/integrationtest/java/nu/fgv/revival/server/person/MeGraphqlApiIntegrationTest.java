@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.person;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -39,8 +40,8 @@ class MeGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void meListsRevivalRolesOnlyForVisibleRevivals() {
-        final long approved = createRevival(ALI_BABA, 2028);
-        final long proposed = createRevival(NOBEL, 2030);
+        final EntityId approved = createRevival(ALI_BABA, 2028);
+        final EntityId proposed = createRevival(NOBEL, 2030);
 
         setStatus(approved, "APPROVED");
         addMember(approved, DIRECTEUR, "DIRECTEUR", List.of());

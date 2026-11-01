@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -99,11 +101,12 @@ class ReferenceRevivalServiceTest {
             stored = invocation.getArgument(0);
             if (stored.getId() == null) {
                 stored.setId(1L);
+                stored.setUuid(uuid(stored.getId()));
                 stored.setVersion(0L);
             } else {
                 stored.setVersion(stored.getVersion() + 1);
             }
-            return stored;
+            return withUuids(stored);
         });
         lenient().when(repository.findById(1L)).thenAnswer(invocation -> Optional.ofNullable(stored));
     }

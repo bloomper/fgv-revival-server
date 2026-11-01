@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Dates proposed from the premiere for the types a revival has no event of yet. A pure function: the caller
@@ -45,7 +46,7 @@ public final class EventProposals {
      * Ordered by start date. None without a premiere.
      */
     public static List<EventProposalDto> propose(final @Nullable LocalDate premiere, final List<EventTypeDto> types,
-                                                 final Collection<Long> typesWithEvents) {
+                                                 final Collection<UUID> typesWithEvents) {
         if (premiere == null) {
             return List.of();
         }

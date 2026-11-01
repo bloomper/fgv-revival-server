@@ -15,6 +15,7 @@
  */
 package nu.fgv.revival.server.news;
 
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Controller;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * News over GraphQL (news.graphqls).
@@ -33,9 +35,12 @@ import java.util.List;
 @Controller
 public class NewsGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final NewsService service;
 
-    public NewsGraphqlApi(final NewsService service) {
+    public NewsGraphqlApi(final NewsService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
@@ -50,13 +55,13 @@ public class NewsGraphqlApi {
     }
 
     @MutationMapping
-    public NewsDto newsUpdate(@Argument final Long id, @Argument final Long version, @Argument final NewsInput input) {
-        return service.update(id, version, input.subject(), input.text(), input.visibleFrom(), input.visibleTo());
+    public NewsDto newsUpdate(@Argument final UUID id, @Argument final Long version, @Argument final NewsInput input) {
+        return service.update(ids.idOf(News.class, id), version, input.subject(), input.text(), input.visibleFrom(), input.visibleTo());
     }
 
     @MutationMapping
-    public void newsDelete(@Argument final Long id, @Argument final Long version) {
-        service.delete(id, version);
+    public void newsDelete(@Argument final UUID id, @Argument final Long version) {
+        service.delete(ids.idOf(News.class, id), version);
     }
 
     public record NewsInput(String subject, String text, @Nullable LocalDate visibleFrom, @Nullable LocalDate visibleTo) {

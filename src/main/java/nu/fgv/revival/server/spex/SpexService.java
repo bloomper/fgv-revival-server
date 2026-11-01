@@ -117,7 +117,7 @@ public class SpexService {
     /**
      * The spex from the cached list only, never calling Spexregister.
      */
-    public Optional<SpexDto> findCached(final Long id) {
+    public Optional<SpexDto> findCached(final String id) {
         final Cache.ValueWrapper cached = cache().get(KEY);
 
         return cached == null || !(cached.get() instanceof final List<?> spex)
@@ -129,8 +129,8 @@ public class SpexService {
      * Titles for several spex from one cached list. Never fails: while Spexregister is unavailable every spex is
      * returned as unavailable.
      */
-    public Map<Long, SpexDto> findTitles(final Collection<Long> ids) {
-        final Map<Long, SpexDto> known;
+    public Map<String, SpexDto> findTitles(final Collection<String> ids) {
+        final Map<String, SpexDto> known;
 
         try {
             known = originalSpex().stream().collect(Collectors.toMap(SpexDto::id, Function.identity(), (a, _) -> a));
@@ -151,7 +151,7 @@ public class SpexService {
      *
      * @throws SpexregisterUnavailableException when Spexregister cannot be reached
      */
-    public Optional<SpexregisterClient.Poster> poster(final Long id) {
+    public Optional<SpexregisterClient.Poster> poster(final String id) {
         try {
             return Objects.requireNonNull(posters().get(id, () -> client.poster(id)));
         } catch (final Cache.ValueRetrievalException e) {
@@ -164,7 +164,7 @@ public class SpexService {
      *
      * @throws SpexregisterUnavailableException when it cannot be checked
      */
-    public SpexDto requireOriginal(final Long id) {
+    public SpexDto requireOriginal(final String id) {
         final Optional<SpexDto> cached = originalSpex().stream().filter(spex -> spex.id().equals(id)).findFirst();
 
         if (cached.isPresent()) {

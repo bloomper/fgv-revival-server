@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.spexcalendar;
 
 import nu.fgv.revival.server.TestCallers;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.util.error.BadRequestException;
@@ -31,6 +32,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -66,10 +69,11 @@ class SpexCalendarServiceTest {
 
             if (date.getId() == null) {
                 date.setId(1L + dates.size());
+                date.setUuid(uuid(date.getId()));
                 date.setVersion(0L);
                 dates.add(date);
             }
-            return date;
+            return withUuids(date);
         });
     }
 
@@ -94,9 +98,9 @@ class SpexCalendarServiceTest {
 
         final SpexCalendarDateDto created = service.create(LocalDate.of(2027, 2, 6), "Premiär");
 
-        assertThat(service.update(created.id(), 0L, LocalDate.of(2027, 2, 7), "Premiär").date()).isEqualTo(LocalDate.of(2027, 2, 7));
-        assertThatThrownBy(() -> service.delete(created.id(), 4L)).isInstanceOf(ConflictException.class);
-        service.delete(created.id(), 0L);
+        assertThat(service.update(TestExternalIds.internal(created.id()), 0L, LocalDate.of(2027, 2, 7), "Premiär").date()).isEqualTo(LocalDate.of(2027, 2, 7));
+        assertThatThrownBy(() -> service.delete(TestExternalIds.internal(created.id()), 4L)).isInstanceOf(ConflictException.class);
+        service.delete(TestExternalIds.internal(created.id()), 0L);
         verify(repository).delete(dates.getFirst());
     }
 

@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.spexcalendar;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code SpexCalendarDate}.
@@ -23,9 +24,9 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record SpexCalendarDateDto(Long id, LocalDate date, String label, Long version) {
+public record SpexCalendarDateDto(UUID id, LocalDate date, String label, Long version) {
 
     static SpexCalendarDateDto of(final SpexCalendarDate date) {
-        return new SpexCalendarDateDto(date.getId(), date.getDate(), date.getLabel(), date.getVersion() == null ? 0L : date.getVersion());
+        return new SpexCalendarDateDto(date.getUuid(), date.getDate(), date.getLabel(), date.getVersion() == null ? 0L : date.getVersion());
     }
 }

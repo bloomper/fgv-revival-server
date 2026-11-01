@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -87,6 +89,7 @@ class CallerServiceTest {
         final Person person = new Person();
 
         person.setId(id);
+        person.setUuid(uuid(person.getId()));
         person.setExternalId(SUBJECT);
         person.setEmail(email);
         person.setEmailVerified(verified);
@@ -133,7 +136,8 @@ class CallerServiceTest {
             final Person saved = invocation.getArgument(0);
 
             saved.setId(5L);
-            return saved;
+            saved.setUuid(uuid(saved.getId()));
+            return withUuids(saved);
         });
 
         final Caller caller = service.current();
@@ -147,7 +151,7 @@ class CallerServiceTest {
     void aChangedNameIsUpdatedAndUnchangedClaimsWriteNothing() {
         authenticate("kim@example.org", true, "Kim S", "USER");
         when(personRepository.findByExternalId(SUBJECT)).thenReturn(Optional.of(person(5L, "kim@example.org", true, "Kim")));
-        when(personRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(personRepository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
 
         assertThat(service.current().person().getDisplayName()).isEqualTo("Kim S");
 

@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -129,7 +130,7 @@ public class BudgetExportService {
                 transactions,
                 categoryService.all(),
                 eventService.list(revivalId, true).stream().collect(Collectors.toMap(EventDto::id, Function.identity())),
-                payers(transactions, locale),
+                payers(revivalId, transactions, locale),
                 Amounts.orZero(budgetService.helperCompensation(revivalId)),
                 budgetService.helpersCategoryId());
 
@@ -142,13 +143,13 @@ public class BudgetExportService {
         }
     }
 
-    private Map<Long, String> payers(final List<Transaction> transactions, final Locale locale) {
+    private Map<UUID, String> payers(final Long revivalId, final List<Transaction> transactions, final Locale locale) {
         final Map<OwnerViews.Ref, @Nullable OwnerDto> owners = ownerViews.toDtos(transactions.stream()
-                .map(transaction -> new OwnerViews.Ref(transaction.revivalId(), transaction.payer())).collect(Collectors.toSet()), locale);
-        final Map<Long, String> names = new HashMap<>();
+                .map(transaction -> new OwnerViews.Ref(revivalId, transaction.payer())).collect(Collectors.toSet()), locale);
+        final Map<UUID, String> names = new HashMap<>();
 
         transactions.forEach(transaction -> {
-            final OwnerDto owner = owners.get(new OwnerViews.Ref(transaction.revivalId(), transaction.payer()));
+            final OwnerDto owner = owners.get(new OwnerViews.Ref(revivalId, transaction.payer()));
             final String name = owner == null ? null : owner.person() != null ? owner.person().displayName() : owner.name();
 
             if (name != null) {
@@ -170,7 +171,7 @@ public class BudgetExportService {
      */
     private record Data(String title, Settings settings, Totals totals, List<Line> lines,
                         List<Transaction> transactions,
-                        List<BudgetCategory> categories, Map<Long, EventDto> events, Map<Long, String> payers,
+                        List<BudgetCategory> categories, Map<UUID, EventDto> events, Map<UUID, String> payers,
                         BigDecimal helpers,
                         @Nullable String helpersCategory) {
 

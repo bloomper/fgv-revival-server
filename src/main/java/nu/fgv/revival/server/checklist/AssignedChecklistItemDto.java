@@ -19,6 +19,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code AssignedChecklistItem}: an item as the participant who owns it sees it, without the steering group's
@@ -27,7 +28,7 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record AssignedChecklistItemDto(Long id,
+public record AssignedChecklistItemDto(UUID id,
                                        GuideVersionView.Text text,
                                        @Nullable String checklistName,
                                        GuideVersionView.@Nullable Text chapterTitle,

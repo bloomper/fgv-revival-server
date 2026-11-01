@@ -16,7 +16,9 @@
 package nu.fgv.revival.server.library;
 
 import nu.fgv.revival.server.guide.GuideGraphqlApi.LocalizedTextInput;
+import nu.fgv.revival.server.guide.GuideItem;
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
@@ -29,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * The reference library over GraphQL (library.graphqls), and the entries guide items link to.
@@ -39,9 +42,12 @@ import java.util.Objects;
 @Controller
 public class LibraryGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final LibraryService service;
 
-    public LibraryGraphqlApi(final LibraryService service) {
+    public LibraryGraphqlApi(final LibraryService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
@@ -60,8 +66,8 @@ public class LibraryGraphqlApi {
     }
 
     @QueryMapping
-    public LibraryEntryDto libraryEntry(@Argument final Long id) {
-        return service.get(id);
+    public LibraryEntryDto libraryEntry(@Argument final UUID id) {
+        return service.get(ids.idOf(LibraryEntry.class, id));
     }
 
     @MutationMapping
@@ -70,18 +76,18 @@ public class LibraryGraphqlApi {
     }
 
     @MutationMapping
-    public LibraryEntryDto libraryEntryUpdate(@Argument final Long id, @Argument final Long version, @Argument final LibraryEntryInput input) {
-        return service.update(id, version, definition(input));
+    public LibraryEntryDto libraryEntryUpdate(@Argument final UUID id, @Argument final Long version, @Argument final LibraryEntryInput input) {
+        return service.update(ids.idOf(LibraryEntry.class, id), version, definition(input));
     }
 
     @MutationMapping
-    public LibraryEntryDto libraryEntryRetire(@Argument final Long id, @Argument final Long version) {
-        return service.retire(id, version);
+    public LibraryEntryDto libraryEntryRetire(@Argument final UUID id, @Argument final Long version) {
+        return service.retire(ids.idOf(LibraryEntry.class, id), version);
     }
 
     @MutationMapping
-    public LibraryEntryDto libraryEntryRestore(@Argument final Long id, @Argument final Long version) {
-        return service.restore(id, version);
+    public LibraryEntryDto libraryEntryRestore(@Argument final UUID id, @Argument final Long version) {
+        return service.restore(ids.idOf(LibraryEntry.class, id), version);
     }
 
     /**
@@ -96,7 +102,7 @@ public class LibraryGraphqlApi {
             return result;
         }
 
-        final Map<Long, List<Long>> links = service.linksOf(items.stream().map(GuideVersionView.Item::id).toList());
+        final Map<UUID, List<Long>> links = ids.byUuid(GuideItem.class, service.linksOf(ids.idsOf(GuideItem.class, items.stream().map(GuideVersionView.Item::id).toList())));
         final Map<Long, LibraryEntryDto> entries = service.byIds(links.values().stream().flatMap(Collection::stream).toList());
 
         items.forEach(item -> result.put(item, links.getOrDefault(item.id(), List.of()).stream()

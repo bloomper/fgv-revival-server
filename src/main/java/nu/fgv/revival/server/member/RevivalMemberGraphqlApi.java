@@ -16,12 +16,15 @@
 
 package nu.fgv.revival.server.member;
 
+import nu.fgv.revival.server.revival.Revival;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * No authorization here: the service decides.
@@ -32,15 +35,18 @@ import java.util.List;
 @Controller
 public class RevivalMemberGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final RevivalMemberService service;
 
-    public RevivalMemberGraphqlApi(final RevivalMemberService service) {
+    public RevivalMemberGraphqlApi(final RevivalMemberService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
     @QueryMapping
-    public List<MemberCandidateDto> revivalMemberCandidates(@Argument final Long revivalId, @Argument final String query) {
-        return service.candidates(revivalId, query);
+    public List<MemberCandidateDto> revivalMemberCandidates(@Argument final UUID revivalId, @Argument final String query) {
+        return service.candidates(ids.idOf(Revival.class, revivalId), query);
     }
 
     @MutationMapping
@@ -54,8 +60,8 @@ public class RevivalMemberGraphqlApi {
     }
 
     @MutationMapping
-    public void revivalMemberRemove(@Argument final Long id) {
-        service.remove(id);
+    public void revivalMemberRemove(@Argument final UUID id) {
+        service.remove(ids.idOf(RevivalMember.class, id));
     }
 
 }

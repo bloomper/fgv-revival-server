@@ -19,6 +19,7 @@ package nu.fgv.revival.server.meeting;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.decisionlog.LogEntry;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
 import nu.fgv.revival.server.member.AccessPolicy;
@@ -52,6 +53,9 @@ import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.PERSON_ID;
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -95,17 +99,19 @@ class MeetingServiceTest {
     @BeforeEach
     void setUp() {
         service = new MeetingService(repository, changeRepository, revivalRepository, logEntryService, callerService, new AccessPolicy(),
-                ownerResolver, ownerViews, personNames, TestClocks.at(TODAY));
+                ownerResolver, ownerViews, personNames, TestClocks.at(TODAY), TestExternalIds.IDS);
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         meeting = new Meeting();
         meeting.setId(MEETING_ID);
+        meeting.setUuid(uuid(meeting.getId()));
         meeting.setRevivalId(REVIVAL_ID);
+        meeting.setRevivalUuid(uuidOrNull(meeting.getRevivalId()));
         meeting.setDate(TODAY);
         meeting.setVersion(1L);
         lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
         lenient().when(revivalRepository.findById(REVIVAL_ID)).thenReturn(Optional.of(revival));
         lenient().when(repository.findById(MEETING_ID)).thenReturn(Optional.of(meeting));
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
         lenient().when(ownerResolver.activeMembers(REVIVAL_ID)).thenReturn(new LinkedHashMap<>(Map.of(PERSON_ID, "Kim", 12L, "Robin")));
         lenient().when(personNames.byIds(anyCollection(), any())).thenReturn(Map.of());
     }

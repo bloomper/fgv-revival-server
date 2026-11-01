@@ -74,8 +74,8 @@ public class EventTypeBudgetLineService {
     @Transactional(readOnly = true)
     public Map<Long, List<EventTypeBudgetLineDto>> byTypes(final Collection<Long> typeIds) {
         return typeIds.isEmpty() ? Map.of()
-                : repository.findByEventTypeIdInOrderByPositionAscIdAsc(Set.copyOf(typeIds)).stream().map(EventTypeBudgetLineDto::of)
-                .collect(Collectors.groupingBy(EventTypeBudgetLineDto::eventTypeId));
+                : repository.findByEventTypeIdInOrderByPositionAscIdAsc(Set.copyOf(typeIds)).stream()
+                .collect(Collectors.groupingBy(EventTypeBudgetLine::getEventTypeId, Collectors.mapping(EventTypeBudgetLineDto::of, Collectors.toList())));
     }
 
     /**

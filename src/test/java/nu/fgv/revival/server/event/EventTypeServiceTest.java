@@ -19,6 +19,7 @@ package nu.fgv.revival.server.event;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.checklist.ChecklistKind;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateRepository;
@@ -40,6 +41,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,6 +76,7 @@ class EventTypeServiceTest {
         final EventType type = new EventType();
 
         type.setId(id);
+        type.setUuid(uuid(type.getId()));
         type.setNameSv(name);
         type.setPosition(position);
         type.setVersion(0L);
@@ -83,6 +87,7 @@ class EventTypeServiceTest {
         final ChecklistTemplate template = new ChecklistTemplate();
 
         template.setId(id);
+        template.setUuid(uuid(template.getId()));
         template.setKind(kind);
         return template;
     }
@@ -95,7 +100,7 @@ class EventTypeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EventTypeService(repository, templateRepository, callerService, new AccessPolicy(), TestClocks.at(LocalDate.of(2026, 10, 23)));
+        service = new EventTypeService(repository, templateRepository, callerService, new AccessPolicy(), TestClocks.at(LocalDate.of(2026, 10, 23)), TestExternalIds.IDS);
         types.add(type(1L, "AW", 0));
         types.add(type(2L, "Kickoff", 1));
         types.add(type(3L, "Rephelg 1", 2));
@@ -104,7 +109,7 @@ class EventTypeServiceTest {
         lenient().when(repository.findAllByOrderByPositionAscIdAsc()).thenAnswer(invocation -> List.copyOf(types));
         lenient().when(repository.findById(any())).thenAnswer(invocation ->
                 types.stream().filter(type -> type.getId().equals(invocation.getArgument(0))).findFirst());
-        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repository.saveAndFlush(any())).thenAnswer(invocation -> withUuids(invocation.getArgument(0)));
         lenient().when(templateRepository.findById(EVENT_TEMPLATE)).thenReturn(Optional.of(eventTemplate));
         lenient().when(templateRepository.findById(CHAPTER_TEMPLATE)).thenReturn(Optional.of(template(CHAPTER_TEMPLATE, ChecklistKind.CHAPTER)));
     }
@@ -121,7 +126,7 @@ class EventTypeServiceTest {
         // No Swedish text, so no text at all
         assertThat(created.rooms()).isNull();
         assertThat(created.catering()).isNull();
-        assertThat(created.checklistTemplateId()).isEqualTo(EVENT_TEMPLATE);
+        assertThat(created.checklistTemplateId()).isEqualTo(uuid(EVENT_TEMPLATE));
         assertThat(created.revivalPays()).isTrue();
     }
 
@@ -171,22 +176,22 @@ class EventTypeServiceTest {
                 .hasMessageContaining("error.checklist.template.retired");
 
         types.get(2).setChecklistTemplateId(EVENT_TEMPLATE);
-        assertThat(service.update(3L, 0L, definition("Rephelg 1", -70, -56, 2, EVENT_TEMPLATE)).checklistTemplateId()).isEqualTo(EVENT_TEMPLATE);
+        assertThat(service.update(3L, 0L, definition("Rephelg 1", -70, -56, 2, EVENT_TEMPLATE)).checklistTemplateId()).isEqualTo(uuid(EVENT_TEMPLATE));
     }
 
     @Test
     void movingRenumbersEveryType() {
         final List<EventTypeDto> moved = service.move(3L, 0L, 0);
 
-        assertThat(moved).extracting(EventTypeDto::id).containsExactly(3L, 1L, 2L);
+        assertThat(moved).extracting(EventTypeDto::id).containsExactly(uuid(3), uuid(1), uuid(2));
         assertThat(moved).extracting(EventTypeDto::position).containsExactly(0, 1, 2);
     }
 
     @Test
     void aRetiredTypeIsListedOnlyOnRequestAndCanBeRestored() {
         assertThat(service.retire(2L, 0L).retired()).isTrue();
-        assertThat(service.list(false)).extracting(EventTypeDto::id).containsExactly(1L, 3L);
-        assertThat(service.list(true)).extracting(EventTypeDto::id).containsExactly(1L, 2L, 3L);
+        assertThat(service.list(false)).extracting(EventTypeDto::id).containsExactly(uuid(1), uuid(3));
+        assertThat(service.list(true)).extracting(EventTypeDto::id).containsExactly(uuid(1), uuid(2), uuid(3));
         assertThat(service.restore(2L, 0L).retired()).isFalse();
     }
 

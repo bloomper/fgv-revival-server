@@ -21,6 +21,7 @@ import nu.fgv.revival.server.revival.RevivalStatus;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * What the caller may do with a revival, computed by {@link AccessPolicy} so the web never computes it.
@@ -28,7 +29,7 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalPermissionsDto(@Nullable Long revivalId,
+public record RevivalPermissionsDto(@Nullable UUID revivalId,
                                     boolean canEditCore,
                                     boolean canEditDetails,
                                     List<RevivalStatus> allowedStatuses,

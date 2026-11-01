@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -40,8 +41,8 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));
 
-    private long revival;
-    private long rehearsal;
+    private EntityId revival;
+    private EntityId rehearsal;
 
     private static boolean refused(final JsonNode response) {
         return response.has("error") || response.path("result").path("isError").asBoolean(false);
@@ -51,7 +52,7 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
     void revivalWithChecklists() {
         publishedGuide();
         revival = organisingRevival();
-        rehearsal = Long.parseLong(graphQl(STEERING_GROUP)
+        rehearsal = entityId("checklist", graphQl(STEERING_GROUP)
                 .document("mutation($input: EventChecklistCreateInput!) { eventChecklistCreate(input: $input) { id } }")
                 .variable("input", Map.of("revivalId", revival, "name", "Rephelg 2", "date", TODAY.plusWeeks(3).toString()))
                 .execute().path("eventChecklistCreate.id").entity(String.class).get());
@@ -78,10 +79,10 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
         return objectMapper.readTree(result.get("content").get(0).get("text").asString());
     }
 
-    private List<Long> ids(final JsonNode list) {
-        final List<Long> ids = new ArrayList<>();
+    private List<String> ids(final JsonNode list) {
+        final List<String> ids = new ArrayList<>();
 
-        list.get("items").forEach(item -> ids.add(item.get("id").asLong()));
+        list.get("items").forEach(item -> ids.add(item.get("id").asString()));
         return ids;
     }
 
@@ -92,11 +93,11 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
             arguments.put("revivalId", revival);
 
-            final List<Long> web = graphQl(STEERING_GROUP)
+            final List<String> web = graphQl(STEERING_GROUP)
                     .document("query($id: ID!, $filter: ChecklistItemFilter) { checklistItems(revivalId: $id, filter: $filter) { id } }")
                     .variable("id", revival).variable("filter", filter)
                     .execute()
-                    .path("checklistItems[*].id").entityList(Long.class).get();
+                    .path("checklistItems[*].id").entityList(String.class).get();
 
             assertThat(ids(result(call(STEERING_GROUP, "list_checklist_items", arguments)))).isNotEmpty().isEqualTo(web);
         }
@@ -120,13 +121,14 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void completeChecklistItemMarksItDoneByTheTokensPerson() {
-        final long item = result(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "overdue", true))).at("/items/0/id").asLong();
+        final EntityId item = entityId("checklist_item",
+                result(call(STEERING_GROUP, "list_checklist_items", Map.of("revivalId", revival, "overdue", true))).at("/items/0/id").asString());
         final JsonNode done = result(call(STEERING_GROUP, "complete_checklist_item", Map.of("itemId", item, "comment", "Hämtade i dag")));
 
         assertThat(done.get("state").asString()).isEqualTo("DONE");
         assertThat(done.get("comment").asString()).isEqualTo("Hämtade i dag");
         assertThat(jdbcClient.sql("SELECT state_changed_by FROM checklist_item WHERE id = ?").param(item).query(Long.class).single())
-                .isEqualTo(personId(STEERING_GROUP));
+                .isEqualTo(personId(STEERING_GROUP).id());
         assertThat(jdbcClient.sql("SELECT DISTINCT r.source FROM checklist_item_audit a JOIN revinfo r ON r.id = a.rev WHERE a.id = ? AND a.state = 'DONE'")
                 .param(item).query(String.class).list()).containsExactly("MCP");
 
@@ -153,11 +155,11 @@ class ChecklistMcpToolsIntegrationTest extends AbstractIntegrationTest {
         assertThat(status.at("/openRequirements/0/open").asInt()).isEqualTo(1);
         assertThat(status.at("/openRequirements/1/total").asInt()).isZero();
 
-        final List<Long> webOverdue = graphQl(DIRECTEUR)
+        final List<String> webOverdue = graphQl(DIRECTEUR)
                 .document("query($id: ID!) { checklistItems(revivalId: $id, filter: {overdue: true}) { id } }")
-                .variable("id", revival).execute().path("checklistItems[*].id").entityList(Long.class).get();
+                .variable("id", revival).execute().path("checklistItems[*].id").entityList(String.class).get();
 
-        assertThat(status.at("/overdueChecklistItems/0/id").asLong()).isEqualTo(webOverdue.getFirst());
+        assertThat(status.at("/overdueChecklistItems/0/id").asString()).isEqualTo(webOverdue.getFirst());
         assertThat(result(call(OBSERVER, "get_revival_status", Map.of("revivalId", revival))).get("openRequirements")).hasSize(10);
     }
 

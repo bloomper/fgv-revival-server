@@ -17,11 +17,13 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.guide.GuideService;
+import nu.fgv.revival.server.guide.GuideVersion;
 import nu.fgv.revival.server.guide.GuideVersionSummaryDto;
 import nu.fgv.revival.server.member.RevivalMemberDto;
 import nu.fgv.revival.server.member.RevivalMemberService;
 import nu.fgv.revival.server.member.RevivalRoleAssignmentDto;
 import nu.fgv.revival.server.person.PersonNames;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -32,6 +34,7 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * No authorization here: the services decide.
@@ -42,6 +45,8 @@ import java.util.Map;
 @Controller
 public class RevivalGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final RevivalService service;
     private final RevivalMemberService memberService;
     private final PersonNames personNames;
@@ -50,7 +55,9 @@ public class RevivalGraphqlApi {
     private final RevivalTitles titles;
 
     public RevivalGraphqlApi(final RevivalService service, final RevivalMemberService memberService, final PersonNames personNames,
-                             final GuideService guideService, final RevivalStatusService statusService, final RevivalTitles titles) {
+                             final GuideService guideService, final RevivalStatusService statusService, final RevivalTitles titles,
+                             final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
         this.memberService = memberService;
         this.personNames = personNames;
@@ -66,7 +73,7 @@ public class RevivalGraphqlApi {
 
     @SchemaMapping(typeName = "Revival", field = "workSummary")
     public RevivalWorkSummaryDto workSummary(final RevivalDto revival, final Locale locale) {
-        return statusService.workSummary(revival.id(), locale);
+        return statusService.workSummary(ids.idOf(Revival.class, revival.id()), locale);
     }
 
     /**
@@ -74,7 +81,7 @@ public class RevivalGraphqlApi {
      */
     @SchemaMapping(typeName = "Revival", field = "guideVersion")
     public @Nullable GuideVersionSummaryDto guideVersion(final RevivalDto revival) {
-        return revival.permissions().canReadWork() ? guideService.summary(revival.guideVersionId()) : null;
+        return revival.permissions().canReadWork() ? guideService.summary(ids.idOfNullable(GuideVersion.class, revival.guideVersionId())) : null;
     }
 
     @SchemaMapping(typeName = "Revival", field = "newerGuideVersion")
@@ -83,7 +90,7 @@ public class RevivalGraphqlApi {
             return null;
         }
 
-        final GuideVersionSummaryDto pinned = guideService.summary(revival.guideVersionId());
+        final GuideVersionSummaryDto pinned = guideService.summary(ids.idOfNullable(GuideVersion.class, revival.guideVersionId()));
 
         return guideService.latestSummary()
                 .filter(latest -> pinned != null && pinned.publishedAt() != null && latest.publishedAt() != null
@@ -93,7 +100,7 @@ public class RevivalGraphqlApi {
 
     @SchemaMapping(typeName = "Revival", field = "guideVersionHistory")
     public List<RevivalGuideVersionChange> guideVersionHistory(final RevivalDto revival) {
-        return service.guideVersionHistory(revival.id());
+        return service.guideVersionHistory(ids.idOf(Revival.class, revival.id()));
     }
 
     @SchemaMapping(typeName = "RevivalGuideVersionChange", field = "from")
@@ -113,7 +120,7 @@ public class RevivalGraphqlApi {
 
     @MutationMapping
     public RevivalDto revivalGuideVersionChange(@Argument final RevivalGuideVersionChangeInput input) {
-        return service.changeGuideVersion(input.revivalId(), input.fromVersionId(), input.toVersionId());
+        return service.changeGuideVersion(ids.idOf(Revival.class, input.revivalId()), ids.idOfNullable(GuideVersion.class, input.fromVersionId()), ids.idOf(GuideVersion.class, input.toVersionId()));
     }
 
     @QueryMapping
@@ -122,8 +129,8 @@ public class RevivalGraphqlApi {
     }
 
     @QueryMapping
-    public RevivalDto revival(@Argument final Long id) {
-        return service.findById(id);
+    public RevivalDto revival(@Argument final UUID id) {
+        return service.findById(ids.idOf(Revival.class, id));
     }
 
     @MutationMapping
@@ -142,24 +149,24 @@ public class RevivalGraphqlApi {
     }
 
     @MutationMapping
-    public Long revivalDelete(@Argument final Long id, @Argument final Long version) {
-        service.delete(id, version);
+    public UUID revivalDelete(@Argument final UUID id, @Argument final Long version) {
+        service.delete(ids.idOf(Revival.class, id), version);
         return id;
     }
 
     @MutationMapping
-    public RevivalDto revivalAnonymize(@Argument final Long id, @Argument final Long version, @Argument final String confirmation) {
-        return service.anonymize(id, version, confirmation);
+    public RevivalDto revivalAnonymize(@Argument final UUID id, @Argument final Long version, @Argument final String confirmation) {
+        return service.anonymize(ids.idOf(Revival.class, id), version, confirmation);
     }
 
     @SchemaMapping(typeName = "Revival", field = "members")
     public List<RevivalMemberDto> members(final RevivalDto revival) {
-        return memberService.findByRevival(revival.id());
+        return memberService.findByRevival(ids.idOf(Revival.class, revival.id()));
     }
 
     @SchemaMapping(typeName = "Revival", field = "statusHistory")
     public List<RevivalStatusChangeHistoryDto> statusHistory(final RevivalDto revival) {
-        return service.statusHistory(revival.id());
+        return service.statusHistory(ids.idOf(Revival.class, revival.id()));
     }
 
     @SchemaMapping(typeName = "Revival", field = "createdBy")
@@ -181,10 +188,10 @@ public class RevivalGraphqlApi {
 
     @SchemaMapping(typeName = "RevivalRoleAssignment", field = "revival")
     public RevivalDto assignmentRevival(final RevivalRoleAssignmentDto assignment) {
-        return service.findById(assignment.revivalId());
+        return service.findById(ids.idOf(Revival.class, assignment.revivalId()));
     }
 
-    public record RevivalGuideVersionChangeInput(Long revivalId, @Nullable Long fromVersionId, Long toVersionId) {
+    public record RevivalGuideVersionChangeInput(UUID revivalId, @Nullable UUID fromVersionId, UUID toVersionId) {
     }
 
 }

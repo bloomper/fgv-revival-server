@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static nu.fgv.revival.server.member.AccessPolicyTest.caller;
 import static nu.fgv.revival.server.member.AccessPolicyTest.revival;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,6 +56,7 @@ class AccessPolicyStaffingMailingTest {
         final Person person = new Person();
 
         person.setId(10L);
+        person.setUuid(uuid(person.getId()));
         return new Caller(person, Set.of(), Map.of(REVIVAL_ID, new RevivalRoleAssignment(RevivalRole.STEERING_GROUP, Set.of(capabilities))));
     }
 

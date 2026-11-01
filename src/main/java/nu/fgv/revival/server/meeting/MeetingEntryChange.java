@@ -28,8 +28,10 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nu.fgv.revival.server.util.Uuids;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * What was done to a row in a meeting. Append-only, and itself a record of changes, so not
@@ -48,6 +50,9 @@ public class MeetingEntryChange {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "meeting_id", nullable = false, updatable = false)
     private Long meetingId;

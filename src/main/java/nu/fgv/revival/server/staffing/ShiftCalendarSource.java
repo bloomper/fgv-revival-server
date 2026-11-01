@@ -97,7 +97,7 @@ class ShiftCalendarSource implements CalendarSource {
         final Instant start = slot.getDay().atTime(slot.getStartTime()).atZone(clock.getZone()).toInstant();
         final Instant end = slot.getDay().atTime(slot.getEndTime()).atZone(clock.getZone()).toInstant();
 
-        return new CalendarEntry(CalendarEntry.uid("shift", slot.getId()), slot.getTask(), event.getLocation(),
+        return new CalendarEntry(CalendarEntry.uid("shift", slot.getUuid()), slot.getTask(), event.getLocation(),
                 slot.getComment() == null ? event.getTitle() : event.getTitle() + "\n" + slot.getComment(), new CalendarEntry.Timed(start, end),
                 slot.getLastModifiedAt() != null ? slot.getLastModifiedAt() : slot.getCreatedAt());
     }

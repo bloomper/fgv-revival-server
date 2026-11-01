@@ -21,6 +21,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code EventType}. The checklist template is resolved from its id.
@@ -28,7 +29,7 @@ import java.util.Locale;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record EventTypeDto(Long id,
+public record EventTypeDto(UUID id,
                            GuideVersionView.Text name,
                            GuideVersionView.@Nullable Text description,
                            GuideVersionView.@Nullable Text rooms,
@@ -37,16 +38,16 @@ public record EventTypeDto(Long id,
                            @Nullable Integer offsetMaxDays,
                            int days,
                            boolean revivalPays,
-                           @Nullable Long checklistTemplateId,
+                           @Nullable UUID checklistTemplateId,
                            int position,
                            boolean retired,
                            Long version) {
 
     public static EventTypeDto of(final EventType type) {
-        return new EventTypeDto(type.getId(), GuideVersionView.Text.plain(type.getNameSv(), type.getNameEn()),
+        return new EventTypeDto(type.getUuid(), GuideVersionView.Text.plain(type.getNameSv(), type.getNameEn()),
                 text(type.getDescriptionSv(), type.getDescriptionEn()), text(type.getRoomsSv(), type.getRoomsEn()),
                 text(type.getCateringSv(), type.getCateringEn()), type.getOffsetMinDays(), type.getOffsetMaxDays(), type.getDays(),
-                type.isRevivalPays(), type.getChecklistTemplateId(), type.getPosition(), type.isRetired(),
+                type.isRevivalPays(), type.getChecklistTemplateUuid(), type.getPosition(), type.isRetired(),
                 type.getVersion() == null ? 0L : type.getVersion());
     }
 

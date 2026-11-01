@@ -17,15 +17,17 @@
 
 package nu.fgv.revival.server.decisionlog;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code LogEntrySummary}: a row referred to from elsewhere.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record LogEntrySummaryDto(Long id, int number, LogEntryType type, LogEntryStatus status) {
+public record LogEntrySummaryDto(UUID id, int number, LogEntryType type, LogEntryStatus status) {
 
     public static LogEntrySummaryDto of(final LogEntry entry) {
-        return new LogEntrySummaryDto(entry.getId(), entry.getNumber(), entry.getType(), entry.getStatus());
+        return new LogEntrySummaryDto(entry.getUuid(), entry.getNumber(), entry.getType(), entry.getStatus());
     }
 }

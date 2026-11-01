@@ -77,7 +77,7 @@ class EventCalendarSource implements CalendarSource {
             when = new CalendarEntry.Timed(start, event.getEndTime() == null ? start.plus(DEFAULT_LENGTH)
                     : event.getEndDate().atTime(event.getEndTime()).atZone(clock.getZone()).toInstant());
         }
-        return new CalendarEntry(CalendarEntry.uid("event", event.getId()), event.getTitle(), event.getLocation(), event.getDescription(), when,
+        return new CalendarEntry(CalendarEntry.uid("event", event.getUuid()), event.getTitle(), event.getLocation(), event.getDescription(), when,
                 event.getLastModifiedAt() != null ? event.getLastModifiedAt() : event.getCreatedAt());
     }
 }

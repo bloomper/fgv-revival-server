@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -37,8 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
-    private long version;
-    private long revival;
+    private EntityId version;
+    private EntityId revival;
 
     private static @org.jspecify.annotations.Nullable String text(final JsonNode node, final String field) {
         return node.get(field).isNull() ? null : node.get(field).asString();
@@ -90,7 +91,7 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
                     .map(hit -> hit.get("kind") + "/" + hit.get("chapterKey") + "/" + hit.get("itemKey") + "/" + hit.get("sectionKey"))
                     .toList();
 
-            assertThat(found.at("/version/id").asLong()).isEqualTo(version);
+            assertThat(found.at("/version/id").asString()).isEqualTo(String.valueOf(version));
             found.get("items").forEach(hit -> mcp.add(hit.get("kind").asString() + "/" + text(hit, "chapterKey") + "/" + text(hit, "itemKey") + "/" + text(hit, "sectionKey")));
             assertThat(mcp).isNotEmpty().isEqualTo(web);
         }
@@ -120,8 +121,8 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
     void theToolsNeverReadTheDraft() {
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute();
 
-        assertThat(result(call(SUPER_ADMIN, "search_guide", Map.of("query", "sprit"))).at("/version/id").asLong()).isEqualTo(version);
-        assertThat(result(call(SUPER_ADMIN, "get_guide_section", Map.of("chapter", "A"))).at("/version/id").asLong()).isEqualTo(version);
+        assertThat(result(call(SUPER_ADMIN, "search_guide", Map.of("query", "sprit"))).at("/version/id").asString()).isEqualTo(String.valueOf(version));
+        assertThat(result(call(SUPER_ADMIN, "get_guide_section", Map.of("chapter", "A"))).at("/version/id").asString()).isEqualTo(String.valueOf(version));
     }
 
     @Test
@@ -133,7 +134,7 @@ class GuideMcpToolsIntegrationTest extends AbstractIntegrationTest {
                 "revivalId", revival, "kind", "CHANGE", "itemKey", itemKey, "textSv", "RunAn behöver en tekniker på söndagen.", "reason", "Saknades förra gången")));
 
         assertThat(created.get("status").asString()).isEqualTo("OPEN");
-        assertThat(created.at("/version/id").asLong()).isEqualTo(version);
+        assertThat(created.at("/version/id").asString()).isEqualTo(String.valueOf(version));
         graphQl(SUPER_ADMIN).document("{ guideSuggestions { id status proposedText { sv } } }").execute()
                 .path("guideSuggestions[0].proposedText.sv").entity(String.class).isEqualTo("RunAn behöver en tekniker på söndagen.");
         assertThat(jdbcClient.sql("SELECT text_sv FROM guide_item WHERE version_id = ? AND `key` = ?").param(version).param(itemKey).query(String.class).single())

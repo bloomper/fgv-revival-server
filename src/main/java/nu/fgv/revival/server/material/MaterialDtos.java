@@ -19,6 +19,7 @@ import nu.fgv.revival.server.member.OwnerDto;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The GraphQL types of materials and the inventory (material.graphqls). A material's service and positions, and an
@@ -32,28 +33,28 @@ public final class MaterialDtos {
     private MaterialDtos() {
     }
 
-    public record MaterialDto(Long id, Long revivalId, String title, String url, @Nullable String serviceId,
+    public record MaterialDto(UUID id, UUID revivalId, String title, String url, @Nullable String serviceId,
                               boolean serviceChosen,
                               MaterialCategory category,
                               MaterialVisibility visibility, List<String> positionIds, @Nullable String comment,
                               boolean removed, Long version) {
 
         static MaterialDto of(final Material material) {
-            return new MaterialDto(material.getId(), material.getRevivalId(), material.getTitle(), material.getUrl(), material.getServiceId(),
+            return new MaterialDto(material.getUuid(), material.getRevivalUuid(), material.getTitle(), material.getUrl(), material.getServiceId(),
                     material.isServiceChosen(), material.getCategory(), material.getVisibility(), material.getPositions().stream().sorted().toList(), material.getComment(),
                     material.isRemoved(), material.getVersion() == null ? 0L : material.getVersion());
         }
     }
 
-    public record InventoryItemDto(Long id, Long revivalId, String name, InventoryKind kind, int quantity,
+    public record InventoryItemDto(UUID id, UUID revivalId, String name, InventoryKind kind, int quantity,
                                    InventoryStatus status,
                                    @Nullable InventoryLocation location, @Nullable String locationNote,
                                    @Nullable OwnerDto owner,
-                                   @Nullable String comment, @Nullable Long materialId, boolean removed, Long version) {
+                                   @Nullable String comment, @Nullable UUID materialId, boolean removed, Long version) {
 
         static InventoryItemDto of(final InventoryItem item, final @Nullable OwnerDto owner) {
-            return new InventoryItemDto(item.getId(), item.getRevivalId(), item.getName(), item.getKind(), item.getQuantity(), item.getStatus(),
-                    item.getLocation(), item.getLocationNote(), owner, item.getComment(), item.getMaterialId(), item.isRemoved(),
+            return new InventoryItemDto(item.getUuid(), item.getRevivalUuid(), item.getName(), item.getKind(), item.getQuantity(), item.getStatus(),
+                    item.getLocation(), item.getLocationNote(), owner, item.getComment(), item.getMaterialUuid(), item.isRemoved(),
                     item.getVersion() == null ? 0L : item.getVersion());
         }
     }

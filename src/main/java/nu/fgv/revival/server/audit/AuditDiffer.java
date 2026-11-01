@@ -43,7 +43,8 @@ import java.util.stream.Collectors;
 
 /**
  * The fields that differ between two Envers snapshots of a record, in the order the entity declares them, written as
- * {@link FieldKind} says. Ids, versions, fields Envers does not audit and those the descriptor hides are left out.
+ * {@link FieldKind} says. Ids, external ids, versions, fields Envers does not audit and those the descriptor hides are
+ * left out.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -52,6 +53,7 @@ import java.util.stream.Collectors;
 public class AuditDiffer {
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
+    private static final String EXTERNAL_ID = "uuid";
 
     private final EntityManagerFactory entityManagerFactory;
     private final Map<Class<?>, List<Field>> fields = new ConcurrentHashMap<>();
@@ -132,6 +134,7 @@ public class AuditDiffer {
             final EntityType<?> entity = entityManagerFactory.getMetamodel().entity(type);
             final Set<String> attributes = entity.getAttributes().stream()
                     .filter(attribute -> !(attribute instanceof final SingularAttribute<?, ?> singular && (singular.isId() || singular.isVersion())))
+                    .filter(attribute -> !EXTERNAL_ID.equals(attribute.getName()))
                     .map(Attribute::getName)
                     .collect(Collectors.toSet());
 

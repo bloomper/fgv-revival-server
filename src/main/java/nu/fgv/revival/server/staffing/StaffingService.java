@@ -267,7 +267,7 @@ public class StaffingService {
                 : slotRepository.findByEventIdIn(events.keySet()).stream().filter(slot -> !slot.getDay().isBefore(today)).toList();
 
         return toDtos(slots, revival, events, callerService.current(), locale).stream()
-                .filter(slot -> slot.open() > 0 && slot.assigned().stream().noneMatch(assigned -> assigned.participant().id().equals(participantId)))
+                .filter(slot -> slot.open() > 0 && slot.assigned().stream().noneMatch(assigned -> assigned.participant().id().equals(participant.getUuid())))
                 .toList();
     }
 
@@ -627,7 +627,7 @@ public class StaffingService {
             final Event event = events.containsKey(slot.getEventId()) ? events.get(slot.getEventId())
                     : eventRepository.findById(slot.getEventId()).orElseThrow();
 
-            dtos.add(new ShiftSlotDto(slot.getId(), EventDto.of(event, revival.getPremiereDate()), slot.getDay(), slot.getStartTime().format(TIME_FORMAT),
+            dtos.add(new ShiftSlotDto(slot.getUuid(), EventDto.of(event, revival.getPremiereDate()), slot.getDay(), slot.getStartTime().format(TIME_FORMAT),
                     slot.getEndTime().format(TIME_FORMAT), slot.getTask(), slot.getNeeded(), slot.getComment(), assigned,
                     Math.max(0, slot.getNeeded() - assigned.size()), slot.getVersion() == null ? 0L : slot.getVersion()));
         }

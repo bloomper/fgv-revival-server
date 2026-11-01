@@ -69,7 +69,7 @@ public class MeService {
                 .map(revival -> {
                     final RevivalRoleAssignment assignment = caller.revivalRoles().get(revival.getId());
 
-                    return new RevivalRoleAssignmentDto(revival.getId(), assignment.role(),
+                    return new RevivalRoleAssignmentDto(revival.getUuid(), assignment.role(),
                             assignment.holdsAll() ? all.get() : assignment.capabilities().stream().sorted().toList());
                 })
                 .toList();

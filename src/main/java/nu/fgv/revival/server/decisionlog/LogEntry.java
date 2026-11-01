@@ -34,6 +34,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
@@ -41,6 +43,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * A decision, to-do or question in a revival's decision log. Never deleted: closed or cancelled instead.
@@ -63,8 +66,15 @@ public class LogEntry extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Column(name = "number", nullable = false)
     private int number;
@@ -95,17 +105,33 @@ public class LogEntry extends AbstractAuditable {
     @Column(name = "meeting_id")
     private @Nullable Long meetingId;
 
+    @Formula("(SELECT t.uuid FROM meeting t WHERE t.id = meeting_id)")
+    @NotAudited
+    private @Nullable UUID meetingUuid;
+
     @Column(name = "guide_item_key", length = 36, columnDefinition = "CHAR(36)")
     private @Nullable String guideItemKey;
 
     @Column(name = "checklist_item_id")
     private @Nullable Long checklistItemId;
 
+    @Formula("(SELECT t.uuid FROM checklist_item t WHERE t.id = checklist_item_id)")
+    @NotAudited
+    private @Nullable UUID checklistItemUuid;
+
     @Column(name = "event_id")
     private @Nullable Long eventId;
 
+    @Formula("(SELECT t.uuid FROM event t WHERE t.id = event_id)")
+    @NotAudited
+    private @Nullable UUID eventUuid;
+
     @Column(name = "answers_entry_id")
     private @Nullable Long answersEntryId;
+
+    @Formula("(SELECT t.uuid FROM log_entry t WHERE t.id = answers_entry_id)")
+    @NotAudited
+    private @Nullable UUID answersEntryUuid;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "origin", nullable = false, updatable = false, length = 16)

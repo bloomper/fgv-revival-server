@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -35,8 +36,8 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     static final String SEARCH = "query($query: String!) { guideSearch(query: $query) { kind chapterKey sectionTitle { sv } itemKey itemType { id } snippet matchedLanguage } }";
     static final String REVIVAL_GUIDE = "query($id: ID!) { revival(id: $id) { guideVersion { id label } } }";
 
-    private long organisingRevivalWithMembers() {
-        final long revival = createRevival(ALI_BABA, 2028);
+    private EntityId organisingRevivalWithMembers() {
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         login(DIRECTEUR);
@@ -49,7 +50,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void readersReadSearchAndListVersions() {
-        final long version = publishedGuide();
+        final EntityId version = publishedGuide();
 
         organisingRevivalWithMembers();
         for (final String user : List.of(SUPER_ADMIN, OBSERVER, DIRECTEUR, STEERING_GROUP)) {
@@ -71,8 +72,8 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aSteeringGroupMemberOfASettlingRevivalIsRefused() {
-        final long version = publishedGuide();
-        final long revival = organisingRevivalWithMembers();
+        final EntityId version = publishedGuide();
+        final EntityId revival = organisingRevivalWithMembers();
 
         setStatus(revival, "SETTLING");
         expectError(graphQl(STEERING_GROUP).document(VERSIONS).execute(), "FORBIDDEN");
@@ -83,7 +84,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aPersonWithoutARevivalRoleIsRefused() {
-        final long version = publishedGuide();
+        final EntityId version = publishedGuide();
 
         expectError(graphQl(PLAIN_USER).document(VERSIONS).execute(), "FORBIDDEN");
         expectError(graphQl(PLAIN_USER).document(LATEST).execute(), "FORBIDDEN");
@@ -94,7 +95,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     void aWaitingMemberIsRefused() {
         publishedGuide();
 
-        final long revival = createRevival(ALI_BABA, 2028);
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         setStatus(revival, "APPROVED");
         addMember(revival, "waiting" + DOMAIN, "STEERING_GROUP", List.of());
@@ -104,7 +105,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void theDraftIsOnlyForSuperAdmins() {
-        final long draft = draftV5Layout();
+        final EntityId draft = draftV5Layout();
 
         organisingRevivalWithMembers();
         graphQl(SUPER_ADMIN).document(VERSION).variable("id", draft).execute()
@@ -116,8 +117,8 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyoneWhoSeesARevivalSeesItsVersion() {
-        final long version = publishedGuide();
-        final long revival = organisingRevivalWithMembers();
+        final EntityId version = publishedGuide();
+        final EntityId revival = organisingRevivalWithMembers();
 
         for (final String user : List.of(SUPER_ADMIN, OBSERVER, DIRECTEUR, STEERING_GROUP)) {
             graphQl(user).document(REVIVAL_GUIDE).variable("id", revival).execute()
@@ -127,7 +128,7 @@ class GuideReadGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void beforeThePublicationThereIsNothing() {
-        final long revival = organisingRevivalWithMembers();
+        final EntityId revival = organisingRevivalWithMembers();
 
         graphQl(DIRECTEUR).document(LATEST).execute().path("guideLatestVersion").valueIsNull();
         graphQl(DIRECTEUR).document(VERSIONS).execute().path("guideVersions").entityList(Object.class).hasSize(0);

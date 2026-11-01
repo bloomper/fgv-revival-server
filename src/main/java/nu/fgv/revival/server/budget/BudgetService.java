@@ -30,8 +30,10 @@ import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.event.EventDto;
 import nu.fgv.revival.server.event.EventRepository;
 import nu.fgv.revival.server.event.EventService;
+import nu.fgv.revival.server.event.EventType;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalCreated;
 import nu.fgv.revival.server.settings.ApplicationSettingsService;
 import nu.fgv.revival.server.staffing.HelperCompensation;
@@ -39,6 +41,7 @@ import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -56,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -70,6 +74,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class BudgetService {
+
+    private final ExternalIds ids;
 
     static final BigDecimal MIN_QUANTITY = new BigDecimal("0.01");
     static final BigDecimal MAX_QUANTITY = new BigDecimal("100000");
@@ -104,7 +110,9 @@ public class BudgetService {
                          final BudgetAccess access,
                          final HelperCompensation helperCompensation,
                          final ApplicationSettingsService applicationSettings,
-                         final Clock clock) {
+                         final Clock clock,
+                         final ExternalIds ids) {
+        this.ids = ids;
         this.settingsRepository = settingsRepository;
         this.lineRepository = lineRepository;
         this.transactionRepository = transactionRepository;
@@ -199,7 +207,7 @@ public class BudgetService {
      */
     @Transactional(readOnly = true)
     public BudgetDtos.@Nullable Budget budget(final Long revivalId) {
-        return access.canRead(callerService.current(), revivalId) ? new BudgetDtos.Budget(revivalId) : null;
+        return access.canRead(callerService.current(), revivalId) ? new BudgetDtos.Budget(ids.uuidOf(Revival.class, revivalId)) : null;
     }
 
     /**
@@ -487,12 +495,12 @@ public class BudgetService {
         access.readable(callerService.current(), revivalId);
 
         final List<EventDto> events = eventService.list(revivalId, false).stream().filter(event -> event.typeId() != null).toList();
-        final Map<Long, List<EventTypeBudgetLine>> typeLines = typeLineRepository
-                .findByEventTypeIdInOrderByPositionAscIdAsc(events.stream().map(EventDto::typeId).filter(Objects::nonNull).collect(Collectors.toSet()))
-                .stream().collect(Collectors.groupingBy(EventTypeBudgetLine::getEventTypeId));
+        final Map<UUID, List<EventTypeBudgetLine>> typeLines = typeLineRepository
+                .findByEventTypeIdInOrderByPositionAscIdAsc(Set.copyOf(ids.idsOf(EventType.class, events.stream().map(EventDto::typeId).filter(Objects::nonNull).distinct().toList())))
+                .stream().collect(Collectors.groupingBy(line -> Objects.requireNonNull(line.getEventTypeUuid())));
         final Set<String> added = lineRepository.findByRevivalId(revivalId).stream()
                 .filter(line -> !line.isRemoved() && line.getEventId() != null && line.getEventTypeLineId() != null)
-                .map(line -> line.getEventId() + "/" + line.getEventTypeLineId())
+                .map(line -> line.getEventUuid() + "/" + line.getEventTypeLineId())
                 .collect(Collectors.toSet());
         final @Nullable Integer participants = settingsRepository.findByRevivalId(revivalId).map(BudgetSettings::getParticipantsPlanned).orElse(null);
         final List<Proposal> proposals = new ArrayList<>();

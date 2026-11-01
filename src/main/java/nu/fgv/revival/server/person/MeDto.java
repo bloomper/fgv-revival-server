@@ -20,6 +20,7 @@ import nu.fgv.revival.server.member.RevivalRoleAssignmentDto;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The caller as GraphQL's {@code Me}.
@@ -27,7 +28,7 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record MeDto(Long id,
+public record MeDto(UUID id,
                     @Nullable String displayName,
                     String email,
                     List<GlobalRole> globalRoles,

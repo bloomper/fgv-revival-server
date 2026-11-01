@@ -19,6 +19,7 @@ package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItem;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateItemRepository;
@@ -65,6 +66,9 @@ import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.PERSON_ID;
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -127,11 +131,13 @@ class ChecklistServiceTest {
     void setUp() {
         service = new ChecklistService(checklistRepository, itemRepository, texts, templateRepository, templateItemRepository, memberRepository,
                 revivalRepository, callerService, new AccessPolicy(),
-                ownerResolver, ownerViews, personNames, messageSource, TestClocks.at(TODAY), logEntryService);
+                ownerResolver, ownerViews, personNames, messageSource, TestClocks.at(TODAY), logEntryService, TestExternalIds.IDS);
         revival = TestCallers.revival(RevivalStatus.ORGANISING);
         checklist = new Checklist();
         checklist.setId(CHECKLIST_ID);
+        checklist.setUuid(uuid(checklist.getId()));
         checklist.setRevivalId(REVIVAL_ID);
+        checklist.setRevivalUuid(uuidOrNull(checklist.getRevivalId()));
         checklist.setKind(ChecklistKind.CHAPTER);
         checklist.setChapterKey("B");
         lenient().when(callerService.current()).thenReturn(TestCallers.steeringGroup());
@@ -143,8 +149,9 @@ class ChecklistServiceTest {
 
             if (saved.getId() == null) {
                 saved.setId(99L);
+                saved.setUuid(uuid(saved.getId()));
             }
-            return saved;
+            return withUuids(saved);
         });
         lenient().when(ownerViews.toDtos(anyCollection(), any())).thenReturn(Map.of());
         lenient().when(texts.texts(anyCollection())).thenReturn(Map.of());
@@ -157,6 +164,7 @@ class ChecklistServiceTest {
         final ChecklistItem item = new ChecklistItem();
 
         item.setId(7L);
+        item.setUuid(uuid(item.getId()));
         item.setChecklistId(CHECKLIST_ID);
         item.setRevivalId(REVIVAL_ID);
         item.setRequired(required);
@@ -241,7 +249,7 @@ class ChecklistServiceTest {
         @Test
         void theOwnerIsChangedAgainstTheStoredOne() {
             final ChecklistItem item = item(false);
-            final OwnerInputDto owner = new OwnerInputDto(PERSON_ID, null);
+            final OwnerInputDto owner = new OwnerInputDto(uuid(PERSON_ID), null);
 
             item.setOwner(Owner.member(PERSON_ID));
             when(ownerResolver.changeChecklistOwner(REVIVAL_ID, Owner.member(PERSON_ID), owner)).thenReturn(Owner.member(PERSON_ID));
@@ -388,7 +396,9 @@ class ChecklistServiceTest {
             final ChecklistTemplateItem item = new ChecklistTemplateItem();
 
             item.setId(id);
+            item.setUuid(uuid(item.getId()));
             item.setTemplateId(5L);
+            item.setTemplateUuid(uuidOrNull(item.getTemplateId()));
             item.setTextSv(sv);
             item.setTextEn(en);
             item.setGuideItemKey(id == 51L ? "tips-lokal" : null);
@@ -405,10 +415,11 @@ class ChecklistServiceTest {
 
                 if (stored.getId() == null) {
                     stored.setId(EVENT_ID);
+                    stored.setUuid(uuid(stored.getId()));
                     stored.setVersion(0L);
                 }
                 checklists.put(stored.getId(), stored);
-                return stored;
+                return withUuids(stored);
             });
             lenient().when(checklistRepository.findById(anyLong())).thenAnswer(invocation -> Optional.ofNullable(checklists.get(invocation.<Long>getArgument(0))));
             lenient().when(checklistRepository.findAllById(any())).thenAnswer(invocation -> new ArrayList<>(checklists.values()));
@@ -416,8 +427,9 @@ class ChecklistServiceTest {
                 final ChecklistItem item = invocation.getArgument(0);
 
                 item.setId(100L + saved.size());
+                item.setUuid(uuid(item.getId()));
                 saved.add(item);
-                return item;
+                return withUuids(item);
             });
             lenient().when(itemRepository.findByChecklistIdOrderByPositionAscIdAsc(anyLong())).thenAnswer(invocation -> saved.stream()
                     .filter(item -> item.getChecklistId().equals(invocation.getArgument(0))).toList());
@@ -425,6 +437,7 @@ class ChecklistServiceTest {
 
             template = new ChecklistTemplate();
             template.setId(5L);
+            template.setUuid(uuid(template.getId()));
             template.setKind(ChecklistKind.EVENT);
             template.setNameSv("Rephelg");
             venue = templateItem(51L, "Boka replokal", null, RelativeDeadline.of(RelativeDeadlineKind.DAYS, -14, null), "FINANCE");
@@ -549,7 +562,9 @@ class ChecklistServiceTest {
             final ChecklistItem done = new ChecklistItem();
 
             done.setId(90L);
+            done.setUuid(uuid(done.getId()));
             done.setChecklistId(EVENT_ID);
+            done.setChecklistUuid(uuidOrNull(done.getChecklistId()));
             done.setRevivalId(REVIVAL_ID);
             done.setTemplateItemId(51L);
             done.setText("Replokalen är bokad");
@@ -683,15 +698,19 @@ class ChecklistServiceTest {
 
             mine.setOwner(Owner.member(PERSON_ID));
             theirs.setId(8L);
+            theirs.setUuid(uuid(theirs.getId()));
             theirs.setChecklistId(CHECKLIST_ID);
+            theirs.setChecklistUuid(uuidOrNull(theirs.getChecklistId()));
             theirs.setOwner(Owner.member(PERSON_ID + 1));
             waived.setId(9L);
+            waived.setUuid(uuid(waived.getId()));
             waived.setChecklistId(CHECKLIST_ID);
+            waived.setChecklistUuid(uuidOrNull(waived.getChecklistId()));
             waived.setOwner(Owner.member(PERSON_ID));
             waived.setState(ChecklistItemState.NOT_APPLICABLE);
             when(itemRepository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(mine, theirs, waived));
 
-            assertThat(service.assigned(REVIVAL_ID)).extracting(AssignedChecklistItemDto::id).containsExactly(7L);
+            assertThat(service.assigned(REVIVAL_ID)).extracting(AssignedChecklistItemDto::id).containsExactly(uuid(7));
         }
 
         @Test

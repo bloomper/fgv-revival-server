@@ -18,6 +18,7 @@ package nu.fgv.revival.server.member;
 
 import jakarta.mail.internet.MimeMessage;
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
@@ -42,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
 
-    private long id;
+    private EntityId id;
 
     private static List<String> recipients(final String subjectPart) {
         return Arrays.stream(MAIL.getReceivedMessages())
@@ -121,7 +122,7 @@ class MemberInvitationIntegrationTest extends AbstractIntegrationTest {
                 .singleElement()
                 .satisfies(message -> assertThat(message.getAllRecipients()[0].toString()).isEqualTo(email));
 
-        final long other = createRevival(NOBEL, 2029);
+        final EntityId other = createRevival(NOBEL, 2029);
 
         setStatus(other, "APPROVED");
         MAIL.reset();

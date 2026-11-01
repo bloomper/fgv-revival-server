@@ -21,6 +21,7 @@ import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalShow;
 import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.MailSubjects;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,6 +52,8 @@ import java.util.Locale;
 @Slf4j
 public class ParticipantMailer {
 
+    private final ExternalIds ids;
+
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
     private final ObjectProvider<JavaMailSender> mailSender;
@@ -61,7 +64,9 @@ public class ParticipantMailer {
     public ParticipantMailer(final ObjectProvider<JavaMailSender> mailSender,
                              final MessageSource messageSource,
                              @Value("${fgv-revival.mail.from}") final String from,
-                             @Value("${fgv-revival.web-url}") final String webUrl) {
+                             @Value("${fgv-revival.web-url}") final String webUrl,
+                             final ExternalIds ids) {
+        this.ids = ids;
         this.mailSender = mailSender;
         this.messageSource = messageSource;
         this.from = from;
@@ -69,7 +74,7 @@ public class ParticipantMailer {
     }
 
     String link(final Long revivalId) {
-        return "%s/revivals/%d/me".formatted(webUrl, revivalId);
+        return "%s/revivals/%s/me".formatted(webUrl, ids.uuidOf(Revival.class, revivalId));
     }
 
     SimpleMailMessage invitation(final Revival revival, final Invitation invitation, final String to, final Locale locale) {

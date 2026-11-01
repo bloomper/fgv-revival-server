@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.news;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -51,11 +52,11 @@ class NewsGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         return input;
     }
 
-    private long create(final Map<String, Object> input) {
-        return Long.parseLong(execute(SUPER_ADMIN, CREATE, Map.of("input", input)).path("newsCreate.id").entity(String.class).get());
+    private EntityId create(final Map<String, Object> input) {
+        return entityId("news", execute(SUPER_ADMIN, CREATE, Map.of("input", input)).path("newsCreate.id").entity(String.class).get());
     }
 
-    private long newsVersion(final long id) {
+    private long newsVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM news WHERE id = ?").param(id).query(Long.class).single();
     }
 
@@ -83,7 +84,7 @@ class NewsGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     void onlyTheSuperAdminWritesAndAStaleVersionIsAConflict() {
         expectError(execute(DIRECTEUR, CREATE, Map.of("input", input("Nej", TODAY, null))), "FORBIDDEN");
 
-        final long news = create(input("Utkast", null, null));
+        final EntityId news = create(input("Utkast", null, null));
         final long stale = newsVersion(news);
 
         execute(SUPER_ADMIN, UPDATE, Map.of("id", news, "version", stale, "input", input("Publicerad", TODAY, null)))

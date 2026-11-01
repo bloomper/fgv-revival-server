@@ -27,9 +27,11 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * One status change of a revival. Append-only.
@@ -48,6 +50,9 @@ public class RevivalStatusChange {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;

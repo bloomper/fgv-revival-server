@@ -23,6 +23,7 @@ import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static nu.fgv.revival.server.guide.GuideMapper.GUIDE_MAPPER;
@@ -43,6 +45,8 @@ import static nu.fgv.revival.server.guide.GuideMapper.GUIDE_MAPPER;
  */
 @Service
 public class GuideService {
+
+    private final ExternalIds ids;
 
     private final GuideVersionRepository versionRepository;
     private final GuideVersionViews views;
@@ -62,7 +66,9 @@ public class GuideService {
                         final GuideAccess guideAccess,
                         final Optional<DraftSuggestions> draftSuggestions,
                         final GuidePdfService pdfService,
-                        final RevivalTitles titles) {
+                        final RevivalTitles titles,
+                        final ExternalIds ids) {
+        this.ids = ids;
         this.versionRepository = versionRepository;
         this.views = views;
         this.revivalRepository = revivalRepository;
@@ -208,25 +214,31 @@ public class GuideService {
      */
     @Transactional(readOnly = true)
     public GuideVersionView.Chapter draftChapter(final Long id) {
+        final UUID uuid = ids.uuidOf(GuideChapter.class, id);
+
         return draftView().chapters().stream()
-                .filter(chapter -> chapter.id().equals(id))
+                .filter(chapter -> chapter.id().equals(uuid))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(GuideChapter.class, id));
     }
 
     @Transactional(readOnly = true)
     public GuideVersionView.Section draftSection(final Long id) {
+        final UUID uuid = ids.uuidOf(GuideSection.class, id);
+
         return draftView().chapters().stream()
                 .flatMap(chapter -> chapter.sections().stream())
-                .filter(section -> section.id().equals(id))
+                .filter(section -> section.id().equals(uuid))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(GuideSection.class, id));
     }
 
     @Transactional(readOnly = true)
     public GuideVersionView.Item draftItem(final Long id) {
+        final UUID uuid = ids.uuidOf(GuideItem.class, id);
+
         return draftView().items()
-                .filter(item -> item.id().equals(id))
+                .filter(item -> item.id().equals(uuid))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(GuideItem.class, id));
     }

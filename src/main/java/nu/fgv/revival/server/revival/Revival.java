@@ -30,7 +30,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
@@ -39,6 +41,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A new production of an old spex. The spex itself lives in Spexregister; only its id is stored.
@@ -58,8 +61,11 @@ public class Revival extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "spex_id", nullable = false)
-    private Long spexId;
+    private String spexId;
 
     @Column(name = "year", nullable = false)
     private Integer year;
@@ -74,6 +80,10 @@ public class Revival extends AbstractAuditable {
     @Column(name = "guide_version_id")
     private @Nullable Long guideVersionId;
 
+    @Formula("(SELECT t.uuid FROM guide_version t WHERE t.id = guide_version_id)")
+    @NotAudited
+    private @Nullable UUID guideVersionUuid;
+
     /**
      * The year the revival pays FGV membership for its participants.
      */
@@ -86,7 +96,7 @@ public class Revival extends AbstractAuditable {
      */
     @NotAudited
     @Column(name = "spexregister_revival_id", updatable = false, insertable = false)
-    private @Nullable Long spexregisterRevivalId;
+    private @Nullable String spexregisterRevivalId;
 
     /**
      * When the people were removed from the revival; nothing personal is added after.

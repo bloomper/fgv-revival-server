@@ -17,6 +17,7 @@
 
 package nu.fgv.revival.server.member;
 
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.member.OwnerResolver.Resolution;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.Person;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,7 +57,7 @@ class OwnerResolverTest {
 
     private final RevivalMemberRepository memberRepository = mock(RevivalMemberRepository.class);
     private final PersonRepository personRepository = mock(PersonRepository.class);
-    private final OwnerResolver resolver = new OwnerResolver(memberRepository, personRepository);
+    private final OwnerResolver resolver = new OwnerResolver(memberRepository, personRepository, TestExternalIds.IDS);
 
     private static RevivalMember member(final @Nullable Long personId, final RevivalRole role, final boolean removed) {
         final RevivalMember member = new RevivalMember();
@@ -73,6 +75,7 @@ class OwnerResolverTest {
         final Person person = new Person();
 
         person.setId(id);
+        person.setUuid(uuid(person.getId()));
         person.setDisplayName(displayName);
         return person;
     }
@@ -147,7 +150,7 @@ class OwnerResolverTest {
 
         @Test
         void anActiveMember() {
-            assertThat(resolver.validate(REVIVAL_ID, new OwnerInputDto(ROBIN, null))).isEqualTo(Owner.member(ROBIN));
+            assertThat(resolver.validate(REVIVAL_ID, new OwnerInputDto(uuid(ROBIN), null))).isEqualTo(Owner.member(ROBIN));
         }
 
         @Test
@@ -157,13 +160,13 @@ class OwnerResolverTest {
 
         @Test
         void bothAreRefused() {
-            assertThatThrownBy(() -> resolver.validate(REVIVAL_ID, new OwnerInputDto(ROBIN, "Sam"))).isInstanceOf(BadRequestException.class);
+            assertThatThrownBy(() -> resolver.validate(REVIVAL_ID, new OwnerInputDto(uuid(ROBIN), "Sam"))).isInstanceOf(BadRequestException.class);
         }
 
         @Test
         void someoneWhoIsNotAnActiveDirecteurOrSteeringGroupMemberIsRefused() {
             for (final long personId : List.of(REMOVED, PARTICIPANT, 99L)) {
-                assertThatThrownBy(() -> resolver.validate(REVIVAL_ID, new OwnerInputDto(personId, null))).isInstanceOf(BadRequestException.class);
+                assertThatThrownBy(() -> resolver.validate(REVIVAL_ID, new OwnerInputDto(uuid(personId), null))).isInstanceOf(BadRequestException.class);
             }
         }
 
@@ -180,14 +183,14 @@ class OwnerResolverTest {
 
         @Test
         void theCurrentOwnerIsKeptEvenAfterLeavingTheSteeringGroup() {
-            assertThat(resolver.change(REVIVAL_ID, Owner.member(REMOVED), new OwnerInputDto(REMOVED, null))).isEqualTo(Owner.member(REMOVED));
+            assertThat(resolver.change(REVIVAL_ID, Owner.member(REMOVED), new OwnerInputDto(uuid(REMOVED), null))).isEqualTo(Owner.member(REMOVED));
             assertThat(resolver.change(REVIVAL_ID, Owner.named("Sam"), new OwnerInputDto(null, " Sam "))).isEqualTo(Owner.named("Sam"));
         }
 
         @Test
         void aNewOwnerIsValidated() {
-            assertThat(resolver.change(REVIVAL_ID, Owner.member(REMOVED), new OwnerInputDto(ROBIN, null))).isEqualTo(Owner.member(ROBIN));
-            assertThatThrownBy(() -> resolver.change(REVIVAL_ID, Owner.member(KIM), new OwnerInputDto(REMOVED, null)))
+            assertThat(resolver.change(REVIVAL_ID, Owner.member(REMOVED), new OwnerInputDto(uuid(ROBIN), null))).isEqualTo(Owner.member(ROBIN));
+            assertThatThrownBy(() -> resolver.change(REVIVAL_ID, Owner.member(KIM), new OwnerInputDto(uuid(REMOVED), null)))
                     .isInstanceOf(BadRequestException.class);
         }
     }

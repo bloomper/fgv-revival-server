@@ -31,12 +31,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.member.Owner;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * A thing to do in a checklist. Required when it comes from a guide requirement, and then its text is the
@@ -61,8 +64,15 @@ public class ChecklistItem extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "checklist_id", nullable = false)
     private Long checklistId;
+
+    @Formula("(SELECT t.uuid FROM checklist t WHERE t.id = checklist_id)")
+    @NotAudited
+    private @Nullable UUID checklistUuid;
 
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
@@ -85,6 +95,10 @@ public class ChecklistItem extends AbstractAuditable {
 
     @Column(name = "state_changed_by")
     private @Nullable Long stateChangedBy;
+
+    @Formula("(SELECT t.uuid FROM person t WHERE t.id = state_changed_by)")
+    @NotAudited
+    private @Nullable UUID stateChangedByUuid;
 
     @Column(name = "state_changed_at")
     private @Nullable Instant stateChangedAt;

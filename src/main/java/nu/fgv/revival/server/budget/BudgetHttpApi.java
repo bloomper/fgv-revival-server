@@ -15,7 +15,9 @@
  */
 package nu.fgv.revival.server.budget;
 
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.error.BadRequestException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
@@ -34,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * A revival's budget over plain HTTP, for what GraphQL does not suit: the Excel export, and uploading,
@@ -45,12 +48,15 @@ import java.util.Locale;
 @RestController
 public class BudgetHttpApi {
 
+    private final ExternalIds ids;
+
     static final MediaType XLSX = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
     private final BudgetExportService exportService;
     private final TransactionService transactionService;
 
-    public BudgetHttpApi(final BudgetExportService exportService, final TransactionService transactionService) {
+    public BudgetHttpApi(final BudgetExportService exportService, final TransactionService transactionService, final ExternalIds ids) {
+        this.ids = ids;
         this.exportService = exportService;
         this.transactionService = transactionService;
     }
@@ -67,9 +73,9 @@ public class BudgetHttpApi {
      * The budget as a workbook, in {@code lang} (sv or en) or the request's language.
      */
     @GetMapping("/api/revivals/{id}/budget.xlsx")
-    public ResponseEntity<byte[]> export(@PathVariable final Long id, @RequestParam(name = "lang", required = false) final @Nullable String lang,
+    public ResponseEntity<byte[]> export(@PathVariable final UUID id, @RequestParam(name = "lang", required = false) final @Nullable String lang,
                                          final Locale locale) {
-        final BudgetExportService.Export export = exportService.export(id, lang == null || lang.isBlank() ? locale : Locale.of(lang.strip()));
+        final BudgetExportService.Export export = exportService.export(ids.idOf(Revival.class, id), lang == null || lang.isBlank() ? locale : Locale.of(lang.strip()));
 
         return ResponseEntity.ok()
                 .contentType(XLSX)
@@ -79,19 +85,19 @@ public class BudgetHttpApi {
     }
 
     @PostMapping(path = "/api/transactions/{id}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public BudgetDtos.Receipt uploadReceipt(@PathVariable final Long id, @RequestPart(name = "file", required = false) final @Nullable MultipartFile file) {
+    public BudgetDtos.Receipt uploadReceipt(@PathVariable final UUID id, @RequestPart(name = "file", required = false) final @Nullable MultipartFile file) {
         if (file == null) {
             throw new BadRequestException("error.receipt.empty");
         }
-        return transactionService.uploadReceipt(id, file.getOriginalFilename(), bytes(file));
+        return transactionService.uploadReceipt(ids.idOf(BudgetTransaction.class, id), file.getOriginalFilename(), bytes(file));
     }
 
     /**
      * The file as an attachment, never shown inline, so a crafted file cannot run in the application's origin.
      */
     @GetMapping("/api/transactions/{id}/receipt")
-    public ResponseEntity<byte[]> receipt(@PathVariable final Long id) {
-        final TransactionService.ReceiptFile receipt = transactionService.receipt(id);
+    public ResponseEntity<byte[]> receipt(@PathVariable final UUID id) {
+        final TransactionService.ReceiptFile receipt = transactionService.receipt(ids.idOf(BudgetTransaction.class, id));
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(receipt.contentType()))
@@ -103,8 +109,8 @@ public class BudgetHttpApi {
     }
 
     @DeleteMapping("/api/transactions/{id}/receipt")
-    public ResponseEntity<Void> removeReceipt(@PathVariable final Long id) {
-        transactionService.removeReceipt(id);
+    public ResponseEntity<Void> removeReceipt(@PathVariable final UUID id) {
+        transactionService.removeReceipt(ids.idOf(BudgetTransaction.class, id));
         return ResponseEntity.noContent().build();
     }
 }

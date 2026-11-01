@@ -26,8 +26,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
+
+import java.util.UUID;
 
 /**
  * A participant or helper holding a shift slot: signed up themselves, or assigned by a writer of staffing.
@@ -47,6 +50,9 @@ public class ShiftAssignment extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "slot_id", nullable = false, updatable = false)
     private Long slotId;

@@ -20,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Omitted fields are left unchanged. Lists replace the whole list. A changed year is this year or later unless
@@ -28,9 +29,9 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalUpdateDto(Long id,
+public record RevivalUpdateDto(UUID id,
                                Long version,
-                               @Nullable Long spexId,
+                               @Nullable String spexId,
                                @Nullable Integer year,
                                @Nullable LocalDate premiereDate,
                                @Nullable Boolean clearPremiereDate,

@@ -25,9 +25,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
 import org.hibernate.envers.Audited;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * A day the current Chalmersspex plays, e.g. its premiere.
@@ -48,6 +50,9 @@ public class SpexCalendarDate extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "date", nullable = false)
     private LocalDate date;

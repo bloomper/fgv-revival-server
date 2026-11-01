@@ -18,11 +18,13 @@ package nu.fgv.revival.server.member;
 
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.person.UserDirectory;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.Locales;
 import nu.fgv.revival.server.util.MailSubjects;
 import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -52,6 +54,8 @@ import java.util.Locale;
 @Slf4j
 public class AccessRequestMailer {
 
+    private final ExternalIds ids;
+
     private final ObjectProvider<JavaMailSender> mailSender;
     private final MessageSource messageSource;
     private final UserDirectory directory;
@@ -66,7 +70,9 @@ public class AccessRequestMailer {
                                final RevivalRepository revivalRepository,
                                final RevivalTitles titles,
                                @Value("${fgv-revival.mail.from}") final String from,
-                               @Value("${fgv-revival.web-url}") final String webUrl) {
+                               @Value("${fgv-revival.web-url}") final String webUrl,
+                               final ExternalIds ids) {
+        this.ids = ids;
         this.mailSender = mailSender;
         this.messageSource = messageSource;
         this.directory = directory;
@@ -159,7 +165,7 @@ public class AccessRequestMailer {
             lines.add(directory.roleMappingUrl(member.keycloakUserId()));
         }
         lines.add("");
-        lines.add(text("member.awaitingAccess.mail.revival", locale, "%s/revivals/%d".formatted(webUrl, event.revivalId())));
+        lines.add(text("member.awaitingAccess.mail.revival", locale, "%s/revivals/%s".formatted(webUrl, ids.uuidOf(Revival.class, event.revivalId()))));
         lines.add("");
         lines.add(text("member.awaitingAccess.mail.footer", locale));
 
@@ -188,7 +194,7 @@ public class AccessRequestMailer {
         lines.add(text("member.awaitingAccess.mail.grant", locale));
         lines.add(directory.roleMappingUrl(event.keycloakUserId()));
         lines.add("");
-        lines.add(text("member.awaitingAccess.mail.revival", locale, "%s/revivals/%d".formatted(webUrl, event.revivalId())));
+        lines.add(text("member.awaitingAccess.mail.revival", locale, "%s/revivals/%s".formatted(webUrl, ids.uuidOf(Revival.class, event.revivalId()))));
         lines.add("");
         lines.add(text("member.awaitingAccess.mail.footer", locale));
 

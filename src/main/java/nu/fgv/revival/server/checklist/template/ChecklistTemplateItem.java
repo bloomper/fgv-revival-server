@@ -29,10 +29,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * An item of a checklist template. Retired, never deleted, so checklist items made from it keep their link.
@@ -54,8 +58,15 @@ public class ChecklistTemplateItem extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "template_id", nullable = false, updatable = false)
     private Long templateId;
+
+    @Formula("(SELECT t.uuid FROM checklist_template t WHERE t.id = template_id)")
+    @NotAudited
+    private @Nullable UUID templateUuid;
 
     @Column(name = "position", nullable = false)
     private int position;

@@ -28,11 +28,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A published version of the guide, or the one draft. Publishing keeps the id, so the draft becomes the version.
@@ -53,6 +56,9 @@ public class GuideVersion extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     private GuideVersionStatus status = GuideVersionStatus.DRAFT;
@@ -71,6 +77,10 @@ public class GuideVersion extends AbstractAuditable {
 
     @Column(name = "based_on_id")
     private @Nullable Long basedOnId;
+
+    @Formula("(SELECT t.uuid FROM guide_version t WHERE t.id = based_on_id)")
+    @NotAudited
+    private @Nullable UUID basedOnUuid;
 
     @Column(name = "published_at")
     private @Nullable Instant publishedAt;

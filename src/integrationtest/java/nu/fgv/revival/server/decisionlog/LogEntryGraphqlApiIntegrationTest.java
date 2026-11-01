@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.decisionlog;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,21 +53,21 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String LIST = "query($revivalId: ID!, $filter: LogEntryFilter) { logEntries(revivalId: $revivalId, filter: $filter) { number } }";
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));
 
-    private long revival;
+    private EntityId revival;
 
     @BeforeEach
     void revival() {
         revival = organisingRevival();
     }
 
-    private long create(final String user, final Map<String, Object> fields) {
+    private EntityId create(final String user, final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("revivalId", revival);
-        return Long.parseLong(execute(user, CREATE, Map.of("input", input)).path("logEntryCreate.id").entity(String.class).get());
+        return entityId("log_entry", execute(user, CREATE, Map.of("input", input)).path("logEntryCreate.id").entity(String.class).get());
     }
 
-    private long rowVersion(final long id) {
+    private long rowVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM log_entry WHERE id = ?").param(id).query(Long.class).single();
     }
 
@@ -84,7 +85,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("logEntryCreate.createdBy").entity(String.class).isEqualTo("Stina Styrgrupp");
         create(DIRECTEUR, Map.of("type", "DECISION", "text", "Vi spelar i februari"));
 
-        final long other = createRevival(ALI_BABA, 2029);
+        final EntityId other = createRevival(ALI_BABA, 2029);
 
         assertThat(jdbcClient.sql("SELECT last_number FROM log_entry_counter WHERE revival_id = ?").param(other).query(Integer.class).single()).isZero();
         assertThat(numbers(STEERING_GROUP, Map.of())).containsExactly(1, 2);
@@ -92,8 +93,8 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aRowKeepsAnOwnerWhoLeftTheSteeringGroupWhenOtherFieldsChange() {
-        final long dana = personId(DIRECTEUR);
-        final long row = create(STEERING_GROUP, Map.of("type", "TODO", "text", "Boka RunAn", "owner", Map.of("personId", dana)));
+        final EntityId dana = personId(DIRECTEUR);
+        final EntityId row = create(STEERING_GROUP, Map.of("type", "TODO", "text", "Boka RunAn", "owner", Map.of("personId", dana)));
 
         jdbcClient.sql("UPDATE revival_member SET removed_at = NOW() WHERE revival_id = ? AND person_id = ?").params(revival, dana).update();
 
@@ -107,7 +108,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     void rowsCreatedAtTheSameTimeGetConsecutiveNumbers() throws Exception {
         final int writers = 6;
         final CountDownLatch start = new CountDownLatch(1);
-        final List<Callable<Long>> tasks = new ArrayList<>();
+        final List<Callable<EntityId>> tasks = new ArrayList<>();
 
         token(STEERING_GROUP);
         token(DIRECTEUR);
@@ -121,10 +122,10 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             });
         }
         try (ExecutorService executor = Executors.newFixedThreadPool(writers)) {
-            final List<Future<Long>> futures = tasks.stream().map(executor::submit).toList();
+            final List<Future<EntityId>> futures = tasks.stream().map(executor::submit).toList();
 
             start.countDown();
-            for (final Future<Long> future : futures) {
+            for (final Future<EntityId> future : futures) {
                 future.get();
             }
         }
@@ -133,7 +134,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void ownersAreMembersOrFreeTextNames() {
-        final long stina = personId(STEERING_GROUP);
+        final EntityId stina = personId(STEERING_GROUP);
 
         execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("revivalId", revival, "type", "TODO", "text", "a",
                 "owner", Map.of("personId", stina))))
@@ -151,7 +152,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void filtersCombineAndKeepNumberOrder() {
-        final long stina = personId(STEERING_GROUP);
+        final EntityId stina = personId(STEERING_GROUP);
 
         create(STEERING_GROUP, Map.of("type", "TODO", "text", "Boka lokal", "owner", Map.of("personId", stina),
                 "deadline", TODAY.minusDays(1).toString(), "tags", List.of("lokal")));
@@ -187,7 +188,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void anyFieldButTheNumberChangesAndStaleVersionsConflict() {
-        final long id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
+        final EntityId id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
         final long version = rowVersion(id);
 
         execute(DIRECTEUR, UPDATE, Map.of("input", Map.of("id", id, "version", version, "status", "CANCELLED", "text", "y",
@@ -203,7 +204,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void answeringAQuestionLinksANewDecision() {
-        final long question = create(STEERING_GROUP, Map.of("type", "QUESTION", "text", "Var spelar vi?"));
+        final EntityId question = create(STEERING_GROUP, Map.of("type", "QUESTION", "text", "Var spelar vi?"));
 
         execute(STEERING_GROUP, ANSWER, Map.of("input", Map.of("questionId", question, "questionVersion", rowVersion(question),
                 "text", "Vi spelar i RunAn")))
@@ -217,7 +218,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void superAdminsAndObserversReadButNeverWrite() {
-        final long id = create(STEERING_GROUP, Map.of("type", "QUESTION", "text", "x"));
+        final EntityId id = create(STEERING_GROUP, Map.of("type", "QUESTION", "text", "x"));
 
         for (final String user : List.of(SUPER_ADMIN, OBSERVER)) {
             assertThat(numbers(user, Map.of())).containsExactly(1);
@@ -230,7 +231,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void someoneWithoutARoleGetsNotFound() {
-        final long id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
+        final EntityId id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
 
         login(PLAIN_USER);
         expectError(execute(PLAIN_USER, LIST, Map.of("revivalId", revival)), "NOT_FOUND");
@@ -250,7 +251,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void anArchivedLogIsReadOnly() {
-        final long id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
+        final EntityId id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
 
         setStatus(revival, "ARCHIVED");
         assertThat(numbers(SUPER_ADMIN, Map.of())).containsExactly(1);
@@ -260,7 +261,7 @@ class LogEntryGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyChangeIsAuditedFromTheWeb() {
-        final long id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
+        final EntityId id = create(STEERING_GROUP, Map.of("type", "TODO", "text", "x"));
 
         execute(STEERING_GROUP, UPDATE, Map.of("input", Map.of("id", id, "version", rowVersion(id), "status", "DONE")));
 

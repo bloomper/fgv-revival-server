@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class McpToolsIntegrationTest extends AbstractIntegrationTest {
 
-    private long revival;
+    private EntityId revival;
 
     private static boolean refused(final JsonNode response) {
         return response.has("error") || response.path("result").path("isError").asBoolean(false);
@@ -100,8 +101,8 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void theSteeringGroupRunsAMeetingAndAnswersAQuestion() {
-        final long meeting = ok(STEERING_GROUP, "create_meeting", args("revivalId", revival, "date", "2027-11-01", "title", "Styrgruppsmöte",
-                "attendees", List.of("me", "Dana"), "othersPresent", "Vaktmästaren", "agenda", List.of("Lokaler"))).get("id").asLong();
+        final String meeting = ok(STEERING_GROUP, "create_meeting", args("revivalId", revival, "date", "2027-11-01", "title", "Styrgruppsmöte",
+                "attendees", List.of("me", "Dana"), "othersPresent", "Vaktmästaren", "agenda", List.of("Lokaler"))).get("id").asString();
 
         assertThat(ok(STEERING_GROUP, "get_meeting", args("meetingId", meeting)).get("attendees").size()).isEqualTo(2);
         assertThat(refused(call(STEERING_GROUP, "create_meeting", args("revivalId", revival, "date", "2027-11-02", "attendees", List.of("Okänd Person")))))
@@ -115,7 +116,7 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(answered.get("question").get("status").asString()).isEqualTo("DONE");
         assertThat(answered.get("decision").get("type").asString()).isEqualTo("DECISION");
-        assertThat(ok(OBSERVER, "get_history", args("type", "LOG_ENTRY", "id", answered.get("question").get("id").asLong()))
+        assertThat(ok(OBSERVER, "get_history", args("type", "LOG_ENTRY", "id", answered.get("question").get("id").asString()))
                 .get("items").get(0).get("modifiedBy").asString()).isEqualTo("Dana Directeur");
         assertThat(ok(STEERING_GROUP, "change_meeting_state", args("meetingId", meeting, "action", "CLOSE")).get("status").asString())
                 .isEqualTo("CLOSED");
@@ -123,15 +124,15 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void eventsBudgetMaterialsAndSlotsAreWrittenAndNeverDeleted() {
-        final long event = ok(STEERING_GROUP, "create_event", args("revivalId", revival, "title", "Förrådsbesök", "startDate", "2028-01-10"))
-                .get("id").asLong();
+        final String event = ok(STEERING_GROUP, "create_event", args("revivalId", revival, "title", "Förrådsbesök", "startDate", "2028-01-10"))
+                .get("id").asString();
 
         assertThat(ok(STEERING_GROUP, "update_event", args("eventId", event, "location", "Kemi")).get("location").asString()).isEqualTo("Kemi");
         assertThat(ok(STEERING_GROUP, "set_event_cancelled", args("eventId", event, "cancelled", true)).get("cancelled").asBoolean()).isTrue();
         assertThat(ok(STEERING_GROUP, "set_event_cancelled", args("eventId", event, "cancelled", false)).get("cancelled").asBoolean()).isFalse();
 
-        final long line = ok(DIRECTEUR, "create_budget_line", args("revivalId", revival, "category", "FOOD", "description", "Mat",
-                "unitAmount", "1200")).get("id").asLong();
+        final String line = ok(DIRECTEUR, "create_budget_line", args("revivalId", revival, "category", "FOOD", "description", "Mat",
+                "unitAmount", "1200")).get("id").asString();
 
         ok(DIRECTEUR, "update_budget_line", args("revivalId", revival, "lineId", line, "unitAmount", "1450.50"));
         assertThat(ok(DIRECTEUR, "set_budget_line_removed", args("revivalId", revival, "lineId", line, "removed", true)).get("removed").asBoolean())
@@ -140,17 +141,17 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
                 "unitAmount", "1")))).isTrue();
         assertThat(ok(OBSERVER, "calculate_budget_scenario", args("revivalId", revival, "parameters", Map.of("participants", 40))).isObject()).isTrue();
 
-        final long material = ok(STEERING_GROUP, "create_material", args("revivalId", revival, "title", "Manus", "url", "https://drive.google.com/x",
-                "category", "SCRIPT", "visibility", "STEERING_GROUP")).get("id").asLong();
+        final String material = ok(STEERING_GROUP, "create_material", args("revivalId", revival, "title", "Manus", "url", "https://drive.google.com/x",
+                "category", "SCRIPT", "visibility", "STEERING_GROUP")).get("id").asString();
 
         assertThat(ok(STEERING_GROUP, "set_material_removed", args("revivalId", revival, "materialId", material, "removed", true))
                 .get("removed").asBoolean()).isTrue();
         assertThat(refused(call(OBSERVER, "list_materials", args("revivalId", revival)))).isTrue();
 
-        final long show = ok(STEERING_GROUP, "create_event", args("revivalId", revival, "title", "Föreställning", "startDate", "2028-02-10"))
-                .get("id").asLong();
-        final long slot = ok(DIRECTEUR, "create_shift_slot", args("eventId", show, "date", "2028-02-10", "startTime", "17:00", "endTime", "19:00",
-                "task", "Biljettkontroll", "needed", 2)).get("id").asLong();
+        final String show = ok(STEERING_GROUP, "create_event", args("revivalId", revival, "title", "Föreställning", "startDate", "2028-02-10"))
+                .get("id").asString();
+        final String slot = ok(DIRECTEUR, "create_shift_slot", args("eventId", show, "date", "2028-02-10", "startTime", "17:00", "endTime", "19:00",
+                "task", "Biljettkontroll", "needed", 2)).get("id").asString();
 
         assertThat(ok(DIRECTEUR, "update_shift_slot", args("revivalId", revival, "slotId", slot, "date", "2028-02-10", "startTime", "17:30",
                 "endTime", "19:00", "task", "Biljettkontroll", "needed", 3)).get("open").asInt()).isEqualTo(3);
@@ -159,10 +160,10 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void checklistsAndTheRevivalItself() {
-        final long checklist = ok(STEERING_GROUP, "create_event_checklist", args("revivalId", revival, "name", "Kalas", "date", "2028-02-12"))
-                .get("id").asLong();
-        final long item = ok(STEERING_GROUP, "create_checklist_item", args("checklistId", checklist, "text", "Boka band", "owner", "me"))
-                .get("id").asLong();
+        final String checklist = ok(STEERING_GROUP, "create_event_checklist", args("revivalId", revival, "name", "Kalas", "date", "2028-02-12"))
+                .get("id").asString();
+        final String item = ok(STEERING_GROUP, "create_checklist_item", args("checklistId", checklist, "text", "Boka band", "owner", "me"))
+                .get("id").asString();
 
         assertThat(ok(STEERING_GROUP, "set_checklist_item_state", args("itemId", item, "state", "NOT_APPLICABLE", "reason", "Inget band i år"))
                 .get("state").asString()).isEqualTo("NOT_APPLICABLE");
@@ -189,14 +190,14 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
         assertThat(refused(call(STEERING_GROUP, "create_catalog_entry", args("catalog", "CAPABILITIES", "nameSv", "x")))).isTrue();
         assertThat(ok(STEERING_GROUP, "list_catalog_entries", args("catalog", "BUDGET_CATEGORIES")).get("items").size()).isPositive();
 
-        final long template = ok(SUPER_ADMIN, "create_checklist_template", args("kind", "EVENT", "nameSv", "Kalas")).get("id").asLong();
+        final String template = ok(SUPER_ADMIN, "create_checklist_template", args("kind", "EVENT", "nameSv", "Kalas")).get("id").asString();
 
         ok(SUPER_ADMIN, "create_checklist_template_item", args("templateId", template, "textSv", "Boka lokal",
                 "deadline", Map.of("kind", "DAYS", "amount", -30)));
         assertThat(ok(SUPER_ADMIN, "create_mailing_template", args("template", Map.of("nameSv", "Välkommen", "subjectSv", "Välkommen",
-                "bodySv", "Hej!", "audience", "PARTICIPANTS", "due", Map.of("kind", "DAYS", "amount", -60)))).get("id").isNumber()).isTrue();
+                "bodySv", "Hej!", "audience", "PARTICIPANTS", "due", Map.of("kind", "DAYS", "amount", -60)))).get("id").isString()).isTrue();
 
-        final long news = ok(SUPER_ADMIN, "create_news", args("subject", "Nytt", "text", "Text", "visibleFrom", "2026-01-01")).get("id").asLong();
+        final String news = ok(SUPER_ADMIN, "create_news", args("subject", "Nytt", "text", "Text", "visibleFrom", "2026-01-01")).get("id").asString();
 
         ok(SUPER_ADMIN, "update_news", args("newsId", news, "subject", "Nyare", "text", "Text", "visibleFrom", "2026-01-01"));
         assertThat(ok(PLAIN_USER, "list_news", args()).get("items").get(0).get("subject").asString()).isEqualTo("Nyare");
@@ -205,12 +206,12 @@ class McpToolsIntegrationTest extends AbstractIntegrationTest {
         publishedGuide();
         ok(SUPER_ADMIN, "start_guide_draft", args());
 
-        final long chapter = ok(SUPER_ADMIN, "create_guide_chapter", args("titleSv", "Efterarbete")).get("id").asLong();
-        final long item = ok(SUPER_ADMIN, "create_guide_item", args("chapterId", chapter, "type", "TIP", "textSv", "Tacka alla")).get("id").asLong();
+        final String chapter = ok(SUPER_ADMIN, "create_guide_chapter", args("titleSv", "Efterarbete")).get("id").asString();
+        final String item = ok(SUPER_ADMIN, "create_guide_item", args("chapterId", chapter, "type", "TIP", "textSv", "Tacka alla")).get("id").asString();
 
         ok(SUPER_ADMIN, "update_guide_item", args("itemId", item, "type", "TIP", "textSv", "Tacka alla som hjälpt till"));
-        assertThat(ok(SUPER_ADMIN, "move_guide_part", args("part", "CHAPTER", "id", chapter, "position", 0)).get("chapters").get(0).get("id").asLong())
-                .isEqualTo(chapter);
+        assertThat(ok(SUPER_ADMIN, "move_guide_part", args("part", "CHAPTER", "id", chapter, "position", 0)).get("chapters").get(0).get("id").asString())
+                .isEqualTo(String.valueOf(chapter));
         assertThat(refused(call(STEERING_GROUP, "get_guide_draft", args()))).isTrue();
     }
 }

@@ -90,7 +90,7 @@ public class GuideVersionViews {
         final List<GuideVersionView.Chapter> chapterViews = chapters.stream()
                 .sorted(Comparator.comparing(GuideChapter::getPosition))
                 .map(chapter -> new GuideVersionView.Chapter(
-                        chapter.getId(),
+                        chapter.getUuid(),
                         chapter.getKey(),
                         GuideVersionView.Text.plain(chapter.getTitleSv(), chapter.getTitleEn()),
                         items.stream()
@@ -102,7 +102,7 @@ public class GuideVersionViews {
                                 .filter(section -> section.getChapterId().equals(chapter.getId()))
                                 .sorted(Comparator.comparing(GuideSection::getPosition))
                                 .map(section -> new GuideVersionView.Section(
-                                        section.getId(),
+                                        section.getUuid(),
                                         section.getKey(),
                                         chapter.getKey(),
                                         GuideVersionView.Text.plain(section.getTitleSv(), section.getTitleEn()),
@@ -117,13 +117,13 @@ public class GuideVersionViews {
                 .toList();
 
         return new GuideVersionView(
-                version.getId(),
+                version.getUuid(),
                 version.getStatus(),
                 version.getLabel(),
                 version.getNote(),
                 version.getPublishedAt(),
                 version.getPublishedBy(),
-                version.getBasedOnId(),
+                version.getBasedOnUuid(),
                 versionOf(version.getVersion()),
                 text(version.getIntroSv(), version.getIntroEn()),
                 chapterViews);
@@ -132,7 +132,7 @@ public class GuideVersionViews {
     private GuideVersionView.Item toItem(final GuideItem item, final Map<String, GuideItemKind> kinds, final GuideChapter chapter,
                                          final @Nullable GuideSection section) {
         return new GuideVersionView.Item(
-                item.getId(),
+                item.getUuid(),
                 item.getKey(),
                 chapter.getKey(),
                 section == null ? null : section.getKey(),

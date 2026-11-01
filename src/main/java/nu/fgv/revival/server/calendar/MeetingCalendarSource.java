@@ -60,7 +60,7 @@ class MeetingCalendarSource implements CalendarSource {
         return repository.findByRevivalIdOrderByDateDescIdDesc(revival.getId()).stream()
                 .filter(candidate -> candidate.getStatus() != MeetingStatus.CANCELLED)
                 .sorted(Comparator.comparing(Meeting::getDate).thenComparing(Meeting::getId))
-                .map(candidate -> new CalendarEntry(CalendarEntry.uid("meeting", candidate.getId()),
+                .map(candidate -> new CalendarEntry(CalendarEntry.uid("meeting", candidate.getUuid()),
                         candidate.getTitle() == null ? meeting : candidate.getTitle(), null, null,
                         new CalendarEntry.AllDay(candidate.getDate(), candidate.getDate()),
                         candidate.getLastModifiedAt() != null ? candidate.getLastModifiedAt() : candidate.getCreatedAt()))

@@ -71,6 +71,7 @@ import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarDate;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarDateRepository;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -115,6 +116,8 @@ import java.util.Set;
 @Slf4j
 @Component
 public class SampleActivityImporter {
+
+    private final ExternalIds ids;
 
     private static final Map<RevivalStatus, Integer> PHASES_DONE = new EnumMap<>(Map.of(
             RevivalStatus.APPROVED, 0,
@@ -189,7 +192,9 @@ public class SampleActivityImporter {
                                   final SyncRunRepository syncRunRepository,
                                   final SyncStepRepository syncStepRepository,
                                   final LogEntryCounters logEntryCounters,
-                                  final SampleHistory sampleHistory) {
+                                  final SampleHistory sampleHistory,
+                                  final ExternalIds ids) {
+        this.ids = ids;
         this.importSampleData = importSampleData;
         this.zone = zone;
         this.jdbcClient = jdbcClient;
@@ -478,7 +483,7 @@ public class SampleActivityImporter {
         final Event event = new Event();
 
         event.setRevivalId(revival.id());
-        event.setTypeId(type == null ? null : type.id());
+        event.setTypeId(type == null ? null : ids.idOf(EventType.class, type.id()));
         event.setTitle(title);
         event.setStartDate(start);
         event.setEndDate(start.plusDays(type == null ? 0 : type.days() - 1L));

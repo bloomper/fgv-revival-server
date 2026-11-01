@@ -19,10 +19,11 @@ package nu.fgv.revival.server.decisionlog;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.checklist.ChecklistItem;
+import nu.fgv.revival.server.checklist.ChecklistItemRepository;
 import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.event.EventRepository;
-import nu.fgv.revival.server.checklist.ChecklistItemRepository;
 import nu.fgv.revival.server.meeting.MeetingEntryChangeKind;
 import nu.fgv.revival.server.meeting.MeetingRecorder;
 import nu.fgv.revival.server.member.AccessPolicy;
@@ -60,6 +61,9 @@ import java.util.Set;
 
 import static nu.fgv.revival.server.TestCallers.PERSON_ID;
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -115,7 +119,9 @@ class LogEntryServiceTest {
         final LogEntry entry = new LogEntry();
 
         entry.setId(id);
+        entry.setUuid(uuid(entry.getId()));
         entry.setRevivalId(REVIVAL_ID);
+        entry.setRevivalUuid(uuidOrNull(entry.getRevivalId()));
         entry.setNumber((int) id);
         entry.setDate(TODAY);
         entry.setType(type);
@@ -145,8 +151,9 @@ class LogEntryServiceTest {
 
             if (entry.getId() == null) {
                 entry.setId(100L + entry.getNumber());
+                entry.setUuid(uuid(entry.getId()));
             }
-            return entry;
+            return withUuids(entry);
         });
         lenient().when(ownerResolver.validate(eq(REVIVAL_ID), any())).thenReturn(Owner.none());
         lenient().when(ownerResolver.change(eq(REVIVAL_ID), any(), any())).thenAnswer(invocation -> ownerResolver.validate(REVIVAL_ID, invocation.getArgument(2)));
@@ -231,6 +238,7 @@ class LogEntryServiceTest {
             final Event event = new Event();
 
             event.setRevivalId(2L);
+            event.setRevivalUuid(uuidOrNull(event.getRevivalId()));
             when(eventRepository.findById(8L)).thenReturn(Optional.of(event));
 
             final LogEntryService.Draft linked = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.DECISION, "x", null, null,
@@ -244,12 +252,13 @@ class LogEntryServiceTest {
             final Event event = new Event();
 
             event.setRevivalId(REVIVAL_ID);
+            event.setRevivalUuid(uuidOrNull(event.getRevivalId()));
             when(eventRepository.findById(8L)).thenReturn(Optional.of(event));
 
             final LogEntryService.Draft linked = new LogEntryService.Draft(REVIVAL_ID, null, null, LogEntryType.DECISION, "x", null, null,
                     null, null, null, null, null, 8L);
 
-            assertThat(service.create(linked, Locale.ENGLISH).eventId()).isEqualTo(8L);
+            assertThat(service.create(linked, Locale.ENGLISH).eventId()).isEqualTo(uuid(8));
         }
 
         @Test
@@ -259,8 +268,8 @@ class LogEntryServiceTest {
             final LogEntryDto created = service.create(inMeeting, Locale.ENGLISH);
 
             verify(meetingRecorder).requireInProgress(5L, REVIVAL_ID);
-            verify(meetingRecorder).record(5L, created.id(), EnumSet.of(MeetingEntryChangeKind.CREATED), PERSON_ID);
-            assertThat(created.meetingId()).isEqualTo(5L);
+            verify(meetingRecorder).record(5L, TestExternalIds.internal(created.id()), EnumSet.of(MeetingEntryChangeKind.CREATED), PERSON_ID);
+            assertThat(created.meetingId()).isEqualTo(uuid(5));
         }
     }
 
@@ -300,7 +309,7 @@ class LogEntryServiceTest {
         @Test
         void aChangeInAMeetingRecordsWhatHappened() {
             final LogEntry entry = entry(1L, LogEntryType.TODO, LogEntryStatus.OPEN);
-            final OwnerInputDto owner = new OwnerInputDto(PERSON_ID, null);
+            final OwnerInputDto owner = new OwnerInputDto(uuid(PERSON_ID), null);
 
             when(repository.findById(1L)).thenReturn(Optional.of(entry));
             when(ownerResolver.validate(REVIVAL_ID, owner)).thenReturn(Owner.member(PERSON_ID));
@@ -338,7 +347,7 @@ class LogEntryServiceTest {
 
             assertThat(answered.question().status()).isEqualTo(LogEntryStatus.DONE);
             assertThat(answered.decision().type()).isEqualTo(LogEntryType.DECISION);
-            assertThat(answered.decision().answersEntryId()).isEqualTo(3L);
+            assertThat(answered.decision().answersEntryId()).isEqualTo(uuid(3));
         }
 
         @Test

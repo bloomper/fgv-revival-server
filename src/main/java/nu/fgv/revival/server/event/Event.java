@@ -27,12 +27,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * An event in a revival's timeline: of a type from the guide's example timeline, or added freely. Times are
@@ -61,11 +65,22 @@ public class Event extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
 
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
+
     @Column(name = "type_id", updatable = false)
     private @Nullable Long typeId;
+
+    @Formula("(SELECT t.uuid FROM event_type t WHERE t.id = type_id)")
+    @NotAudited
+    private @Nullable UUID typeUuid;
 
     @Column(name = "title", nullable = false, length = TITLE_MAX_LENGTH)
     private String title;

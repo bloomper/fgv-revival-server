@@ -17,8 +17,10 @@
 
 package nu.fgv.revival.server.event;
 
+import nu.fgv.revival.server.checklist.template.ChecklistTemplate;
 import nu.fgv.revival.server.checklist.template.ChecklistTemplateSummaryDto;
 import nu.fgv.revival.server.guide.GuideGraphqlApi.LocalizedTextInput;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -27,6 +29,7 @@ import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Event types over GraphQL (event.graphqls).
@@ -37,16 +40,19 @@ import java.util.List;
 @Controller
 public class EventTypeGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final EventTypeService service;
 
-    public EventTypeGraphqlApi(final EventTypeService service) {
+    public EventTypeGraphqlApi(final EventTypeService service, final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
     }
 
-    private static EventTypeService.Definition definition(final EventTypeInput input) {
+    private EventTypeService.Definition definition(final EventTypeInput input) {
         return new EventTypeService.Definition(text(input.name()), input.description() == null ? null : text(input.description()),
                 input.rooms() == null ? null : text(input.rooms()), input.catering() == null ? null : text(input.catering()),
-                input.offsetMinDays(), input.offsetMaxDays(), input.days(), input.revivalPays(), input.checklistTemplateId());
+                input.offsetMinDays(), input.offsetMaxDays(), input.days(), input.revivalPays(), ids.idOfNullable(ChecklistTemplate.class, input.checklistTemplateId()));
     }
 
     private static EventTypeService.Text text(final LocalizedTextInput input) {
@@ -59,8 +65,8 @@ public class EventTypeGraphqlApi {
     }
 
     @QueryMapping
-    public EventTypeDto eventType(@Argument final Long id) {
-        return service.get(id);
+    public EventTypeDto eventType(@Argument final UUID id) {
+        return service.get(ids.idOf(EventType.class, id));
     }
 
     @MutationMapping
@@ -69,23 +75,23 @@ public class EventTypeGraphqlApi {
     }
 
     @MutationMapping
-    public EventTypeDto eventTypeUpdate(@Argument final Long id, @Argument final Long version, @Argument final EventTypeInput input) {
-        return service.update(id, version, definition(input));
+    public EventTypeDto eventTypeUpdate(@Argument final UUID id, @Argument final Long version, @Argument final EventTypeInput input) {
+        return service.update(ids.idOf(EventType.class, id), version, definition(input));
     }
 
     @MutationMapping
-    public List<EventTypeDto> eventTypeMove(@Argument final Long id, @Argument final Long version, @Argument final int position) {
-        return service.move(id, version, position);
+    public List<EventTypeDto> eventTypeMove(@Argument final UUID id, @Argument final Long version, @Argument final int position) {
+        return service.move(ids.idOf(EventType.class, id), version, position);
     }
 
     @MutationMapping
-    public EventTypeDto eventTypeRetire(@Argument final Long id, @Argument final Long version) {
-        return service.retire(id, version);
+    public EventTypeDto eventTypeRetire(@Argument final UUID id, @Argument final Long version) {
+        return service.retire(ids.idOf(EventType.class, id), version);
     }
 
     @MutationMapping
-    public EventTypeDto eventTypeRestore(@Argument final Long id, @Argument final Long version) {
-        return service.restore(id, version);
+    public EventTypeDto eventTypeRestore(@Argument final UUID id, @Argument final Long version) {
+        return service.restore(ids.idOf(EventType.class, id), version);
     }
 
     @SchemaMapping(typeName = "EventType", field = "checklistTemplate")
@@ -97,6 +103,6 @@ public class EventTypeGraphqlApi {
                                  @Nullable LocalizedTextInput rooms,
                                  @Nullable LocalizedTextInput catering, @Nullable Integer offsetMinDays,
                                  @Nullable Integer offsetMaxDays,
-                                 int days, boolean revivalPays, @Nullable Long checklistTemplateId) {
+                                 int days, boolean revivalPays, @Nullable UUID checklistTemplateId) {
     }
 }

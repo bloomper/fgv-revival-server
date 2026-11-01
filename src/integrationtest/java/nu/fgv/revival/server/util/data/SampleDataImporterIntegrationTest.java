@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.util.data;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import nu.fgv.revival.server.checklist.RevivalGuideSync;
 import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.revival.RevivalStatus;
@@ -25,11 +26,11 @@ import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -293,7 +294,7 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
         importSampleDataAndActivity();
         forgetTokens();
 
-        final Long revivalId = jdbcClient.sql("SELECT id FROM revival WHERE status = 'OPEN' ORDER BY id LIMIT 1").query(Long.class).single();
+        final EntityId revivalId = entityId(jdbcClient.sql("SELECT id, uuid FROM revival WHERE status = 'OPEN' ORDER BY id LIMIT 1"));
 
         graphQl(SampleDataImporter.PARTICIPANT)
                 .document("query($id: ID!) { myParticipation(revivalId: $id) { participant { response } dietary } }")
@@ -308,15 +309,15 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
         importSampleDataAndActivity();
         forgetTokens();
 
-        final Long meetingId = jdbcClient.sql("""
-                        SELECT m.id FROM meeting m
+        final String meetingId = jdbcClient.sql("""
+                        SELECT m.uuid FROM meeting m
                         JOIN revival_member rm ON rm.revival_id = m.revival_id AND rm.role = 'DIRECTEUR'
                         JOIN person p ON p.id = rm.person_id
                         WHERE m.status = 'CLOSED' AND p.email = ?
                         LIMIT 1
                         """)
                 .param(SampleDataImporter.DIRECTEUR)
-                .query(Long.class)
+                .query(String.class)
                 .single();
 
         graphQl(SampleDataImporter.DIRECTEUR)

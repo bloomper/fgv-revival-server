@@ -35,6 +35,7 @@ import org.springframework.security.access.AccessDeniedException;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -75,6 +76,7 @@ class GuideVersionServiceTest {
                 callerService, new AccessPolicy());
         version = new GuideVersion();
         version.setId(VERSION_ID);
+        version.setUuid(uuid(version.getId()));
         version.setVersion(3L);
         version.setStatus(GuideVersionStatus.PUBLISHED);
         version.setLabel("v4");

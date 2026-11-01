@@ -33,12 +33,12 @@ public interface RevivalMapper {
 
     RevivalMapper REVIVAL_MAPPER = Mappers.getMapper(RevivalMapper.class);
 
-    @Mapping(target = "id", source = "revival.id")
+    @Mapping(target = "id", source = "revival.uuid")
     @Mapping(target = "year", source = "revival.year")
     @Mapping(target = "premiereDate", source = "revival.premiereDate")
     @Mapping(target = "shows", source = "revival.shows")
     @Mapping(target = "status", source = "revival.status")
-    @Mapping(target = "guideVersionId", source = "revival.guideVersionId")
+    @Mapping(target = "guideVersionId", source = "revival.guideVersionUuid")
     @Mapping(target = "version", source = "revival.version")
     @Mapping(target = "createdBy", source = "revival.createdBy")
     @Mapping(target = "createdAt", source = "revival.createdAt")

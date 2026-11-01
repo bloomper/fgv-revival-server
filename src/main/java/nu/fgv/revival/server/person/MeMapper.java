@@ -32,7 +32,7 @@ public interface MeMapper {
 
     MeMapper ME_MAPPER = Mappers.getMapper(MeMapper.class);
 
-    @Mapping(target = "id", source = "person.id")
+    @Mapping(target = "id", source = "person.uuid")
     @Mapping(target = "displayName", source = "person.displayName")
     @Mapping(target = "email", source = "person.email")
     @Mapping(target = "globalRoles", source = "globalRoles")

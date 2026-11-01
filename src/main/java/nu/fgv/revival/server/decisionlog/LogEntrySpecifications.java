@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.springframework.util.StringUtils.hasText;
 
@@ -93,8 +94,8 @@ final class LogEntrySpecifications {
         return (root, query, cb) -> root.get("type").in(types);
     }
 
-    static Specification<LogEntry> meeting(final Long meetingId) {
-        return (root, query, cb) -> cb.equal(root.get("meetingId"), meetingId);
+    static Specification<LogEntry> meeting(final UUID meetingId) {
+        return (root, query, cb) -> cb.equal(root.get("meetingUuid"), meetingId);
     }
 
     static Specification<LogEntry> tags(final Collection<String> tags) {

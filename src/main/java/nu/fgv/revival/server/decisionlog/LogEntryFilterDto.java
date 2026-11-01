@@ -20,6 +20,7 @@ package nu.fgv.revival.server.decisionlog;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code LogEntryFilter}: every given filter must match; within types and tags any value may.
@@ -31,7 +32,7 @@ public record LogEntryFilterDto(@Nullable Boolean mine,
                                 @Nullable Boolean open,
                                 @Nullable Boolean overdue,
                                 @Nullable List<LogEntryType> types,
-                                @Nullable Long meetingId,
+                                @Nullable UUID meetingId,
                                 @Nullable List<String> tags,
                                 @Nullable String text) {
 

@@ -27,10 +27,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A kind of event from the guide's example timeline, with its offsets from the premiere. Kept by the super
@@ -55,6 +59,9 @@ public class EventType extends AbstractAuditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
 
     @Column(name = "name_sv", nullable = false, length = NAME_MAX_LENGTH)
     private String nameSv;
@@ -94,6 +101,10 @@ public class EventType extends AbstractAuditable {
 
     @Column(name = "checklist_template_id")
     private @Nullable Long checklistTemplateId;
+
+    @Formula("(SELECT t.uuid FROM checklist_template t WHERE t.id = checklist_template_id)")
+    @NotAudited
+    private @Nullable UUID checklistTemplateUuid;
 
     @Column(name = "position", nullable = false)
     private int position;

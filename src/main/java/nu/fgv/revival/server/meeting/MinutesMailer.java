@@ -127,7 +127,7 @@ public class MinutesMailer {
         section(lines, text("minutes.mail.closed", locale), minutes.closed(),
                 row -> "#%d %s (%s)".formatted(row.number(), row.text(), status(row.status(), locale)));
         lines.add("");
-        lines.add(text("minutes.mail.link", locale, "%s/revivals/%d/meetings/%d".formatted(webUrl, meeting.revivalId(), meeting.id())));
+        lines.add(text("minutes.mail.link", locale, "%s/revivals/%s/meetings/%s".formatted(webUrl, meeting.revivalId(), meeting.id())));
         lines.add("");
         lines.add(text("minutes.mail.footer", locale, context.senderName()));
         return String.join("\n", lines);

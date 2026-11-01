@@ -17,6 +17,7 @@ package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
 import nu.fgv.revival.server.Documents;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -35,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class BudgetMcpToolsIntegrationTest extends AbstractIntegrationTest {
 
-    private long revival;
+    private EntityId revival;
 
     private static boolean refused(final JsonNode response) {
         return response.has("error") || response.path("result").path("isError").asBoolean(false);
@@ -45,8 +46,8 @@ class BudgetMcpToolsIntegrationTest extends AbstractIntegrationTest {
     void revivalWithABudget() {
         revival = organisingRevival();
 
-        final long member = jdbcClient.sql("SELECT m.id FROM revival_member m JOIN person p ON p.id = m.person_id WHERE m.revival_id = ? AND p.email = ?")
-                .params(revival, STEERING_GROUP).query(Long.class).single();
+        final EntityId member = entityId(jdbcClient.sql("SELECT m.id, m.uuid FROM revival_member m JOIN person p ON p.id = m.person_id WHERE m.revival_id = ? AND p.email = ?")
+                .params(revival, STEERING_GROUP));
 
         execute(SUPER_ADMIN, Documents.MEMBER_CAPABILITIES, Map.of("input", Map.of("id", member, "version",
                 jdbcClient.sql("SELECT version FROM revival_member WHERE id = ?").param(member).query(Long.class).single(), "capabilities", List.of("FINANCE"))));

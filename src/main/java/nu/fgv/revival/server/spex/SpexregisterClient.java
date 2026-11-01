@@ -260,7 +260,7 @@ public class SpexregisterClient {
 
             return page.edges().stream()
                     .map(SpexEdge::node)
-                    .map(node -> new SpexDto(Long.valueOf(node.id()), node.title(), year(node.year()), true))
+                    .map(node -> new SpexDto(node.id(), node.title(), year(node.year()), true))
                     .toList();
         });
     }
@@ -268,7 +268,7 @@ public class SpexregisterClient {
     /**
      * One spex, with whether it is a revival, or empty when Spexregister does not know it.
      */
-    public Optional<SpexNode> spexById(final Long id) {
+    public Optional<SpexNode> spexById(final String id) {
         return call(() -> {
             final ClientGraphQlResponse response = graphQlClient.document(SPEX_BY_ID)
                     .variable("id", id)
@@ -292,7 +292,7 @@ public class SpexregisterClient {
     /**
      * A spex's poster, or empty when it has none or Spexregister does not know the spex.
      */
-    public Optional<Poster> poster(final Long id) {
+    public Optional<Poster> poster(final String id) {
         return call(() -> {
             final ResponseEntity<byte[]> response = restClient.get()
                     .uri(POSTER, id)
@@ -318,7 +318,7 @@ public class SpexregisterClient {
      * The spexare with these ids that Spexregister lets the service account read, with their addresses, consents and
      * spex activities, at most {@value #MAX_SPEXARE}.
      */
-    public List<Spexare> spexareByIds(final Collection<Long> ids, final String actingPerson) {
+    public List<Spexare> spexareByIds(final Collection<String> ids, final String actingPerson) {
         if (ids.isEmpty()) {
             return List.of();
         }
@@ -339,7 +339,7 @@ public class SpexregisterClient {
      * The participants of a spex and its revivals recorded in Spexregister, by last and first name; empty when
      * Spexregister does not know the spex.
      */
-    public List<Spexare> spexareBySpex(final Long spexId, final String actingPerson) {
+    public List<Spexare> spexareBySpex(final String spexId, final String actingPerson) {
         return call(() -> {
             final ClientGraphQlResponse response = actingFor(actingPerson).document(SPEXARE_BY_SPEX)
                     .variable("spexId", spexId)
@@ -375,7 +375,7 @@ public class SpexregisterClient {
     /**
      * The ids of a spex and of its revivals recorded in Spexregister; empty when Spexregister does not know it.
      */
-    public List<Long> spexFamily(final Long spexId) {
+    public List<String> spexFamily(final String spexId) {
         return call(() -> {
             final ClientGraphQlResponse response = graphQlClient.document(SPEX_FAMILY)
                     .variable("id", spexId)
@@ -393,7 +393,6 @@ public class SpexregisterClient {
             }
             return java.util.stream.Stream.concat(java.util.stream.Stream.of(family.id()),
                             family.revivals() == null ? java.util.stream.Stream.empty() : family.revivals().stream().filter(Objects::nonNull).map(SpexRevivalNode::id))
-                    .map(Long::valueOf)
                     .toList();
         });
     }
@@ -436,7 +435,7 @@ public class SpexregisterClient {
     /**
      * Creates an unpublished spexare who is not deceased, and returns its id.
      */
-    public Long createSpexare(final String firstName, final String lastName, final String actingPerson) {
+    public String createSpexare(final String firstName, final String lastName, final String actingPerson) {
         return call(() -> {
             final Map<String, Object> input = new LinkedHashMap<>();
 
@@ -456,14 +455,14 @@ public class SpexregisterClient {
             if (created == null) {
                 throw new SpexregisterCallException("No spexareCreate in response");
             }
-            return Long.valueOf(created.id());
+            return created.id();
         });
     }
 
     /**
      * Writes the spexare's {@value #HOME} address: updates the one with {@code addressId}, or creates it when null.
      */
-    public void saveHomeAddress(final Long spexareId, final @Nullable String addressId, final AddressInput address, final String actingPerson) {
+    public void saveHomeAddress(final String spexareId, final @Nullable String addressId, final AddressInput address, final String actingPerson) {
         call(() -> {
             final Map<String, Object> input = new LinkedHashMap<>();
 
@@ -491,7 +490,7 @@ public class SpexregisterClient {
      * Records the spexare's {@value #REGISTER} consent: updates the one with {@code consentId}, or creates it when
      * null.
      */
-    public void saveRegisterConsent(final Long spexareId, final @Nullable String consentId, final boolean value, final String actingPerson) {
+    public void saveRegisterConsent(final String spexareId, final @Nullable String consentId, final boolean value, final String actingPerson) {
         call(() -> {
             final Map<String, Object> input = new LinkedHashMap<>();
 
@@ -515,7 +514,7 @@ public class SpexregisterClient {
      * The spexare's activities with their spex, tasks and actors, read fresh (never cached): the sync decides from them
      * what already exists. At most {@value #MAX_SPEXARE} ids.
      */
-    public List<SpexareActivities> spexareActivities(final Collection<Long> ids, final String actingPerson) {
+    public List<SpexareActivities> spexareActivities(final Collection<String> ids, final String actingPerson) {
         if (ids.isEmpty()) {
             return List.of();
         }
@@ -535,7 +534,7 @@ public class SpexregisterClient {
     /**
      * The revivals Spexregister records for a spex, read fresh; empty when it does not know the spex.
      */
-    public List<SpexRevival> spexRevivals(final Long spexId) {
+    public List<SpexRevival> spexRevivals(final String spexId) {
         return call(() -> {
             final ClientGraphQlResponse response = graphQlClient.document(SPEX_REVIVALS)
                     .variable("id", spexId)
@@ -549,14 +548,14 @@ public class SpexregisterClient {
             final SpexFamily family = response.field("spex").toEntity(SpexFamily.class);
 
             return family == null || family.revivals() == null ? List.of()
-                    : family.revivals().stream().filter(Objects::nonNull).map(node -> new SpexRevival(Long.valueOf(node.id()), year(node.year()))).toList();
+                    : family.revivals().stream().filter(Objects::nonNull).map(node -> new SpexRevival(node.id(), year(node.year()))).toList();
         });
     }
 
     /**
      * Records a revival of the spex in Spexregister and returns its id.
      */
-    public Long createSpexRevival(final Long spexId, final int year, final String actingPerson) {
+    public String createSpexRevival(final String spexId, final int year, final String actingPerson) {
         return created(actingFor(actingPerson).document(SPEX_REVIVAL_CREATE)
                 .variable("spexId", spexId)
                 .variable("year", String.valueOf(year)), "spexRevivalCreate");
@@ -565,28 +564,28 @@ public class SpexregisterClient {
     /**
      * A new, empty activity of the spexare.
      */
-    public Long createActivity(final Long spexareId, final String actingPerson) {
+    public String createActivity(final String spexareId, final String actingPerson) {
         return created(actingFor(actingPerson).document(ACTIVITY_CREATE).variable("spexareId", spexareId), "activityCreate");
     }
 
     /**
      * Ties the activity to a spex (here, Spexregister's revival).
      */
-    public Long createSpexActivity(final Long spexareId, final Long activityId, final Long spexId, final String actingPerson) {
+    public String createSpexActivity(final String spexareId, final String activityId, final String spexId, final String actingPerson) {
         return created(actingFor(actingPerson).document(SPEX_ACTIVITY_CREATE)
                 .variable("spexareId", spexareId)
                 .variable("activityId", activityId)
                 .variable("spexId", spexId), "spexActivityCreate");
     }
 
-    public Long createTaskActivity(final Long spexareId, final Long activityId, final String taskId, final String actingPerson) {
+    public String createTaskActivity(final String spexareId, final String activityId, final String taskId, final String actingPerson) {
         return created(actingFor(actingPerson).document(TASK_ACTIVITY_CREATE)
                 .variable("spexareId", spexareId)
                 .variable("activityId", activityId)
                 .variable("taskId", taskId), "taskActivityCreate");
     }
 
-    public Long createActor(final Long spexareId, final Long activityId, final Long taskActivityId, final String vocalId, final @Nullable String role,
+    public String createActor(final String spexareId, final String activityId, final String taskActivityId, final String vocalId, final @Nullable String role,
                             final String actingPerson) {
         final Map<String, Object> input = new LinkedHashMap<>();
 
@@ -603,14 +602,14 @@ public class SpexregisterClient {
      * Records the spexare's {@value #FGV_MEMBERSHIP} membership for the year. Spexregister refuses a second one for the
      * same year with {@link SpexregisterCallException#EXISTS}.
      */
-    public Long createMembership(final Long spexareId, final int year, final String actingPerson) {
+    public String createMembership(final String spexareId, final int year, final String actingPerson) {
         return created(actingFor(actingPerson).document(MEMBERSHIP_CREATE)
                 .variable("spexareId", spexareId)
                 .variable("typeId", FGV_MEMBERSHIP)
                 .variable("input", Map.of("year", String.valueOf(year))), "membershipCreate");
     }
 
-    private Long created(final org.springframework.graphql.client.GraphQlClient.RequestSpec request, final String field) {
+    private String created(final org.springframework.graphql.client.GraphQlClient.RequestSpec request, final String field) {
         return call(() -> {
             final ClientGraphQlResponse response = request.executeSync();
 
@@ -621,7 +620,7 @@ public class SpexregisterClient {
             if (created == null) {
                 throw new SpexregisterCallException("No %s in response".formatted(field), SpexregisterCallException.REFUSED);
             }
-            return Long.valueOf(created.id());
+            return created.id();
         });
     }
 
@@ -789,7 +788,7 @@ public class SpexregisterClient {
     /**
      * A revival of a spex as Spexregister records it.
      */
-    public record SpexRevival(Long id, @Nullable Integer year) {
+    public record SpexRevival(String id, @Nullable Integer year) {
     }
 
     /**

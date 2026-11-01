@@ -19,6 +19,7 @@ package nu.fgv.revival.server.member;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * {@code firstName} and {@code lastName} are used only when a Keycloak user is created for the address.
@@ -26,7 +27,7 @@ import java.util.Set;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalMemberAddDto(Long revivalId,
+public record RevivalMemberAddDto(UUID revivalId,
                                   String email,
                                   RevivalRole role,
                                   @Nullable Set<String> capabilities,

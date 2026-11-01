@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -38,8 +39,8 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void publishingPinsExistingRevivals() {
-        final long revival = createRevival(ALI_BABA, 2028);
-        final long draft = draftV5Layout();
+        final EntityId revival = createRevival(ALI_BABA, 2028);
+        final EntityId draft = draftV5Layout();
 
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
                 .path("revival.guideVersion").valueIsNull();
@@ -61,8 +62,8 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aRevivalCreatedAfterPublishingIsPinnedToTheLatest() {
-        final long version = publishedGuide();
-        final long revival = createRevival(NOBEL, 2027);
+        final EntityId version = publishedGuide();
+        final EntityId revival = createRevival(NOBEL, 2027);
 
         graphQl(SUPER_ADMIN).document(REVIVAL_GUIDE).variable("id", revival).execute()
                 .path("revival.guideVersion.id").entity(String.class).isEqualTo(String.valueOf(version));
@@ -70,7 +71,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void discardingDeletesTheDraft() {
-        final long draft = draftV5Layout();
+        final EntityId draft = draftV5Layout();
 
         graphQl(SUPER_ADMIN).document(DISCARD).variable("id", draft).variable("version", guideVersion(draft)).execute()
                 .errors().verify();
@@ -82,7 +83,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aStaleVersionIsAConflict() {
-        final long draft = draftV5Layout();
+        final EntityId draft = draftV5Layout();
 
         expectError(graphQl(SUPER_ADMIN).document(PUBLISH)
                 .variable("input", Map.of("id", draft, "version", guideVersion(draft) + 1))
@@ -91,7 +92,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void everyoneButSuperAdminsIsRefused() {
-        final long draft = draftV5Layout();
+        final EntityId draft = draftV5Layout();
 
         for (final String user : List.of(OBSERVER, DIRECTEUR, STEERING_GROUP, PLAIN_USER)) {
             expectError(graphQl(user).document(PUBLISH)
@@ -105,7 +106,7 @@ class GuidePublishGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void publishingIsAuditedWithTheActor() {
-        final long draft = draftV5Layout();
+        final EntityId draft = draftV5Layout();
 
         publishGuide(draft, "v5");
 

@@ -44,6 +44,7 @@ import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class ChecklistService {
+
+    private final ExternalIds ids;
 
     private static final Locale SWEDISH = Locale.of("sv");
 
@@ -108,7 +111,9 @@ public class ChecklistService {
                             final PersonNames personNames,
                             final MessageSource messageSource,
                             final Clock clock,
-                            final LogEntryService logEntries) {
+                            final LogEntryService logEntries,
+                            final ExternalIds ids) {
+        this.ids = ids;
         this.checklistRepository = checklistRepository;
         this.itemRepository = itemRepository;
         this.texts = texts;
@@ -215,9 +220,9 @@ public class ChecklistService {
                 : version.map(view -> view.items().filter(item -> item.chapterKey().equals(checklist.getChapterKey()) && item.kind() == GuideItemKind.TIP).toList())
                 .orElse(List.of());
 
-        return new ChecklistDto(checklist.getId(), checklist.getRevivalId(), checklist.getKind(), checklist.getChapterKey(),
+        return new ChecklistDto(checklist.getUuid(), checklist.getRevivalUuid(), checklist.getKind(), checklist.getChapterKey(),
                 chapterTitle(version, checklist),
-                checklist.getName(), checklist.getDate(), checklist.getTemplateId(), checklist.getEventId(), checklist.isCancelled(), toDtos(items, locale), tips,
+                checklist.getName(), checklist.getDate(), checklist.getTemplateUuid(), checklist.getEventUuid(), checklist.isCancelled(), toDtos(items, locale), tips,
                 checklist.getVersion());
     }
 
@@ -277,7 +282,7 @@ public class ChecklistService {
     @Transactional(readOnly = true)
     public @Nullable ChecklistTemplateSummaryDto template(final ChecklistDto checklist) {
         return checklist.templateId() == null ? null
-                : templateRepository.findById(checklist.templateId()).map(ChecklistTemplateSummaryDto::of).orElse(null);
+                : templateRepository.findById(ids.idOf(ChecklistTemplate.class, checklist.templateId())).map(ChecklistTemplateSummaryDto::of).orElse(null);
     }
 
     /**
@@ -286,7 +291,7 @@ public class ChecklistService {
      */
     @Transactional(readOnly = true)
     public List<ChecklistTemplateSummaryDto> templatesAvailable(final ChecklistDto checklist) {
-        final Revival revival = revivalRepository.findById(checklist.revivalId()).orElse(null);
+        final Revival revival = revivalRepository.findById(ids.idOf(Revival.class, checklist.revivalId())).orElse(null);
 
         if (revival == null || checklist.cancelled() || !accessPolicy.canWriteRevivalWork(callerService.current(), revival)) {
             return List.of();
@@ -570,7 +575,7 @@ public class ChecklistService {
         return items.stream().map(item -> {
             final ChecklistSummaryDto checklist = summaries.get(item.getChecklistId());
 
-            return new AssignedChecklistItemDto(item.getId(), itemTexts.get(item.getId()), checklist.name(), checklist.chapterTitle(), checklist.date(),
+            return new AssignedChecklistItemDto(item.getUuid(), itemTexts.get(item.getId()), checklist.name(), checklist.chapterTitle(), checklist.date(),
                     item.getDeadline(), item.isOverdue(today), item.getState() == ChecklistItemState.DONE, item.getComment(), item.getVersion());
         }).toList();
     }
@@ -694,7 +699,7 @@ public class ChecklistService {
                     .filter(item -> !item.isRequired() || !requirements.contains(item.getGuideItemKey()))
                     .toList();
 
-            removals.add(new ChecklistRemovalDto(checklist.getId(), Objects.requireNonNull(checklist.getChapterKey()), chapterTitle(current, checklist),
+            removals.add(new ChecklistRemovalDto(checklist.getUuid(), Objects.requireNonNull(checklist.getChapterKey()), chapterTitle(current, checklist),
                     items.size(), (int) items.stream().filter(item -> item.getState() == ChecklistItemState.DONE).count(),
                     logEntries.countLinkedToChecklistItems(items.stream().map(ChecklistItem::getId).toList())));
         }
@@ -856,8 +861,12 @@ public class ChecklistService {
         if (eventIds.isEmpty()) {
             return Map.of();
         }
-        return summaries(checklistRepository.findByEventIdIn(Set.copyOf(eventIds))).values().stream()
-                .collect(Collectors.toMap(summary -> Objects.requireNonNull(summary.eventId()), Function.identity()));
+        final List<Checklist> checklists = checklistRepository.findByEventIdIn(Set.copyOf(eventIds));
+        final Map<Long, ChecklistSummaryDto> byId = summaries(checklists);
+
+        return checklists.stream()
+                .filter(checklist -> checklist.getEventId() != null && byId.containsKey(checklist.getId()))
+                .collect(Collectors.toMap(Checklist::getEventId, checklist -> byId.get(checklist.getId()), (first, _) -> first));
     }
 
     private void recomputeDeadlines(final Checklist checklist) {
@@ -977,11 +986,11 @@ public class ChecklistService {
         for (final Checklist checklist : checklists) {
             final List<ChecklistItem> own = items.getOrDefault(checklist.getId(), List.of());
 
-            summaries.put(checklist.getId(), new ChecklistSummaryDto(checklist.getId(), checklist.getKind(), checklist.getChapterKey(),
+            summaries.put(checklist.getId(), new ChecklistSummaryDto(checklist.getUuid(), checklist.getKind(), checklist.getChapterKey(),
                     chapterTitle(versions.computeIfAbsent(checklist.getRevivalId(), texts::pinnedVersion), checklist),
                     checklist.getName(), checklist.getDate(), checklist.isCancelled(),
                     (int) own.stream().filter(item -> item.getState() == ChecklistItemState.OPEN).count(),
-                    (int) own.stream().filter(item -> item.isOverdue(today)).count(), own.size(), checklist.getEventId()));
+                    (int) own.stream().filter(item -> item.isOverdue(today)).count(), own.size(), checklist.getEventUuid()));
         }
         return summaries;
     }
@@ -1006,8 +1015,8 @@ public class ChecklistService {
             final GuideVersionView.@Nullable Item guideItem = item.getGuideItemKey() == null ? null
                     : versions.computeIfAbsent(item.getRevivalId(), texts::pinnedVersion).flatMap(view -> view.item(item.getGuideItemKey())).orElse(null);
 
-            return new ChecklistItemDto(item.getId(), summaries.get(item.getChecklistId()), item.isRequired(), itemTexts.get(item.getId()),
-                    item.getState(), item.getStateChangedBy() == null ? null : new PersonRefDto(item.getStateChangedBy(), names.get(item.getStateChangedBy())),
+            return new ChecklistItemDto(item.getUuid(), summaries.get(item.getChecklistId()), item.isRequired(), itemTexts.get(item.getId()),
+                    item.getState(), item.getStateChangedBy() == null ? null : new PersonRefDto(item.getStateChangedByUuid(), names.get(item.getStateChangedBy())),
                     item.getStateChangedAt(), reason(item, locale), owners.get(new OwnerViews.Ref(item.getRevivalId(), item.getOwner())),
                     item.getDeadline(), item.isDeadlineManual(), item.isOverdue(today), item.getComment(), guideItem, item.getGuideItemKey(),
                     item.getDefaultCapability(), item.getVersion());

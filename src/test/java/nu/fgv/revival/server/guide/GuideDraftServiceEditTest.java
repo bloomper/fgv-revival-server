@@ -35,6 +35,8 @@ import org.springframework.security.access.AccessDeniedException;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -122,7 +124,8 @@ class GuideDraftServiceEditTest {
                 final GuideVersion version = invocation.getArgument(0);
 
                 version.setId(20L);
-                return version;
+                version.setUuid(uuid(version.getId()));
+                return withUuids(version);
             });
         }
 
@@ -153,18 +156,22 @@ class GuideDraftServiceEditTest {
             final GuideItem item = new GuideItem();
 
             latest.setId(5L);
+            latest.setUuid(uuid(latest.getId()));
             latest.setIntroSv("Inledning");
             latest.setIntroEn("Introduction");
             chapter.setId(50L);
+            chapter.setUuid(uuid(chapter.getId()));
             chapter.setKey("chapter-key");
             chapter.setPosition(0);
             chapter.setTitleSv("Först");
             section.setId(60L);
+            section.setUuid(uuid(section.getId()));
             section.setChapterId(50L);
             section.setKey("section-key");
             section.setPosition(0);
             section.setTitleSv("Avsnitt");
             item.setId(70L);
+            item.setUuid(uuid(item.getId()));
             item.setChapterId(50L);
             item.setSectionId(60L);
             item.setKey("item-key");
@@ -179,13 +186,15 @@ class GuideDraftServiceEditTest {
                 final GuideChapter copy = invocation.getArgument(0);
 
                 copy.setId(51L);
-                return copy;
+                copy.setUuid(uuid(copy.getId()));
+                return withUuids(copy);
             });
             when(sectionRepository.save(any())).thenAnswer(invocation -> {
                 final GuideSection copy = invocation.getArgument(0);
 
                 copy.setId(61L);
-                return copy;
+                copy.setUuid(uuid(copy.getId()));
+                return withUuids(copy);
             });
 
             service.start();

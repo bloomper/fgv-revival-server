@@ -84,7 +84,7 @@ class SpexregisterClientTest {
                           "activities": [{"id": "72", "spexActivity": {"id": "73", "spex": {"id": "1", "year": "1956", "title": "Ali Baba", "revival": false}}}]
                         }]}}""", MediaType.APPLICATION_JSON));
 
-        final List<SpexregisterClient.Spexare> found = client.spexareByIds(List.of(7L), ACTING);
+        final List<SpexregisterClient.Spexare> found = client.spexareByIds(List.of("7"), ACTING);
 
         assertThat(found).hasSize(1);
         assertThat(found.getFirst().home()).hasValueSatisfying(home -> assertThat(home.emailAddress()).isEqualTo("anna@example.org"));
@@ -113,9 +113,9 @@ class SpexregisterClientTest {
                 .andExpect(jsonPath("$.variables.input.value").value(true))
                 .andRespond(withSuccess("{\"data\": {\"consentUpdate\": {\"id\": \"5\"}}}", MediaType.APPLICATION_JSON));
 
-        assertThat(client.createSpexare("Pia", "Persson", "participant via revival 3")).isEqualTo(99L);
-        client.saveHomeAddress(99L, null, new SpexregisterClient.AddressInput("pia@example.org", "0701", null, null, null), "participant via revival 3");
-        client.saveRegisterConsent(99L, "5", true, "participant via revival 3");
+        assertThat(client.createSpexare("Pia", "Persson", "participant via revival 3")).isEqualTo("99");
+        client.saveHomeAddress("99", null, new SpexregisterClient.AddressInput("pia@example.org", "0701", null, null, null), "participant via revival 3");
+        client.saveRegisterConsent("99", "5", true, "participant via revival 3");
         server.verify();
     }
 
@@ -139,7 +139,7 @@ class SpexregisterClientTest {
                                 {"data": {"spexareBySpex": null}, "errors": [{"message": "Not found", "extensions": {"classification": "NOT_FOUND"}}]}""",
                         MediaType.APPLICATION_JSON));
 
-        assertThat(client.spexareBySpex(5L, ACTING)).isEmpty();
+        assertThat(client.spexareBySpex("5", ACTING)).isEmpty();
     }
 
     @Test
@@ -169,12 +169,12 @@ class SpexregisterClientTest {
                 .andExpect(jsonPath("$.variables.year").value("2028"))
                 .andRespond(withSuccess("{\"data\": {\"spexRevivalCreate\": {\"id\": \"500\", \"year\": \"2028\"}}}", MediaType.APPLICATION_JSON));
 
-        final List<SpexregisterClient.SpexareActivities> found = client.spexareActivities(List.of(7L), ACTING);
+        final List<SpexregisterClient.SpexareActivities> found = client.spexareActivities(List.of("7"), ACTING);
 
         assertThat(found.getFirst().all().getFirst().spexId()).isEqualTo("500");
         assertThat(found.getFirst().all().getFirst().tasks().getFirst().allActors()).extracting(SpexregisterClient.Actor::role).containsExactly("Kalifen");
-        assertThat(client.createActor(7L, 70L, 72L, "B1", "Kalifen", ACTING)).isEqualTo(73L);
-        assertThat(client.createSpexRevival(1L, 2028, ACTING)).isEqualTo(500L);
+        assertThat(client.createActor("7", "70", "72", "B1", "Kalifen", ACTING)).isEqualTo("73");
+        assertThat(client.createSpexRevival("1", 2028, ACTING)).isEqualTo("500");
         server.verify();
     }
 
@@ -191,11 +191,11 @@ class SpexregisterClientTest {
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo(URL)).andRespond(withServerError());
 
-        assertThatThrownBy(() -> client.createMembership(7L, 2028, ACTING)).isInstanceOfSatisfying(SpexregisterClient.SpexregisterCallException.class,
+        assertThatThrownBy(() -> client.createMembership("7", 2028, ACTING)).isInstanceOfSatisfying(SpexregisterClient.SpexregisterCallException.class,
                 e -> assertThat(e.code()).isEqualTo(SpexregisterClient.SpexregisterCallException.EXISTS));
-        assertThatThrownBy(() -> client.createTaskActivity(7L, 70L, "ROLE", ACTING)).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> client.createTaskActivity("7", "70", "ROLE", ACTING)).isInstanceOfSatisfying(
                 SpexregisterClient.SpexregisterCallException.class, e -> assertThat(e.code()).isEqualTo(SpexregisterClient.SpexregisterCallException.NOT_FOUND));
-        assertThatThrownBy(() -> client.createActivity(7L, ACTING)).isInstanceOfSatisfying(SpexregisterClient.SpexregisterCallException.class,
+        assertThatThrownBy(() -> client.createActivity("7", ACTING)).isInstanceOfSatisfying(SpexregisterClient.SpexregisterCallException.class,
                 e -> assertThat(e.code()).isEqualTo(SpexregisterClient.SpexregisterCallException.UNAVAILABLE));
     }
 }

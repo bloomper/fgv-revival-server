@@ -17,6 +17,7 @@ package nu.fgv.revival.server.revival;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code UpcomingRevival}: what a revival announces anyway, nothing about its people or work.
@@ -24,5 +25,5 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record UpcomingRevivalDto(Long id, String title, int year, LocalDate premiereDate, List<RevivalShowDto> shows) {
+public record UpcomingRevivalDto(UUID id, String title, int year, LocalDate premiereDate, List<RevivalShowDto> shows) {
 }

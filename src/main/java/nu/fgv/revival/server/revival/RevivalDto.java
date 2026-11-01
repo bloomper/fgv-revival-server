@@ -23,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A revival as GraphQL's {@code Revival}. {@code createdBy} and {@code lastModifiedBy} hold Keycloak subjects; the
@@ -31,13 +32,13 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalDto(Long id,
+public record RevivalDto(UUID id,
                          SpexDto spex,
                          Integer year,
                          @Nullable LocalDate premiereDate,
                          List<RevivalShowDto> shows,
                          RevivalStatus status,
-                         @Nullable Long guideVersionId,
+                         @Nullable UUID guideVersionId,
                          Long version,
                          String createdBy,
                          Instant createdAt,

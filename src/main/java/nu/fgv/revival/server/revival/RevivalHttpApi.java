@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.revival;
 
 import nu.fgv.revival.server.spex.SpexregisterClient;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.springframework.http.CacheControl;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * A revival's plain HTTP endpoints, for what GraphQL does not suit: the spex poster as an image.
@@ -37,6 +39,8 @@ import java.util.Set;
 @RestController
 public class RevivalHttpApi {
 
+    private final ExternalIds ids;
+
     /**
      * The image types Spexregister accepts for posters; anything else is treated as no poster.
      */
@@ -45,7 +49,8 @@ public class RevivalHttpApi {
 
     private final RevivalService revivalService;
 
-    public RevivalHttpApi(final RevivalService revivalService) {
+    public RevivalHttpApi(final RevivalService revivalService, final ExternalIds ids) {
+        this.ids = ids;
         this.revivalService = revivalService;
     }
 
@@ -73,8 +78,8 @@ public class RevivalHttpApi {
      * Spexregister is unavailable. The image is sandboxed, since an SVG opened on its own could otherwise run script.
      */
     @GetMapping("/api/revivals/{id}/poster")
-    public ResponseEntity<byte[]> poster(@PathVariable final Long id) {
-        return revivalService.poster(id)
+    public ResponseEntity<byte[]> poster(@PathVariable final UUID id) {
+        return revivalService.poster(ids.idOf(Revival.class, id))
                 .filter(poster -> POSTER_TYPES.contains(baseType(poster.contentType())))
                 .map(RevivalHttpApi::image)
                 .orElseGet(() -> ResponseEntity.noContent().cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate()).build());

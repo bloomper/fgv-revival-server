@@ -154,7 +154,7 @@ public class SyncWorker implements DisposableBean {
             final List<SyncStep> steps = inTransaction(origin, () -> stepRepository.findByRunIdOrderByIdAsc(runId));
             final SyncRun run = inTransaction(origin, () -> runRepository.findById(runId).orElseThrow());
             final Revival revival = inTransaction(origin, () -> revivalRepository.findById(run.getRevivalId()).orElseThrow());
-            @Nullable Long remoteRevival = revival.getSpexregisterRevivalId();
+            @Nullable String remoteRevival = revival.getSpexregisterRevivalId();
             final Map<Long, List<SyncStep>> byParticipant = new LinkedHashMap<>();
 
             for (final SyncStep step : steps) {
@@ -176,14 +176,14 @@ public class SyncWorker implements DisposableBean {
         }
     }
 
-    private @Nullable Long revivalStep(final SyncStep step, final Revival revival, final String actingPerson, final AuditContext.Origin origin) {
+    private @Nullable String revivalStep(final SyncStep step, final Revival revival, final String actingPerson, final AuditContext.Origin origin) {
         try {
-            final @Nullable Long existing = client.spexRevivals(revival.getSpexId()).stream()
+            final @Nullable String existing = client.spexRevivals(revival.getSpexId()).stream()
                     .filter(remote -> Objects.equals(remote.year(), revival.getYear()))
                     .map(SpexregisterClient.SpexRevival::id)
                     .findFirst()
                     .orElse(null);
-            final Long remote = existing != null ? existing : client.createSpexRevival(revival.getSpexId(), revival.getYear(), actingPerson);
+            final String remote = existing != null ? existing : client.createSpexRevival(revival.getSpexId(), revival.getYear(), actingPerson);
 
             inTransaction(origin, () -> entityManager.createNativeQuery("UPDATE revival SET spexregister_revival_id = ? WHERE id = ?")
                     .setParameter(1, remote)
@@ -197,7 +197,7 @@ public class SyncWorker implements DisposableBean {
         }
     }
 
-    private void participantSteps(final Long participantId, final List<SyncStep> steps, final Long remoteRevival, final String actingPerson,
+    private void participantSteps(final Long participantId, final List<SyncStep> steps, final String remoteRevival, final String actingPerson,
                                   final AuditContext.Origin origin) {
         final @Nullable Participant participant = inTransaction(origin, () -> participantRepository.findById(participantId)).orElse(null);
 
@@ -206,7 +206,7 @@ public class SyncWorker implements DisposableBean {
             return;
         }
 
-        final Long spexareId = participant.getSpexareId();
+        final String spexareId = participant.getSpexareId();
         final SpexregisterClient.@Nullable SpexareActivities fresh;
 
         try {
@@ -224,8 +224,8 @@ public class SyncWorker implements DisposableBean {
 
         final SpexregisterClient.@Nullable ActivityDetail activity = SyncPlanner.activityFor(fresh, remoteRevival);
         final SpexregisterClient.@Nullable TaskActivity task = SyncPlanner.taskFor(activity, participant.getPositionTaskId());
-        @Nullable Long activityId = activity == null ? null : Long.valueOf(activity.id());
-        @Nullable Long taskActivityId = task == null ? null : Long.valueOf(task.id());
+        @Nullable String activityId = activity == null ? null : activity.id();
+        @Nullable String taskActivityId = task == null ? null : task.id();
 
         try {
             for (final SyncStep step : steps) {
@@ -236,11 +236,11 @@ public class SyncWorker implements DisposableBean {
                                 record(step, SyncStepStatus.EXISTED, String.valueOf(activityId), null, origin);
                             } else {
                                 // An activity without a spex is one an earlier run created before it failed: use it again
-                                final @Nullable Long empty = fresh.all().stream()
+                                final @Nullable String empty = fresh.all().stream()
                                         .filter(candidate -> candidate.spexId() == null && candidate.tasks().isEmpty())
-                                        .map(candidate -> Long.valueOf(candidate.id()))
+                                        .map(SpexregisterClient.ActivityDetail::id)
                                         .findFirst().orElse(null);
-                                final Long created = empty != null ? empty : client.createActivity(spexareId, actingPerson);
+                                final String created = empty != null ? empty : client.createActivity(spexareId, actingPerson);
 
                                 client.createSpexActivity(spexareId, created, remoteRevival, actingPerson);
                                 activityId = created;
@@ -265,7 +265,7 @@ public class SyncWorker implements DisposableBean {
                             if (task != null && !task.allActors().isEmpty()) {
                                 record(step, SyncStepStatus.EXISTED, task.allActors().getFirst().id(), null, origin);
                             } else {
-                                final Long actor = client.createActor(spexareId, activityId, taskActivityId,
+                                final String actor = client.createActor(spexareId, activityId, taskActivityId,
                                         Objects.requireNonNullElse(participant.getVocalPartId(), SpexregisterClient.UNKNOWN_VOCAL),
                                         participant.getRoleName() == null ? null : participant.getRoleName().strip(), actingPerson);
 
@@ -274,7 +274,7 @@ public class SyncWorker implements DisposableBean {
                         }
                         case MEMBERSHIP -> {
                             try {
-                                final Long membership = client.createMembership(spexareId, Integer.parseInt(Objects.requireNonNull(step.getDetail())),
+                                final String membership = client.createMembership(spexareId, Integer.parseInt(Objects.requireNonNull(step.getDetail())),
                                         actingPerson);
 
                                 record(step, SyncStepStatus.DONE, String.valueOf(membership), null, origin);

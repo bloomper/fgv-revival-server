@@ -19,6 +19,8 @@ package nu.fgv.revival.server.member;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * An owner as GraphQL's {@code Owner}: a member by display name, or a free-text name. Never an email.
  *
@@ -30,6 +32,6 @@ public record OwnerDto(@Nullable OwnerPersonDto person, @Nullable String name) {
     /**
      * A member who owns something. {@code active} is false once they no longer hold a revival role.
      */
-    public record OwnerPersonDto(Long id, @Nullable String displayName, boolean active) {
+    public record OwnerPersonDto(UUID id, @Nullable String displayName, boolean active) {
     }
 }

@@ -19,11 +19,13 @@ package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.guide.GuideVersionView;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code ChecklistItemSummary}. A required item's text is the guide's, in the revival's pinned version.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistItemSummaryDto(Long id, Long checklistId, GuideVersionView.Text text, ChecklistItemState state) {
+public record ChecklistItemSummaryDto(UUID id, UUID checklistId, GuideVersionView.Text text, ChecklistItemState state) {
 }

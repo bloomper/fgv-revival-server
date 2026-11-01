@@ -29,6 +29,7 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -60,6 +61,8 @@ import static org.springframework.util.StringUtils.hasText;
 @Slf4j
 public class RevivalMemberService {
 
+    private final ExternalIds ids;
+
     static final int CANDIDATE_QUERY_MIN_LENGTH = 3;
     static final int MAX_CANDIDATES = 10;
     static final int NAME_MAX_LENGTH = 100;
@@ -80,7 +83,9 @@ public class RevivalMemberService {
                                 final AccessPolicy accessPolicy,
                                 final CapabilityService capabilityService,
                                 final UserDirectory directory,
-                                final ApplicationEventPublisher events) {
+                                final ApplicationEventPublisher events,
+                                final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.revivalRepository = revivalRepository;
         this.personRepository = personRepository;
@@ -185,7 +190,7 @@ public class RevivalMemberService {
     @Transactional
     public RevivalMemberDto add(final RevivalMemberAddDto dto) {
         final Caller caller = callerService.current();
-        final Revival revival = visibleRevival(caller, dto.revivalId());
+        final Revival revival = visibleRevival(caller, ids.idOf(Revival.class, dto.revivalId()));
 
         requireAssignable(dto.role());
         accessPolicy.requireManageMembers(caller, revival, dto.role());
@@ -316,7 +321,7 @@ public class RevivalMemberService {
     @Transactional
     public RevivalMemberDto setCapabilities(final RevivalMemberCapabilitiesDto dto) {
         final Caller caller = callerService.current();
-        final RevivalMember member = activeMember(dto.id());
+        final RevivalMember member = activeMember(ids.idOf(RevivalMember.class, dto.id()));
         final Revival revival = visibleRevival(caller, member.getRevivalId());
 
         accessPolicy.requireManageMembers(caller, revival, RevivalRole.STEERING_GROUP);

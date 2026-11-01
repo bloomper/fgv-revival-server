@@ -28,12 +28,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A participant or helper of a revival: a spexare by id, or a pending person kept in {@link PendingPerson} until they
@@ -58,15 +61,22 @@ public class Participant extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "revival_id", nullable = false, updatable = false)
     private Long revivalId;
+
+    @Formula("(SELECT t.uuid FROM revival t WHERE t.id = revival_id)")
+    @NotAudited
+    private @Nullable UUID revivalUuid;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "kind", nullable = false, length = 16)
     private ParticipantKind kind;
 
     @Column(name = "spexare_id")
-    private @Nullable Long spexareId;
+    private @Nullable String spexareId;
 
     @Column(name = "member_id")
     private @Nullable Long memberId;
@@ -132,7 +142,7 @@ public class Participant extends AbstractAuditable {
 
     @NotAudited
     @Column(name = "active_spexare_id", insertable = false, updatable = false)
-    private @Nullable Long activeSpexareId;
+    private @Nullable String activeSpexareId;
 
     public boolean isRemoved() {
         return removedAt != null;

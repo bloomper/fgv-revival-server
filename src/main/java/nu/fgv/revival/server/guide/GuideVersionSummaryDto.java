@@ -19,6 +19,7 @@ package nu.fgv.revival.server.guide;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code GuideVersionSummary}.
@@ -26,7 +27,7 @@ import java.time.Instant;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record GuideVersionSummaryDto(Long id,
+public record GuideVersionSummaryDto(UUID id,
                                      @Nullable String label,
                                      @Nullable String note,
                                      @Nullable Instant publishedAt,

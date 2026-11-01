@@ -22,11 +22,13 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import nu.fgv.revival.server.member.OwnerInputDto;
 import nu.fgv.revival.server.member.OwnerResolver;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -39,6 +41,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -51,11 +55,14 @@ import java.util.function.Supplier;
 @Component
 public class McpToolSupport {
 
+    private final ExternalIds ids;
+
     private final MessageSource messageSource;
     private final OwnerResolver ownerResolver;
     private final CallerService callerService;
 
-    public McpToolSupport(final MessageSource messageSource, final OwnerResolver ownerResolver, final CallerService callerService) {
+    public McpToolSupport(final MessageSource messageSource, final OwnerResolver ownerResolver, final CallerService callerService, final ExternalIds ids) {
+        this.ids = ids;
         this.messageSource = messageSource;
         this.ownerResolver = ownerResolver;
         this.callerService = callerService;
@@ -78,11 +85,21 @@ public class McpToolSupport {
     }
 
     /**
-     * The one item of a list with this id, or NOT_FOUND as the API says for it.
+     * The one item of a list with this external id, or NOT_FOUND as the API says for it.
      */
-    static <T> T byId(final List<T> items, final java.util.function.Function<T, ?> id, final Object wanted, final Class<?> type) {
+    static <T> T byId(final List<T> items, final Function<T, UUID> id, final UUID wanted, final Class<?> type) {
         return items.stream()
-                .filter(item -> String.valueOf(id.apply(item)).equals(String.valueOf(wanted)))
+                .filter(item -> wanted.equals(id.apply(item)))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(type, wanted));
+    }
+
+    /**
+     * The one item of a list with this code, or NOT_FOUND as the API says for it.
+     */
+    static <T> T byCode(final List<T> items, final Function<T, String> code, final String wanted, final Class<?> type) {
+        return items.stream()
+                .filter(item -> wanted.equals(code.apply(item)))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(type, wanted));
     }
@@ -96,7 +113,7 @@ public class McpToolSupport {
             return null;
         }
         return switch (ownerResolver.resolve(revivalId, owner, callerService.current())) {
-            case OwnerResolver.Resolution.Member member -> new OwnerInputDto(member.personId(), null);
+            case OwnerResolver.Resolution.Member member -> new OwnerInputDto(ids.uuidOf(Person.class, member.personId()), null);
             case OwnerResolver.Resolution.FreeText name -> new OwnerInputDto(null, name.name());
             case OwnerResolver.Resolution.Ambiguous ambiguous ->
                     throw new BadRequestException("error.owner.ambiguous", owner.strip(), String.join(", ", ambiguous.candidates()));
@@ -118,7 +135,7 @@ public class McpToolSupport {
                     if (resolved == null || resolved.personId() == null) {
                         throw new BadRequestException("error.mcp.notMember", name.strip());
                     }
-                    return resolved.personId();
+                    return ids.idOf(Person.class, resolved.personId());
                 })
                 .distinct()
                 .toList();

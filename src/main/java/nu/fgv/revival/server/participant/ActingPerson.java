@@ -18,6 +18,8 @@ package nu.fgv.revival.server.participant;
 
 import nu.fgv.revival.server.person.Caller;
 
+import java.util.UUID;
+
 import static org.springframework.util.StringUtils.hasText;
 
 /**
@@ -35,10 +37,10 @@ final class ActingPerson {
     static String of(final Caller caller) {
         final String name = caller.person().getDisplayName();
 
-        return "%s (via Nyuppsättning)".formatted(hasText(name) ? name.strip() : "person " + caller.person().getId());
+        return "%s (via Nyuppsättning)".formatted(hasText(name) ? name.strip() : "person " + caller.person().getUuid());
     }
 
-    static String participantOf(final Long revivalId) {
-        return "participant via revival %d (Nyuppsättning)".formatted(revivalId);
+    static String participantOf(final UUID revivalId) {
+        return "participant via revival %s (Nyuppsättning)".formatted(revivalId);
     }
 }

@@ -18,6 +18,8 @@
 package nu.fgv.revival.server.event;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -52,10 +54,10 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
             + TYPE_FIELDS + " } }";
     private static final String CALENDAR_CREATE = "mutation($id: ID!) { calendarFeedCreate(revivalId: $id) { url createdAt } }";
 
-    private long revival;
+    private EntityId revival;
 
     private static Map<String, Object> typeInput(final String sv, final String en, final Integer min, final Integer max, final int days,
-                                                 final boolean pays, final Long templateId) {
+                                                 final boolean pays, final @Nullable EntityId templateId) {
         final Map<String, Object> input = new HashMap<>();
 
         input.put("name", Map.of("sv", sv, "en", en));
@@ -75,20 +77,20 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("revivalUpdate.premiereDate").entity(String.class).isEqualTo("2028-02-10");
     }
 
-    private long typeId(final String name) {
-        return jdbcClient.sql("SELECT id FROM event_type WHERE name_sv = ?").param(name).query(Long.class).single();
+    private EntityId typeId(final String name) {
+        return entityId(jdbcClient.sql("SELECT id, uuid FROM event_type WHERE name_sv = ?").param(name));
     }
 
-    private long typeVersion(final long id) {
+    private long typeVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM event_type WHERE id = ?").param(id).query(Long.class).single();
     }
 
-    private long eventVersion(final long id) {
+    private long eventVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM event WHERE id = ?").param(id).query(Long.class).single();
     }
 
-    private long rehearsalTemplate() {
-        final long template = Long.parseLong(execute(SUPER_ADMIN, "mutation($input: ChecklistTemplateCreateInput!) { checklistTemplateCreate(input: $input) { id } }",
+    private EntityId rehearsalTemplate() {
+        final EntityId template = entityId("checklist_template", execute(SUPER_ADMIN, "mutation($input: ChecklistTemplateCreateInput!) { checklistTemplateCreate(input: $input) { id } }",
                 Map.of("input", Map.of("kind", "EVENT", "name", Map.of("sv", "Rephelg")))).path("checklistTemplateCreate.id").entity(String.class).get());
 
         for (final String text : List.of("Boka replokal", "Hämta nycklar")) {
@@ -98,11 +100,11 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         return template;
     }
 
-    private long createEvent(final String user, final Map<String, Object> fields) {
+    private EntityId createEvent(final String user, final Map<String, Object> fields) {
         final Map<String, Object> input = new HashMap<>(fields);
 
         input.put("revivalId", revival);
-        return Long.parseLong(execute(user, CREATE, Map.of("input", input)).path("eventCreate.id").entity(String.class).get());
+        return entityId("event", execute(user, CREATE, Map.of("input", input)).path("eventCreate.id").entity(String.class).get());
     }
 
     @Test
@@ -126,14 +128,14 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void anEventFromATypeWithATemplateGetsAChecklistThatFollowsIt() {
-        final long template = rehearsalTemplate();
-        final long rehearsal = typeId("Rephelg 1");
+        final EntityId template = rehearsalTemplate();
+        final EntityId rehearsal = typeId("Rephelg 1");
 
         execute(SUPER_ADMIN, TYPE_UPDATE, Map.of("id", rehearsal, "version", typeVersion(rehearsal),
                 "input", typeInput("Rephelg 1", "Rehearsal weekend 1", -70, -56, 2, true, template)))
-                .path("eventTypeUpdate.checklistTemplate.id").entity(Long.class).isEqualTo(template);
+                .path("eventTypeUpdate.checklistTemplate.id").entity(String.class).isEqualTo(String.valueOf(template));
 
-        final long event = createEvent(STEERING_GROUP, Map.of("typeId", rehearsal, "startDate", "2027-12-11", "location", "Kemi"));
+        final EntityId event = createEvent(STEERING_GROUP, Map.of("typeId", rehearsal, "startDate", "2027-12-11", "location", "Kemi"));
 
         execute(STEERING_GROUP, "query($id: ID!) { event(id: $id) { " + EVENT_FIELDS + " } }", Map.of("id", event))
                 .path("event.title").entity(String.class).isEqualTo("Rehearsal weekend 1")
@@ -144,12 +146,12 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("event.checklist.name").entity(String.class).isEqualTo("Rehearsal weekend 1")
                 .path("event.checklist.date").entity(String.class).isEqualTo("2027-12-11")
                 .path("event.checklist.totalCount").entity(Integer.class).isEqualTo(2)
-                .path("event.checklist.eventId").entity(Long.class).isEqualTo(event);
+                .path("event.checklist.eventId").entity(String.class).isEqualTo(String.valueOf(event));
 
-        final long checklist = jdbcClient.sql("SELECT id FROM checklist WHERE event_id = ?").param(event).query(Long.class).single();
+        final EntityId checklist = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE event_id = ?").param(event));
 
         execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { event { id title } items { deadline } } }", Map.of("id", checklist))
-                .path("checklist.event.id").entity(Long.class).isEqualTo(event)
+                .path("checklist.event.id").entity(String.class).isEqualTo(String.valueOf(event))
                 .path("checklist.items[*].deadline").entityList(String.class).containsExactly("2027-11-27", "2027-11-27");
 
         execute(STEERING_GROUP, UPDATE, Map.of("input", Map.of("id", event, "version", eventVersion(event), "title", "Rephelg i Kemi",
@@ -166,7 +168,7 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, "query($id: ID!) { events(revivalId: $id) { id } all: events(revivalId: $id, includeCancelled: true) { id } "
                 + "revival(id: $id) { eventProposals { type { name { sv } } } } }", Map.of("id", revival))
                 .path("events").entityList(Object.class).hasSize(0)
-                .path("all[*].id").entityList(Long.class).containsExactly(event)
+                .path("all[*].id").entityList(String.class).containsExactly(event.external())
                 .path("revival.eventProposals[*].type.name.sv").entityList(String.class).contains("Rephelg 1");
         execute(STEERING_GROUP, RESTORE, Map.of("id", event, "version", eventVersion(event)))
                 .path("eventRestore.cancelled").entity(Boolean.class).isEqualTo(false)
@@ -178,7 +180,7 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void validationConflictsAndReadersAreRefusedAsTheContractSays() {
-        final long event = createEvent(STEERING_GROUP, Map.of("title", "Förrådsbesök", "startDate", "2028-01-10"));
+        final EntityId event = createEvent(STEERING_GROUP, Map.of("title", "Förrådsbesök", "startDate", "2028-01-10"));
 
         expectError(execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("revivalId", revival, "startDate", "2028-01-10"))), "BAD_REQUEST");
         expectError(execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("revivalId", revival, "title", "AW", "startDate", "2028-01-10",
@@ -192,7 +194,7 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                 .path("events[*].title").entityList(String.class).containsExactly("Förrådsbesök");
         expectError(execute(PLAIN_USER, "query($id: ID!) { event(id: $id) { id } }", Map.of("id", event)), "NOT_FOUND");
 
-        final long retired = typeId("Kortafton");
+        final EntityId retired = typeId("Kortafton");
 
         execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { eventTypeRetire(id: $id, version: $version) { retired } }",
                 Map.of("id", retired, "version", typeVersion(retired))).path("eventTypeRetire.retired").entity(Boolean.class).isEqualTo(true);
@@ -207,14 +209,14 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
         expectError(execute(DIRECTEUR, create, Map.of("input", input)), "FORBIDDEN");
 
-        final long id = Long.parseLong(execute(SUPER_ADMIN, create, Map.of("input", input))
+        final EntityId id = entityId("event_type", execute(SUPER_ADMIN, create, Map.of("input", input))
                 .path("eventTypeCreate.position").entity(Integer.class).isEqualTo(7)
                 .path("eventTypeCreate.id").entity(String.class).get());
 
         expectError(execute(SUPER_ADMIN, create, Map.of("input", typeInput("teknikgenomgång", "", null, null, 1, false, null))), "BAD_REQUEST");
         execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { eventTypeMove(id: $id, version: $version, position: 0) { id position } }",
                 Map.of("id", id, "version", typeVersion(id)))
-                .path("eventTypeMove[0].id").entity(Long.class).isEqualTo(id)
+                .path("eventTypeMove[0].id").entity(String.class).isEqualTo(String.valueOf(id))
                 .path("eventTypeMove[*].position").entityList(Integer.class).containsExactly(0, 1, 2, 3, 4, 5, 6, 7);
         execute(SUPER_ADMIN, "mutation($id: ID!, $version: Int!) { eventTypeRetire(id: $id, version: $version) { retired } }",
                 Map.of("id", id, "version", typeVersion(id)));
@@ -285,8 +287,8 @@ class EventGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void deletingTheRevivalTakesItsEventsAndLinksAlong() {
-        final long template = rehearsalTemplate();
-        final long rehearsal = typeId("Rephelg 1");
+        final EntityId template = rehearsalTemplate();
+        final EntityId rehearsal = typeId("Rephelg 1");
 
         execute(SUPER_ADMIN, TYPE_UPDATE, Map.of("id", rehearsal, "version", typeVersion(rehearsal),
                 "input", typeInput("Rephelg 1", "Rehearsal weekend 1", -70, -56, 2, true, template)));

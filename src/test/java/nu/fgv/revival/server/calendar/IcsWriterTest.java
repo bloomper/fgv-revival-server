@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -52,10 +53,10 @@ class IcsWriterTest {
 
     @Test
     void anAllDayEntryEndsTheDayAfterItsLastDay() {
-        final String ics = IcsWriter.write("Kalender", "Europe/Stockholm", List.of(new CalendarEntry(CalendarEntry.uid("event", 12L), "Rephelg 1",
+        final String ics = IcsWriter.write("Kalender", "Europe/Stockholm", List.of(new CalendarEntry(CalendarEntry.uid("event", uuid(12)), "Rephelg 1",
                 "Kemi", null, new CalendarEntry.AllDay(LocalDate.of(2027, 12, 11), LocalDate.of(2027, 12, 12)), STAMP)));
 
-        assertThat(ics).contains("BEGIN:VEVENT\r\nUID:event-12@nyuppsattning.fgv.nu\r\nDTSTAMP:20271101T083000Z\r\n"
+        assertThat(ics).contains("BEGIN:VEVENT\r\nUID:event-00000000-0000-7000-8000-00000000000c@nyuppsattning.fgv.nu\r\nDTSTAMP:20271101T083000Z\r\n"
                 + "DTSTART;VALUE=DATE:20271211\r\nDTEND;VALUE=DATE:20271213\r\nSUMMARY:Rephelg 1\r\nLOCATION:Kemi\r\nEND:VEVENT\r\n");
         assertThat(ics).doesNotContain("DESCRIPTION");
     }

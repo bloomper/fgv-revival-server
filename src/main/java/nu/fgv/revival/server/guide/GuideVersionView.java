@@ -21,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -30,13 +31,13 @@ import java.util.stream.Stream;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record GuideVersionView(Long id,
+public record GuideVersionView(UUID id,
                                GuideVersionStatus status,
                                @Nullable String label,
                                @Nullable String note,
                                @Nullable Instant publishedAt,
                                @Nullable Long publishedBy,
-                               @Nullable Long basedOnId,
+                               @Nullable UUID basedOnId,
                                Long version,
                                Text introduction,
                                List<Chapter> chapters) {
@@ -86,7 +87,7 @@ public record GuideVersionView(Long id,
         }
     }
 
-    public record Chapter(Long id, String key, Text title, List<Item> items, List<Section> sections, Long version) {
+    public record Chapter(UUID id, String key, Text title, List<Item> items, List<Section> sections, Long version) {
 
         public Chapter {
             items = List.copyOf(items);
@@ -94,7 +95,7 @@ public record GuideVersionView(Long id,
         }
     }
 
-    public record Section(Long id, String key, String chapterKey, Text title, List<Item> items, Long version) {
+    public record Section(UUID id, String key, String chapterKey, Text title, List<Item> items, Long version) {
 
         public Section {
             items = List.copyOf(items);
@@ -104,7 +105,7 @@ public record GuideVersionView(Long id,
     /**
      * {@code type} is a {@link GuideItemType}'s id, {@code kind} that type's kind, which never changes.
      */
-    public record Item(Long id, String key, String chapterKey, @Nullable String sectionKey, String type,
+    public record Item(UUID id, String key, String chapterKey, @Nullable String sectionKey, String type,
                        GuideItemKind kind, Text text, Long version) {
     }
 }

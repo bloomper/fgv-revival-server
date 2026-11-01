@@ -74,11 +74,11 @@ public class SyncPlanner {
      * The participant's activity in Spexregister's revival, if any.
      */
     static SpexregisterClient.@Nullable ActivityDetail activityFor(final SpexregisterClient.@Nullable SpexareActivities spexare,
-                                                                   final @Nullable Long remoteRevival) {
+                                                                   final @Nullable String remoteRevival) {
         if (spexare == null || remoteRevival == null) {
             return null;
         }
-        return spexare.all().stream().filter(activity -> String.valueOf(remoteRevival).equals(activity.spexId())).findFirst().orElse(null);
+        return spexare.all().stream().filter(activity -> remoteRevival.equals(activity.spexId())).findFirst().orElse(null);
     }
 
     static SpexregisterClient.@Nullable TaskActivity taskFor(final SpexregisterClient.@Nullable ActivityDetail activity, final @Nullable String taskId) {
@@ -165,11 +165,11 @@ public class SyncPlanner {
         final List<Participant> all = participants(revival.getId());
         final List<Participant> spexare = all.stream().filter(participant -> participant.getSpexareId() != null).toList();
         final List<Participant> excluded = all.stream().filter(participant -> participant.getSpexareId() == null).toList();
-        final @Nullable Long remoteRevival = revival.getSpexregisterRevivalId() != null ? revival.getSpexregisterRevivalId()
+        final @Nullable String remoteRevival = revival.getSpexregisterRevivalId() != null ? revival.getSpexregisterRevivalId()
                 : findRemoteRevival(revival).orElse(null);
         final Operation revivalOperation = new Operation(null, SyncOperation.REVIVAL, String.valueOf(revival.getYear()), remoteRevival != null,
-                "%d/%d".formatted(revival.getSpexId(), revival.getYear()));
-        final Map<Long, SpexregisterClient.SpexareActivities> activities = remoteRevival == null ? Map.of() : activities(spexare, actingPerson);
+                "%s/%d".formatted(revival.getSpexId(), revival.getYear()));
+        final Map<String, SpexregisterClient.SpexareActivities> activities = remoteRevival == null ? Map.of() : activities(spexare, actingPerson);
         final Map<String, SpexareDirectory.Position> positions = positions();
         final Map<String, SpexareDirectory.VocalPart> vocalParts = vocalParts();
         final Set<Long> memberships = memberships(spexare, revival.getMembershipYear());
@@ -190,21 +190,21 @@ public class SyncPlanner {
     /**
      * Spexregister's revival of the revival's spex in its year, if it records one.
      */
-    public Optional<Long> findRemoteRevival(final Revival revival) {
+    public Optional<String> findRemoteRevival(final Revival revival) {
         return unavailableOnFailure(() -> client.spexRevivals(revival.getSpexId())).stream()
                 .filter(remote -> Objects.equals(remote.year(), revival.getYear()))
                 .map(SpexregisterClient.SpexRevival::id)
                 .findFirst();
     }
 
-    private Map<Long, SpexregisterClient.SpexareActivities> activities(final List<Participant> participants, final String actingPerson) {
-        final List<Long> ids = participants.stream().map(Participant::getSpexareId).filter(Objects::nonNull).distinct().toList();
-        final Map<Long, SpexregisterClient.SpexareActivities> found = new HashMap<>();
+    private Map<String, SpexregisterClient.SpexareActivities> activities(final List<Participant> participants, final String actingPerson) {
+        final List<String> ids = participants.stream().map(Participant::getSpexareId).filter(Objects::nonNull).distinct().toList();
+        final Map<String, SpexregisterClient.SpexareActivities> found = new HashMap<>();
 
         for (int from = 0; from < ids.size(); from += SpexregisterClient.MAX_SPEXARE) {
-            final List<Long> chunk = ids.subList(from, Math.min(ids.size(), from + SpexregisterClient.MAX_SPEXARE));
+            final List<String> chunk = ids.subList(from, Math.min(ids.size(), from + SpexregisterClient.MAX_SPEXARE));
 
-            unavailableOnFailure(() -> client.spexareActivities(chunk, actingPerson)).forEach(spexare -> found.put(Long.valueOf(spexare.id()), spexare));
+            unavailableOnFailure(() -> client.spexareActivities(chunk, actingPerson)).forEach(spexare -> found.put(spexare.id(), spexare));
         }
         return found;
     }
@@ -243,7 +243,7 @@ public class SyncPlanner {
      * {@code revival} is the {@link SyncOperation#REVIVAL} operation; {@code spexregisterRevivalId} is Spexregister's
      * revival when it exists.
      */
-    public record Plan(Long revivalId, @Nullable Long spexregisterRevivalId, Operation revival,
+    public record Plan(Long revivalId, @Nullable String spexregisterRevivalId, Operation revival,
                        List<ParticipantPlan> participants,
                        List<Participant> excluded, String hash) {
 

@@ -17,14 +17,19 @@
 
 package nu.fgv.revival.server.decisionlog;
 
+import nu.fgv.revival.server.checklist.ChecklistItem;
 import nu.fgv.revival.server.checklist.ChecklistItemSummaryDto;
 import nu.fgv.revival.server.checklist.ChecklistTexts;
+import nu.fgv.revival.server.event.Event;
 import nu.fgv.revival.server.event.EventDto;
 import nu.fgv.revival.server.event.EventService;
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.meeting.Meeting;
 import nu.fgv.revival.server.meeting.MeetingRecorder;
 import nu.fgv.revival.server.meeting.MeetingSummaryDto;
 import nu.fgv.revival.server.member.OwnerInputDto;
+import nu.fgv.revival.server.revival.Revival;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
@@ -39,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -50,13 +56,17 @@ import java.util.stream.Collectors;
 @Controller
 public class LogEntryGraphqlApi {
 
+    private final ExternalIds ids;
+
     private final LogEntryService service;
     private final MeetingRecorder meetingRecorder;
     private final ChecklistTexts checklistTexts;
     private final EventService eventService;
 
     public LogEntryGraphqlApi(final LogEntryService service, final MeetingRecorder meetingRecorder, final ChecklistTexts checklistTexts,
-                              final EventService eventService) {
+                              final EventService eventService,
+                              final ExternalIds ids) {
+        this.ids = ids;
         this.service = service;
         this.meetingRecorder = meetingRecorder;
         this.checklistTexts = checklistTexts;
@@ -77,64 +87,66 @@ public class LogEntryGraphqlApi {
     }
 
     @QueryMapping
-    public List<LogEntryDto> logEntries(@Argument final Long revivalId, @Argument final @Nullable LogEntryFilterDto filter, final Locale locale) {
-        return service.list(revivalId, filter, locale);
+    public List<LogEntryDto> logEntries(@Argument final UUID revivalId, @Argument final @Nullable LogEntryFilterDto filter, final Locale locale) {
+        return service.list(ids.idOf(Revival.class, revivalId), filter, locale);
     }
 
     @QueryMapping
-    public LogEntryDto logEntry(@Argument final Long id, final Locale locale) {
-        return service.get(id, locale);
+    public LogEntryDto logEntry(@Argument final UUID id, final Locale locale) {
+        return service.get(ids.idOf(LogEntry.class, id), locale);
     }
 
     @QueryMapping
-    public List<String> logTags(@Argument final Long revivalId) {
-        return service.tags(revivalId);
+    public List<String> logTags(@Argument final UUID revivalId) {
+        return service.tags(ids.idOf(Revival.class, revivalId));
     }
 
     @MutationMapping
     public LogEntryDto logEntryCreate(@Argument final LogEntryCreateInput input, final Locale locale) {
-        return service.create(new LogEntryService.Draft(input.revivalId(), input.meetingId(), input.date(), input.type(), input.text(),
+        return service.create(new LogEntryService.Draft(ids.idOf(Revival.class, input.revivalId()), ids.idOfNullable(Meeting.class, input.meetingId()), input.date(), input.type(), input.text(),
                 input.status(), input.owner(), input.deadline(), input.comment(), input.tags(), input.guideItemKey(),
-                input.checklistItemId(), input.eventId()), locale);
+                ids.idOfNullable(ChecklistItem.class, input.checklistItemId()), ids.idOfNullable(Event.class, input.eventId())), locale);
     }
 
     @MutationMapping
     public LogEntryDto logEntryUpdate(@Argument final LogEntryUpdateInput input, final Locale locale) {
-        return service.update(new LogEntryService.Change(input.id(), input.version(), input.meetingId(), input.date(), input.type(),
+        return service.update(new LogEntryService.Change(ids.idOf(LogEntry.class, input.id()), input.version(), ids.idOfNullable(Meeting.class, input.meetingId()), input.date(), input.type(),
                 input.text(), input.status(), input.owner(), Boolean.TRUE.equals(input.clearOwner()), input.deadline(),
                 Boolean.TRUE.equals(input.clearDeadline()), input.comment(), Boolean.TRUE.equals(input.clearComment()), input.tags(),
-                input.guideItemKey(), input.checklistItemId(), input.eventId(), Boolean.TRUE.equals(input.clearEvent()),
+                input.guideItemKey(), ids.idOfNullable(ChecklistItem.class, input.checklistItemId()), ids.idOfNullable(Event.class, input.eventId()), Boolean.TRUE.equals(input.clearEvent()),
                 Boolean.TRUE.equals(input.clearLinks())), locale);
     }
 
     @MutationMapping
     public LogEntryService.Answered logEntryAnswer(@Argument final LogEntryAnswerInput input, final Locale locale) {
-        return service.answer(new LogEntryService.Answer(input.questionId(), input.questionVersion(), input.meetingId(), input.text(),
+        return service.answer(new LogEntryService.Answer(ids.idOf(LogEntry.class, input.questionId()), input.questionVersion(), ids.idOfNullable(Meeting.class, input.meetingId()), input.text(),
                 input.owner(), input.deadline(), input.comment()), locale);
     }
 
     @BatchMapping(typeName = "LogEntry", field = "meeting")
     public Map<LogEntryDto, MeetingSummaryDto> meeting(final List<LogEntryDto> entries) {
-        final Map<Long, MeetingSummaryDto> meetings = meetingRecorder.summaries(entries.stream()
-                .map(LogEntryDto::meetingId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        final Map<UUID, MeetingSummaryDto> meetings = meetingRecorder.summaries(ids.idsOf(Meeting.class, entries.stream()
+                        .map(LogEntryDto::meetingId).filter(Objects::nonNull).distinct().toList()))
+                .values().stream().collect(Collectors.toMap(MeetingSummaryDto::id, summary -> summary));
 
         return mapped(entries, entry -> entry.meetingId() == null ? null : meetings.get(entry.meetingId()));
     }
 
     @BatchMapping(typeName = "LogEntry", field = "checklistItem")
     public Map<LogEntryDto, ChecklistItemSummaryDto> checklistItem(final List<LogEntryDto> entries) {
-        final Map<Long, ChecklistItemSummaryDto> items = checklistTexts.summariesByIds(entries.stream()
-                .map(LogEntryDto::checklistItemId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        final Map<UUID, ChecklistItemSummaryDto> items = checklistTexts.summariesByIds(ids.idsOf(ChecklistItem.class, entries.stream()
+                        .map(LogEntryDto::checklistItemId).filter(Objects::nonNull).distinct().toList()))
+                .values().stream().collect(Collectors.toMap(ChecklistItemSummaryDto::id, summary -> summary));
 
         return mapped(entries, entry -> entry.checklistItemId() == null ? null : items.get(entry.checklistItemId()));
     }
 
     @BatchMapping(typeName = "LogEntry", field = "event")
     public Map<LogEntryDto, EventDto> event(final List<LogEntryDto> entries) {
-        final Map<Long, EventDto> events = new HashMap<>();
+        final Map<UUID, EventDto> events = new HashMap<>();
 
         entries.stream().filter(entry -> entry.eventId() != null).map(LogEntryDto::revivalId).distinct()
-                .forEach(revivalId -> eventService.list(revivalId, true).forEach(event -> events.put(event.id(), event)));
+                .forEach(revivalId -> eventService.list(ids.idOf(Revival.class, revivalId), true).forEach(event -> events.put(event.id(), event)));
         return mapped(entries, entry -> entry.eventId() == null ? null : events.get(entry.eventId()));
     }
 
@@ -143,15 +155,17 @@ public class LogEntryGraphqlApi {
         final Map<Long, Optional<GuideVersionView>> versions = new HashMap<>();
 
         return mapped(entries, entry -> entry.guideItemKey() == null ? null : versions
-                .computeIfAbsent(entry.revivalId(), checklistTexts::pinnedVersion)
+                .computeIfAbsent(ids.idOf(Revival.class, entry.revivalId()), checklistTexts::pinnedVersion)
                 .flatMap(version -> version.item(Objects.requireNonNull(entry.guideItemKey())))
                 .orElse(null));
     }
 
     @BatchMapping(typeName = "LogEntry", field = "answers")
     public Map<LogEntryDto, LogEntrySummaryDto> answers(final List<LogEntryDto> entries) {
-        final Map<Long, LogEntry> questions = service.byIds(entries.stream()
-                .map(LogEntryDto::answersEntryId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        final Map<UUID, LogEntry> questions = service.byIds(ids.idsOf(LogEntry.class, entries.stream()
+                        .map(LogEntryDto::answersEntryId).filter(Objects::nonNull).distinct().toList()))
+                .values().stream()
+                .collect(Collectors.toMap(LogEntry::getUuid, entry -> entry));
 
         return mapped(entries, entry -> entry.answersEntryId() == null || !questions.containsKey(entry.answersEntryId())
                 ? null : LogEntrySummaryDto.of(questions.get(entry.answersEntryId())));
@@ -159,22 +173,32 @@ public class LogEntryGraphqlApi {
 
     @BatchMapping(typeName = "LogEntry", field = "answeredBy")
     public Map<LogEntryDto, LogEntrySummaryDto> answeredBy(final List<LogEntryDto> entries) {
-        final Map<Long, LogEntry> decisions = service.answersTo(entries.stream()
-                .filter(entry -> entry.type() == LogEntryType.QUESTION).map(LogEntryDto::id).toList());
+        final List<UUID> questions = entries.stream().filter(entry -> entry.type() == LogEntryType.QUESTION).map(LogEntryDto::id).toList();
+        final List<Long> questionIds = ids.idsOf(LogEntry.class, questions);
+        final Map<Long, LogEntry> answers = service.answersTo(questionIds);
+        final Map<UUID, LogEntry> decisions = new HashMap<>();
+
+        for (int i = 0; i < questions.size(); i++) {
+            final LogEntry answer = answers.get(questionIds.get(i));
+
+            if (answer != null) {
+                decisions.put(questions.get(i), answer);
+            }
+        }
 
         return mapped(entries, entry -> decisions.containsKey(entry.id()) ? LogEntrySummaryDto.of(decisions.get(entry.id())) : null);
     }
 
-    public record LogEntryCreateInput(Long revivalId, @Nullable Long meetingId, @Nullable LocalDate date,
+    public record LogEntryCreateInput(UUID revivalId, @Nullable UUID meetingId, @Nullable LocalDate date,
                                       LogEntryType type, String text,
                                       @Nullable LogEntryStatus status, @Nullable OwnerInputDto owner,
                                       @Nullable LocalDate deadline,
                                       @Nullable String comment, @Nullable List<String> tags,
                                       @Nullable String guideItemKey,
-                                      @Nullable Long checklistItemId, @Nullable Long eventId) {
+                                      @Nullable UUID checklistItemId, @Nullable UUID eventId) {
     }
 
-    public record LogEntryUpdateInput(Long id, Long version, @Nullable Long meetingId, @Nullable LocalDate date,
+    public record LogEntryUpdateInput(UUID id, Long version, @Nullable UUID meetingId, @Nullable LocalDate date,
                                       @Nullable LogEntryType type,
                                       @Nullable String text, @Nullable LogEntryStatus status,
                                       @Nullable OwnerInputDto owner,
@@ -182,11 +206,11 @@ public class LogEntryGraphqlApi {
                                       @Nullable Boolean clearDeadline,
                                       @Nullable String comment, @Nullable Boolean clearComment,
                                       @Nullable List<String> tags,
-                                      @Nullable String guideItemKey, @Nullable Long checklistItemId,
-                                      @Nullable Long eventId, @Nullable Boolean clearEvent, @Nullable Boolean clearLinks) {
+                                      @Nullable String guideItemKey, @Nullable UUID checklistItemId,
+                                      @Nullable UUID eventId, @Nullable Boolean clearEvent, @Nullable Boolean clearLinks) {
     }
 
-    public record LogEntryAnswerInput(Long questionId, Long questionVersion, @Nullable Long meetingId, String text,
+    public record LogEntryAnswerInput(UUID questionId, Long questionVersion, @Nullable UUID meetingId, String text,
                                       @Nullable OwnerInputDto owner, @Nullable LocalDate deadline,
                                       @Nullable String comment) {
     }

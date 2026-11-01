@@ -20,7 +20,9 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.guide.GuideMarkdown;
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.MailSubjects;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +51,8 @@ import static org.springframework.util.StringUtils.hasText;
 @Slf4j
 public class MailingMailer {
 
+    private final ExternalIds ids;
+
     private final ObjectProvider<JavaMailSender> mailSender;
     private final GuideMarkdown markdown;
     private final MessageSource messageSource;
@@ -59,7 +63,9 @@ public class MailingMailer {
                          final GuideMarkdown markdown,
                          final MessageSource messageSource,
                          @Value("${fgv-revival.mail.from}") final String from,
-                         @Value("${fgv-revival.web-url}") final String webUrl) {
+                         @Value("${fgv-revival.web-url}") final String webUrl,
+                         final ExternalIds ids) {
+        this.ids = ids;
         this.mailSender = mailSender;
         this.markdown = markdown;
         this.messageSource = messageSource;
@@ -142,7 +148,7 @@ public class MailingMailer {
         }
 
         final StringBuilder text = new StringBuilder();
-        final String link = "%s/revivals/%d/mailings".formatted(webUrl, revivalId);
+        final String link = "%s/revivals/%s/mailings".formatted(webUrl, ids.uuidOf(Revival.class, revivalId));
 
         for (final Locale locale : List.of(Locale.of("sv"), Locale.ENGLISH)) {
             if (!text.isEmpty()) {

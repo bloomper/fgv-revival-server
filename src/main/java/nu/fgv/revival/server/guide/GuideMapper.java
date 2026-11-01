@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.guide;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 /**
@@ -31,6 +32,7 @@ public interface GuideMapper {
 
     GuideMapper GUIDE_MAPPER = Mappers.getMapper(GuideMapper.class);
 
+    @Mapping(target = "id", source = "uuid")
     GuideVersionSummaryDto toSummary(GuideVersion version);
 
     GuideVersionSummaryDto toSummary(GuideVersionView version);

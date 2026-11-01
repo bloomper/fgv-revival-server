@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +47,7 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     private static final String UPDATE = "mutation($input: ChecklistItemUpdateInput!) { checklistItemUpdate(input: $input) { " + ITEM_FIELDS + " } }";
     private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Europe/Stockholm"));
 
-    private long revival;
+    private EntityId revival;
 
     @BeforeEach
     void pinnedRevival() {
@@ -54,16 +55,16 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         revival = organisingRevival();
     }
 
-    long chapterChecklist(final String chapter) {
-        return jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = ?").param(revival).param(chapter).query(Long.class).single();
+    EntityId chapterChecklist(final String chapter) {
+        return entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = ?").param(revival).param(chapter));
     }
 
-    long requiredItem(final String chapter) {
-        return jdbcClient.sql("SELECT i.id FROM checklist_item i JOIN checklist c ON c.id = i.checklist_id WHERE c.revival_id = ? AND c.chapter_key = ? AND i.required = 1")
-                .param(revival).param(chapter).query(Long.class).single();
+    EntityId requiredItem(final String chapter) {
+        return entityId(jdbcClient.sql("SELECT i.id, i.uuid FROM checklist_item i JOIN checklist c ON c.id = i.checklist_id WHERE c.revival_id = ? AND c.chapter_key = ? AND i.required = 1")
+                .param(revival).param(chapter));
     }
 
-    long itemVersion(final long id) {
+    long itemVersion(final EntityId id) {
         return jdbcClient.sql("SELECT version FROM checklist_item WHERE id = ?").param(id).query(Long.class).single();
     }
 
@@ -90,7 +91,7 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void onlyADirecteurWaivesARequirementAndOnlyWithAReason() {
-        final long item = requiredItem("A");
+        final EntityId item = requiredItem("A");
 
         expectError(execute(STEERING_GROUP, SET_STATE, Map.of("input", Map.of("id", item, "version", itemVersion(item), "state", "NOT_APPLICABLE",
                 "reason", "Godkänt muntligt"))), "FORBIDDEN");
@@ -108,13 +109,13 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void membersAddAndWorkItemsAndFilterThem() {
-        final long stina = personId(STEERING_GROUP);
+        final EntityId stina = personId(STEERING_GROUP);
         final String created = execute(STEERING_GROUP, CREATE, Map.of("input", Map.of("checklistId", chapterChecklist("B"), "text", "Boka RunAn",
                 "owner", Map.of("personId", stina), "deadline", TODAY.minusDays(1).toString())))
                 .path("checklistItemCreate.deadlineManual").entity(Boolean.class).isEqualTo(true)
                 .path("checklistItemCreate.overdue").entity(Boolean.class).isEqualTo(true)
                 .path("checklistItemCreate.id").entity(String.class).get();
-        final long item = Long.parseLong(created);
+        final EntityId item = entityId("checklist_item", created);
 
         execute(STEERING_GROUP, ITEMS, Map.of("id", revival, "filter", Map.of("mine", true))).path("checklistItems[*].text.sv")
                 .entityList(String.class).containsExactly("Boka RunAn");
@@ -138,7 +139,7 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void readersAndRefusals() {
-        final long item = requiredItem("C");
+        final EntityId item = requiredItem("C");
 
         for (final String user : List.of(SUPER_ADMIN, OBSERVER)) {
             execute(user, LIST, Map.of("id", revival)).path("checklists").entityList(Object.class).hasSize(10);
@@ -160,7 +161,7 @@ class ChecklistGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         execute(STEERING_GROUP, "mutation($input: MeetingCreateInput!) { meetingCreate(input: $input) { id version } }",
                 Map.of("input", Map.of("revivalId", revival, "date", TODAY.toString())));
 
-        final long meeting = jdbcClient.sql("SELECT id FROM meeting WHERE revival_id = ?").param(revival).query(Long.class).single();
+        final EntityId meeting = entityId(jdbcClient.sql("SELECT id, uuid FROM meeting WHERE revival_id = ?").param(revival));
 
         execute(STEERING_GROUP, "mutation($id: ID!) { meetingStart(id: $id, version: 0) { id } }", Map.of("id", meeting));
         execute(OBSERVER, "query($id: ID!) { revival(id: $id) { workSummary { openEntries overdueEntries overdueChecklistItems openRequiredItems "

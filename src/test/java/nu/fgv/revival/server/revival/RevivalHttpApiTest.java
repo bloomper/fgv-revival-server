@@ -27,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
@@ -56,7 +57,7 @@ class RevivalHttpApiTest extends AbstractApiTest {
         when(revivalService.poster(1L)).thenReturn(Optional.of(new SpexregisterClient.Poster(new byte[]{1, 2}, "image/svg+xml;charset=UTF-8")));
 
         mockMvc
-                .perform(get("/api/revivals/{id}/poster", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/revivals/{id}/poster", uuid(1)).header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isOk())
                 .andExpect(content().bytes(new byte[]{1, 2}))
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/svg+xml;charset=UTF-8"))
@@ -81,7 +82,7 @@ class RevivalHttpApiTest extends AbstractApiTest {
         when(revivalService.poster(1L)).thenReturn(Optional.empty());
 
         mockMvc
-                .perform(get("/api/revivals/{id}/poster", 1L))
+                .perform(get("/api/revivals/{id}/poster", uuid(1)))
                 .andExpect(status().isNoContent());
     }
 
@@ -90,8 +91,8 @@ class RevivalHttpApiTest extends AbstractApiTest {
         when(revivalService.poster(1L)).thenReturn(Optional.of(new SpexregisterClient.Poster(new byte[]{1}, "text/html")));
         when(revivalService.poster(2L)).thenReturn(Optional.of(new SpexregisterClient.Poster(new byte[]{1}, "not a type")));
 
-        mockMvc.perform(get("/api/revivals/{id}/poster", 1L)).andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/revivals/{id}/poster", 2L)).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/revivals/{id}/poster", uuid(1))).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/revivals/{id}/poster", uuid(2))).andExpect(status().isNoContent());
     }
 
     @Test
@@ -99,7 +100,7 @@ class RevivalHttpApiTest extends AbstractApiTest {
         when(revivalService.poster(1L)).thenThrow(new ResourceNotFoundException(Revival.class, 1L));
 
         mockMvc
-                .perform(get("/api/revivals/{id}/poster", 1L).header(HttpHeaders.AUTHORIZATION, BEARER))
+                .perform(get("/api/revivals/{id}/poster", uuid(1)).header(HttpHeaders.AUTHORIZATION, BEARER))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andDo(document(

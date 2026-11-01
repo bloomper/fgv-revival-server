@@ -31,6 +31,7 @@ import nu.fgv.revival.server.participant.ParticipantDtos.Settings;
 import nu.fgv.revival.server.participant.ParticipantDtos.SwishPayment;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
+import nu.fgv.revival.server.person.Person;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalService;
@@ -42,6 +43,7 @@ import nu.fgv.revival.server.util.Amounts;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 import static org.springframework.util.StringUtils.hasText;
 
@@ -69,6 +72,8 @@ import static org.springframework.util.StringUtils.hasText;
 @Service
 @Slf4j
 public class ParticipationService {
+
+    private final ExternalIds ids;
 
     static final int MAX_OPEN_REFERRALS = 20;
 
@@ -114,7 +119,9 @@ public class ParticipationService {
                                 final SwishQrClient swish,
                                 final MessageSource messageSource,
                                 final ApplicationSettingsService applicationSettings,
-                                final Clock clock) {
+                                final Clock clock,
+                                final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.pendingRepository = pendingRepository;
         this.dietaryRepository = dietaryRepository;
@@ -188,7 +195,7 @@ public class ParticipationService {
         final ParticipationSettings settings = settingsRepository.findByRevivalId(revival.getId()).orElse(null);
         final BudgetSettings budget = budgetSettingsRepository.findByRevivalId(revival.getId()).orElse(null);
         final BigDecimal fee = ParticipantViews.fee(participant, budget == null ? null : budget.getParticipationFee());
-        final String acting = ActingPerson.participantOf(revival.getId());
+        final String acting = ActingPerson.participantOf(revival.getUuid());
         final SpexregisterClient.Spexare spexare = participant.getSpexareId() == null ? null
                 : views.people(List.of(participant), acting, false).get(participant.getSpexareId());
         final PendingPerson person = pendingRepository.findById(participant.getId()).orElse(null);
@@ -208,7 +215,7 @@ public class ParticipationService {
                 payment,
                 participant.getResponse() == ParticipantResponse.YES && settings != null ? settings.getWhatsappLink() : null,
                 ownerResolver.activeMembers(revival.getId()).entrySet().stream()
-                        .map(entry -> new PersonRefDto(entry.getKey(), entry.getValue()))
+                        .map(entry -> new PersonRefDto(ids.uuidOf(Person.class, entry.getKey()), entry.getValue()))
                         .toList());
     }
 
@@ -287,7 +294,7 @@ public class ParticipationService {
             participant.setTermsAcceptedAt(now);
         }
         if (input.response() != ParticipantResponse.NO && input.registerConsent() != null) {
-            consent(participant, input.registerConsent(), own.revival().getId(), now);
+            consent(participant, input.registerConsent(), own.revival().getUuid(), now);
         }
 
         if (input.response() == ParticipantResponse.NO && participant.isPending()) {
@@ -300,7 +307,7 @@ public class ParticipationService {
         }
         if (participant.isRemoved()) {
             return new Participation(views.toDto(participant, new ParticipantViews.Options(false, false, false,
-                    ActingPerson.participantOf(own.revival().getId()), locale)), revivalService.findById(own.revival().getId()),
+                    ActingPerson.participantOf(own.revival().getUuid()), locale)), revivalService.findById(own.revival().getId()),
                     Settings.of(null), List.of(), null, null, null, null, List.of());
         }
         return participation(own, locale);
@@ -311,7 +318,7 @@ public class ParticipationService {
      * becomes a spexare: if Spexregister fails part way, the response is refused and they stay pending; a spexare it
      * created before failing is left there, unpublished.
      */
-    private void consent(final Participant participant, final boolean value, final Long revivalId, final Instant now) {
+    private void consent(final Participant participant, final boolean value, final UUID revivalId, final Instant now) {
         final String acting = ActingPerson.participantOf(revivalId);
 
         if (participant.getSpexareId() != null) {
@@ -329,7 +336,7 @@ public class ParticipationService {
         } else if (value) {
             final PendingPerson person = pendingRepository.findById(participant.getId())
                     .orElseThrow(() -> new BadRequestException("error.participant.removed"));
-            final Long spexareId = directory.create(person.getFirstName(), person.getLastName(), acting);
+            final String spexareId = directory.create(person.getFirstName(), person.getLastName(), acting);
 
             try {
                 directory.saveHomeAddress(spexareId, null, new SpexregisterClient.AddressInput(person.getEmail(), person.getPhone(),
@@ -406,7 +413,7 @@ public class ParticipationService {
                 throw new BadRequestException("error.participant.contact.noConsent");
             }
 
-            final String acting = ActingPerson.participantOf(own.revival().getId());
+            final String acting = ActingPerson.participantOf(own.revival().getUuid());
             final SpexregisterClient.Spexare spexare = directory.byId(participant.getSpexareId(), acting);
 
             if (spexare == null) {

@@ -21,6 +21,7 @@ import nu.fgv.revival.server.member.PersonRefDto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code MinutesEmail}: one sending, recipients by display name, never by address.
@@ -28,7 +29,7 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record MinutesEmailDto(Long id, String language, PersonRefDto sentBy, Instant sentAt, List<Recipient> recipients,
+public record MinutesEmailDto(UUID id, String language, PersonRefDto sentBy, Instant sentAt, List<Recipient> recipients,
                               int waitingLeftOut) {
 
     public record Recipient(PersonRefDto person, MinutesEmailRecipientStatus status) {

@@ -28,8 +28,8 @@ import nu.fgv.revival.server.guide.GuideItem;
 import nu.fgv.revival.server.guide.GuideItemType;
 import nu.fgv.revival.server.guide.GuideSection;
 import nu.fgv.revival.server.guide.GuideVersion;
-import nu.fgv.revival.server.material.LinkService;
 import nu.fgv.revival.server.library.LibraryEntry;
+import nu.fgv.revival.server.material.LinkService;
 import nu.fgv.revival.server.member.Capability;
 import nu.fgv.revival.server.member.RevivalMember;
 import nu.fgv.revival.server.member.RevivalRole;
@@ -424,7 +424,25 @@ public class SampleDataImporter {
         timed("Created the reference library", () -> SampleLibrary.insert(jdbcClient, people.get(ADMIN).externalId()));
         timed("Created the revivals", () -> createSampleRevivals(jdbcClient, spex, people, guide));
         timed("Seeded the baseline revision", () -> seedBaselineRevision(jdbcClient));
+        timed("Gave the history the external ids of its rows", () -> copyExternalIdsToHistory(jdbcClient));
         log.info("Imported sample data in {} s", Duration.ofNanos(System.nanoTime() - started).toSeconds());
+    }
+
+    /**
+     * The rows were inserted without external ids and got them from the column default; their history, written here by
+     * hand, gets the same ones.
+     */
+    private static void copyExternalIdsToHistory(final JdbcClient jdbcClient) {
+        jdbcClient
+                .sql("""
+                        SELECT table_name FROM information_schema.columns
+                        WHERE table_schema = DATABASE() AND column_name = 'uuid' AND table_name LIKE '%\\_audit'""")
+                .query(String.class)
+                .list()
+                .forEach(audit -> jdbcClient
+                        .sql("UPDATE %s a JOIN %s e ON a.id = e.id SET a.uuid = e.uuid WHERE a.uuid IS NULL"
+                                .formatted(audit, audit.substring(0, audit.length() - "_audit".length())))
+                        .update());
     }
 
     private void timed(final String step, final Runnable action) {

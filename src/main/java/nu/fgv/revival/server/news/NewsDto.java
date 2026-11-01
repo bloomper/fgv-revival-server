@@ -19,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code News}.
@@ -26,11 +27,11 @@ import java.time.LocalDate;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record NewsDto(Long id, String subject, String text, @Nullable LocalDate visibleFrom, @Nullable LocalDate visibleTo,
+public record NewsDto(UUID id, String subject, String text, @Nullable LocalDate visibleFrom, @Nullable LocalDate visibleTo,
                       boolean published, Instant createdAt, @Nullable Instant lastModifiedAt, Long version) {
 
     static NewsDto of(final News news, final LocalDate today) {
-        return new NewsDto(news.getId(), news.getSubject(), news.getText(), news.getVisibleFrom(), news.getVisibleTo(),
+        return new NewsDto(news.getUuid(), news.getSubject(), news.getText(), news.getVisibleFrom(), news.getVisibleTo(),
                 news.isPublishedOn(today), news.getCreatedAt(), news.getLastModifiedAt(), news.getVersion() == null ? 0L : news.getVersion());
     }
 }

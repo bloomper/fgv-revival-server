@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.checklist;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
@@ -42,17 +43,17 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private RevivalGuideSync sync;
 
-    private List<String> chapterChecklists(final long revival) {
+    private List<String> chapterChecklists(final EntityId revival) {
         return jdbcClient.sql("SELECT chapter_key FROM checklist WHERE revival_id = ? AND kind = 'CHAPTER'").param(revival).query(String.class).list();
     }
 
-    private int count(final long revival, final String where) {
+    private int count(final EntityId revival, final String where) {
         return jdbcClient.sql("SELECT COUNT(*) FROM checklist_item WHERE revival_id = ? AND " + where).param(revival).query(Integer.class).single();
     }
 
     @Test
     void aRevivalCreatedBeforeThePublicationGetsItsChecklistsAndRequirementsWithTheFirstVersion() {
-        final long revival = createRevival(ALI_BABA, 2028);
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         assertThat(chapterChecklists(revival)).isEmpty();
         assertThat(count(revival, "1 = 1")).isZero();
@@ -67,9 +68,9 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aVersionChangeAddsMarksRemovedAndKeepsMembersItemsLast() {
-        final long v1 = publishedGuide();
-        final long revival = organisingRevival();
-        final long checklistC = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'C'").param(revival).query(Long.class).single();
+        final EntityId v1 = publishedGuide();
+        final EntityId revival = organisingRevival();
+        final EntityId checklistC = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = 'C'").param(revival));
 
         execute(STEERING_GROUP, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",
                 Map.of("input", Map.of("checklistId", checklistC, "text", "Egen punkt")));
@@ -91,7 +92,7 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
                 Map.of("input", Map.of("chapterId", chapterC.get("id"), "position", 0, "type", "REQUIREMENT",
                         "text", Map.of("sv", "Budgeten ska godkännas av direktionen."))));
 
-        final long v2 = Long.parseLong(String.valueOf(draft.get("id")));
+        final EntityId v2 = entityId("guide_version", String.valueOf(draft.get("id")));
 
         publishGuide(v2, "v2");
         execute(DIRECTEUR, "mutation($input: RevivalGuideVersionChangeInput!) { revivalGuideVersionChange(input: $input) { id } }",
@@ -101,7 +102,7 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
                 .path("checklist.items[*].text.sv").entityList(String.class)
                 .containsExactly("Budgeten ska godkännas av direktionen.", "Budget ska upprättas innan ni drar kostnader.", "Egen punkt");
 
-        final long checklistA = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival).query(Long.class).single();
+        final EntityId checklistA = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = 'A'").param(revival));
 
         execute(STEERING_GROUP, "query($id: ID!) { checklist(id: $id) { items { state reason text { sv } stateChangedBy { displayName } } } }",
                 Map.of("id", checklistA))
@@ -118,19 +119,19 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void aChapterRemovedFromTheGuideTakesItsChecklistAlongWhenTheRevivalMovesOn() {
-        final long v1 = publishedGuide();
-        final long revival = organisingRevival();
-        final long checklistC = jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'C'").param(revival).query(Long.class).single();
-        final long own = Long.parseLong(execute(STEERING_GROUP, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",
+        final EntityId v1 = publishedGuide();
+        final EntityId revival = organisingRevival();
+        final EntityId checklistC = entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = 'C'").param(revival));
+        final EntityId own = entityId("checklist_item", execute(STEERING_GROUP, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",
                 Map.of("input", Map.of("checklistId", checklistC, "text", "Egen punkt"))).path("checklistItemCreate.id").entity(String.class).get());
-        final long logRow = Long.parseLong(execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
+        final EntityId logRow = entityId("log_entry", execute(STEERING_GROUP, "mutation($input: LogEntryCreateInput!) { logEntryCreate(input: $input) { id } }",
                 Map.of("input", Map.of("revivalId", revival, "type", "TODO", "text", "Följ upp budgeten", "checklistItemId", own)))
                 .path("logEntryCreate.id").entity(String.class).get());
 
         graphQl(SUPER_ADMIN).document("mutation { guideDraftStart { draft { id } } }").execute();
 
-        final long v2 = jdbcClient.sql("SELECT id FROM guide_version WHERE status = 'DRAFT'").query(Long.class).single();
-        final long chapterC = jdbcClient.sql("SELECT id FROM guide_chapter WHERE version_id = ? AND `key` = 'C'").param(v2).query(Long.class).single();
+        final EntityId v2 = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_version WHERE status = 'DRAFT'"));
+        final EntityId chapterC = entityId(jdbcClient.sql("SELECT id, uuid FROM guide_chapter WHERE version_id = ? AND `key` = 'C'").param(v2));
 
         execute(SUPER_ADMIN, "query($key: ID!) { guideChapterRemovalImpact(chapterKey: $key) { revivalCount itemCount doneCount } }", Map.of("key", "C"))
                 .path("guideChapterRemovalImpact.revivalCount").entity(Integer.class).isEqualTo(1)
@@ -162,14 +163,14 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void theStartupRunGivesExistingRevivalsTheirChecklistsOnce() {
-        final long version = publishedGuide();
+        final EntityId version = publishedGuide();
 
         jdbcClient.sql("""
                         INSERT INTO revival (spex_id, year, status, guide_version_id, created_by, created_at, version)
                         VALUES (?, 2027, 'ORGANISING', ?, 'system', NOW(6), 0)""")
                 .param(SNORRE).param(version).update();
 
-        final long revival = jdbcClient.sql("SELECT id FROM revival WHERE spex_id = 3 AND year = 2027").query(Long.class).single();
+        final EntityId revival = entityId(jdbcClient.sql("SELECT id, uuid FROM revival WHERE spex_id = 3 AND year = 2027"));
 
         sync.run(new DefaultApplicationArguments());
         sync.run(new DefaultApplicationArguments());
@@ -186,11 +187,11 @@ class RevivalGuideSyncIntegrationTest extends AbstractIntegrationTest {
     void aSuperAdminsActionsSyncAlthoughSuperAdminsMayNotWriteChecklists() {
         publishedGuide();
 
-        final long revival = createRevival(ALI_BABA, 2028);
+        final EntityId revival = createRevival(ALI_BABA, 2028);
 
         assertThat(count(revival, "required = 1")).isEqualTo(3);
         expectError(execute(SUPER_ADMIN, "mutation($input: ChecklistItemCreateInput!) { checklistItemCreate(input: $input) { id } }",
-                Map.of("input", Map.of("checklistId", jdbcClient.sql("SELECT id FROM checklist WHERE revival_id = ? AND chapter_key = 'A'")
-                        .param(revival).query(Long.class).single(), "text", "x"))), "FORBIDDEN");
+                Map.of("input", Map.of("checklistId", entityId(jdbcClient.sql("SELECT id, uuid FROM checklist WHERE revival_id = ? AND chapter_key = 'A'")
+                        .param(revival)), "text", "x"))), "FORBIDDEN");
     }
 }

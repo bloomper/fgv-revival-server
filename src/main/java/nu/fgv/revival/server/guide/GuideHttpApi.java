@@ -16,7 +16,9 @@
 
 package nu.fgv.revival.server.guide;
 
+import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.util.Locales;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * The guide's plain HTTP endpoints, for what GraphQL does not suit.
@@ -39,9 +42,12 @@ import java.util.Locale;
 @RestController
 public class GuideHttpApi {
 
+    private final ExternalIds ids;
+
     private final GuideService guideService;
 
-    public GuideHttpApi(final GuideService guideService) {
+    public GuideHttpApi(final GuideService guideService, final ExternalIds ids) {
+        this.ids = ids;
         this.guideService = guideService;
     }
 
@@ -58,12 +64,12 @@ public class GuideHttpApi {
     }
 
     @GetMapping("/api/guide/versions/{id}/pdf")
-    public ResponseEntity<byte[]> versionPdf(@PathVariable final Long id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
-        return pdf(guideService.versionPdf(id, language(lang, locale)));
+    public ResponseEntity<byte[]> versionPdf(@PathVariable final UUID id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
+        return pdf(guideService.versionPdf(ids.idOf(GuideVersion.class, id), language(lang, locale)));
     }
 
     @GetMapping("/api/revivals/{id}/guide/pdf")
-    public ResponseEntity<byte[]> revivalPdf(@PathVariable final Long id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
-        return pdf(guideService.revivalPdf(id, language(lang, locale)));
+    public ResponseEntity<byte[]> revivalPdf(@PathVariable final UUID id, @RequestParam(required = false) final @Nullable String lang, final Locale locale) {
+        return pdf(guideService.revivalPdf(ids.idOf(Revival.class, id), language(lang, locale)));
     }
 }

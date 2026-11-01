@@ -21,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * One VEVENT of a calendar feed: all day over whole dates, or timed between two instants.
@@ -34,10 +35,10 @@ public record CalendarEntry(String uid, String summary, @Nullable String locatio
     static final String UID_DOMAIN = "nyuppsattning.fgv.nu";
 
     /**
-     * A UID that stays the same for the row, e.g. {@code event-12@nyuppsattning.fgv.nu}.
+     * A UID that stays the same for the row, e.g. {@code event-01933f2a-7c3e-7b1a-9d2e-4f5a6b7c8d9e@nyuppsattning.fgv.nu}.
      */
-    public static String uid(final String kind, final Long id) {
-        return "%s-%d@%s".formatted(kind, id, UID_DOMAIN);
+    public static String uid(final String kind, final UUID id) {
+        return "%s-%s@%s".formatted(kind, id, UID_DOMAIN);
     }
 
     /**

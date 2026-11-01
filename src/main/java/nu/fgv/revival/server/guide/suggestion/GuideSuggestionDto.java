@@ -22,6 +22,7 @@ import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code GuideSuggestion}. {@code authorId} and {@code decidedById} are person ids; GraphQL resolves them to
@@ -30,11 +31,11 @@ import java.time.Instant;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record GuideSuggestionDto(Long id,
+public record GuideSuggestionDto(UUID id,
                                  GuideSuggestionKind kind,
                                  GuideSuggestionStatus status,
                                  Revival revival,
-                                 Long authorId,
+                                 UUID authorId,
                                  boolean mine,
                                  GuideVersionSummaryDto madeOn,
                                  String chapterKey,
@@ -45,7 +46,7 @@ public record GuideSuggestionDto(Long id,
                                  @Nullable String proposedType,
                                  @Nullable ProposedText proposedText,
                                  @Nullable String reason,
-                                 @Nullable Long decidedById,
+                                 @Nullable UUID decidedById,
                                  @Nullable Instant decidedAt,
                                  @Nullable String decisionReason,
                                  @Nullable GuideVersionSummaryDto publishedIn,
@@ -56,7 +57,7 @@ public record GuideSuggestionDto(Long id,
     /**
      * GraphQL's {@code GuideSuggestionRevival}: only what the suggestion needs, not the revival's details.
      */
-    public record Revival(Long id, Long spexId, Integer year) {
+    public record Revival(UUID id, String spexId, Integer year) {
     }
 
     /**

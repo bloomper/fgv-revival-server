@@ -36,6 +36,7 @@ import org.springframework.security.access.AccessDeniedException;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -91,6 +92,7 @@ class GuideDraftServicePublishTest {
                 views, revivalGuideVersions, callerService, new AccessPolicy(), List.of(listener), events, mock(GuideItemTypeService.class), mock(LibraryService.class));
         draft = new GuideVersion();
         draft.setId(DRAFT_ID);
+        draft.setUuid(uuid(draft.getId()));
         draft.setVersion(2L);
         draft.setStatus(GuideVersionStatus.DRAFT);
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());

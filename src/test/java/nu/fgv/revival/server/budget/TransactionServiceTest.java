@@ -17,6 +17,7 @@ package nu.fgv.revival.server.budget;
 
 import nu.fgv.revival.server.TestCallers;
 import nu.fgv.revival.server.TestClocks;
+import nu.fgv.revival.server.TestExternalIds;
 import nu.fgv.revival.server.budget.BudgetDtos.Transaction;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.member.Owner;
@@ -45,6 +46,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static nu.fgv.revival.server.TestCallers.REVIVAL_ID;
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -88,7 +92,7 @@ class TransactionServiceTest {
         if (input == null || input.personId() == null && input.name() == null) {
             return Owner.none();
         }
-        return input.personId() != null ? Owner.member(input.personId()) : Owner.named(input.name().strip());
+        return input.personId() != null ? Owner.member(TestExternalIds.internal(input.personId())) : Owner.named(input.name().strip());
     }
 
     private static BigDecimal kr(final String amount) {
@@ -124,12 +128,13 @@ class TransactionServiceTest {
 
             if (transaction.getId() == null) {
                 transaction.setId(100L + transactions.size());
+                transaction.setUuid(uuid(transaction.getId()));
                 transaction.setVersion(0L);
                 transactions.add(transaction);
             } else {
                 transaction.setVersion(transaction.getVersion() + 1);
             }
-            return transaction;
+            return withUuids(transaction);
         });
         lenient().when(ownerResolver.validate(anyLong(), any())).thenAnswer(invocation -> owner(invocation.getArgument(1)));
         lenient().when(ownerResolver.change(anyLong(), any(), any())).thenAnswer(invocation -> owner(invocation.getArgument(2)));
@@ -141,7 +146,7 @@ class TransactionServiceTest {
 
     @Test
     void aCostCanBePaidByAMemberOrSomeoneElse() {
-        final Transaction byMember = create("FOOD", new OwnerInputDto(MEMBER, null));
+        final Transaction byMember = create("FOOD", new OwnerInputDto(uuid(MEMBER), null));
         final Transaction byName = create("FOOD", new OwnerInputDto(null, " Kim "));
 
         assertThat(byMember.description()).isEqualTo("Mat till rephelgen");
@@ -158,9 +163,9 @@ class TransactionServiceTest {
 
         final Transaction cost = create("FOOD", new OwnerInputDto(null, "Kim"));
 
-        assertThatThrownBy(() -> service.update(new TransactionService.TransactionChange(cost.id(), 0L, null, null, "SPONSORSHIP", null, null, false,
+        assertThatThrownBy(() -> service.update(new TransactionService.TransactionChange(TestExternalIds.internal(cost.id()), 0L, null, null, "SPONSORSHIP", null, null, false,
                 null, false))).hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.paidBy.income");
-        assertThat(service.update(new TransactionService.TransactionChange(cost.id(), 0L, null, null, "SPONSORSHIP", null, null, false, null, true))
+        assertThat(service.update(new TransactionService.TransactionChange(TestExternalIds.internal(cost.id()), 0L, null, null, "SPONSORSHIP", null, null, false, null, true))
                 .categoryId()).isEqualTo("SPONSORSHIP");
     }
 
@@ -175,7 +180,9 @@ class TransactionServiceTest {
         final BudgetLine line = new BudgetLine();
 
         line.setId(7L);
+        line.setUuid(uuid(line.getId()));
         line.setRevivalId(2L);
+        line.setRevivalUuid(uuidOrNull(line.getRevivalId()));
         when(lineRepository.findById(7L)).thenReturn(Optional.of(line));
 
         assertThatThrownBy(() -> service.create(new TransactionService.NewTransaction(REVIVAL_ID, TODAY, kr("1"), "FOOD", "Mat", 7L, null)))
@@ -184,25 +191,25 @@ class TransactionServiceTest {
 
     @Test
     void onlyACostSomeonePaidIsReimbursed() {
-        final Transaction paid = create("FOOD", new OwnerInputDto(MEMBER, null));
+        final Transaction paid = create("FOOD", new OwnerInputDto(uuid(MEMBER), null));
         final Transaction unpaid = create("FOOD", null);
 
-        final Transaction reimbursed = service.setReimbursed(paid.id(), 0L, true);
+        final Transaction reimbursed = service.setReimbursed(TestExternalIds.internal(paid.id()), 0L, true);
 
         assertThat(reimbursed.reimbursed()).isTrue();
         assertThat(reimbursed.reimbursedAt()).isNotNull();
-        assertThat(service.setReimbursed(paid.id(), 1L, false).reimbursed()).isFalse();
-        assertThatThrownBy(() -> service.setReimbursed(unpaid.id(), 0L, true))
+        assertThat(service.setReimbursed(TestExternalIds.internal(paid.id()), 1L, false).reimbursed()).isFalse();
+        assertThatThrownBy(() -> service.setReimbursed(TestExternalIds.internal(unpaid.id()), 0L, true))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.reimbursed.noPayer");
     }
 
     @Test
     void clearingWhoPaidClearsTheReimbursement() {
-        final Transaction paid = create("FOOD", new OwnerInputDto(MEMBER, null));
+        final Transaction paid = create("FOOD", new OwnerInputDto(uuid(MEMBER), null));
 
-        service.setReimbursed(paid.id(), 0L, true);
+        service.setReimbursed(TestExternalIds.internal(paid.id()), 0L, true);
 
-        final Transaction cleared = service.update(new TransactionService.TransactionChange(paid.id(), 1L, null, null, null, null, null, false, null,
+        final Transaction cleared = service.update(new TransactionService.TransactionChange(TestExternalIds.internal(paid.id()), 1L, null, null, null, null, null, false, null,
                 true));
 
         assertThat(cleared.payer().isSet()).isFalse();
@@ -212,14 +219,14 @@ class TransactionServiceTest {
     @Test
     void aCancelledTransactionStaysButCannotBeChanged() {
         final Transaction created = create("FOOD", null);
-        final Transaction cancelled = service.cancel(created.id(), 0L);
+        final Transaction cancelled = service.cancel(TestExternalIds.internal(created.id()), 0L);
 
         assertThat(cancelled.cancelled()).isTrue();
         assertThat(service.list(REVIVAL_ID, false)).isEmpty();
         assertThat(service.list(REVIVAL_ID, true)).hasSize(1);
-        assertThatThrownBy(() -> service.update(change(created.id(), 1L))).hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.cancelled");
-        assertThatThrownBy(() -> service.cancel(created.id(), 1L)).hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.cancelled");
-        assertThatThrownBy(() -> service.uploadReceipt(created.id(), "kvitto.pdf", ReceiptsTest.PDF))
+        assertThatThrownBy(() -> service.update(change(TestExternalIds.internal(created.id()), 1L))).hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.cancelled");
+        assertThatThrownBy(() -> service.cancel(TestExternalIds.internal(created.id()), 1L)).hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.cancelled");
+        assertThatThrownBy(() -> service.uploadReceipt(TestExternalIds.internal(created.id()), "kvitto.pdf", ReceiptsTest.PDF))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.transaction.cancelled");
     }
 
@@ -227,7 +234,7 @@ class TransactionServiceTest {
     void aStaleVersionIsAConflict() {
         final Transaction created = create("FOOD", null);
 
-        assertThatThrownBy(() -> service.update(change(created.id(), 3L))).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.update(change(TestExternalIds.internal(created.id()), 3L))).isInstanceOf(ConflictException.class);
     }
 
     @Test
@@ -250,20 +257,20 @@ class TransactionServiceTest {
     @Test
     void aReceiptIsStoredWithItsSniffedTypeAndReplacedByTheNext() {
         final Transaction created = create("FOOD", null);
-        final BudgetDtos.Receipt receipt = service.uploadReceipt(created.id(), "../kvitto.pdf", ReceiptsTest.PDF);
+        final BudgetDtos.Receipt receipt = service.uploadReceipt(TestExternalIds.internal(created.id()), "../kvitto.pdf", ReceiptsTest.PDF);
 
         assertThat(receipt.filename()).isEqualTo("kvitto.pdf");
         assertThat(receipt.contentType()).isEqualTo(Receipts.PDF);
         assertThat(receipt.size()).isEqualTo(ReceiptsTest.PDF.length);
         verify(receiptRepository).save(any(ReceiptContent.class));
 
-        final ReceiptContent stored = new ReceiptContent(created.id(), ReceiptsTest.PDF);
+        final ReceiptContent stored = new ReceiptContent(TestExternalIds.internal(created.id()), ReceiptsTest.PDF);
 
-        when(receiptRepository.findById(created.id())).thenReturn(Optional.of(stored));
-        assertThat(service.uploadReceipt(created.id(), "bild.png", ReceiptsTest.PNG).contentType()).isEqualTo(Receipts.PNG);
+        when(receiptRepository.findById(TestExternalIds.internal(created.id()))).thenReturn(Optional.of(stored));
+        assertThat(service.uploadReceipt(TestExternalIds.internal(created.id()), "bild.png", ReceiptsTest.PNG).contentType()).isEqualTo(Receipts.PNG);
         assertThat(stored.getContent()).isEqualTo(ReceiptsTest.PNG);
 
-        final TransactionService.ReceiptFile file = service.receipt(created.id());
+        final TransactionService.ReceiptFile file = service.receipt(TestExternalIds.internal(created.id()));
 
         assertThat(file.filename()).isEqualTo("bild.png");
         assertThat(file.content()).isEqualTo(ReceiptsTest.PNG);
@@ -273,7 +280,7 @@ class TransactionServiceTest {
     void aFileThatIsNoReceiptIsRefused() {
         final Transaction created = create("FOOD", null);
 
-        assertThatThrownBy(() -> service.uploadReceipt(created.id(), "kvitto.pdf", "<script>".getBytes(StandardCharsets.UTF_8)))
+        assertThatThrownBy(() -> service.uploadReceipt(TestExternalIds.internal(created.id()), "kvitto.pdf", "<script>".getBytes(StandardCharsets.UTF_8)))
                 .hasFieldOrPropertyWithValue("detailMessageCode", "error.receipt.type");
         verify(receiptRepository, never()).save(any());
     }
@@ -281,29 +288,29 @@ class TransactionServiceTest {
     @Test
     void removingAReceiptDeletesItsFile() {
         final Transaction created = create("FOOD", null);
-        final ReceiptContent stored = new ReceiptContent(created.id(), ReceiptsTest.PDF);
+        final ReceiptContent stored = new ReceiptContent(TestExternalIds.internal(created.id()), ReceiptsTest.PDF);
 
-        service.uploadReceipt(created.id(), "kvitto.pdf", ReceiptsTest.PDF);
-        when(receiptRepository.findById(created.id())).thenReturn(Optional.of(stored));
-        service.removeReceipt(created.id());
+        service.uploadReceipt(TestExternalIds.internal(created.id()), "kvitto.pdf", ReceiptsTest.PDF);
+        when(receiptRepository.findById(TestExternalIds.internal(created.id()))).thenReturn(Optional.of(stored));
+        service.removeReceipt(TestExternalIds.internal(created.id()));
 
         verify(receiptRepository).delete(stored);
         assertThat(service.list(REVIVAL_ID, false).getFirst().receipt()).isNull();
-        assertThatThrownBy(() -> service.removeReceipt(created.id())).isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.receipt(created.id())).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.removeReceipt(TestExternalIds.internal(created.id()))).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.receipt(TestExternalIds.internal(created.id()))).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void readersDownloadButDoNotUpload() {
         final Transaction created = create("FOOD", null);
 
-        service.uploadReceipt(created.id(), "kvitto.pdf", ReceiptsTest.PDF);
-        when(receiptRepository.findById(created.id())).thenReturn(Optional.of(new ReceiptContent(created.id(), ReceiptsTest.PDF)));
+        service.uploadReceipt(TestExternalIds.internal(created.id()), "kvitto.pdf", ReceiptsTest.PDF);
+        when(receiptRepository.findById(TestExternalIds.internal(created.id()))).thenReturn(Optional.of(new ReceiptContent(TestExternalIds.internal(created.id()), ReceiptsTest.PDF)));
         when(callerService.current()).thenReturn(TestCallers.observer());
 
-        assertThat(service.receipt(created.id()).contentType()).isEqualTo(Receipts.PDF);
-        assertThatThrownBy(() -> service.uploadReceipt(created.id(), "kvitto.pdf", ReceiptsTest.PDF)).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> service.removeReceipt(created.id())).isInstanceOf(AccessDeniedException.class);
+        assertThat(service.receipt(TestExternalIds.internal(created.id())).contentType()).isEqualTo(Receipts.PDF);
+        assertThatThrownBy(() -> service.uploadReceipt(TestExternalIds.internal(created.id()), "kvitto.pdf", ReceiptsTest.PDF)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.removeReceipt(TestExternalIds.internal(created.id()))).isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -312,6 +319,6 @@ class TransactionServiceTest {
 
         when(callerService.current()).thenReturn(TestCallers.nobody());
 
-        assertThatThrownBy(() -> service.receipt(created.id())).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.receipt(TestExternalIds.internal(created.id()))).isInstanceOf(ResourceNotFoundException.class);
     }
 }

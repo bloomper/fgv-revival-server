@@ -17,10 +17,11 @@
 package nu.fgv.revival.server.member;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalMemberCapabilitiesDto(Long id, Long version, Set<String> capabilities) {
+public record RevivalMemberCapabilitiesDto(UUID id, Long version, Set<String> capabilities) {
 }

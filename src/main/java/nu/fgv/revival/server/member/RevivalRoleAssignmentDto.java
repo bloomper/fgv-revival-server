@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.member;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * GraphQL's {@code RevivalRoleAssignment}. The revival is resolved by its id.
@@ -24,5 +25,5 @@ import java.util.List;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalRoleAssignmentDto(Long revivalId, RevivalRole role, List<String> capabilities) {
+public record RevivalRoleAssignmentDto(UUID revivalId, RevivalRole role, List<String> capabilities) {
 }

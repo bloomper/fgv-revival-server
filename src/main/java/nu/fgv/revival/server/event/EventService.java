@@ -43,6 +43,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -218,9 +219,9 @@ public class EventService {
     @Transactional(readOnly = true)
     public List<EventProposalDto> proposals(final Long revivalId) {
         final Revival revival = visible(callerService.current(), revivalId);
-        final Set<Long> typed = repository.findByRevivalId(revivalId).stream()
-                .filter(event -> !event.isCancelled() && event.getTypeId() != null)
-                .map(Event::getTypeId)
+        final Set<UUID> typed = repository.findByRevivalId(revivalId).stream()
+                .filter(event -> !event.isCancelled() && event.getTypeUuid() != null)
+                .map(Event::getTypeUuid)
                 .collect(Collectors.toSet());
 
         return EventProposals.propose(revival.getPremiereDate(),

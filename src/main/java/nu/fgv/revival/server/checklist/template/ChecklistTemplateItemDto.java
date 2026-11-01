@@ -21,19 +21,21 @@ import nu.fgv.revival.server.checklist.RelativeDeadline;
 import nu.fgv.revival.server.guide.GuideVersionView;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
  * GraphQL's {@code ChecklistTemplateItem}; its {@code guideItem} is resolved in the latest published version.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ChecklistTemplateItemDto(Long id, Long templateId, int position, GuideVersionView.Text text,
+public record ChecklistTemplateItemDto(UUID id, UUID templateId, int position, GuideVersionView.Text text,
                                        @Nullable String guideItemKey,
                                        @Nullable String defaultCapability, @Nullable RelativeDeadline deadline,
                                        boolean retired, Long version) {
 
     public static ChecklistTemplateItemDto of(final ChecklistTemplateItem item) {
-        return new ChecklistTemplateItemDto(item.getId(), item.getTemplateId(), item.getPosition(),
+        return new ChecklistTemplateItemDto(item.getUuid(), item.getTemplateUuid(), item.getPosition(),
                 GuideVersionView.Text.plain(item.getTextSv(), item.getTextEn()), item.getGuideItemKey(), item.getDefaultCapability(),
                 item.getDeadline(), item.isRetired(), item.getVersion());
     }

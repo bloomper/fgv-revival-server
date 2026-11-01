@@ -16,9 +16,11 @@
 
 package nu.fgv.revival.server.revival;
 
+import java.util.UUID;
+
 /**
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record RevivalStatusChangeDto(Long id, RevivalStatus from, RevivalStatus to) {
+public record RevivalStatusChangeDto(UUID id, RevivalStatus from, RevivalStatus to) {
 }

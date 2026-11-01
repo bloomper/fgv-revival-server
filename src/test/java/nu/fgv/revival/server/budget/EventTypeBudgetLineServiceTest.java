@@ -38,6 +38,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.withUuids;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,6 +85,7 @@ class EventTypeBudgetLineServiceTest {
                 new BudgetCategoryService(categoryRepository, callerService, accessPolicy, TestClocks.at(LocalDate.of(2026, 10, 23))), callerService,
                 accessPolicy);
         type.setId(TYPE);
+        type.setUuid(uuid(type.getId()));
         type.setNameSv("Rephelg 1");
         type.setVersion(0L);
         lenient().when(callerService.current()).thenReturn(TestCallers.superAdmin());
@@ -103,10 +106,11 @@ class EventTypeBudgetLineServiceTest {
 
             if (line.getId() == null) {
                 line.setId(10L + lines.size());
+                line.setUuid(uuid(line.getId()));
                 line.setVersion(0L);
                 lines.add(line);
             }
-            return line;
+            return withUuids(line);
         });
     }
 
@@ -114,7 +118,7 @@ class EventTypeBudgetLineServiceTest {
     void linesAreAppendedToTheType() {
         final EventTypeDto type = service.create(definition(BudgetLineQuantity.PER_PARTICIPANT, "3"));
 
-        assertThat(type.id()).isEqualTo(TYPE);
+        assertThat(type.id()).isEqualTo(uuid(TYPE));
         assertThat(lines).singleElement().satisfies(line -> {
             assertThat(line.getDescriptionSv()).isEqualTo("Mat per deltagare");
             assertThat(line.getDescriptionEn()).isNull();

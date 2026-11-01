@@ -16,14 +16,18 @@
 package nu.fgv.revival.server.mcp;
 
 import nu.fgv.revival.server.guide.GuideVersionView;
+import nu.fgv.revival.server.library.LibraryEntry;
 import nu.fgv.revival.server.library.LibraryEntryDto;
 import nu.fgv.revival.server.library.LibraryEntryKind;
 import nu.fgv.revival.server.library.LibraryService;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /**
  * The reference library over MCP: venues, ticket services, role descriptions and roles to contact. Whoever reads the
@@ -35,10 +39,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class LibraryMcpTools {
 
+    private final ExternalIds ids;
+
     private final LibraryService libraryService;
     private final McpToolSupport support;
 
-    public LibraryMcpTools(final LibraryService libraryService, final McpToolSupport support) {
+    public LibraryMcpTools(final LibraryService libraryService, final McpToolSupport support, final ExternalIds ids) {
+        this.ids = ids;
         this.libraryService = libraryService;
         this.support = support;
     }
@@ -94,7 +101,7 @@ public class LibraryMcpTools {
             description = "Super admins: change an entry of the reference library. Leave out what stays as it is; an empty Swedish text clears that text. The kind cannot change.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public Entry updateLibraryEntry(
-            @McpToolParam(description = "The entry's id") final Long id,
+            @McpToolParam(description = "The entry's id") final UUID id,
             @McpToolParam(required = false, description = "The name in Swedish") final @Nullable String nameSv,
             @McpToolParam(required = false, description = "The name in English") final @Nullable String nameEn,
             @McpToolParam(required = false, description = "What it is, in Swedish") final @Nullable String descriptionSv,
@@ -106,9 +113,9 @@ public class LibraryMcpTools {
             @McpToolParam(required = false, description = "How the role is reached, in Swedish") final @Nullable String contactSv,
             @McpToolParam(required = false, description = "An https link; an empty string clears it") final @Nullable String url) {
         return support.call("update_library_entry", () -> {
-            final LibraryEntryDto current = entry(id);
+            final LibraryEntryDto current = entry(ids.idOf(LibraryEntry.class, id));
 
-            return Entry.of(libraryService.update(id, current.version(), new LibraryService.Definition(current.kind(),
+            return Entry.of(libraryService.update(ids.idOf(LibraryEntry.class, id), current.version(), new LibraryService.Definition(current.kind(),
                     new LibraryService.Text(nameSv == null ? current.name().sv() : nameSv, nameEn == null ? current.name().en() : nameEn),
                     text(descriptionSv, descriptionEn, current.description()), text(prosSv, null, current.pros()), text(consSv, null, current.cons()),
                     text(bookingSv, null, current.booking()), text(pricesSv, null, current.prices()), text(contactSv, null, current.contact()),
@@ -120,19 +127,19 @@ public class LibraryMcpTools {
             description = "Super admins: retire a reference library entry so guide items can no longer be linked to it, or restore it. Items that link to it keep it; entries are never deleted.",
             annotations = @McpAnnotations(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public Entry setLibraryEntryRetired(
-            @McpToolParam(description = "The entry's id") final Long id,
+            @McpToolParam(description = "The entry's id") final UUID id,
             @McpToolParam(description = "true to retire, false to restore") final Boolean retired) {
         return support.call("set_library_entry_retired", () -> {
-            final Long version = entry(id).version();
+            final Long version = entry(ids.idOf(LibraryEntry.class, id)).version();
 
-            return Entry.of(retired ? libraryService.retire(id, version) : libraryService.restore(id, version));
+            return Entry.of(retired ? libraryService.retire(ids.idOf(LibraryEntry.class, id), version) : libraryService.restore(ids.idOf(LibraryEntry.class, id), version));
         });
     }
 
     /**
      * An entry of the reference library, with the texts its kind uses.
      */
-    public record Entry(Long id, LibraryEntryKind kind, ChecklistMcpTools.Text name, ChecklistMcpTools.@Nullable Text description,
+    public record Entry(UUID id, LibraryEntryKind kind, ChecklistMcpTools.Text name, ChecklistMcpTools.@Nullable Text description,
                         ChecklistMcpTools.@Nullable Text pros, ChecklistMcpTools.@Nullable Text cons, ChecklistMcpTools.@Nullable Text booking,
                         ChecklistMcpTools.@Nullable Text prices, ChecklistMcpTools.@Nullable Text contact, @Nullable String url, boolean retired) {
 

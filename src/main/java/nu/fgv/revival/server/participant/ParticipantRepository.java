@@ -45,7 +45,7 @@ public interface ParticipantRepository extends Repository<Participant, Long> {
 
     Optional<Participant> findByMemberIdAndRemovedAtIsNull(Long memberId);
 
-    boolean existsByRevivalIdAndSpexareIdAndRemovedAtIsNull(Long revivalId, Long spexareId);
+    boolean existsByRevivalIdAndSpexareIdAndRemovedAtIsNull(Long revivalId, String spexareId);
 
     /**
      * Pending people, not removed, with one of the responses, of revivals in any status but the given one.

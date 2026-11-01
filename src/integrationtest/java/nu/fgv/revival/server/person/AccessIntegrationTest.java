@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.person;
 
 import nu.fgv.revival.server.AbstractIntegrationTest;
+import nu.fgv.revival.server.EntityId;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.ClientResource;
@@ -90,7 +91,7 @@ class AccessIntegrationTest extends AbstractIntegrationTest {
             userId = createUser(realm(admin), email, "Rut", "Borttagen", CLIENT_ID, List.of("USER"));
         }
 
-        final long revivalId = createRevival(ALI_BABA, 2028);
+        final EntityId revivalId = createRevival(ALI_BABA, 2028);
 
         setStatus(revivalId, "APPROVED");
         addMember(revivalId, email, "DIRECTEUR", List.of());

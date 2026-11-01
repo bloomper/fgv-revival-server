@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 /**
  * An event as GraphQL's {@code Event}, with times as {@code HH:mm}. Its type and checklist are resolved from ids.
@@ -29,9 +30,9 @@ import java.time.temporal.ChronoUnit;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record EventDto(Long id,
-                       Long revivalId,
-                       @Nullable Long typeId,
+public record EventDto(UUID id,
+                       UUID revivalId,
+                       @Nullable UUID typeId,
                        String title,
                        LocalDate startDate,
                        LocalDate endDate,
@@ -47,7 +48,7 @@ public record EventDto(Long id,
     static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     public static EventDto of(final Event event, final @Nullable LocalDate premiereDate) {
-        return new EventDto(event.getId(), event.getRevivalId(), event.getTypeId(), event.getTitle(), event.getStartDate(), event.getEndDate(),
+        return new EventDto(event.getUuid(), event.getRevivalUuid(), event.getTypeUuid(), event.getTitle(), event.getStartDate(), event.getEndDate(),
                 event.getStartTime() == null ? null : event.getStartTime().format(TIME_FORMAT),
                 event.getEndTime() == null ? null : event.getEndTime().format(TIME_FORMAT),
                 event.getLocation(), event.getDescription(), event.isRevivalPays(),

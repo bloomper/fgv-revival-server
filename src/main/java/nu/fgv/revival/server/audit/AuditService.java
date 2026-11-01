@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A record's history from Envers, read only. Who changed it is shown by name, never by email address.
@@ -67,12 +68,12 @@ public class AuditService {
      * not read now is refused even though they may have read it once.
      */
     @Transactional(readOnly = true)
-    public List<RevisionDto> revisions(final AuditedType type, final Long id, final Locale locale) {
+    public List<RevisionDto> revisions(final AuditedType type, final UUID id, final Locale locale) {
         final AuditedEntityDescriptor descriptor = registry.require(type);
         final Caller caller = callerService.current();
         @SuppressWarnings("unchecked") final List<Object[]> triples = AuditReaderFactory.get(entityManager).createQuery()
                 .forRevisionsOfEntity(descriptor.entityClass(), false, true)
-                .add(AuditEntity.id().eq(id))
+                .add(AuditEntity.property("uuid").eq(id))
                 .addOrder(AuditEntity.revisionNumber().asc())
                 .getResultList();
 

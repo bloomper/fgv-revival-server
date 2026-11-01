@@ -26,6 +26,7 @@ import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.jpa.ExternalIds;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +52,8 @@ import java.util.stream.Collectors;
 @Service
 public class EventTypeService {
 
+    private final ExternalIds ids;
+
     private final EventTypeRepository repository;
     private final ChecklistTemplateRepository templateRepository;
     private final CallerService callerService;
@@ -62,7 +64,9 @@ public class EventTypeService {
                             final ChecklistTemplateRepository templateRepository,
                             final CallerService callerService,
                             final AccessPolicy accessPolicy,
-                            final Clock clock) {
+                            final Clock clock,
+                            final ExternalIds ids) {
+        this.ids = ids;
         this.repository = repository;
         this.templateRepository = templateRepository;
         this.callerService = callerService;
@@ -135,7 +139,7 @@ public class EventTypeService {
     @Transactional(readOnly = true)
     public Map<Long, EventTypeDto> byIds(final Collection<Long> ids) {
         return ids.isEmpty() ? Map.of()
-                : repository.findAllById(Set.copyOf(ids)).stream().map(EventTypeDto::of).collect(Collectors.toMap(EventTypeDto::id, Function.identity()));
+                : repository.findAllById(Set.copyOf(ids)).stream().collect(Collectors.toMap(EventType::getId, EventTypeDto::of));
     }
 
     /**
@@ -144,7 +148,7 @@ public class EventTypeService {
     @Transactional(readOnly = true)
     public @Nullable ChecklistTemplateSummaryDto template(final EventTypeDto type) {
         return type.checklistTemplateId() == null ? null
-                : templateRepository.findById(type.checklistTemplateId()).map(ChecklistTemplateSummaryDto::of).orElse(null);
+                : templateRepository.findById(ids.idOf(ChecklistTemplate.class, type.checklistTemplateId())).map(ChecklistTemplateSummaryDto::of).orElse(null);
     }
 
     /**

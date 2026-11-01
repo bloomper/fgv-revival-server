@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -45,11 +46,11 @@ class GuideChangesTest {
     }
 
     private static GuideVersionView.Item item(final String key, final String chapter, final String section, final GuideItemKind type, final GuideVersionView.Text text) {
-        return new GuideVersionView.Item(1L, key, chapter, section, type.name(), type, text, 0L);
+        return new GuideVersionView.Item(uuid(1), key, chapter, section, type.name(), type, text, 0L);
     }
 
     private static GuideVersionView version(final long id, final GuideVersionView.Text intro, final List<GuideVersionView.Chapter> chapters) {
-        return new GuideVersionView(id, GuideVersionStatus.PUBLISHED, "v" + id, null, Instant.parse("2026-11-0" + id + "T10:00:00Z"), null, null, 0L, intro, chapters);
+        return new GuideVersionView(uuid(id), GuideVersionStatus.PUBLISHED, "v" + id, null, Instant.parse("2026-11-0" + id + "T10:00:00Z"), null, null, 0L, intro, chapters);
     }
 
     private static List<GuideVersionView.Chapter> chapters(final GuideVersionView.Chapter a, final GuideVersionView.Chapter b, final GuideVersionView.Chapter c) {
@@ -63,11 +64,11 @@ class GuideChangesTest {
 
     private static GuideVersionView.Chapter chapter(final String key, final GuideVersionView.Text title,
                                                     final List<GuideVersionView.Item> items, final List<GuideVersionView.Section> sections) {
-        return new GuideVersionView.Chapter((long) key.hashCode(), key, title, items, sections, 0L);
+        return new GuideVersionView.Chapter(uuid(key.hashCode()), key, title, items, sections, 0L);
     }
 
     private static GuideVersionView.Section section(final String key, final String chapter, final String title, final List<GuideVersionView.Item> items) {
-        return new GuideVersionView.Section((long) key.hashCode(), key, chapter, GuideVersionView.Text.plain(title, null), items, 0L);
+        return new GuideVersionView.Section(uuid(key.hashCode()), key, chapter, GuideVersionView.Text.plain(title, null), items, 0L);
     }
 
     private static GuideVersionView before() {

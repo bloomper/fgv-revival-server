@@ -41,10 +41,11 @@ import org.mockito.quality.Strictness;
 import java.util.List;
 import java.util.Map;
 
+import static nu.fgv.revival.server.TestUuids.uuid;
+import static nu.fgv.revival.server.TestUuids.uuidOrNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -81,8 +82,10 @@ class SyncPlannerTest {
         final Participant participant = new Participant();
 
         participant.setId(id);
+        participant.setUuid(uuid(participant.getId()));
         participant.setRevivalId(1L);
-        participant.setSpexareId(spexareId);
+        participant.setRevivalUuid(uuidOrNull(participant.getRevivalId()));
+        participant.setSpexareId(spexareId == null ? null : String.valueOf(spexareId));
         participant.setKind(kind);
         participant.setResponse(response);
         participant.setPositionTaskId(position);
@@ -97,7 +100,8 @@ class SyncPlannerTest {
         planner = new SyncPlanner(participantRepository, stepRepository, client, directory);
         revival = new Revival();
         revival.setId(1L);
-        revival.setSpexId(10L);
+        revival.setUuid(uuid(revival.getId()));
+        revival.setSpexId("10");
         revival.setYear(2028);
         revival.setMembershipYear(2028);
         when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("ROLE", "Roll", "Ensemble", true),
@@ -117,7 +121,7 @@ class SyncPlannerTest {
                 participant(2, null, ParticipantKind.PARTICIPANT, ParticipantResponse.YES, null, null, false),
                 participant(3, 8L, ParticipantKind.PARTICIPANT, ParticipantResponse.NO, null, null, false),
                 participant(4, 9L, ParticipantKind.HELPER, ParticipantResponse.YES, null, null, false));
-        when(client.spexRevivals(10L)).thenReturn(List.of(new SpexregisterClient.SpexRevival(400L, 2005)));
+        when(client.spexRevivals("10")).thenReturn(List.of(new SpexregisterClient.SpexRevival("400", 2005)));
 
         final SyncPlanner.Plan plan = planner.plan(revival, ACTING);
 
@@ -141,7 +145,7 @@ class SyncPlannerTest {
     void whatSpexregisterHasIsMarkedExisting() {
         participants(participant(1, 7L, ParticipantKind.PARTICIPANT, ParticipantResponse.YES, "ROLE", "Kalifen", true),
                 participant(2, 8L, ParticipantKind.PARTICIPANT, ParticipantResponse.YES, "TRUMPET", null, false));
-        revival.setSpexregisterRevivalId(REMOTE_REVIVAL);
+        revival.setSpexregisterRevivalId(String.valueOf(REMOTE_REVIVAL));
         when(client.spexareActivities(anyCollection(), anyString())).thenReturn(List.of(
                 new SpexareActivities("7", List.of(new ActivityDetail("70", new SpexActivityRef("71", new IdRef(String.valueOf(REMOTE_REVIVAL))),
                         List.of(new TaskActivity("72", new IdRef("ROLE"), List.of(new Actor("73", "Kalifen", new IdRef("B1")))))))),
@@ -157,7 +161,7 @@ class SyncPlannerTest {
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(SyncOperation.PARTICIPATION, false),
                         org.assertj.core.groups.Tuple.tuple(SyncOperation.TASK, false));
         assertThat(plan.planned()).extracting(SyncPlanner.Operation::participantId).containsOnly(2L);
-        verify(client, never()).spexRevivals(anyLong());
+        verify(client, never()).spexRevivals(anyString());
     }
 
     @Test
@@ -165,7 +169,7 @@ class SyncPlannerTest {
         final Participant anna = participant(1, 7L, ParticipantKind.PARTICIPANT, ParticipantResponse.YES, "TRUMPET", null, false);
 
         participants(anna);
-        when(client.spexRevivals(10L)).thenReturn(List.of());
+        when(client.spexRevivals("10")).thenReturn(List.of());
 
         final String first = planner.plan(revival, ACTING).hash();
 

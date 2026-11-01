@@ -28,11 +28,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nu.fgv.revival.server.util.AbstractAuditable;
+import nu.fgv.revival.server.util.Uuids;
+import org.hibernate.annotations.Formula;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.jspecify.annotations.Nullable;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * A participant's answer for one day of an event. Clearing the answer deletes the row: it is the person's
@@ -55,11 +58,18 @@ public class Availability extends AbstractAuditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
+    private UUID uuid = Uuids.v7();
+
     @Column(name = "participant_id", nullable = false, updatable = false)
     private Long participantId;
 
     @Column(name = "event_id", nullable = false, updatable = false)
     private Long eventId;
+
+    @Formula("(SELECT t.uuid FROM event t WHERE t.id = event_id)")
+    @NotAudited
+    private @Nullable UUID eventUuid;
 
     @Column(name = "day", nullable = false, updatable = false)
     private LocalDate day;
