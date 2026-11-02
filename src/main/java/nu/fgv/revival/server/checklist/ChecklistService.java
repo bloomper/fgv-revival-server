@@ -262,7 +262,7 @@ public class ChecklistService {
                 .filter(item -> !Boolean.TRUE.equals(actual.mine()) || Objects.equals(item.getOwner().getPersonId(), caller.person().getId()))
                 .filter(item -> !Boolean.TRUE.equals(actual.open()) || item.getState() == ChecklistItemState.OPEN)
                 .filter(item -> !Boolean.TRUE.equals(actual.overdue()) || item.isOverdue(today))
-                .filter(item -> actual.checklistId() == null || item.getChecklistId().equals(actual.checklistId()))
+                .filter(item -> actual.checklistId() == null || checklists.get(item.getChecklistId()).getUuid().equals(actual.checklistId()))
                 .filter(item -> !Boolean.TRUE.equals(actual.requiredOnly()) || item.isRequired())
                 .filter(item -> chapterKey == null || chapterKey.equals(checklists.get(item.getChecklistId()).getChapterKey()))
                 .filter(item -> words.isEmpty() || hasWords(checklists.get(item.getChecklistId()).getName(), words))

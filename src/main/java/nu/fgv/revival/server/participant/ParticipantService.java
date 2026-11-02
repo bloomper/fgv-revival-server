@@ -126,7 +126,7 @@ public class ParticipantService {
             return List.of();
         }
         return spexare.spex().stream()
-                .filter(spex -> family == null || family.contains(Long.valueOf(spex.id())))
+                .filter(spex -> family == null || family.contains(spex.id()))
                 .sorted(Comparator.comparing((SpexregisterClient.SpexNode spex) -> spex.year() == null ? "" : spex.year()).reversed())
                 .map(spex -> ((spex.title() == null ? "" : spex.title()) + " " + (spex.year() == null ? "" : spex.year())).strip())
                 .distinct()

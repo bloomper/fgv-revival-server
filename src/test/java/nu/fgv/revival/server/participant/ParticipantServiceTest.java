@@ -389,4 +389,21 @@ class ParticipantServiceTest {
         assertThat(counts.byResponse()).contains(new ParticipantDtos.ResponseCount(ParticipantResponse.YES, 2),
                 new ParticipantDtos.ResponseCount(ParticipantResponse.PENDING, 1));
     }
+
+    @Test
+    void historyKeepsTheFamilysSpexByTheirExternalIds() {
+        final String original = uuid(1).toString();
+        final String revival = uuid(2).toString();
+        final String other = uuid(3).toString();
+        final SpexregisterClient.Spexare spexare = new SpexregisterClient.Spexare("s", "Anna", "Andersson", null, null, false, null, null,
+                List.of(activity(original, "1990", "Nobel"), activity(revival, "2015", "Nobel"), activity(other, "2000", "Anckarström")));
+
+        assertThat(ParticipantService.history(spexare, Set.of(original, revival))).containsExactly("Nobel 2015", "Nobel 1990");
+        assertThat(ParticipantService.history(spexare, null)).containsExactly("Nobel 2015", "Anckarström 2000", "Nobel 1990");
+    }
+
+    private static SpexregisterClient.Activity activity(final String spexId, final String year, final String title) {
+        return new SpexregisterClient.Activity("a" + spexId, new SpexregisterClient.SpexActivity("sa" + spexId,
+                new SpexregisterClient.SpexNode(spexId, year, title, null)));
+    }
 }

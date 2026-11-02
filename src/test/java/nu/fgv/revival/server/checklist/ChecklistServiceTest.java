@@ -187,6 +187,19 @@ class ChecklistServiceTest {
                 .satisfies(dto -> assertThat(dto.text().en()).isEqualTo("The venue must be booked."));
     }
 
+    @Test
+    void itemsAreFilteredByTheChecklistsExternalId() {
+        final ChecklistItem item = item(false);
+
+        when(checklistRepository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(checklist));
+        when(itemRepository.findByRevivalId(REVIVAL_ID)).thenReturn(List.of(item));
+
+        assertThat(service.items(REVIVAL_ID, new ChecklistItemFilterDto(null, null, null, checklist.getUuid(), null), null, null, Locale.ENGLISH))
+                .hasSize(1);
+        assertThat(service.items(REVIVAL_ID, new ChecklistItemFilterDto(null, null, null, uuid(99), null), null, null, Locale.ENGLISH))
+                .isEmpty();
+    }
+
     @Nested
     class Create {
 

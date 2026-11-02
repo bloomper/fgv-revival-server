@@ -419,7 +419,7 @@ public class MailingService {
 
         final Caller caller = callerService.current();
         final MailingDto latest = item.mailing() == null ? null
-                : item.mailing().getId().equals(mailing.id()) ? mailing : toDto(item.mailing(), revival, caller, locale);
+                : item.mailing().getUuid().equals(mailing.id()) ? mailing : toDto(item.mailing(), revival, caller, locale);
 
         return new MailingPlanEntry(MailingTemplateDto.of(item.template()),
                 item.event() == null ? null : EventDto.of(item.event(), revival.getPremiereDate()), item.dueDate(), latest,
