@@ -112,6 +112,11 @@ fgv-revival:
   base-url: ${API_BASE_URL:https://api.revival.fgv.local.nu:8443}
   web-url: ${API_WEB_URL:http://localhost:3001}
   time-zone: Europe/Stockholm
+  jobs:
+    participant-retention:
+      cron-expression: 0 15 3 * * * # Every day at 03:15
+    mailing-reminders:
+      cron-expression: 0 30 7 * * * # Every day at 07:30
   mail:
     from: ${MAIL_FROM:noreply@localhost}
   keycloak:

@@ -447,6 +447,13 @@ public class AccessPolicy {
     }
 
     /**
+     * Only SUPER_ADMIN sees the scheduled maintenance jobs and starts them by hand.
+     */
+    public boolean canRunMaintenanceJobs(final Caller caller) {
+        return caller.isSuperAdmin();
+    }
+
+    /**
      * The current Chalmersspex's show dates, for the cross-revival timeline: super admins and observers read them.
      */
     public boolean canReadSpexCalendar(final Caller caller) {
@@ -793,6 +800,10 @@ public class AccessPolicy {
 
     public void requireManageApplicationSettings(final Caller caller) {
         require(canManageApplicationSettings(caller));
+    }
+
+    public void requireRunMaintenanceJobs(final Caller caller) {
+        require(canRunMaintenanceJobs(caller));
     }
 
     public void requireWorkAssignedChecklistItems(final Caller caller, final Revival revival) {
