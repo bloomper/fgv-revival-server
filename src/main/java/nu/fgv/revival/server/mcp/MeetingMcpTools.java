@@ -109,9 +109,12 @@ public class MeetingMcpTools {
             final MeetingDto meeting = meetingService.get(ids.idOf(Meeting.class, meetingId), Locale.ENGLISH);
 
             return switch (action) {
-                case START -> meetingService.start(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
-                case CLOSE -> meetingService.close(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
-                case CANCEL -> meetingService.cancel(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
+                case START ->
+                        meetingService.start(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
+                case CLOSE ->
+                        meetingService.close(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
+                case CANCEL ->
+                        meetingService.cancel(ids.idOf(Meeting.class, meetingId), meeting.version(), Locale.ENGLISH);
             };
         });
     }

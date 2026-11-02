@@ -49,14 +49,14 @@ public class EventTypeGraphqlApi {
         this.service = service;
     }
 
+    private static EventTypeService.Text text(final LocalizedTextInput input) {
+        return new EventTypeService.Text(input.sv(), input.en());
+    }
+
     private EventTypeService.Definition definition(final EventTypeInput input) {
         return new EventTypeService.Definition(text(input.name()), input.description() == null ? null : text(input.description()),
                 input.rooms() == null ? null : text(input.rooms()), input.catering() == null ? null : text(input.catering()),
                 input.offsetMinDays(), input.offsetMaxDays(), input.days(), input.revivalPays(), ids.idOfNullable(ChecklistTemplate.class, input.checklistTemplateId()));
-    }
-
-    private static EventTypeService.Text text(final LocalizedTextInput input) {
-        return new EventTypeService.Text(input.sv(), input.en());
     }
 
     @QueryMapping

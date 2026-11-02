@@ -23,7 +23,6 @@ import nu.fgv.revival.server.revival.RevivalAnonymization;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalStatusChanged;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -68,7 +67,6 @@ public class ParticipantRetention {
         this.clock = clock;
     }
 
-    @Scheduled(cron = "0 15 3 * * *", zone = "Europe/Stockholm")
     public void daily() {
         try {
             transactions.executeWithoutResult(_ -> {

@@ -80,13 +80,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MailingService {
 
-    private final ExternalIds ids;
-
     /**
      * How many days ahead a plan entry counts as due.
      */
     static final int DUE_WITHIN_DAYS = 7;
-
+    private final ExternalIds ids;
     private final MailingRepository repository;
     private final MailingRecipientRepository recipientRepository;
     private final MailingTemplateRepository templateRepository;

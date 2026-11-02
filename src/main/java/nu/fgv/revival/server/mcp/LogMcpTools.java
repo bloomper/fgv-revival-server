@@ -17,7 +17,6 @@
 
 package nu.fgv.revival.server.mcp;
 
-import nu.fgv.revival.server.decisionlog.LogEntry;
 import nu.fgv.revival.server.decisionlog.LogEntryDto;
 import nu.fgv.revival.server.decisionlog.LogEntryFilterDto;
 import nu.fgv.revival.server.decisionlog.LogEntryService;
@@ -51,11 +50,9 @@ import java.util.UUID;
 @Component
 public class LogMcpTools {
 
-    private final ExternalIds ids;
-
     static final int DEFAULT_LIMIT = 50;
     static final int MAX_LIMIT = 200;
-
+    private final ExternalIds ids;
     private final LogEntryService logEntryService;
     private final OwnerResolver ownerResolver;
     private final CallerService callerService;

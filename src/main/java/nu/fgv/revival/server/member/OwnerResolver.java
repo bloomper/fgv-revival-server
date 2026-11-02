@@ -50,12 +50,10 @@ import java.util.stream.Collectors;
 @Component
 public class OwnerResolver {
 
-    private final ExternalIds ids;
-
     private static final Set<RevivalRole> OWNER_ROLES = EnumSet.of(RevivalRole.DIRECTEUR, RevivalRole.STEERING_GROUP);
     private static final Set<RevivalRole> PARTICIPANT_ROLES = EnumSet.of(RevivalRole.PARTICIPANT);
     private static final String ME = "me";
-
+    private final ExternalIds ids;
     private final RevivalMemberRepository memberRepository;
     private final PersonRepository personRepository;
 

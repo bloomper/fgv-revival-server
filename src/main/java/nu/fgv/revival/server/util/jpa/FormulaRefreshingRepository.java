@@ -47,6 +47,17 @@ public class FormulaRefreshingRepository<T, ID> extends SimpleJpaRepository<T, I
         this.entityManager = entityManager;
     }
 
+    private static boolean hasFormulas(final Class<?> type) {
+        for (Class<?> current = type; current != null && current != Object.class; current = current.getSuperclass()) {
+            for (final Field field : current.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Formula.class)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     @Override
     @Transactional
     public <S extends T> S save(final S entity) {
@@ -57,16 +68,5 @@ public class FormulaRefreshingRepository<T, ID> extends SimpleJpaRepository<T, I
             entityManager.refresh(saved);
         }
         return saved;
-    }
-
-    private static boolean hasFormulas(final Class<?> type) {
-        for (Class<?> current = type; current != null && current != Object.class; current = current.getSuperclass()) {
-            for (final Field field : current.getDeclaredFields()) {
-                if (field.isAnnotationPresent(Formula.class)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

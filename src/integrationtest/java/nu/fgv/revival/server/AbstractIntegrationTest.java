@@ -402,6 +402,22 @@ public abstract class AbstractIntegrationTest {
         return Objects.requireNonNull(keyHolder.getKey()).longValue();
     }
 
+    /**
+     * @param query selects {@code id} and {@code uuid} of exactly one row
+     * @return both of the row's ids
+     */
+    protected static EntityId entityId(final JdbcClient.StatementSpec query) {
+        return query.query((rs, _) -> new EntityId(rs.getLong("id"), UUID.fromString(rs.getString("uuid")))).single();
+    }
+
+    /**
+     * @param query selects {@code id} and {@code uuid} of rows
+     * @return both ids of each row
+     */
+    protected static List<EntityId> entityIds(final JdbcClient.StatementSpec query) {
+        return query.query((rs, _) -> new EntityId(rs.getLong("id"), UUID.fromString(rs.getString("uuid")))).list();
+    }
+
     @BeforeEach
     void resetState() {
         jdbcClient.sql("UPDATE log_entry SET answers_entry_id = NULL").update();
@@ -533,22 +549,6 @@ public abstract class AbstractIntegrationTest {
      */
     protected EntityId entityId(final String table, final String uuid) {
         return new EntityId(jdbcClient.sql("SELECT id FROM %s WHERE uuid = ?".formatted(table)).param(uuid).query(Long.class).single(), UUID.fromString(uuid));
-    }
-
-    /**
-     * @param query selects {@code id} and {@code uuid} of exactly one row
-     * @return both of the row's ids
-     */
-    protected static EntityId entityId(final JdbcClient.StatementSpec query) {
-        return query.query((rs, _) -> new EntityId(rs.getLong("id"), UUID.fromString(rs.getString("uuid")))).single();
-    }
-
-    /**
-     * @param query selects {@code id} and {@code uuid} of rows
-     * @return both ids of each row
-     */
-    protected static List<EntityId> entityIds(final JdbcClient.StatementSpec query) {
-        return query.query((rs, _) -> new EntityId(rs.getLong("id"), UUID.fromString(rs.getString("uuid")))).list();
     }
 
     protected EntityId createRevival(final long spexId, final int year) {

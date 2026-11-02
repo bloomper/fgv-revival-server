@@ -117,8 +117,6 @@ import java.util.Set;
 @Component
 public class SampleActivityImporter {
 
-    private final ExternalIds ids;
-
     private static final Map<RevivalStatus, Integer> PHASES_DONE = new EnumMap<>(Map.of(
             RevivalStatus.APPROVED, 0,
             RevivalStatus.ORGANISING, 3,
@@ -138,7 +136,7 @@ public class SampleActivityImporter {
             "e-storage", "Vi får låna V-förrådet, nycklarna finns hos FGV:s ordförande.",
             "g-tickets", "Biljetterna säljs via Nortic och släpps tre månader före premiären."
     );
-
+    private final ExternalIds ids;
     private final boolean importSampleData;
     private final JdbcClient jdbcClient;
     private final TransactionTemplate transactions;

@@ -73,10 +73,8 @@ import static org.springframework.util.StringUtils.hasText;
 @Slf4j
 public class ParticipationService {
 
-    private final ExternalIds ids;
-
     static final int MAX_OPEN_REFERRALS = 20;
-
+    private final ExternalIds ids;
     private final ParticipantRepository repository;
     private final PendingPersonRepository pendingRepository;
     private final DietaryNeedRepository dietaryRepository;

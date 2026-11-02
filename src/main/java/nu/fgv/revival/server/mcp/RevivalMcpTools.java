@@ -274,8 +274,10 @@ public class RevivalMcpTools {
     /**
      * A revival as {@code get_revival} returns it: no people.
      */
-    public record RevivalDetails(UUID id, @Nullable String spexTitle, Integer year, RevivalStatus status, @Nullable LocalDate premiereDate,
-                                 List<RevivalShowDto> shows, @Nullable UUID guideVersionId, List<RevivalStatus> allowedStatuses,
+    public record RevivalDetails(UUID id, @Nullable String spexTitle, Integer year, RevivalStatus status,
+                                 @Nullable LocalDate premiereDate,
+                                 List<RevivalShowDto> shows, @Nullable UUID guideVersionId,
+                                 List<RevivalStatus> allowedStatuses,
                                  @Nullable RevivalRole role) {
     }
 

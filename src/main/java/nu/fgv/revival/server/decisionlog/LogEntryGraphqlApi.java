@@ -207,7 +207,8 @@ public class LogEntryGraphqlApi {
                                       @Nullable String comment, @Nullable Boolean clearComment,
                                       @Nullable List<String> tags,
                                       @Nullable String guideItemKey, @Nullable UUID checklistItemId,
-                                      @Nullable UUID eventId, @Nullable Boolean clearEvent, @Nullable Boolean clearLinks) {
+                                      @Nullable UUID eventId, @Nullable Boolean clearEvent,
+                                      @Nullable Boolean clearLinks) {
     }
 
     public record LogEntryAnswerInput(UUID questionId, Long questionVersion, @Nullable UUID meetingId, String text,

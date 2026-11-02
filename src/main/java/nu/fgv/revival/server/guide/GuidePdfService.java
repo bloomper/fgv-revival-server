@@ -93,6 +93,19 @@ public class GuidePdfService {
         return Math.abs(Math.round(days / 7.0));
     }
 
+    private static void addTimelineText(final Section target, final String label, final @Nullable String text, final PdfFonts body) {
+        if (text == null || text.isBlank()) {
+            return;
+        }
+
+        final Paragraph paragraph = new Paragraph();
+
+        paragraph.setSpacingBefore(3);
+        paragraph.add(new Chunk(label + ": ", body.bold()));
+        paragraph.add(new Chunk(GuideMarkdown.pdfSafe(text.strip()), body.normal()));
+        target.add(paragraph);
+    }
+
     public byte[] render(final GuideVersionView version, final Locale locale, final @Nullable String revivalTitle) {
         final boolean english = Locale.ENGLISH.getLanguage().equals(locale.getLanguage());
         final PdfFonts body = PdfFonts.helvetica(10.5f);
@@ -272,19 +285,6 @@ public class GuidePdfService {
             return message("guide.pdf.timeline.offsetAfter", locale, weeks(min), weeks(max));
         }
         return message("guide.pdf.timeline.offsetAround", locale, weeks(min), weeks(max));
-    }
-
-    private static void addTimelineText(final Section target, final String label, final @Nullable String text, final PdfFonts body) {
-        if (text == null || text.isBlank()) {
-            return;
-        }
-
-        final Paragraph paragraph = new Paragraph();
-
-        paragraph.setSpacingBefore(3);
-        paragraph.add(new Chunk(label + ": ", body.bold()));
-        paragraph.add(new Chunk(GuideMarkdown.pdfSafe(text.strip()), body.normal()));
-        target.add(paragraph);
     }
 
     private void addItem(final Section target, final GuideVersionView.Item item, final @Nullable GuideItemType itemType, final boolean english,

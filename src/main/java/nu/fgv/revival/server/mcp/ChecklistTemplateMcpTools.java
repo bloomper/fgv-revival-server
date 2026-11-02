@@ -29,7 +29,6 @@ import org.springframework.ai.mcp.annotation.McpTool.McpAnnotations;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 

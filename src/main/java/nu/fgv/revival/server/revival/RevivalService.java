@@ -63,18 +63,15 @@ import static org.springframework.util.StringUtils.hasText;
 @Service
 public class RevivalService {
 
-    private final ExternalIds ids;
-
     static final int MIN_YEAR = 1948;
     static final int MAX_YEAR = 2100;
     static final int MAX_SHOWS = 50;
     private static final Pattern SHOW_TIME = Pattern.compile("([01]\\d|2[0-3]):[0-5]\\d");
-
     private static final Sort NEWEST_FIRST = Sort.by(
             Sort.Order.desc("premiereDate").nullsLast(),
             Sort.Order.desc("year"),
             Sort.Order.desc("id"));
-
+    private final ExternalIds ids;
     private final RevivalRepository repository;
     private final RevivalStatusChangeRepository statusChangeRepository;
     private final CallerService callerService;
@@ -121,17 +118,6 @@ public class RevivalService {
             throw new BadRequestException("error.revival.year.beforeOriginal", spex.year());
         }
         return year;
-    }
-
-    /**
-     * A year before this one only for a revival marked as already played.
-     */
-    private void requireNotPast(final Integer year, final @Nullable Boolean past) {
-        final int thisYear = LocalDate.now(clock).getYear();
-
-        if (year < thisYear && !Boolean.TRUE.equals(past)) {
-            throw new BadRequestException("error.revival.year.past", thisYear);
-        }
     }
 
     /**
@@ -183,6 +169,17 @@ public class RevivalService {
         }
         if (premiere != null && revival.getShows().stream().anyMatch(show -> show.getDate().isBefore(premiere))) {
             throw new BadRequestException("error.revival.shows.beforePremiere");
+        }
+    }
+
+    /**
+     * A year before this one only for a revival marked as already played.
+     */
+    private void requireNotPast(final Integer year, final @Nullable Boolean past) {
+        final int thisYear = LocalDate.now(clock).getYear();
+
+        if (year < thisYear && !Boolean.TRUE.equals(past)) {
+            throw new BadRequestException("error.revival.year.past", thisYear);
         }
     }
 

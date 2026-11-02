@@ -80,7 +80,7 @@ class LogSpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest 
                 Map.of("input", Map.of("revivalId", revival, "meetingId", meeting, "type", "DECISION", "text", "Vi spelar i RunAn"))).errors().verify();
         execute(STEERING_GROUP, "mutation($input: LogEntryUpdateInput!) { logEntryUpdate(input: $input) { id } }",
                 Map.of("input", Map.of("id", entityId(jdbcClient.sql("SELECT id, uuid FROM log_entry WHERE revival_id = ? AND type = 'QUESTION'").param(revival)
-                        ), "version", 0, "meetingId", meeting, "status", "DONE"))).errors().verify();
+                ), "version", 0, "meetingId", meeting, "status", "DONE"))).errors().verify();
         execute(STEERING_GROUP, "mutation($id: ID!) { meetingClose(id: $id, version: 2) { id } }", Map.of("id", meeting)).errors().verify();
         execute(STEERING_GROUP, "mutation($input: MinutesEmailSendInput!) { minutesEmailSend(input: $input) { id } }",
                 Map.of("input", Map.of("meetingId", meeting, "language", "sv"))).errors().verify();

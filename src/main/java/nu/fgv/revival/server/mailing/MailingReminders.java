@@ -30,7 +30,6 @@ import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalTitles;
 import nu.fgv.revival.server.util.Locales;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -88,7 +87,6 @@ public class MailingReminders {
         this.clock = clock;
     }
 
-    @Scheduled(cron = "0 30 7 * * *", zone = "Europe/Stockholm")
     public void daily() {
         if (!mailer.available()) {
             log.info("No mail server is configured, so no mailing reminders were sent");

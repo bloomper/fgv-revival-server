@@ -34,7 +34,7 @@ final class SampleNews {
             new Piece("Välkommen till Nyuppsättning",
                     """
                             Här samlar vi allt som behövs för att sätta upp ett gammalt spex igen: guiden, beslutsloggen, checklistorna, budgeten och deltagarna.
-
+                            
                             Hör av dig till FGV:s styrelse om något saknas.""",
                     -120, null),
             new Piece("Ny version av guiden",

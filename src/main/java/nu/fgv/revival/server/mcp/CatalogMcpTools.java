@@ -64,12 +64,21 @@ public class CatalogMcpTools {
 
     private static Entry toMcp(final CatalogEntry entry) {
         return switch (entry) {
-            case final BudgetCategory category -> Entry.of(entry, category.getKind().name(), category.getRole() == null ? null : category.getRole().name(),
-                    null, null);
+            case final BudgetCategory category ->
+                    Entry.of(entry, category.getKind().name(), category.getRole() == null ? null : category.getRole().name(),
+                            null, null);
             case final GuideItemType type -> Entry.of(entry, type.getKind().name(), null, null, null);
-            case final LinkService service -> Entry.of(entry, null, null, service.getHosts().stream().sorted().toList(), service.getHomeUrl());
+            case final LinkService service ->
+                    Entry.of(entry, null, null, service.getHosts().stream().sorted().toList(), service.getHomeUrl());
             default -> Entry.of(entry, null, null, null, null);
         };
+    }
+
+    private static <T> T required(final @Nullable T value, final String what) {
+        if (value == null) {
+            throw new BadRequestException("error.mcp.required", what);
+        }
+        return value;
     }
 
     private CatalogService<? extends CatalogEntry> service(final Catalog catalog) {
@@ -83,13 +92,6 @@ public class CatalogMcpTools {
 
     private CatalogEntry entry(final Catalog catalog, final String id) {
         return McpToolSupport.byCode(List.copyOf(service(catalog).list(true)), CatalogEntry::getId, id, CatalogEntry.class);
-    }
-
-    private static <T> T required(final @Nullable T value, final String what) {
-        if (value == null) {
-            throw new BadRequestException("error.mcp.required", what);
-        }
-        return value;
     }
 
     @McpTool(name = "list_catalog_entries",
@@ -119,7 +121,8 @@ public class CatalogMcpTools {
             return toMcp(switch (catalog) {
                 case CAPABILITIES -> capabilities.create(names);
                 case GUIDE_ITEM_TYPES -> itemTypes.create(GuideItemKind.valueOf(required(kind, "kind")), names);
-                case BUDGET_CATEGORIES -> budgetCategories.create(BudgetCategoryKind.valueOf(required(kind, "kind")), role, names);
+                case BUDGET_CATEGORIES ->
+                        budgetCategories.create(BudgetCategoryKind.valueOf(required(kind, "kind")), role, names);
                 case LINK_SERVICES -> linkServices.create(names, hosts, homeUrl);
             });
         });
@@ -145,7 +148,8 @@ public class CatalogMcpTools {
                         nameEn == null ? entry.getNameEn() : nameEn);
 
                 entry = switch (entry) {
-                    case final BudgetCategory category -> budgetCategories.update(id, category.getVersion(), names, role == null ? category.getRole() : role);
+                    case final BudgetCategory category ->
+                            budgetCategories.update(id, category.getVersion(), names, role == null ? category.getRole() : role);
                     case final LinkService service -> linkServices.update(id, service.getVersion(), names,
                             hosts == null ? List.copyOf(service.getHosts()) : hosts, homeUrl == null ? service.getHomeUrl() : homeUrl);
                     default -> service(catalog).rename(id, entry.getVersion(), names);
@@ -181,7 +185,8 @@ public class CatalogMcpTools {
      * An entry of a list: its kind and role for guide item types and budget categories, hosts and home page for link
      * services.
      */
-    public record Entry(String id, ChecklistMcpTools.Text name, int position, boolean retired, @Nullable String kind, @Nullable String role,
+    public record Entry(String id, ChecklistMcpTools.Text name, int position, boolean retired, @Nullable String kind,
+                        @Nullable String role,
                         @Nullable List<String> hosts, @Nullable String homeUrl) {
 
         static Entry of(final CatalogEntry entry, final @Nullable String kind, final @Nullable String role, final @Nullable List<String> hosts,

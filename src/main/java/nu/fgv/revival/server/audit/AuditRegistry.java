@@ -116,6 +116,18 @@ public class AuditRegistry {
         return "en".equals(locale.getLanguage()) && entry.getNameEn() != null ? entry.getNameEn() : entry.getNameSv();
     }
 
+    private static Long revivalIdOf(final Object snapshot) {
+        return switch (snapshot) {
+            case final LogEntry entry -> entry.getRevivalId();
+            case final ChecklistItem item -> item.getRevivalId();
+            case final Event event -> event.getRevivalId();
+            case final BudgetLine line -> line.getRevivalId();
+            case final BudgetTransaction transaction -> transaction.getRevivalId();
+            case final Material material -> material.getRevivalId();
+            default -> throw new IllegalArgumentException("Not revival data: " + snapshot.getClass().getName());
+        };
+    }
+
     private @Nullable String ownerName(final Object value, final Locale locale) {
         final Owner owner = (Owner) value;
 
@@ -134,18 +146,6 @@ public class AuditRegistry {
             final Revival revival = accessPolicy.requireVisible(caller, revivalRepository.findById(revivalId).orElse(null), revivalId);
 
             requirement.accept(caller, revival);
-        };
-    }
-
-    private static Long revivalIdOf(final Object snapshot) {
-        return switch (snapshot) {
-            case final LogEntry entry -> entry.getRevivalId();
-            case final ChecklistItem item -> item.getRevivalId();
-            case final Event event -> event.getRevivalId();
-            case final BudgetLine line -> line.getRevivalId();
-            case final BudgetTransaction transaction -> transaction.getRevivalId();
-            case final Material material -> material.getRevivalId();
-            default -> throw new IllegalArgumentException("Not revival data: " + snapshot.getClass().getName());
         };
     }
 

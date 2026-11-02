@@ -586,7 +586,7 @@ public class SpexregisterClient {
     }
 
     public String createActor(final String spexareId, final String activityId, final String taskActivityId, final String vocalId, final @Nullable String role,
-                            final String actingPerson) {
+                              final String actingPerson) {
         final Map<String, Object> input = new LinkedHashMap<>();
 
         input.put("role", role);

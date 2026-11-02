@@ -27,7 +27,8 @@ import java.util.UUID;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record NewsDto(UUID id, String subject, String text, @Nullable LocalDate visibleFrom, @Nullable LocalDate visibleTo,
+public record NewsDto(UUID id, String subject, String text, @Nullable LocalDate visibleFrom,
+                      @Nullable LocalDate visibleTo,
                       boolean published, Instant createdAt, @Nullable Instant lastModifiedAt, Long version) {
 
     static NewsDto of(final News news, final LocalDate today) {

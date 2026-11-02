@@ -26,7 +26,8 @@ import java.math.BigDecimal;
  * @author Anders Jacobsson
  * @since 1.0
  */
-public record ApplicationSettingsDto(GuideVersionView.@Nullable Text terms, @Nullable BigDecimal defaultParticipationFee, Long version) {
+public record ApplicationSettingsDto(GuideVersionView.@Nullable Text terms,
+                                     @Nullable BigDecimal defaultParticipationFee, Long version) {
 
     static ApplicationSettingsDto of(final ApplicationSettings settings) {
         return new ApplicationSettingsDto(settings.getTermsSv() == null ? null : GuideVersionView.Text.plain(settings.getTermsSv(), settings.getTermsEn()),

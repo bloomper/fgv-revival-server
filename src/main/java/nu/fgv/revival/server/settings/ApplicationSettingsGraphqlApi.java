@@ -50,6 +50,7 @@ public class ApplicationSettingsGraphqlApi {
                 input.defaultParticipationFee());
     }
 
-    public record ApplicationSettingsInput(@Nullable LocalizedTextInput terms, @Nullable BigDecimal defaultParticipationFee) {
+    public record ApplicationSettingsInput(@Nullable LocalizedTextInput terms,
+                                           @Nullable BigDecimal defaultParticipationFee) {
     }
 }
