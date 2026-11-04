@@ -93,7 +93,7 @@ dependencies {
     implementation 'org.keycloak:keycloak-admin-client:26.0.12'
     implementation 'org.apache.poi:poi-ooxml:6.0.0'
     implementation 'com.github.librepdf:openpdf:3.0.5'
-    implementation 'org.commonmark:commonmark:0.31.0'
+    implementation 'org.commonmark:commonmark:0.32.0'
 
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -116,7 +116,7 @@ dependencies {
     integrationTestImplementation 'org.testcontainers:testcontainers-mysql'
     integrationTestImplementation 'com.github.dasniko:testcontainers-keycloak:4.4.0'
     integrationTestImplementation 'org.wiremock:wiremock-standalone:3.13.2'
-    integrationTestImplementation 'com.icegreen:greenmail-junit5:2.1.14'
+    integrationTestImplementation 'com.icegreen:greenmail-junit5:2.1.15'
 
     runtimeOnly 'com.mysql:mysql-connector-j'
     if (System.getProperty("os.name").toLowerCase().contains("mac") && System.getProperty("os.arch").toLowerCase().contains("aarch64")) {
