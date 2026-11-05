@@ -1662,7 +1662,8 @@
       "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [
-        "roles"
+        "roles",
+        "kc-admin-api"
       ],
       "optionalClientScopes": []
     },
