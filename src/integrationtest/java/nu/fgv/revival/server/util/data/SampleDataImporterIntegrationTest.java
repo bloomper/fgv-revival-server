@@ -21,9 +21,12 @@ import nu.fgv.revival.server.EntityId;
 import nu.fgv.revival.server.checklist.RevivalGuideSync;
 import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.revival.RevivalStatus;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
@@ -59,6 +62,23 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
         try (Keycloak admin = keycloakAdmin()) {
             createUser(realm(admin), SampleDataImporter.ADMIN, "Admin", "Spexregister", "spexregister", List.of("USER", "EDITOR", "ADMIN"));
             createUser(realm(admin), SampleDataImporter.USER, "User", "Spexregister", "spexregister", List.of("USER"));
+        }
+    }
+
+    /**
+     * Keycloak is shared by every test class, and the import makes {@code admin@fgv.nu} a super admin of
+     * Nyuppsättning. Left behind, it would be told about everything the super admins are told about in later classes.
+     */
+    @AfterAll
+    static void removeSampleUsers() {
+        try (Keycloak admin = keycloakAdmin()) {
+            final RealmResource realm = realm(admin);
+
+            // Keycloak's search matches prefixes, so a search for the domain finds no one
+            realm.users().list(0, Integer.MAX_VALUE).stream()
+                    .filter(user -> user.getEmail() != null && user.getEmail().endsWith(SampleDataImporter.SAMPLE_USER_DOMAIN))
+                    .map(UserRepresentation::getId)
+                    .forEach(id -> realm.users().delete(id).close());
         }
     }
 
