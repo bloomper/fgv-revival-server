@@ -139,7 +139,8 @@ fgv-revival:
     qr-url: ${API_SWISH_QR_URL:https://mpc.getswish.net/qrg-swish/api/v1/prefilled}
   data:
     import-sample-data: ${API_IMPORT_SAMPLE_DATA:false}
-    sample-user-password: ${SAMPLE_USER_PASSWORD:s3cr3t-s3cr3t}
+    # Needed only to import sample data; the local profile has a development value
+    sample-user-password: ${SAMPLE_USER_PASSWORD:}
 
 ---
 spring:
@@ -157,3 +158,8 @@ server:
 management:
   server:
     port: 9001
+
+fgv-revival:
+  data:
+    # For development only; every other environment sets SAMPLE_USER_PASSWORD
+    sample-user-password: ${SAMPLE_USER_PASSWORD:s3cr3t-s3cr3t}

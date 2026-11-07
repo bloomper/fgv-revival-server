@@ -265,7 +265,7 @@ $ ./gradlew build              # all of the above, plus this documentation
 [[test_credentials]]
 == Test credentials
 
-The following test users are created when sample data is imported (see <<sample_data>>), with the password in ``SAMPLE_USER_PASSWORD`` (default ``s3cr3t-s3cr3t``, the same as Spexregister's).
+The following test users are created when sample data is imported (see <<sample_data>>), with the password in ``SAMPLE_USER_PASSWORD`` (``s3cr3t-s3cr3t`` in the ``local`` profile, the same as Spexregister's; every other environment must set it).
 ``admin@fgv.nu`` and ``user@fgv.nu`` are Spexregister's sample users, which are the same in every FGV application; the others are Nyuppsättning's own, since they stand for its roles.
 
 |===

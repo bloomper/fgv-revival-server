@@ -650,6 +650,9 @@ public class SampleDataImporter {
         final UserRepresentation user = new UserRepresentation();
 
         credential.setType(CredentialRepresentation.PASSWORD);
+        if (!StringUtils.hasText(sampleUserPassword)) {
+            throw new IllegalStateException("SAMPLE_USER_PASSWORD must be set to import sample data");
+        }
         credential.setValue(sampleUserPassword);
         credential.setTemporary(false);
         user.setUsername(email);
