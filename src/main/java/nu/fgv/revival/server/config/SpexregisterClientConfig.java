@@ -36,8 +36,8 @@ import java.time.Duration;
 import static org.springframework.security.oauth2.client.web.client.RequestAttributeClientRegistrationIdResolver.clientRegistrationId;
 
 /**
- * The GraphQL client for Spexregister: client credentials of {@code fgv-revival-service}, which holds only the
- * {@code REVIVAL} role, with 3-second timeouts.
+ * The GraphQL clients for Spexregister (people, activities) and Spexipedia (spex, tasks, revivals): client credentials
+ * of {@code fgv-revival-service}, which holds {@code REVIVAL} on both, with 3-second timeouts.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -73,6 +73,35 @@ public class SpexregisterClientConfig {
                         .withReadTimeout(TIMEOUT)))
                 .requestInterceptor(new OAuth2ClientHttpRequestInterceptor(spexregisterAuthorizedClientManager))
                 .defaultRequest(request -> request.attributes(clientRegistrationId(REGISTRATION_ID)))
+                .build();
+    }
+
+    /**
+     * Spexipedia's GraphQL API, with the same service account (it holds {@code REVIVAL} on {@code fgv-spexipedia}).
+     */
+    @Bean
+    public HttpSyncGraphQlClient spexipediaGraphQlClient(@Value("${fgv-revival.spexipedia.graphql-url}") final String url,
+                                                         final OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager) {
+        return HttpSyncGraphQlClient.builder(RestClient.builder()
+                        .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults()
+                                .withConnectTimeout(TIMEOUT)
+                                .withReadTimeout(TIMEOUT)))
+                        .requestInterceptor(new OAuth2ClientHttpRequestInterceptor(spexregisterAuthorizedClientManager))
+                        .defaultRequest(request -> request.attributes(clientRegistrationId(REGISTRATION_ID)))
+                        .build())
+                .url(url)
+                .build();
+    }
+
+    /**
+     * For Spexipedia's poster images, which are public: no token.
+     */
+    @Bean
+    public RestClient spexipediaMediaRestClient() {
+        return RestClient.builder()
+                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults()
+                        .withConnectTimeout(TIMEOUT)
+                        .withReadTimeout(TIMEOUT)))
                 .build();
     }
 

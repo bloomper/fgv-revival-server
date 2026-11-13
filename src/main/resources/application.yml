@@ -134,6 +134,9 @@ fgv-revival:
     authorized-parties: ${API_KEYCLOAK_MCP_CLIENT_ID:fgv-revival-mcp}
   spexregister:
     graphql-url: ${API_SPEXREGISTER_GRAPHQL_URL:https://api.register.fgv.local.nu:8443/api/graphql}
+  # The source of spex, tasks and revivals; Nyuppsättning creates revivals there (REVIVAL on fgv-spexipedia)
+  spexipedia:
+    graphql-url: ${API_SPEXIPEDIA_GRAPHQL_URL:https://api.spexipedia.fgv.local.nu:8443/api/graphql}
   swish:
     # Swish's pre-filled QR code API, which needs no agreement
     qr-url: ${API_SWISH_QR_URL:https://mpc.getswish.net/qrg-swish/api/v1/prefilled}

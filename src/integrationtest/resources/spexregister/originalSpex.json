@@ -1,30 +1,24 @@
 {
   "data": {
-    "spexPaged": {
-      "edges": [
-        {
-          "node": {
-            "id": "1",
-            "year": "1956",
-            "title": "Ali Baba"
-          }
-        },
-        {
-          "node": {
-            "id": "3",
-            "year": "1974",
-            "title": "Snorre"
-          }
-        },
-        {
-          "node": {
-            "id": "2",
-            "year": "1988",
-            "title": "Nobel"
-          }
-        }
-      ],
-      "totalCount": 3
-    }
+    "spexAll": [
+      {
+        "id": "1",
+        "year": "1956",
+        "title": "Ali Baba",
+        "revival": false
+      },
+      {
+        "id": "3",
+        "year": "1974",
+        "title": "Snorre",
+        "revival": false
+      },
+      {
+        "id": "2",
+        "year": "1988",
+        "title": "Nobel",
+        "revival": false
+      }
+    ]
   }
 }

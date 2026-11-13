@@ -57,7 +57,7 @@ Keycloak imports the realm, with its clients and their secrets, from ``realm/fgv
 [[configuration]]
 === Configuration
 
-Nyuppsättning reads spex from Spexregister.
+Nyuppsättning reads spex and tasks from Spexipedia, and creates revivals there; people come from Spexregister.
 Running https://github.com/bloomper/spexregister-server[spexregister-server]'s local stack as well is optional; without it, spex show as unavailable.
 
 There are some configuration parameters that need to be set before Nyuppsättning Server can be started.
@@ -82,7 +82,7 @@ To see a changed placeholder after a pull, undo it with ``git update-index --no-
 
 |FGV_REVIVAL_MYSQL_ROOT_PASSWORD|The password for the root user of Nyuppsättning Server's database||verysecret
 |FGV_REVIVAL_MYSQL_USER_PASSWORD|The password for the user of Nyuppsättning Server's database||secret
-|API_KEYCLOAK_SERVICE_CLIENT_SECRET|The client secret of ``fgv-revival-service``, with which Nyuppsättning Server calls Spexregister|Must match the value in ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], search for ``fgv-revival-service`` and pick the value for ``secret`` in the same section|0mtInqqUtVD0h0XlHQYEGvYo400HhI9X
+|API_KEYCLOAK_SERVICE_CLIENT_SECRET|The client secret of ``fgv-revival-service``, with which Nyuppsättning Server calls Spexregister and Spexipedia|Must match the value in ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], search for ``fgv-revival-service`` and pick the value for ``secret`` in the same section|0mtInqqUtVD0h0XlHQYEGvYo400HhI9X
 |API_KEYCLOAK_ADMIN_CLIENT_SECRET|The client secret of ``fgv-admin``, with which Nyuppsättning Server reads and creates the realm's users|Must match the value in ``realm/fgv.json``, search for ``fgv-admin``|YGXDSS5oiZFf4fnTWfX4LImOToPlVOhF
 
 |===
@@ -130,7 +130,7 @@ $ docker compose -f ../../fgv-infra-deploy/local/compose.yaml up -d
 $ docker compose up -d
 ----
 
-``revival-api`` reaches Keycloak and Spexregister by their container names on the ``fgv-local`` network.
+``revival-api`` reaches Keycloak, Spexregister and Spexipedia by their container names on the ``fgv-local`` network.
 Caddy serves it on ``https://api.revival.fgv.local.nu:8443``.
 
 When the ``revival-api`` container isn't running, Caddy forwards ``https://api.revival.fgv.local.nu:8443`` to port 8081 on the host, i.e. Nyuppsättning Server started from the IDE or with ``./gradlew bootRun`` with the Spring profile ``local``.
@@ -153,7 +153,7 @@ The import needs the secret of ``fgv-admin`` in ``API_KEYCLOAK_ADMIN_CLIENT_SECR
 
 The sample data is built on Spexregister's, so Spexregister must run with ``API_IMPORT_SAMPLE_DATA=true``:
 
-* The spex are read from Spexregister's API.
+* The spex are read from Spexipedia's API.
 The import waits up to 5 minutes for Spexregister, which answers only once its own import is done.
 * Spexregister's sample user ``admin@fgv.nu`` becomes super admin, and ``user@fgv.nu`` gets ``USER`` only.
 The import refuses to run without them, which keeps it away from real environments.
@@ -203,7 +203,7 @@ The username is ``KEYCLOAK_ADMIN`` in fgv-infra-deploy's ``local/.env`` and the 
 === Setup
 
 The realm is defined by ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], whose README describes what it contains.
-Nyuppsättning uses its clients ``fgv-revival`` (the web), ``fgv-revival-mcp`` (MCP clients), ``fgv-revival-service`` (calls to Spexregister) and ``fgv-admin`` (the realm's users).
+Nyuppsättning uses its clients ``fgv-revival`` (the web), ``fgv-revival-mcp`` (MCP clients), ``fgv-revival-service`` (calls to Spexregister and Spexipedia) and ``fgv-admin`` (the realm's users).
 
 The integration tests import a copy of ``fgv.json`` at ``src/integrationtest/resources/realm/fgv.json``.
 After every realm change, replace it with the new ``realm/fgv.json`` from fgv-keycloak and commit it.

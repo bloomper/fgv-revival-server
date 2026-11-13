@@ -21,7 +21,7 @@ import nu.fgv.revival.server.config.CacheConfig;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.util.error.BadRequestException;
-import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
+import nu.fgv.revival.server.util.error.SpexipediaUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,7 +54,7 @@ class SpexServiceTest {
             new SpexDto("4", "Ålänningen", 1960, true));
 
     @Mock
-    private SpexregisterClient client;
+    private SpexipediaClient client;
     @Mock
     private CallerService callerService;
 
@@ -117,7 +117,7 @@ class SpexServiceTest {
     void searchFailsWhenSpexregisterIsUnavailable() {
         when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("down"));
 
-        assertThatThrownBy(() -> service.search("ali", 20)).isInstanceOf(SpexregisterUnavailableException.class);
+        assertThatThrownBy(() -> service.search("ali", 20)).isInstanceOf(SpexipediaUnavailableException.class);
     }
 
     @Test
@@ -141,7 +141,7 @@ class SpexServiceTest {
     void requireOriginalFailsOnTimeout() {
         when(client.originalSpex()).thenThrow(new SpexregisterClient.SpexregisterCallException("timeout"));
 
-        assertThatThrownBy(() -> service.requireOriginal("1")).isInstanceOf(SpexregisterUnavailableException.class);
+        assertThatThrownBy(() -> service.requireOriginal("1")).isInstanceOf(SpexipediaUnavailableException.class);
     }
 
     @Test
@@ -166,7 +166,7 @@ class SpexServiceTest {
                 .thenThrow(new SpexregisterClient.SpexregisterCallException("down"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.poster("1")).isInstanceOf(SpexregisterUnavailableException.class);
+        assertThatThrownBy(() -> service.poster("1")).isInstanceOf(SpexipediaUnavailableException.class);
         assertThat(service.poster("1")).isEmpty();
     }
 }

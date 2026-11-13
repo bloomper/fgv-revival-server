@@ -20,7 +20,7 @@ import nu.fgv.revival.server.config.CacheConfig;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.CallerService;
 import nu.fgv.revival.server.util.error.BadRequestException;
-import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
+import nu.fgv.revival.server.util.error.SpexipediaUnavailableException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -50,12 +50,12 @@ public class SpexService {
 
     private static final String KEY = "all";
 
-    private final SpexregisterClient client;
+    private final SpexipediaClient client;
     private final CacheManager cacheManager;
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
 
-    public SpexService(final SpexregisterClient client,
+    public SpexService(final SpexipediaClient client,
                        final CacheManager cacheManager,
                        final CallerService callerService,
                        final AccessPolicy accessPolicy) {
@@ -84,17 +84,17 @@ public class SpexService {
     }
 
     /**
-     * The original spex, from the cache or from Spexregister.
+     * The original spex, from the cache or from Spexipedia.
      *
-     * @throws SpexregisterUnavailableException when Spexregister cannot be reached
+     * @throws SpexipediaUnavailableException when Spexipedia cannot be reached
      */
     List<SpexDto> originalSpex() {
         try {
             return Objects.requireNonNull(cache().get(KEY, client::originalSpex));
         } catch (final Cache.ValueRetrievalException e) {
-            throw new SpexregisterUnavailableException(e.getCause() != null ? e.getCause() : e);
+            throw new SpexipediaUnavailableException(e.getCause() != null ? e.getCause() : e);
         } catch (final SpexregisterClient.SpexregisterCallException e) {
-            throw new SpexregisterUnavailableException(e);
+            throw new SpexipediaUnavailableException(e);
         }
     }
 
@@ -134,7 +134,7 @@ public class SpexService {
 
         try {
             known = originalSpex().stream().collect(Collectors.toMap(SpexDto::id, Function.identity(), (a, _) -> a));
-        } catch (final SpexregisterUnavailableException _) {
+        } catch (final SpexipediaUnavailableException _) {
             return ids.stream().distinct().collect(Collectors.toMap(Function.identity(), SpexDto::unavailable, (a, _) -> a, LinkedHashMap::new));
         }
 
@@ -146,23 +146,23 @@ public class SpexService {
     }
 
     /**
-     * A spex's poster, from the cache or from Spexregister. A spex without one is cached as empty too. Callers check
+     * A spex's poster, from the cache or from Spexipedia. A spex without one is cached as empty too. Callers check
      * that the caller may see a revival of the spex first.
      *
-     * @throws SpexregisterUnavailableException when Spexregister cannot be reached
+     * @throws SpexipediaUnavailableException when Spexipedia cannot be reached
      */
     public Optional<SpexregisterClient.Poster> poster(final String id) {
         try {
             return Objects.requireNonNull(posters().get(id, () -> client.poster(id)));
         } catch (final Cache.ValueRetrievalException e) {
-            throw new SpexregisterUnavailableException(e.getCause() != null ? e.getCause() : e);
+            throw new SpexipediaUnavailableException(e.getCause() != null ? e.getCause() : e);
         }
     }
 
     /**
      * Refuses a spex that does not exist or is a revival recorded in Spexregister.
      *
-     * @throws SpexregisterUnavailableException when it cannot be checked
+     * @throws SpexipediaUnavailableException when it cannot be checked
      */
     public SpexDto requireOriginal(final String id) {
         final Optional<SpexDto> cached = originalSpex().stream().filter(spex -> spex.id().equals(id)).findFirst();
@@ -177,7 +177,7 @@ public class SpexService {
         try {
             spex = client.spexById(id).orElseThrow(() -> new BadRequestException("error.spex.notOriginal", id));
         } catch (final SpexregisterClient.SpexregisterCallException e) {
-            throw new SpexregisterUnavailableException(e);
+            throw new SpexipediaUnavailableException(e);
         }
 
         if (Boolean.TRUE.equals(spex.revival())) {

@@ -59,7 +59,7 @@ class SpexregisterClientTest {
 
         final RestClient restClient = builder.build();
 
-        client = new SpexregisterClient(HttpSyncGraphQlClient.builder(restClient).url(URL).build(), restClient);
+        client = new SpexregisterClient(HttpSyncGraphQlClient.builder(restClient).url(URL).build());
     }
 
     @Test
@@ -120,19 +120,6 @@ class SpexregisterClientTest {
     }
 
     @Test
-    void tasksTellTheEnsembleByTheirCategory() {
-        server.expect(requestTo(URL))
-                .andRespond(withSuccess("""
-                        {"data": {"taskPaged": {"edges": [
-                          {"node": {"id": "1", "name": "Roll", "category": {"id": "10", "name": "Ensemble", "actorPresent": true}}},
-                          {"node": {"id": "2", "name": "Trumpet", "category": {"id": "11", "name": "Orkester", "actorPresent": false}}}
-                        ], "totalCount": 2}}}""", MediaType.APPLICATION_JSON));
-
-        assertThat(client.tasks()).extracting(task -> task.category() != null && Boolean.TRUE.equals(task.category().actorPresent()))
-                .containsExactly(true, false);
-    }
-
-    @Test
     void anUnknownSpexHasNoParticipants() {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess("""
@@ -164,17 +151,12 @@ class SpexregisterClientTest {
                 .andExpect(jsonPath("$.variables.input.role").value("Kalifen"))
                 .andExpect(header("X-Acting-Person", SpexregisterClient.actingPersonHeader(ACTING)))
                 .andRespond(withSuccess("{\"data\": {\"actorCreate\": {\"id\": \"73\"}}}", MediaType.APPLICATION_JSON));
-        server.expect(requestTo(URL))
-                .andExpect(jsonPath("$.query").value(org.hamcrest.Matchers.containsString("spexRevivalCreate")))
-                .andExpect(jsonPath("$.variables.year").value("2028"))
-                .andRespond(withSuccess("{\"data\": {\"spexRevivalCreate\": {\"id\": \"500\", \"year\": \"2028\"}}}", MediaType.APPLICATION_JSON));
 
         final List<SpexregisterClient.SpexareActivities> found = client.spexareActivities(List.of("7"), ACTING);
 
         assertThat(found.getFirst().all().getFirst().spexId()).isEqualTo("500");
         assertThat(found.getFirst().all().getFirst().tasks().getFirst().allActors()).extracting(SpexregisterClient.Actor::role).containsExactly("Kalifen");
         assertThat(client.createActor("7", "70", "72", "B1", "Kalifen", ACTING)).isEqualTo("73");
-        assertThat(client.createSpexRevival("1", 2028, ACTING)).isEqualTo("500");
         server.verify();
     }
 

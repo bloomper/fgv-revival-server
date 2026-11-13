@@ -46,6 +46,7 @@ services:
       API_KEYCLOAK_ADMIN_CLIENT_ID: ${API_KEYCLOAK_ADMIN_CLIENT_ID}
       API_KEYCLOAK_CONSOLE_URL: https://auth.fgv.local.nu:8443/auth
       API_SPEXREGISTER_GRAPHQL_URL: http://spexregister-api:8080/api/graphql
+      API_SPEXIPEDIA_GRAPHQL_URL: http://spexipedia-api:8080/api/graphql
       API_IMPORT_SAMPLE_DATA: ${API_IMPORT_SAMPLE_DATA:-false}
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: 1025

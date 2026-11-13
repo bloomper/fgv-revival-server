@@ -41,6 +41,7 @@ import nu.fgv.revival.server.revival.RevivalShow;
 import nu.fgv.revival.server.revival.RevivalStatus;
 import nu.fgv.revival.server.revival.RevivalStatusChange;
 import nu.fgv.revival.server.spex.SpexDto;
+import nu.fgv.revival.server.spex.SpexipediaClient;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.security.SecurityUtil;
 import org.jspecify.annotations.Nullable;
@@ -135,17 +136,17 @@ public class SampleDataImporter {
     private static final Set<RevivalStatus> SUPER_ADMIN_STEPS = EnumSet.of(RevivalStatus.APPROVED, RevivalStatus.REJECTED, RevivalStatus.ARCHIVED);
     private static final Set<RevivalStatus> PLAYED = EnumSet.of(RevivalStatus.CLOSING, RevivalStatus.SETTLING, RevivalStatus.ARCHIVED);
 
-    private final SpexregisterClient spexregisterClient;
+    private final SpexipediaClient spexipediaClient;
     private final Keycloak keycloak;
     private final String keycloakRealm;
     private final String sampleUserPassword;
     private final Random rnd = new SecureRandom();
 
-    public SampleDataImporter(final SpexregisterClient spexregisterClient,
+    public SampleDataImporter(final SpexipediaClient spexipediaClient,
                               final Keycloak keycloak,
                               @Value("${fgv-revival.keycloak.realm}") final String keycloakRealm,
                               @Value("${fgv-revival.data.sample-user-password}") final String sampleUserPassword) {
-        this.spexregisterClient = spexregisterClient;
+        this.spexipediaClient = spexipediaClient;
         this.keycloak = keycloak;
         this.keycloakRealm = keycloakRealm;
         this.sampleUserPassword = sampleUserPassword;
@@ -587,22 +588,22 @@ public class SampleDataImporter {
     }
 
     /**
-     * Waits for Spexregister, which answers only once its own sample data import is done.
+     * Waits for Spexipedia, which has spex once its own sample data import is done.
      */
     private List<SpexDto> originalSpex() {
         for (int attempt = 1; ; attempt++) {
             try {
-                final List<SpexDto> spex = spexregisterClient.originalSpex();
+                final List<SpexDto> spex = spexipediaClient.originalSpex();
 
                 if (spex.isEmpty()) {
-                    throw new IllegalStateException("Spexregister has no spex; import its sample data first");
+                    throw new IllegalStateException("Spexipedia has no spex; import its sample data first");
                 }
                 return spex;
             } catch (final SpexregisterClient.SpexregisterCallException e) {
                 if (attempt == SPEXREGISTER_ATTEMPTS) {
-                    throw new IllegalStateException("Spexregister is unavailable, so sample data cannot be imported", e);
+                    throw new IllegalStateException("Spexipedia is unavailable, so sample data cannot be imported", e);
                 }
-                log.info("Waiting for Spexregister ({}/{})", attempt, SPEXREGISTER_ATTEMPTS);
+                log.info("Waiting for Spexipedia ({}/{})", attempt, SPEXREGISTER_ATTEMPTS);
                 sleep();
             }
         }

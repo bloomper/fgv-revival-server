@@ -72,6 +72,8 @@ class SyncPlannerTest {
     @Mock
     private SpexregisterClient client;
     @Mock
+    private nu.fgv.revival.server.spex.SpexipediaClient spexipedia;
+    @Mock
     private SpexareDirectory directory;
 
     private SyncPlanner planner;
@@ -97,7 +99,7 @@ class SyncPlannerTest {
 
     @BeforeEach
     void setUp() {
-        planner = new SyncPlanner(participantRepository, stepRepository, client, directory);
+        planner = new SyncPlanner(participantRepository, stepRepository, client, spexipedia, directory);
         revival = new Revival();
         revival.setId(1L);
         revival.setUuid(uuid(revival.getId()));
@@ -121,7 +123,7 @@ class SyncPlannerTest {
                 participant(2, null, ParticipantKind.PARTICIPANT, ParticipantResponse.YES, null, null, false),
                 participant(3, 8L, ParticipantKind.PARTICIPANT, ParticipantResponse.NO, null, null, false),
                 participant(4, 9L, ParticipantKind.HELPER, ParticipantResponse.YES, null, null, false));
-        when(client.spexRevivals("10")).thenReturn(List.of(new SpexregisterClient.SpexRevival("400", 2005)));
+        when(spexipedia.spexRevivals("10")).thenReturn(List.of(new SpexregisterClient.SpexRevival("400", 2005)));
 
         final SyncPlanner.Plan plan = planner.plan(revival, ACTING);
 
@@ -161,7 +163,7 @@ class SyncPlannerTest {
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(SyncOperation.PARTICIPATION, false),
                         org.assertj.core.groups.Tuple.tuple(SyncOperation.TASK, false));
         assertThat(plan.planned()).extracting(SyncPlanner.Operation::participantId).containsOnly(2L);
-        verify(client, never()).spexRevivals(anyString());
+        verify(spexipedia, never()).spexRevivals(anyString());
     }
 
     @Test
@@ -169,7 +171,7 @@ class SyncPlannerTest {
         final Participant anna = participant(1, 7L, ParticipantKind.PARTICIPANT, ParticipantResponse.YES, "TRUMPET", null, false);
 
         participants(anna);
-        when(client.spexRevivals("10")).thenReturn(List.of());
+        when(spexipedia.spexRevivals("10")).thenReturn(List.of());
 
         final String first = planner.plan(revival, ACTING).hash();
 

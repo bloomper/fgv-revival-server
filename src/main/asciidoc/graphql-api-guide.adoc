@@ -117,10 +117,10 @@ The web may send a reason for a change in the HTTP header ``X-Audit-Reason``, pe
 [[spexregister]]
 == Spexregister
 
-Spex, their posters, and the names and contact details of participants are read from Spexregister, which Nyuppsättning Server calls as the service account ``fgv-revival-service`` with Spexregister's ``REVIVAL`` role.
-While Spexregister is down, revivals still work, and only what needs it fails with ``SPEXREGISTER_UNAVAILABLE``.
+Spex, their posters, revivals and tasks are read from Spexipedia, and the names and contact details of participants from Spexregister, which Nyuppsättning Server calls as the service account ``fgv-revival-service`` with Spexregister's ``REVIVAL`` role.
+While either is down, revivals still work, and only what needs it fails with ``SPEXIPEDIA_UNAVAILABLE`` or ``SPEXREGISTER_UNAVAILABLE``.
 
-When a revival is settled, it is synced to Spexregister: ``syncPreview`` shows what would be written, and ``syncStart`` starts the sync with the preview's ``hash``.
+When a revival is settled, its spex is created in Spexipedia (``REVIVAL`` on ``fgv-spexipedia``) unless it exists, the sync waits up to a minute for Spexregister to get it from Spexipedia's change feed, and the participants are synced to Spexregister: ``syncPreview`` shows what would be written, and ``syncStart`` starts the sync with the preview's ``hash``.
 A failed sync is resumed by starting it again, which writes only what is missing.
 
 [[file_handling]]
