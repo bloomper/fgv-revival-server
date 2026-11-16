@@ -69,8 +69,8 @@ public class AccessRequestMailer {
                                final UserDirectory directory,
                                final RevivalRepository revivalRepository,
                                final RevivalTitles titles,
-                               @Value("${fgv-revival.mail.from}") final String from,
-                               @Value("${fgv-revival.web-url}") final String webUrl,
+                               @Value("${revival.mail.from}") final String from,
+                               @Value("${revival.web-url}") final String webUrl,
                                final ExternalIds ids) {
         this.ids = ids;
         this.mailSender = mailSender;

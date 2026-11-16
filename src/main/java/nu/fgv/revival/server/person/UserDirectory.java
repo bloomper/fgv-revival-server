@@ -70,8 +70,8 @@ public class UserDirectory {
     private volatile @Nullable String clientUuid;
 
     public UserDirectory(final Keycloak keycloak,
-                         @Value("${fgv-revival.keycloak.realm}") final String realm,
-                         @Value("${fgv-revival.keycloak.admin.console-url}") final String consoleUrl) {
+                         @Value("${revival.keycloak.realm}") final String realm,
+                         @Value("${revival.keycloak.admin.console-url}") final String consoleUrl) {
         this.keycloak = keycloak;
         this.realm = realm;
         this.consoleUrl = consoleUrl.endsWith("/") ? consoleUrl.substring(0, consoleUrl.length() - 1) : consoleUrl;

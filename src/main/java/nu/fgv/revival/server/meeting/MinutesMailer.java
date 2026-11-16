@@ -56,8 +56,8 @@ public class MinutesMailer {
 
     public MinutesMailer(final ObjectProvider<JavaMailSender> mailSender,
                          final MessageSource messageSource,
-                         @Value("${fgv-revival.mail.from}") final String from,
-                         @Value("${fgv-revival.web-url}") final String webUrl) {
+                         @Value("${revival.mail.from}") final String from,
+                         @Value("${revival.web-url}") final String webUrl) {
         this.mailSender = mailSender;
         this.messageSource = messageSource;
         this.from = from;

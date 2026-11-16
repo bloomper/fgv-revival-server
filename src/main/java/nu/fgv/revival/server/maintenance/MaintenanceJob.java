@@ -19,15 +19,15 @@ package nu.fgv.revival.server.maintenance;
 
 /**
  * The scheduled maintenance jobs, which SUPER_ADMIN can also start by hand. Their schedules are set in the
- * {@code fgv-revival.jobs} properties and run in {@code fgv-revival.time-zone}.
+ * {@code revival.jobs} properties and run in {@code revival.time-zone}.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
 public enum MaintenanceJob {
 
-    PARTICIPANT_RETENTION("fgv-revival.jobs.participant-retention.cron-expression"),
-    MAILING_REMINDERS("fgv-revival.jobs.mailing-reminders.cron-expression");
+    PARTICIPANT_RETENTION("revival.jobs.participant-retention.cron-expression"),
+    MAILING_REMINDERS("revival.jobs.mailing-reminders.cron-expression");
 
     private final String cronProperty;
 

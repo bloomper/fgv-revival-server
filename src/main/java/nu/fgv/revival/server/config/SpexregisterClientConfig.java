@@ -64,7 +64,7 @@ public class SpexregisterClientConfig {
      * images.
      */
     @Bean
-    public RestClient spexregisterRestClient(@Value("${fgv-revival.spexregister.graphql-url}") final String url,
+    public RestClient spexregisterRestClient(@Value("${revival.spexregister.graphql-url}") final String url,
                                              final OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager) {
         return RestClient.builder()
                 .baseUrl(URI.create(url).resolve("/").toString())
@@ -80,7 +80,7 @@ public class SpexregisterClientConfig {
      * Spexipedia's GraphQL API, with the same service account (it holds {@code REVIVAL} on {@code fgv-spexipedia}).
      */
     @Bean
-    public HttpSyncGraphQlClient spexipediaGraphQlClient(@Value("${fgv-revival.spexipedia.graphql-url}") final String url,
+    public HttpSyncGraphQlClient spexipediaGraphQlClient(@Value("${revival.spexipedia.graphql-url}") final String url,
                                                          final OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager) {
         return HttpSyncGraphQlClient.builder(RestClient.builder()
                         .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults()
@@ -106,7 +106,7 @@ public class SpexregisterClientConfig {
     }
 
     @Bean
-    public HttpSyncGraphQlClient spexregisterGraphQlClient(@Value("${fgv-revival.spexregister.graphql-url}") final String url,
+    public HttpSyncGraphQlClient spexregisterGraphQlClient(@Value("${revival.spexregister.graphql-url}") final String url,
                                                            final RestClient spexregisterRestClient) {
         return HttpSyncGraphQlClient.builder(spexregisterRestClient).url(url).build();
     }

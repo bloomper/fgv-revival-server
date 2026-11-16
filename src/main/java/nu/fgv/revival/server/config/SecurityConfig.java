@@ -65,8 +65,8 @@ public class SecurityConfig {
     public SecurityFilterChain mcpSecurityFilterChain(final HttpSecurity http,
                                                       @Value("${spring.ai.mcp.server.streamable-http.mcp-endpoint}") final String mcpEndpoint,
                                                       @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") final String issuerUri,
-                                                      @Value("${fgv-revival.mcp.authorized-parties}") final List<String> authorizedParties,
-                                                      @Value("${fgv-revival.base-url}") final String baseUrl,
+                                                      @Value("${revival.mcp.authorized-parties}") final List<String> authorizedParties,
+                                                      @Value("${revival.base-url}") final String baseUrl,
                                                       final JwtAuthenticationConverter jwtAuthenticationConverter) {
         final String resource = UriComponentsBuilder.fromUriString(baseUrl).replacePath(mcpEndpoint).build().toUriString();
         final JwtDecoder jwtDecoder = new SupplierJwtDecoder(() -> {
@@ -124,7 +124,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public OAuth2TokenValidator<Jwt> authorizedPartyValidator(@Value("${fgv-revival.security.authorized-parties}") final List<String> authorizedParties) {
+    public OAuth2TokenValidator<Jwt> authorizedPartyValidator(@Value("${revival.security.authorized-parties}") final List<String> authorizedParties) {
         return new JwtClaimValidator<String>("azp", authorizedParties::contains);
     }
 

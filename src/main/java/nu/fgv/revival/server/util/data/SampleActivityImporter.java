@@ -167,8 +167,8 @@ public class SampleActivityImporter {
     private final ZoneId zone;
     private final SecureRandom rnd = new SecureRandom();
 
-    public SampleActivityImporter(@Value("${fgv-revival.data.import-sample-data:false}") final boolean importSampleData,
-                                  @Value("${fgv-revival.time-zone}") final ZoneId zone,
+    public SampleActivityImporter(@Value("${revival.data.import-sample-data:false}") final boolean importSampleData,
+                                  @Value("${revival.time-zone}") final ZoneId zone,
                                   final JdbcClient jdbcClient,
                                   final TransactionTemplate transactions,
                                   final ChecklistRepository checklistRepository,

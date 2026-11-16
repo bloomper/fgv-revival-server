@@ -31,7 +31,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${fgv-revival.keycloak.url}/realms/${fgv-revival.keycloak.realm}
+          issuer-uri: ${revival.keycloak.url}/realms/${revival.keycloak.realm}
       client:
         registration:
           fgv-revival-service:
@@ -41,7 +41,7 @@ spring:
             authorization-grant-type: client_credentials
         provider:
           fgv:
-            token-uri: ${fgv-revival.keycloak.url}/realms/${fgv-revival.keycloak.realm}/protocol/openid-connect/token
+            token-uri: ${revival.keycloak.url}/realms/${revival.keycloak.realm}/protocol/openid-connect/token
   threads:
     virtual:
       enabled: true
@@ -108,7 +108,7 @@ logging:
   file:
     path: ./data/log_data
 
-fgv-revival:
+revival:
   base-url: ${API_BASE_URL:https://api.revival.fgv.local.nu:8443}
   web-url: ${API_WEB_URL:http://localhost:3001}
   time-zone: Europe/Stockholm
@@ -123,13 +123,13 @@ fgv-revival:
     url: ${API_KEYCLOAK_URL:https://auth.fgv.local.nu:8443/auth}
     realm: ${API_KEYCLOAK_REALM:fgv}
     admin:
-      url: ${fgv-revival.keycloak.url}
+      url: ${revival.keycloak.url}
       client-id: ${API_KEYCLOAK_ADMIN_CLIENT_ID:fgv-admin}
       client-secret: ${API_KEYCLOAK_ADMIN_CLIENT_SECRET:}
       # Keycloak as super admins' browsers reach it, for the links in the email about members waiting for access
-      console-url: ${API_KEYCLOAK_CONSOLE_URL:${fgv-revival.keycloak.url}}
+      console-url: ${API_KEYCLOAK_CONSOLE_URL:${revival.keycloak.url}}
   security:
-    authorized-parties: ${REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
+    authorized-parties: ${API_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
   mcp:
     authorized-parties: ${API_KEYCLOAK_MCP_CLIENT_ID:fgv-revival-mcp}
   spexregister:

@@ -194,10 +194,10 @@ public abstract class AbstractIntegrationTest {
     @DynamicPropertySource
     static void properties(final DynamicPropertyRegistry registry) {
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM);
-        registry.add("fgv-revival.keycloak.url", KEYCLOAK::getAuthServerUrl);
-        registry.add("fgv-revival.spexregister.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
+        registry.add("revival.keycloak.url", KEYCLOAK::getAuthServerUrl);
+        registry.add("revival.spexregister.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
         // Spexipedia's operations have names of their own, so one stand-in answers both
-        registry.add("fgv-revival.spexipedia.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
+        registry.add("revival.spexipedia.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
         registry.add("spring.mail.host", () -> "localhost");
         registry.add("spring.mail.port", () -> MAIL.getSmtp().getPort());
     }

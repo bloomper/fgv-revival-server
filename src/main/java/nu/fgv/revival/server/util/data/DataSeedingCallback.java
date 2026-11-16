@@ -23,7 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Imports sample data after the migrations when {@code fgv-revival.data.import-sample-data} is set.
+ * Imports sample data after the migrations when {@code revival.data.import-sample-data} is set.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -34,7 +34,7 @@ public class DataSeedingCallback implements Callback {
     private final boolean importSampleData;
     private final SampleDataImporter sampleDataImporter;
 
-    public DataSeedingCallback(@Value("${fgv-revival.data.import-sample-data:false}") final boolean importSampleData,
+    public DataSeedingCallback(@Value("${revival.data.import-sample-data:false}") final boolean importSampleData,
                                final SampleDataImporter sampleDataImporter) {
         this.importSampleData = importSampleData;
         this.sampleDataImporter = sampleDataImporter;
