@@ -129,7 +129,7 @@ fgv-revival:
       # Keycloak as super admins' browsers reach it, for the links in the email about members waiting for access
       console-url: ${API_KEYCLOAK_CONSOLE_URL:${fgv-revival.keycloak.url}}
   security:
-    authorized-parties: ${FGV_REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
+    authorized-parties: ${REVIVAL_SECURITY_AUTHORIZED_PARTIES:fgv-revival}
   mcp:
     authorized-parties: ${API_KEYCLOAK_MCP_CLIENT_ID:fgv-revival-mcp}
   spexregister:

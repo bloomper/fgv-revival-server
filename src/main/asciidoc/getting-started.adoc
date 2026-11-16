@@ -73,15 +73,15 @@ $ ./scripts/configure-keycloak.sh    # the Keycloak client secrets, read from th
 
 Both keep the values that are already set, so they can be run again, and tell git to leave your values alone so they are never committed (``git update-index --skip-worktree .docker/secrets/*``).
 The database passwords take effect only when the databases are created, i.e. with empty data folders.
-To set a value by hand, write it without a trailing newline, e.g. ``printf '%s' 'verysecret' > .docker/secrets/FGV_REVIVAL_MYSQL_ROOT_PASSWORD``.
+To set a value by hand, write it without a trailing newline, e.g. ``printf '%s' 'verysecret' > .docker/secrets/REVIVAL_MYSQL_ROOT_PASSWORD``.
 
 To see a changed placeholder after a pull, undo it with ``git update-index --no-skip-worktree .docker/secrets/*``.
 
 |===
 |Parameter|Purpose|Comment|Example value
 
-|FGV_REVIVAL_MYSQL_ROOT_PASSWORD|The password for the root user of Nyuppsättning Server's database||verysecret
-|FGV_REVIVAL_MYSQL_USER_PASSWORD|The password for the user of Nyuppsättning Server's database||secret
+|REVIVAL_MYSQL_ROOT_PASSWORD|The password for the root user of Nyuppsättning Server's database||verysecret
+|REVIVAL_MYSQL_USER_PASSWORD|The password for the user of Nyuppsättning Server's database||secret
 |API_KEYCLOAK_SERVICE_CLIENT_SECRET|The client secret of ``fgv-revival-service``, with which Nyuppsättning Server calls Spexregister and Spexipedia|Must match the value in ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], search for ``fgv-revival-service`` and pick the value for ``secret`` in the same section|0mtInqqUtVD0h0XlHQYEGvYo400HhI9X
 |API_KEYCLOAK_ADMIN_CLIENT_SECRET|The client secret of ``fgv-admin``, with which Nyuppsättning Server reads and creates the realm's users|Must match the value in ``realm/fgv.json``, search for ``fgv-admin``|YGXDSS5oiZFf4fnTWfX4LImOToPlVOhF
 
@@ -95,9 +95,9 @@ There are also configuration parameters in ``.env`` that can be tweaked if so de
 |===
 |Parameter|Purpose|Default value
 
-|FGV_REVIVAL_MYSQL_DATABASE|The name of the database used by Nyuppsättning Server|fgvrevival
-|FGV_REVIVAL_MYSQL_ROOT_USER|The root user of Nyuppsättning Server's database|root
-|FGV_REVIVAL_MYSQL_USER|The user of Nyuppsättning Server's database|fgvrevival
+|REVIVAL_MYSQL_DATABASE|The name of the database used by Nyuppsättning Server|fgvrevival
+|REVIVAL_MYSQL_ROOT_USER|The root user of Nyuppsättning Server's database|root
+|REVIVAL_MYSQL_USER|The user of Nyuppsättning Server's database|fgvrevival
 |API_KEYCLOAK_REALM|The Keycloak realm of Nyuppsättning Server|fgv
 |API_KEYCLOAK_ADMIN_CLIENT_ID|The Keycloak admin client id of Nyuppsättning Server|fgv-admin
 |API_KEYCLOAK_CLIENT_CLIENT_ID|The Keycloak client id of Nyuppsättning Web|fgv-revival
@@ -137,7 +137,7 @@ When the ``revival-api`` container isn't running, Caddy forwards ``https://api.r
 The JVM must then trust Caddy's local root certificate (see <<caddy>>), since it reaches Keycloak at ``https://auth.fgv.local.nu:8443``.
 
 Keycloak, its realm, registration and Turnstile are described in fgv-infra-deploy's README.
-The realm lets a locally running https://github.com/bloomper/fgv-revival-web[fgv-revival-web], i.e. ``npm run dev``, log in from ``FGV_REVIVAL_URL`` in fgv-infra-deploy's ``local/.env``, which defaults to ``http://localhost:3001``.
+The realm lets a locally running https://github.com/bloomper/fgv-revival-web[fgv-revival-web], i.e. ``npm run dev``, log in from ``REVIVAL_URL`` in fgv-infra-deploy's ``local/.env``, which defaults to ``http://localhost:3001``.
 
 ``./scripts/configure-keycloak.sh`` copies the secrets of the Keycloak clients the API uses from the local Keycloak into ``.docker/secrets``, sets the web client's id and secret (``KEYCLOAK_CLIENT_ID``, ``KEYCLOAK_CLIENT_SECRET``) in the ``.env.local`` of the web's checkout next to this one (or where ``WEB_DIR`` points), and allows Postman's callback URL in Keycloak (see <<testing_the_api>>).
 It finds fgv-infra-deploy in ``../../fgv-infra-deploy``, or where ``INFRA_DEPLOY`` points.
@@ -315,7 +315,7 @@ Every tool call runs with the permissions of the signed-in user, and changes are
 
 Authentication uses OAuth 2.0 against Keycloak with the public client ``fgv-revival-mcp`` (authorization code with PKCE, redirect URIs ``http://localhost:*`` and ``http://127.0.0.1:*``).
 Only tokens issued to that client are accepted by the MCP endpoint, and they are not accepted by the rest of the API.
-The tokens must also have the MCP endpoint's address as audience, which ``fgv.json`` sets from ``FGV_REVIVAL_MCP_URL``.
+The tokens must also have the MCP endpoint's address as audience, which ``fgv.json`` sets from ``REVIVAL_MCP_URL``.
 Users confirm the access once, on Keycloak's consent page.
 MCP clients discover Keycloak through the protected resource metadata at ``/.well-known/oauth-protected-resource/api/mcp``.
 Keycloak does not allow dynamic client registration by default, so configure the MCP client with the client id ``fgv-revival-mcp``.
