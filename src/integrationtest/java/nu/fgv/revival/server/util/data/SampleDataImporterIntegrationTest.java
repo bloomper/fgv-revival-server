@@ -16,17 +16,20 @@
 
 package nu.fgv.revival.server.util.data;
 
+import java.util.Map;
+import org.keycloak.representations.idm.UserRepresentation;
+import org.keycloak.representations.idm.PartialImportRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.admin.client.Keycloak;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import jakarta.ws.rs.core.Response;
 import nu.fgv.revival.server.AbstractIntegrationTest;
 import nu.fgv.revival.server.EntityId;
 import nu.fgv.revival.server.checklist.RevivalGuideSync;
 import nu.fgv.revival.server.guide.GuideTestChapters;
 import nu.fgv.revival.server.revival.RevivalStatus;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
@@ -38,8 +41,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The sample data is built on Spexregister's: its spex and its sample users {@code admin@fgv.nu} and
- * {@code user@fgv.nu}. The other users have one purpose each and are created by the import.
+ * The sample data is built on Spexipedia's spex and fgv-infra-deploy's sample users, recorded by their fixed Keycloak
+ * ids; each user has one purpose.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -57,28 +60,50 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private SampleActivityImporter activityImporter;
 
+    /**
+     * The sample users as fgv-infra-deploy's bin/seed-users.sh creates them: the fixed ids the import refers to, and
+     * their roles on {@code fgv-revival}, so that they can log in as their sample selves.
+     */
     @BeforeAll
-    static void createSpexregisterSampleUsers() {
-        try (Keycloak admin = keycloakAdmin()) {
-            createUser(realm(admin), SampleDataImporter.ADMIN, "Admin", "Spexregister", "spexregister", List.of("USER", "EDITOR", "ADMIN"));
-            createUser(realm(admin), SampleDataImporter.USER, "User", "Spexregister", "spexregister", List.of("USER"));
+    static void seedSampleUsers() {
+        final PartialImportRepresentation users = new PartialImportRepresentation();
+
+        users.setIfResourceExists(PartialImportRepresentation.Policy.OVERWRITE.name());
+        users.setUsers(SampleDataImporter.SAMPLE_USERS.entrySet().stream().map(entry -> {
+            final CredentialRepresentation password = new CredentialRepresentation();
+            final UserRepresentation user = new UserRepresentation();
+            final String email = entry.getKey();
+
+            password.setType(CredentialRepresentation.PASSWORD);
+            password.setValue(PASSWORD);
+            password.setTemporary(false);
+            user.setId(entry.getValue()[0]);
+            user.setUsername(email);
+            user.setEmail(email);
+            user.setFirstName(entry.getValue()[1]);
+            user.setEnabled(true);
+            user.setEmailVerified(true);
+            user.setCredentials(List.of(password));
+            user.setClientRoles(Map.of(CLIENT_ID, switch (email) {
+                case SampleDataImporter.ADMIN -> List.of("USER", "SUPER_ADMIN");
+                case SampleDataImporter.OBSERVER -> List.of("USER", "OBSERVER");
+                default -> List.of("USER");
+            }));
+            return user;
+        }).toList());
+        try (Keycloak admin = keycloakAdmin(); Response response = realm(admin).partialImport(users)) {
+            assertThat(response.getStatus()).isEqualTo(200);
         }
     }
 
     /**
-     * Keycloak is shared by every test class, and the import makes {@code admin@fgv.nu} a super admin of
-     * Nyuppsättning. Left behind, it would be told about everything the super admins are told about in later classes.
+     * Keycloak is shared by every test class, and {@code admin@fgv.nu} is a super admin of Nyuppsättning. Left behind, it
+     * would be told about everything the super admins are told about in later classes.
      */
     @AfterAll
     static void removeSampleUsers() {
         try (Keycloak admin = keycloakAdmin()) {
-            final RealmResource realm = realm(admin);
-
-            // Keycloak's search matches prefixes, so a search for the domain finds no one
-            realm.users().list(0, Integer.MAX_VALUE).stream()
-                    .filter(user -> user.getEmail() != null && user.getEmail().endsWith(SampleDataImporter.SAMPLE_USER_DOMAIN))
-                    .map(UserRepresentation::getId)
-                    .forEach(id -> realm.users().delete(id).close());
+            SampleDataImporter.SAMPLE_USERS.values().forEach(user -> realm(admin).users().delete(user[0]).close());
         }
     }
 
@@ -146,9 +171,9 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(count("revival")).isEqualTo(SampleDataImporter.NUMBER_OF_SAMPLES_REVIVALS);
         assertThat(count("revinfo")).isOne();
-        try (Keycloak admin = keycloakAdmin()) {
-            assertThat(realm(admin).users().searchByEmail(SampleDataImporter.DIRECTEUR, true)).hasSize(1);
-        }
+        // fgv-infra-deploy's sample users, by their fixed Keycloak ids; Keycloak itself is never asked
+        assertThat(jdbcClient.sql("SELECT external_id FROM person WHERE email = ?").param(SampleDataImporter.DIRECTEUR)
+                .query(String.class).list()).containsExactly("00000000-0000-4000-8000-000000000012");
     }
 
     @Test

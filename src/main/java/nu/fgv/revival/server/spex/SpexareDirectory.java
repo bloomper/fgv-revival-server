@@ -50,10 +50,12 @@ public class SpexareDirectory {
     private static final String FAMILY = "family:";
 
     private final SpexregisterClient client;
+    private final SpexipediaClient spexipedia;
     private final CacheManager cacheManager;
 
-    public SpexareDirectory(final SpexregisterClient client, final CacheManager cacheManager) {
+    public SpexareDirectory(final SpexregisterClient client, final SpexipediaClient spexipedia, final CacheManager cacheManager) {
         this.client = client;
+        this.spexipedia = spexipedia;
         this.cacheManager = cacheManager;
     }
 
@@ -124,11 +126,11 @@ public class SpexareDirectory {
      * The ids of a spex and its revivals in Spexregister.
      */
     public Set<String> family(final String spexId) {
-        return Set.copyOf(unavailableOnFailure(() -> Objects.requireNonNull(reference().get(FAMILY + spexId, () -> client.spexFamily(spexId)))));
+        return Set.copyOf(unavailableOnFailure(() -> Objects.requireNonNull(reference().get(FAMILY + spexId, () -> spexipedia.spexFamily(spexId)))));
     }
 
     public List<Position> positions() {
-        return unavailableOnFailure(() -> Objects.requireNonNull(reference().get(POSITIONS, () -> client.tasks().stream()
+        return unavailableOnFailure(() -> Objects.requireNonNull(reference().get(POSITIONS, () -> spexipedia.tasks().stream()
                 .map(task -> new Position(task.id(), task.name(), task.category() == null ? null : task.category().name(),
                         task.category() != null && Boolean.TRUE.equals(task.category().actorPresent())))
                 .toList())));

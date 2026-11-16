@@ -34,7 +34,7 @@ import java.time.ZoneId;
 public class TimeConfig {
 
     @Bean
-    public Clock clock(@Value("${fgv-revival.time-zone}") final String timeZone) {
+    public Clock clock(@Value("${revival.time-zone}") final String timeZone) {
         return Clock.system(ZoneId.of(timeZone));
     }
 }

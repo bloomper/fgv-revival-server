@@ -74,11 +74,13 @@ public class SpexregisterClient {
      * The vocal type for an actor whose vocal part is not known.
      */
     public static final String UNKNOWN_VOCAL = "UNKNOWN";
-    static final int MAX_SPEX = 500;
-    static final int MAX_TASKS = 500;
     static final int MAX_SEARCH = 50;
     static final String ACTING_PERSON_HEADER = "X-Acting-Person";
     static final int ACTING_PERSON_MAX_LENGTH = 255;
+    private static final String KNOWS_SPEX = """
+            query KnowsSpex($id: ID!) {
+                spex(id: $id) { id }
+            }""";
     private static final String SPEXARE_FIELDS = "id firstName lastName nickName graduation deceased";
     private static final String SPEXARE_BY_IDS = """
             query SpexareByIds($ids: [ID!]!) {
@@ -97,14 +99,6 @@ public class SpexregisterClient {
             query SpexareSearch($q: String!, $first: Int!) {
                 spexareSearchPaged(first: $first, q: $q) { edges { node { %s } } totalCount }
             }""".formatted(SPEXARE_FIELDS);
-    private static final String SPEX_FAMILY = """
-            query SpexFamily($id: ID!) {
-                spex(id: $id) { id revivals { id year } }
-            }""";
-    private static final String TASKS = """
-            query Tasks($first: Int!) {
-                taskPaged(first: $first) { edges { node { id name category { id name actorPresent } } } totalCount }
-            }""";
     private static final String VOCAL_PARTS = """
             query VocalParts {
                 typesOfType(type: VOCAL) { id label }
@@ -137,14 +131,6 @@ public class SpexregisterClient {
                     activities { id spexActivity { id spex { id } } taskActivities { id task { id } actors { id role vocal { id } } } }
                 }
             }""";
-    private static final String SPEX_REVIVALS = """
-            query SpexRevivals($id: ID!) {
-                spex(id: $id) { id revivals { id year } }
-            }""";
-    private static final String SPEX_REVIVAL_CREATE = """
-            mutation SpexRevivalCreate($spexId: ID!, $year: Year!) {
-                spexRevivalCreate(spexId: $spexId, year: $year) { id year }
-            }""";
     private static final String ACTIVITY_CREATE = """
             mutation ActivityCreate($spexareId: ID!) {
                 activityCreate(spexareId: $spexareId) { id }
@@ -165,27 +151,13 @@ public class SpexregisterClient {
             mutation MembershipCreate($spexareId: ID!, $typeId: ID!, $input: MembershipCreate!) {
                 membershipCreate(spexareId: $spexareId, typeId: $typeId, input: $input) { id }
             }""";
-    private static final String ORIGINAL_SPEX = """
-            query OriginalSpex($first: Int!) {
-                spexPaged(first: $first, filter: "parent:NULL", sort: ["year"], direction: ASC) {
-                    edges { node { id year title } }
-                    totalCount
-                }
-            }""";
-    private static final String SPEX_BY_ID = """
-            query SpexById($id: ID!) {
-                spex(id: $id) { id year title revival }
-            }""";
-    private static final String POSTER = "/api/spex/{id}/poster";
     private static final long LOG_INTERVAL_MILLIS = 60_000;
 
     private final HttpSyncGraphQlClient graphQlClient;
-    private final RestClient restClient;
     private final AtomicLong lastErrorLogged = new AtomicLong();
 
-    public SpexregisterClient(final HttpSyncGraphQlClient spexregisterGraphQlClient, final RestClient spexregisterRestClient) {
+    public SpexregisterClient(@org.springframework.beans.factory.annotation.Qualifier("spexregisterGraphQlClient") final HttpSyncGraphQlClient spexregisterGraphQlClient) {
         this.graphQlClient = spexregisterGraphQlClient;
-        this.restClient = spexregisterRestClient;
     }
 
     static @Nullable Integer year(final @Nullable String year) {
@@ -239,74 +211,13 @@ public class SpexregisterClient {
     }
 
     /**
-     * Every original spex, i.e. not a revival recorded in Spexregister.
+     * Whether Spexregister has the spex in its copy of Spexipedia's base data yet.
      */
-    public List<SpexDto> originalSpex() {
+    public boolean knowsSpex(final String id) {
         return call(() -> {
-            final ClientGraphQlResponse response = graphQlClient.document(ORIGINAL_SPEX)
-                    .variable("first", MAX_SPEX)
-                    .executeSync();
+            final ClientGraphQlResponse response = graphQlClient.document(KNOWS_SPEX).variable("id", id).executeSync();
 
-            requireValid(response);
-
-            final SpexPage page = response.field("spexPaged").toEntity(SpexPage.class);
-
-            if (page == null) {
-                throw new SpexregisterCallException("No spexPaged in response");
-            }
-            if (page.totalCount() != null && page.totalCount() > MAX_SPEX) {
-                log.warn("Spexregister has {} original spex; only the first {} are offered", page.totalCount(), MAX_SPEX);
-            }
-
-            return page.edges().stream()
-                    .map(SpexEdge::node)
-                    .map(node -> new SpexDto(node.id(), node.title(), year(node.year()), true))
-                    .toList();
-        });
-    }
-
-    /**
-     * One spex, with whether it is a revival, or empty when Spexregister does not know it.
-     */
-    public Optional<SpexNode> spexById(final String id) {
-        return call(() -> {
-            final ClientGraphQlResponse response = graphQlClient.document(SPEX_BY_ID)
-                    .variable("id", id)
-                    .executeSync();
-            final ClientResponseField field = response.field("spex");
-
-            if (field.getValue() == null) {
-                final boolean notFound = !response.getErrors().isEmpty()
-                        && response.getErrors().stream().allMatch(error -> ErrorType.NOT_FOUND.equals(error.getErrorType()));
-
-                if (notFound || response.getErrors().isEmpty()) {
-                    return Optional.empty();
-                }
-                throw new SpexregisterCallException("spex failed");
-            }
-
-            return Optional.ofNullable(field.toEntity(SpexNode.class));
-        });
-    }
-
-    /**
-     * A spex's poster, or empty when it has none or Spexregister does not know the spex.
-     */
-    public Optional<Poster> poster(final String id) {
-        return call(() -> {
-            final ResponseEntity<byte[]> response = restClient.get()
-                    .uri(POSTER, id)
-                    .header("X-API-Version", "1.0")
-                    .retrieve()
-                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(), (_, _) -> {
-                    })
-                    .toEntity(byte[].class);
-            final MediaType contentType = response.getHeaders().getContentType();
-
-            if (response.getStatusCode().value() == HttpStatus.NOT_FOUND.value() || response.getBody() == null || contentType == null) {
-                return Optional.empty();
-            }
-            return Optional.of(new Poster(response.getBody(), contentType.toString()));
+            return response.getErrors().isEmpty() && response.field("spex").getValue() != null;
         });
     }
 
@@ -369,54 +280,6 @@ public class SpexregisterClient {
 
             return page == null || page.edges() == null ? List.of()
                     : page.edges().stream().filter(Objects::nonNull).map(SpexareEdge::node).filter(Objects::nonNull).toList();
-        });
-    }
-
-    /**
-     * The ids of a spex and of its revivals recorded in Spexregister; empty when Spexregister does not know it.
-     */
-    public List<String> spexFamily(final String spexId) {
-        return call(() -> {
-            final ClientGraphQlResponse response = graphQlClient.document(SPEX_FAMILY)
-                    .variable("id", spexId)
-                    .executeSync();
-
-            if (notFound(response) || (response.getErrors().isEmpty() && response.field("spex").getValue() == null)) {
-                return List.of();
-            }
-            requireValid(response);
-
-            final SpexFamily family = response.field("spex").toEntity(SpexFamily.class);
-
-            if (family == null) {
-                return List.of();
-            }
-            return java.util.stream.Stream.concat(java.util.stream.Stream.of(family.id()),
-                            family.revivals() == null ? java.util.stream.Stream.empty() : family.revivals().stream().filter(Objects::nonNull).map(SpexRevivalNode::id))
-                    .toList();
-        });
-    }
-
-    /**
-     * Spexregister's tasks with their categories, at most {@value #MAX_TASKS}.
-     */
-    public List<Task> tasks() {
-        return call(() -> {
-            final ClientGraphQlResponse response = graphQlClient.document(TASKS)
-                    .variable("first", MAX_TASKS)
-                    .executeSync();
-
-            requireValid(response);
-
-            final TaskPage page = response.field("taskPaged").toEntity(TaskPage.class);
-
-            if (page == null || page.edges() == null) {
-                return List.of();
-            }
-            if (page.totalCount() != null && page.totalCount() > MAX_TASKS) {
-                log.warn("Spexregister has {} tasks; only the first {} are offered", page.totalCount(), MAX_TASKS);
-            }
-            return page.edges().stream().filter(Objects::nonNull).map(TaskEdge::node).filter(Objects::nonNull).toList();
         });
     }
 
@@ -529,36 +392,6 @@ public class SpexregisterClient {
             requireValid(response);
             return Objects.requireNonNullElse(response.field("spexareByIds").toEntityList(SpexareActivities.class), List.of());
         });
-    }
-
-    /**
-     * The revivals Spexregister records for a spex, read fresh; empty when it does not know the spex.
-     */
-    public List<SpexRevival> spexRevivals(final String spexId) {
-        return call(() -> {
-            final ClientGraphQlResponse response = graphQlClient.document(SPEX_REVIVALS)
-                    .variable("id", spexId)
-                    .executeSync();
-
-            if (notFound(response) || (response.getErrors().isEmpty() && response.field("spex").getValue() == null)) {
-                return List.of();
-            }
-            requireValid(response);
-
-            final SpexFamily family = response.field("spex").toEntity(SpexFamily.class);
-
-            return family == null || family.revivals() == null ? List.of()
-                    : family.revivals().stream().filter(Objects::nonNull).map(node -> new SpexRevival(node.id(), year(node.year()))).toList();
-        });
-    }
-
-    /**
-     * Records a revival of the spex in Spexregister and returns its id.
-     */
-    public String createSpexRevival(final String spexId, final int year, final String actingPerson) {
-        return created(actingFor(actingPerson).document(SPEX_REVIVAL_CREATE)
-                .variable("spexId", spexId)
-                .variable("year", String.valueOf(year)), "spexRevivalCreate");
     }
 
     /**

@@ -25,6 +25,7 @@ import nu.fgv.revival.server.participant.ParticipantRepository;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.spex.SpexareDirectory;
+import nu.fgv.revival.server.spex.SpexipediaClient;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
@@ -38,6 +39,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -74,20 +76,27 @@ public class SyncWorker implements DisposableBean {
     private final ParticipantRepository participantRepository;
     private final RevivalRepository revivalRepository;
     private final SpexregisterClient client;
+    private final SpexipediaClient spexipedia;
     private final SpexareDirectory directory;
+    /**
+     * How long a new revival may take to reach Spexregister from Spexipedia's change feed.
+     */
+    private Duration revivalArrival = Duration.ofSeconds(60);
     private final EntityManager entityManager;
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final SimpleAsyncTaskExecutor executor;
 
     public SyncWorker(final SyncRunRepository runRepository, final SyncStepRepository stepRepository, final ParticipantRepository participantRepository,
-                      final RevivalRepository revivalRepository, final SpexregisterClient client, final SpexareDirectory directory,
+                      final RevivalRepository revivalRepository, final SpexregisterClient client, final SpexipediaClient spexipedia,
+                      final SpexareDirectory directory,
                       final EntityManager entityManager, final PlatformTransactionManager transactionManager, final Clock clock) {
         this.runRepository = runRepository;
         this.stepRepository = stepRepository;
         this.participantRepository = participantRepository;
         this.revivalRepository = revivalRepository;
         this.client = client;
+        this.spexipedia = spexipedia;
         this.directory = directory;
         this.entityManager = entityManager;
         this.transactions = new TransactionTemplate(transactionManager);
@@ -178,12 +187,18 @@ public class SyncWorker implements DisposableBean {
 
     private @Nullable String revivalStep(final SyncStep step, final Revival revival, final String actingPerson, final AuditContext.Origin origin) {
         try {
-            final @Nullable String existing = client.spexRevivals(revival.getSpexId()).stream()
+            final @Nullable String existing = spexipedia.spexRevivals(revival.getSpexId()).stream()
                     .filter(remote -> Objects.equals(remote.year(), revival.getYear()))
                     .map(SpexregisterClient.SpexRevival::id)
                     .findFirst()
                     .orElse(null);
-            final String remote = existing != null ? existing : client.createSpexRevival(revival.getSpexId(), revival.getYear(), actingPerson);
+            final String remote = existing != null ? existing : spexipedia.createSpexRevival(revival.getSpexId(), revival.getYear());
+
+            // The revival is Spexipedia's; Spexregister's copy comes with its change feed, and activities need it
+            if (!arrivedInSpexregister(remote)) {
+                record(step, SyncStepStatus.FAILED, String.valueOf(remote), SpexregisterClient.SpexregisterCallException.NOT_FOUND, origin);
+                return null;
+            }
 
             inTransaction(origin, () -> entityManager.createNativeQuery("UPDATE revival SET spexregister_revival_id = ? WHERE id = ?")
                     .setParameter(1, remote)
@@ -195,6 +210,30 @@ public class SyncWorker implements DisposableBean {
             record(step, SyncStepStatus.FAILED, null, reason(e), origin);
             return null;
         }
+    }
+
+    private boolean arrivedInSpexregister(final String spexId) {
+        final Instant until = clock.instant().plus(revivalArrival);
+
+        while (true) {
+            if (client.knowsSpex(spexId)) {
+                return true;
+            }
+            if (!clock.instant().isBefore(until)) {
+                log.warn("Revival {} has not reached Spexregister from Spexipedia", spexId);
+                return false;
+            }
+            try {
+                Thread.sleep(Duration.ofSeconds(2));
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+    }
+
+    void setRevivalArrival(final Duration revivalArrival) {
+        this.revivalArrival = revivalArrival;
     }
 
     private void participantSteps(final Long participantId, final List<SyncStep> steps, final String remoteRevival, final String actingPerson,

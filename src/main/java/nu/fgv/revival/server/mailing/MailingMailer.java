@@ -62,8 +62,8 @@ public class MailingMailer {
     public MailingMailer(final ObjectProvider<JavaMailSender> mailSender,
                          final GuideMarkdown markdown,
                          final MessageSource messageSource,
-                         @Value("${fgv-revival.mail.from}") final String from,
-                         @Value("${fgv-revival.web-url}") final String webUrl,
+                         @Value("${revival.mail.from}") final String from,
+                         @Value("${revival.web-url}") final String webUrl,
                          final ExternalIds ids) {
         this.ids = ids;
         this.mailSender = mailSender;

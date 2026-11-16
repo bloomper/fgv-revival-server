@@ -29,21 +29,21 @@ import static nu.fgv.revival.server.Documents.SPEX_SEARCH;
 import static nu.fgv.revival.server.Documents.UPDATE;
 
 /**
- * Revivals keep working while Spexregister is down; only picking a spex is blocked.
+ * Revivals keep working while Spexipedia is down; only picking a spex is blocked.
  *
  * @author Anders Jacobsson
  * @since 1.0
  */
-class SpexregisterUnavailableIntegrationTest extends AbstractIntegrationTest {
+class SpexipediaUnavailableIntegrationTest extends AbstractIntegrationTest {
 
     private void assertDegraded(final EntityId id) {
         execute(SUPER_ADMIN, REVIVALS, Map.of())
                 .path("revivals[0].spex.available").entity(Boolean.class).isEqualTo(false)
                 .path("revivals[0].spex.title").valueIsNull();
         execute(SUPER_ADMIN, REVIVAL, Map.of("id", id)).path("revival.spex.available").entity(Boolean.class).isEqualTo(false);
-        expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2029))), "SPEXREGISTER_UNAVAILABLE");
-        expectError(execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL))), "SPEXREGISTER_UNAVAILABLE");
-        expectError(execute(SUPER_ADMIN, SPEX_SEARCH, Map.of("query", "ali")), "SPEXREGISTER_UNAVAILABLE");
+        expectError(execute(SUPER_ADMIN, CREATE, Map.of("input", Map.of("spexId", ALI_BABA, "year", 2029))), "SPEXIPEDIA_UNAVAILABLE");
+        expectError(execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "spexId", NOBEL))), "SPEXIPEDIA_UNAVAILABLE");
+        expectError(execute(SUPER_ADMIN, SPEX_SEARCH, Map.of("query", "ali")), "SPEXIPEDIA_UNAVAILABLE");
         execute(SUPER_ADMIN, UPDATE, Map.of("input", Map.of("id", id, "version", version(id), "premiereDate", "2028-02-10", "shows", java.util.List.of(Map.of("date", "2028-02-10", "venue", "Kårhuset")))))
                 .path("revivalUpdate.title").entity(String.class).isEqualTo("Revival 2028");
     }

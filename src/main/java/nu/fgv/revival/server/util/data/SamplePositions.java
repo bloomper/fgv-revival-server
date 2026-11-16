@@ -16,6 +16,7 @@
 package nu.fgv.revival.server.util.data;
 
 import lombok.extern.slf4j.Slf4j;
+import nu.fgv.revival.server.spex.SpexipediaClient;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import org.jspecify.annotations.Nullable;
 
@@ -33,9 +34,9 @@ record SamplePositions(@Nullable String actorTaskId, @Nullable String crewTaskId
 
     static final SamplePositions NONE = new SamplePositions(null, null, null);
 
-    static SamplePositions read(final SpexregisterClient client) {
+    static SamplePositions read(final SpexipediaClient spexipedia, final SpexregisterClient client) {
         try {
-            final List<SpexregisterClient.Task> tasks = client.tasks();
+            final List<SpexregisterClient.Task> tasks = spexipedia.tasks();
             final String actor = tasks.stream().filter(SamplePositions::onStage).map(SpexregisterClient.Task::id).findFirst().orElse(null);
             final String crew = tasks.stream().filter(task -> !onStage(task)).map(SpexregisterClient.Task::id).findFirst().orElse(null);
             final String vocal = client.vocalParts().stream().map(SpexregisterClient.TypeNode::id)
@@ -43,7 +44,7 @@ record SamplePositions(@Nullable String actorTaskId, @Nullable String crewTaskId
 
             return new SamplePositions(actor, crew, vocal);
         } catch (final RuntimeException e) {
-            log.info("Spexregister's positions could not be read, so the sample data has none: {}", e.getClass().getSimpleName());
+            log.info("The positions could not be read from Spexipedia and Spexregister, so the sample data has none: {}", e.getClass().getSimpleName());
             return NONE;
         }
     }

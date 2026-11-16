@@ -85,8 +85,7 @@ class ParticipantGraphqlApiIntegrationTest extends AbstractIntegrationTest {
                   {"id": "8", "firstName": "Död", "lastName": "Dödsson", "nickName": null, "graduation": null, "deceased": true}]}}""");
         stub("SpexFamily", "{\"data\": {\"spex\": {\"id\": \"1\", \"revivals\": [{\"id\": \"50\", \"year\": \"2005\"}]}}}");
         stub("query Tasks", """
-                {"data": {"taskPaged": {"edges": [{"node": {"id": "ROLE", "name": "Roll", "category": {"id": "1", "name": "Ensemble", "actorPresent": true}}}],
-                  "totalCount": 1}}}""");
+                {"data": {"tasks": [{"id": "ROLE", "name": "Roll", "category": {"id": "1", "name": "Ensemble", "actorPresent": true}}]}}""");
         stub("VocalParts", "{\"data\": {\"typesOfType\": [{\"id\": \"B1\", \"label\": \"Bas 1\"}]}}");
         stub("SpexareCreate", "{\"data\": {\"spexareCreate\": {\"id\": \"99\"}}}");
         stub("AddressCreate", "{\"data\": {\"addressCreate\": {\"id\": \"100\"}}}");

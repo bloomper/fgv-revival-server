@@ -22,6 +22,7 @@ import nu.fgv.revival.server.util.error.BadRequestException;
 import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.error.SpexipediaUnavailableException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
 import nu.fgv.revival.server.util.error.SwishUnavailableException;
 import org.jspecify.annotations.Nullable;
@@ -82,6 +83,11 @@ public class HttpErrorAdvice {
     @ExceptionHandler({OptimisticLockingFailureException.class, OptimisticLockException.class})
     public ResponseEntity<Error> staleVersion(final Exception e, final Locale locale) {
         return error(HttpStatus.CONFLICT, "CONFLICT", "error.conflict", null, locale);
+    }
+
+    @ExceptionHandler(SpexipediaUnavailableException.class)
+    public ResponseEntity<Error> spexipediaUnavailable(final SpexipediaUnavailableException e, final Locale locale) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "SPEXIPEDIA_UNAVAILABLE", SpexipediaUnavailableException.MESSAGE_CODE, null, locale);
     }
 
     @ExceptionHandler(SpexregisterUnavailableException.class)

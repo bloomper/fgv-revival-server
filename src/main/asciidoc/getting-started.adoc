@@ -57,7 +57,7 @@ Keycloak imports the realm, with its clients and their secrets, from ``realm/fgv
 [[configuration]]
 === Configuration
 
-Nyuppsättning reads spex from Spexregister.
+Nyuppsättning reads spex and tasks from Spexipedia, and creates revivals there; people come from Spexregister.
 Running https://github.com/bloomper/spexregister-server[spexregister-server]'s local stack as well is optional; without it, spex show as unavailable.
 
 There are some configuration parameters that need to be set before Nyuppsättning Server can be started.
@@ -82,12 +82,12 @@ To see a changed placeholder after a pull, undo it with ``git update-index --no-
 
 |FGV_REVIVAL_MYSQL_ROOT_PASSWORD|The password for the root user of Nyuppsättning Server's database||verysecret
 |FGV_REVIVAL_MYSQL_USER_PASSWORD|The password for the user of Nyuppsättning Server's database||secret
-|API_KEYCLOAK_SERVICE_CLIENT_SECRET|The client secret of ``fgv-revival-service``, with which Nyuppsättning Server calls Spexregister|Must match the value in ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], search for ``fgv-revival-service`` and pick the value for ``secret`` in the same section|0mtInqqUtVD0h0XlHQYEGvYo400HhI9X
+|API_KEYCLOAK_SERVICE_CLIENT_SECRET|The client secret of ``fgv-revival-service``, with which Nyuppsättning Server calls Spexregister and Spexipedia|Must match the value in ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], search for ``fgv-revival-service`` and pick the value for ``secret`` in the same section|0mtInqqUtVD0h0XlHQYEGvYo400HhI9X
 |API_KEYCLOAK_ADMIN_CLIENT_SECRET|The client secret of ``fgv-admin``, with which Nyuppsättning Server reads and creates the realm's users|Must match the value in ``realm/fgv.json``, search for ``fgv-admin``|YGXDSS5oiZFf4fnTWfX4LImOToPlVOhF
 
 |===
 
-``fgv-admin`` needs the ``realm-management`` roles ``query-users``, ``view-users``, ``view-clients`` and ``manage-users``, and ``manage-events`` for the sample data (see <<sample_data>>).
+``fgv-admin`` needs the ``realm-management`` roles ``query-users``, ``view-users``, ``view-clients`` and ``manage-users``.
 The realm gives it all of them.
 
 There are also configuration parameters in ``.env`` that can be tweaked if so desired but the default values will work just fine.
@@ -95,9 +95,9 @@ There are also configuration parameters in ``.env`` that can be tweaked if so de
 |===
 |Parameter|Purpose|Default value
 
-|FGV_REVIVAL_MYSQL_DATABASE|The name of the database used by Nyuppsättning Server|fgvrevival
+|FGV_REVIVAL_MYSQL_DATABASE|The name of the database used by Nyuppsättning Server|revival
 |FGV_REVIVAL_MYSQL_ROOT_USER|The root user of Nyuppsättning Server's database|root
-|FGV_REVIVAL_MYSQL_USER|The user of Nyuppsättning Server's database|fgvrevival
+|FGV_REVIVAL_MYSQL_USER|The user of Nyuppsättning Server's database|revival
 |API_KEYCLOAK_REALM|The Keycloak realm of Nyuppsättning Server|fgv
 |API_KEYCLOAK_ADMIN_CLIENT_ID|The Keycloak admin client id of Nyuppsättning Server|fgv-admin
 |API_KEYCLOAK_CLIENT_CLIENT_ID|The Keycloak client id of Nyuppsättning Web|fgv-revival
@@ -130,14 +130,14 @@ $ docker compose -f ../../fgv-infra-deploy/local/compose.yaml up -d
 $ docker compose up -d
 ----
 
-``revival-api`` reaches Keycloak and Spexregister by their container names on the ``fgv-local`` network.
+``revival-api`` reaches Keycloak, Spexregister and Spexipedia by their container names on the ``fgv-local`` network.
 Caddy serves it on ``https://api.revival.fgv.local.nu:8443``.
 
 When the ``revival-api`` container isn't running, Caddy forwards ``https://api.revival.fgv.local.nu:8443`` to port 8081 on the host, i.e. Nyuppsättning Server started from the IDE or with ``./gradlew bootRun`` with the Spring profile ``local``.
 The JVM must then trust Caddy's local root certificate (see <<caddy>>), since it reaches Keycloak at ``https://auth.fgv.local.nu:8443``.
 
 Keycloak, its realm, registration and Turnstile are described in fgv-infra-deploy's README.
-The realm lets a locally running https://github.com/bloomper/fgv-revival-web[fgv-revival-web], i.e. ``npm run dev``, log in from ``FGV_REVIVAL_URL`` in fgv-infra-deploy's ``local/.env``, which defaults to ``http://localhost:3001``.
+The realm lets a locally running https://github.com/bloomper/fgv-revival-web[fgv-revival-web], i.e. ``npm run dev``, log in from ``REVIVAL_URL`` in fgv-infra-deploy's ``local/.env``, which defaults to ``http://localhost:3001``.
 
 ``./scripts/configure-keycloak.sh`` copies the secrets of the Keycloak clients the API uses from the local Keycloak into ``.docker/secrets``, sets the web client's id and secret (``KEYCLOAK_CLIENT_ID``, ``KEYCLOAK_CLIENT_SECRET``) in the ``.env.local`` of the web's checkout next to this one (or where ``WEB_DIR`` points), and allows Postman's callback URL in Keycloak (see <<testing_the_api>>).
 It finds fgv-infra-deploy in ``../../fgv-infra-deploy``, or where ``INFRA_DEPLOY`` points.
@@ -149,20 +149,12 @@ The same setup for staging and production is in https://github.com/bloomper/fgv-
 
 If ``API_IMPORT_SAMPLE_DATA`` is set to ``true``, all data is replaced with sample revivals at every start.
 None of the data can be traced to real individuals, i.e. no personally identifiable information (PII).
-The import needs the secret of ``fgv-admin`` in ``API_KEYCLOAK_ADMIN_CLIENT_SECRET`` (for ``bootRun``) or in ``.docker/secrets/API_KEYCLOAK_ADMIN_CLIENT_SECRET`` (for ``revival-api``).
+The sample data is built on Spexipedia's spex and fgv-infra-deploy's sample users:
 
-The sample data is built on Spexregister's, so Spexregister must run with ``API_IMPORT_SAMPLE_DATA=true``:
-
-* The spex are read from Spexregister's API.
+* The spex are read from Spexipedia's API.
 The import waits up to 5 minutes for Spexregister, which answers only once its own import is done.
-* Spexregister's sample user ``admin@fgv.nu`` becomes super admin, and ``user@fgv.nu`` gets ``USER`` only.
-The import refuses to run without them, which keeps it away from real environments.
-
-[sidebar]
-.NOTE
---
-Spexregister's import deletes all Keycloak users at every start, so restart Nyuppsättning Server after Spexregister.
---
+* The users are fgv-infra-deploy's (``bin/seed-users.sh``), with their roles on ``fgv-revival`` there: ``admin@fgv.nu`` is super admin, ``user@fgv.nu`` has ``USER`` only (see <<test_credentials>>).
+The import records them as people by their fixed ids and never asks Keycloak.
 
 There are two revivals in every status, with shows (dates at venues), status history and one baseline revision.
 The premieres follow the status: ahead while a revival is being organised or is open, behind once it has been played.
@@ -186,9 +178,6 @@ Last, the revival archived four years ago is anonymized, as the nightly job woul
 The sample participants are pending people, not spexare, so their names never come from Spexregister.
 Positions (and the materials and mailing for one) are taken from Spexregister when it answers.
 
-The import also creates the users listed under <<test_credentials>> in Keycloak when they are missing.
-It turns off the Keycloak event listener ``fgv-admin-notification`` while it does, so they aren't emailed.
-That needs the ``realm-management`` role ``manage-events`` on ``fgv-admin``; without it the import logs a warning and the users are emailed.
 
 [[keycloak]]
 == Keycloak
@@ -203,7 +192,7 @@ The username is ``KEYCLOAK_ADMIN`` in fgv-infra-deploy's ``local/.env`` and the 
 === Setup
 
 The realm is defined by ``realm/fgv.json`` in https://github.com/bloomper/fgv-keycloak[fgv-keycloak], whose README describes what it contains.
-Nyuppsättning uses its clients ``fgv-revival`` (the web), ``fgv-revival-mcp`` (MCP clients), ``fgv-revival-service`` (calls to Spexregister) and ``fgv-admin`` (the realm's users).
+Nyuppsättning uses its clients ``fgv-revival`` (the web), ``fgv-revival-mcp`` (MCP clients), ``fgv-revival-service`` (calls to Spexregister and Spexipedia) and ``fgv-admin`` (the realm's users).
 
 The integration tests import a copy of ``fgv.json`` at ``src/integrationtest/resources/realm/fgv.json``.
 After every realm change, replace it with the new ``realm/fgv.json`` from fgv-keycloak and commit it.
@@ -226,7 +215,7 @@ It catches all emails sent by Keycloak and Nyuppsättning Server, nothing is del
 
 The caught emails can be viewed at https://mail.fgv.local.nu:8443 (or http://localhost:8025).
 
-Nyuppsättning Server sends mail through Spring Mail (``spring.mail.*``; the password is the ``SMTP_PASSWORD`` secret), from ``fgv-revival.mail.from``, with links to ``fgv-revival.web-url``.
+Nyuppsättning Server sends mail through Spring Mail (``spring.mail.*``; the password is the ``SMTP_PASSWORD`` secret), from ``revival.mail.from``, with links to ``revival.web-url``.
 Without ``spring.mail.host``, nothing is sent and the web hides what would send email.
 These are the emails sent:
 
@@ -265,8 +254,8 @@ $ ./gradlew build              # all of the above, plus this documentation
 [[test_credentials]]
 == Test credentials
 
-The following test users are created when sample data is imported (see <<sample_data>>), with the password in ``SAMPLE_USER_PASSWORD`` (``s3cr3t-s3cr3t`` in the ``local`` profile, the same as Spexregister's; every other environment must set it).
-``admin@fgv.nu`` and ``user@fgv.nu`` are Spexregister's sample users, which are the same in every FGV application; the others are Nyuppsättning's own, since they stand for its roles.
+The following test users come from fgv-infra-deploy's ``bin/seed-users.sh`` (``sample-users.tsv``), with their roles on ``fgv-revival``; the password is ``s3cr3t-s3cr3t`` locally and its ``secrets/SAMPLE_USER_PASSWORD`` on staging.
+``admin@fgv.nu`` and ``user@fgv.nu`` are the same in every FGV application; the others stand for Nyuppsättning's roles.
 
 |===
 |Username|In Nyuppsättning
@@ -326,7 +315,7 @@ Every tool call runs with the permissions of the signed-in user, and changes are
 
 Authentication uses OAuth 2.0 against Keycloak with the public client ``fgv-revival-mcp`` (authorization code with PKCE, redirect URIs ``http://localhost:*`` and ``http://127.0.0.1:*``).
 Only tokens issued to that client are accepted by the MCP endpoint, and they are not accepted by the rest of the API.
-The tokens must also have the MCP endpoint's address as audience, which ``fgv.json`` sets from ``FGV_REVIVAL_MCP_URL``.
+The tokens must also have the MCP endpoint's address as audience, which ``fgv.json`` sets from ``REVIVAL_MCP_URL``.
 Users confirm the access once, on Keycloak's consent page.
 MCP clients discover Keycloak through the protected resource metadata at ``/.well-known/oauth-protected-resource/api/mcp``.
 Keycloak does not allow dynamic client registration by default, so configure the MCP client with the client id ``fgv-revival-mcp``.

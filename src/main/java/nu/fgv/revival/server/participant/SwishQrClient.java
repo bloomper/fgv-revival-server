@@ -48,7 +48,7 @@ public class SwishQrClient {
     private final RestClient restClient;
     private final String url;
 
-    public SwishQrClient(@Value("${fgv-revival.swish.qr-url:https://mpc.getswish.net/qrg-swish/api/v1/prefilled}") final String url) {
+    public SwishQrClient(@Value("${revival.swish.qr-url:https://mpc.getswish.net/qrg-swish/api/v1/prefilled}") final String url) {
         this.url = url;
         this.restClient = RestClient.builder()
                 .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults()

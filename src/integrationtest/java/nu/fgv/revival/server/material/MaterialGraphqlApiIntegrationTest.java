@@ -70,10 +70,9 @@ class MaterialGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         setStatus(revival, "OPEN");
         SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing("query Tasks"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("""
-                        {"data": {"taskPaged": {"edges": [
-                          {"node": {"id": "BAND", "name": "Orkester", "category": {"id": "2", "name": "Orkester", "actorPresent": false}}},
-                          {"node": {"id": "ENSEMBLE", "name": "Ensemble", "category": {"id": "1", "name": "Ensemble", "actorPresent": true}}}],
-                          "totalCount": 2}}}""")));
+                        {"data": {"tasks": [
+                          {"id": "BAND", "name": "Orkester", "category": {"id": "2", "name": "Orkester", "actorPresent": false}},
+                          {"id": "ENSEMBLE", "name": "Ensemble", "category": {"id": "1", "name": "Ensemble", "actorPresent": true}}]}}""")));
         participant = pending("PARTICIPANT", "Pia", "Deltagare", PARTICIPANT);
         invite(participant, pending("HELPER", "Hugo", "Springare", HELPER));
         login(PARTICIPANT);

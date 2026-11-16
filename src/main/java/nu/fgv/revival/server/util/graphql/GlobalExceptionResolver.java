@@ -27,6 +27,7 @@ import nu.fgv.revival.server.util.error.ConflictException;
 import nu.fgv.revival.server.util.error.DirectoryUnavailableException;
 import nu.fgv.revival.server.util.error.MailUnavailableException;
 import nu.fgv.revival.server.util.error.ResourceNotFoundException;
+import nu.fgv.revival.server.util.error.SpexipediaUnavailableException;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
@@ -91,6 +92,8 @@ public class GlobalExceptionResolver extends DataFetcherExceptionResolverAdapter
             case final ConflictException e -> localized(CustomErrorType.CONFLICT, e, environment);
             case final SpexregisterUnavailableException e ->
                     localized(CustomErrorType.SPEXREGISTER_UNAVAILABLE, e, environment);
+            case final SpexipediaUnavailableException e ->
+                    localized(CustomErrorType.SPEXIPEDIA_UNAVAILABLE, e, environment);
             case final DirectoryUnavailableException e ->
                     localized(CustomErrorType.DIRECTORY_UNAVAILABLE, e, environment);
             case final MailUnavailableException e -> localized(CustomErrorType.MAIL_UNAVAILABLE, e, environment);

@@ -34,10 +34,10 @@ import org.springframework.context.annotation.Configuration;
 public class KeycloakAdminConfig {
 
     @Bean(destroyMethod = "close")
-    public Keycloak keycloakAdminClient(@Value("${fgv-revival.keycloak.admin.url}") final String url,
-                                        @Value("${fgv-revival.keycloak.realm}") final String realm,
-                                        @Value("${fgv-revival.keycloak.admin.client-id}") final String clientId,
-                                        @Value("${fgv-revival.keycloak.admin.client-secret}") final String clientSecret) {
+    public Keycloak keycloakAdminClient(@Value("${revival.keycloak.admin.url}") final String url,
+                                        @Value("${revival.keycloak.realm}") final String realm,
+                                        @Value("${revival.keycloak.admin.client-id}") final String clientId,
+                                        @Value("${revival.keycloak.admin.client-secret}") final String clientSecret) {
         return KeycloakBuilder.builder()
                 .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
                 .serverUrl(url)

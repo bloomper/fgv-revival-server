@@ -102,10 +102,9 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                    "addresses": [], "consents": [], "activities": []}]}}""");
         stub("SpexFamily", "{\"data\": {\"spex\": {\"id\": \"1\", \"revivals\": []}}}");
         stub("query Tasks", """
-                {"data": {"taskPaged": {"edges": [
-                  {"node": {"id": "ROLE", "name": "Roll", "category": {"id": "1", "name": "Ensemble", "actorPresent": true}}},
-                  {"node": {"id": "TRUMPET", "name": "Trumpet", "category": {"id": "2", "name": "Orkester", "actorPresent": false}}}],
-                  "totalCount": 2}}}""");
+                {"data": {"tasks": [
+                  {"id": "ROLE", "name": "Roll", "category": {"id": "1", "name": "Ensemble", "actorPresent": true}},
+                  {"id": "TRUMPET", "name": "Trumpet", "category": {"id": "2", "name": "Orkester", "actorPresent": false}}]}}""");
         stub("VocalParts", "{\"data\": {\"typesOfType\": [{\"id\": \"B1\", \"label\": \"Bas 1\"}]}}");
         stub("SpexRevivals", "{\"data\": {\"spex\": {\"id\": \"1\", \"revivals\": []}}}");
         stub("SpexareActivities", NO_ACTIVITIES);

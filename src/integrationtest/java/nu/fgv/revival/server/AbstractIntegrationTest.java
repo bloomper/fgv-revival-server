@@ -79,7 +79,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * MySQL and Keycloak in Testcontainers, with the committed copy of {@code fgv-keycloak}'s realm plus fictitious users,
- * and WireMock standing in for Spexregister's GraphQL API. Every test starts from empty tables.
+ * and WireMock standing in for Spexregister's and Spexipedia's GraphQL APIs. Every test starts from empty tables.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -106,7 +106,7 @@ public abstract class AbstractIntegrationTest {
     protected static final String CLIENT_ID = "fgv-revival";
     protected static final String MCP_CLIENT_ID = "fgv-revival-mcp";
     protected static final String UNBOUND_MCP_CLIENT_ID = "fgv-revival-mcp-unbound";
-    protected static final String SPEXREGISTER_MCP_CLIENT_ID = "spexregister-mcp";
+    protected static final String SPEXREGISTER_MCP_CLIENT_ID = "fgv-spexregister-mcp";
     protected static final long ALI_BABA = 1L;
     protected static final long NOBEL = 2L;
     protected static final long SNORRE = 3L;
@@ -194,8 +194,10 @@ public abstract class AbstractIntegrationTest {
     @DynamicPropertySource
     static void properties(final DynamicPropertyRegistry registry) {
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM);
-        registry.add("fgv-revival.keycloak.url", KEYCLOAK::getAuthServerUrl);
-        registry.add("fgv-revival.spexregister.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
+        registry.add("revival.keycloak.url", KEYCLOAK::getAuthServerUrl);
+        registry.add("revival.spexregister.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
+        // Spexipedia's operations have names of their own, so one stand-in answers both
+        registry.add("revival.spexipedia.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
         registry.add("spring.mail.host", () -> "localhost");
         registry.add("spring.mail.port", () -> MAIL.getSmtp().getPort());
     }
@@ -244,7 +246,7 @@ public abstract class AbstractIntegrationTest {
             createUser(realm, DIRECTEUR_2, "David", "Directeur", CLIENT_ID, List.of("USER"));
             createUser(realm, STEERING_GROUP, "Stina", "Styrgrupp", CLIENT_ID, List.of("USER"));
             createUser(realm, PLAIN_USER, "Ulla", "Användare", CLIENT_ID, List.of("USER"));
-            createUser(realm, SPEXREGISTER_ONLY, "Sven", "Spexare", "spexregister", List.of("USER"));
+            createUser(realm, SPEXREGISTER_ONLY, "Sven", "Spexare", "fgv-spexregister", List.of("USER"));
             createUser(realm, PARTICIPANT, "Pia", "Deltagare", CLIENT_ID, List.of("USER"));
             createUser(realm, HELPER, "Hugo", "Springare", CLIENT_ID, List.of("USER"));
         }
@@ -307,6 +309,10 @@ public abstract class AbstractIntegrationTest {
                 .withRequestBody(matchingJsonPath("$.variables.id", equalTo(String.valueOf(SPEX_REVIVAL))))
                 .atPriority(1)
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(resource("spexRevival.json"))));
+        // Spexregister has every revival from Spexipedia's change feed at once
+        SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql"))
+                .withRequestBody(containing("KnowsSpex"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("{\"data\": {\"spex\": {\"id\": \"500\"}}}")));
     }
 
     protected static int spexregisterCalls() {

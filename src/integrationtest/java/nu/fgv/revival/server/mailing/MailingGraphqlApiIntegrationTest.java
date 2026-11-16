@@ -99,8 +99,7 @@ class MailingGraphqlApiIntegrationTest extends AbstractIntegrationTest {
         setStatus(revival, "OPEN");
         SPEXREGISTER.stubFor(post(urlEqualTo("/api/graphql")).withRequestBody(containing("query Tasks"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("""
-                        {"data": {"taskPaged": {"edges": [{"node": {"id": "BAND", "name": "Orkester", "category": {"id": "2", "name": "Orkester", "actorPresent": false}}}],
-                          "totalCount": 1}}}""")));
+                        {"data": {"tasks": [{"id": "BAND", "name": "Orkester", "category": {"id": "2", "name": "Orkester", "actorPresent": false}}]}}""")));
         participant = pending("PARTICIPANT", "Pia", "Deltagare", PARTICIPANT);
         helper = pending("HELPER", "Hugo", "Springare", HELPER);
         pending("PARTICIPANT", "Nils", "Nej", "nils@example.org");

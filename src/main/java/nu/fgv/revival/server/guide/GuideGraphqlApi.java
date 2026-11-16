@@ -28,6 +28,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -108,9 +109,9 @@ public class GuideGraphqlApi {
     }
 
     @MutationMapping
-    public @Nullable GuideDraftDto guideDraftStart() {
+    public GuideDraftDto guideDraftStart() {
         draftService.start();
-        return service.draft();
+        return Objects.requireNonNull(service.draft(), "No draft after starting one");
     }
 
     @MutationMapping

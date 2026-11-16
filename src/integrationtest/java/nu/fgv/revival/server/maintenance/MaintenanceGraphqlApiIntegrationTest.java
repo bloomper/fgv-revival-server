@@ -35,7 +35,9 @@ class MaintenanceGraphqlApiIntegrationTest extends AbstractIntegrationTest {
     void theSuperAdminSeesTheJobs() {
         execute(SUPER_ADMIN, JOBS, Map.of())
                 .path("maintenanceJobs[*].job").entityList(String.class).containsExactly("PARTICIPANT_RETENTION", "MAILING_REMINDERS")
-                .path("maintenanceJobs[0].schedule").entity(String.class).isEqualTo("0 15 3 * * *");
+                // The tests turn every schedule off (application-integrationtest.yml), so none is shown;
+                // MaintenanceServiceTest covers how a configured one is
+                .path("maintenanceJobs[0].schedule").valueIsNull();
     }
 
     @Test

@@ -22,6 +22,7 @@ import nu.fgv.revival.server.participant.ParticipantRepository;
 import nu.fgv.revival.server.participant.ParticipantResponse;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.spex.SpexareDirectory;
+import nu.fgv.revival.server.spex.SpexipediaClient;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.error.SpexregisterUnavailableException;
 import org.jspecify.annotations.Nullable;
@@ -60,13 +61,15 @@ public class SyncPlanner {
     private final ParticipantRepository participantRepository;
     private final SyncStepRepository stepRepository;
     private final SpexregisterClient client;
+    private final SpexipediaClient spexipedia;
     private final SpexareDirectory directory;
 
     public SyncPlanner(final ParticipantRepository participantRepository, final SyncStepRepository stepRepository, final SpexregisterClient client,
-                       final SpexareDirectory directory) {
+                       final SpexipediaClient spexipedia, final SpexareDirectory directory) {
         this.participantRepository = participantRepository;
         this.stepRepository = stepRepository;
         this.client = client;
+        this.spexipedia = spexipedia;
         this.directory = directory;
     }
 
@@ -188,10 +191,10 @@ public class SyncPlanner {
     }
 
     /**
-     * Spexregister's revival of the revival's spex in its year, if it records one.
+     * Spexipedia's revival of the revival's spex in its year, if it has one.
      */
     public Optional<String> findRemoteRevival(final Revival revival) {
-        return unavailableOnFailure(() -> client.spexRevivals(revival.getSpexId())).stream()
+        return unavailableOnFailure(() -> spexipedia.spexRevivals(revival.getSpexId())).stream()
                 .filter(remote -> Objects.equals(remote.year(), revival.getYear()))
                 .map(SpexregisterClient.SpexRevival::id)
                 .findFirst();

@@ -59,12 +59,12 @@ public class MaintenanceJobs {
         this.work = work;
     }
 
-    @Scheduled(cron = "${fgv-revival.jobs.participant-retention.cron-expression}", zone = "${fgv-revival.time-zone}")
+    @Scheduled(cron = "${revival.jobs.participant-retention.cron-expression}", zone = "${revival.time-zone}")
     void participantRetention() {
         run(MaintenanceJob.PARTICIPANT_RETENTION);
     }
 
-    @Scheduled(cron = "${fgv-revival.jobs.mailing-reminders.cron-expression}", zone = "${fgv-revival.time-zone}")
+    @Scheduled(cron = "${revival.jobs.mailing-reminders.cron-expression}", zone = "${revival.time-zone}")
     void mailingReminders() {
         run(MaintenanceJob.MAILING_REMINDERS);
     }

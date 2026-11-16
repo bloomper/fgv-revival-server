@@ -82,7 +82,7 @@ public class CalendarFeedService {
                                final RevivalTitles titles,
                                final List<CalendarSource> sources,
                                final Clock clock,
-                               @Value("${fgv-revival.web-url}") final String webUrl) {
+                               @Value("${revival.web-url}") final String webUrl) {
         this.repository = repository;
         this.revivalRepository = revivalRepository;
         this.personRepository = personRepository;

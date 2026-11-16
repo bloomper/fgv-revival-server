@@ -1,12 +1,4 @@
 {
-  "errors": [
-    {
-      "message": "Not found",
-      "extensions": {
-        "classification": "NOT_FOUND"
-      }
-    }
-  ],
   "data": {
     "spex": null
   }

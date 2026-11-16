@@ -68,6 +68,7 @@ import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalAnonymization;
 import nu.fgv.revival.server.revival.RevivalRepository;
 import nu.fgv.revival.server.revival.RevivalStatus;
+import nu.fgv.revival.server.spex.SpexipediaClient;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarDate;
 import nu.fgv.revival.server.spexcalendar.SpexCalendarDateRepository;
@@ -153,6 +154,7 @@ public class SampleActivityImporter {
     private final SampleStaffing sampleStaffing;
     private final SampleMaterials sampleMaterials;
     private final SpexregisterClient spexregisterClient;
+    private final SpexipediaClient spexipediaClient;
     private final RevivalRepository revivalRepository;
     private final RevivalAnonymization anonymization;
     private final SpexCalendarDateRepository spexCalendarRepository;
@@ -165,8 +167,8 @@ public class SampleActivityImporter {
     private final ZoneId zone;
     private final SecureRandom rnd = new SecureRandom();
 
-    public SampleActivityImporter(@Value("${fgv-revival.data.import-sample-data:false}") final boolean importSampleData,
-                                  @Value("${fgv-revival.time-zone}") final ZoneId zone,
+    public SampleActivityImporter(@Value("${revival.data.import-sample-data:false}") final boolean importSampleData,
+                                  @Value("${revival.time-zone}") final ZoneId zone,
                                   final JdbcClient jdbcClient,
                                   final TransactionTemplate transactions,
                                   final ChecklistRepository checklistRepository,
@@ -182,6 +184,7 @@ public class SampleActivityImporter {
                                   final SampleStaffing sampleStaffing,
                                   final SampleMaterials sampleMaterials,
                                   final SpexregisterClient spexregisterClient,
+                                  final SpexipediaClient spexipediaClient,
                                   final RevivalRepository revivalRepository,
                                   final RevivalAnonymization anonymization,
                                   final SpexCalendarDateRepository spexCalendarRepository,
@@ -210,6 +213,7 @@ public class SampleActivityImporter {
         this.sampleStaffing = sampleStaffing;
         this.sampleMaterials = sampleMaterials;
         this.spexregisterClient = spexregisterClient;
+        this.spexipediaClient = spexipediaClient;
         this.revivalRepository = revivalRepository;
         this.anonymization = anonymization;
         this.spexCalendarRepository = spexCalendarRepository;
@@ -275,7 +279,7 @@ public class SampleActivityImporter {
     public void importSampleActivity() {
         final long started = System.nanoTime();
         final List<SampleRevival> revivals = revivals();
-        final SamplePositions positions = SamplePositions.read(spexregisterClient);
+        final SamplePositions positions = SamplePositions.read(spexipediaClient, spexregisterClient);
 
         transactions.executeWithoutResult(status -> {
             AuditContext.stamp(new AuditContext.Origin(AuditSource.SYSTEM, SampleDataImporter.OPERATION, null));
