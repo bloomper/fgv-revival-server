@@ -87,7 +87,7 @@ To see a changed placeholder after a pull, undo it with ``git update-index --no-
 
 |===
 
-``fgv-admin`` needs the ``realm-management`` roles ``query-users``, ``view-users``, ``view-clients`` and ``manage-users``, and ``manage-events`` for the sample data (see <<sample_data>>).
+``fgv-admin`` needs the ``realm-management`` roles ``query-users``, ``view-users``, ``view-clients`` and ``manage-users``.
 The realm gives it all of them.
 
 There are also configuration parameters in ``.env`` that can be tweaked if so desired but the default values will work just fine.
@@ -149,20 +149,12 @@ The same setup for staging and production is in https://github.com/bloomper/fgv-
 
 If ``API_IMPORT_SAMPLE_DATA`` is set to ``true``, all data is replaced with sample revivals at every start.
 None of the data can be traced to real individuals, i.e. no personally identifiable information (PII).
-The import needs the secret of ``fgv-admin`` in ``API_KEYCLOAK_ADMIN_CLIENT_SECRET`` (for ``bootRun``) or in ``.docker/secrets/API_KEYCLOAK_ADMIN_CLIENT_SECRET`` (for ``revival-api``).
-
-The sample data is built on Spexregister's, so Spexregister must run with ``API_IMPORT_SAMPLE_DATA=true``:
+The sample data is built on Spexipedia's spex and fgv-infra-deploy's sample users:
 
 * The spex are read from Spexipedia's API.
 The import waits up to 5 minutes for Spexregister, which answers only once its own import is done.
-* Spexregister's sample user ``admin@fgv.nu`` becomes super admin, and ``user@fgv.nu`` gets ``USER`` only.
-The import refuses to run without them, which keeps it away from real environments.
-
-[sidebar]
-.NOTE
---
-Spexregister's import deletes all Keycloak users at every start, so restart Nyuppsättning Server after Spexregister.
---
+* The users are fgv-infra-deploy's (``bin/seed-users.sh``), with their roles on ``fgv-revival`` there: ``admin@fgv.nu`` is super admin, ``user@fgv.nu`` has ``USER`` only (see <<test_credentials>>).
+The import records them as people by their fixed ids and never asks Keycloak.
 
 There are two revivals in every status, with shows (dates at venues), status history and one baseline revision.
 The premieres follow the status: ahead while a revival is being organised or is open, behind once it has been played.
@@ -186,9 +178,6 @@ Last, the revival archived four years ago is anonymized, as the nightly job woul
 The sample participants are pending people, not spexare, so their names never come from Spexregister.
 Positions (and the materials and mailing for one) are taken from Spexregister when it answers.
 
-The import also creates the users listed under <<test_credentials>> in Keycloak when they are missing.
-It turns off the Keycloak event listener ``fgv-admin-notification`` while it does, so they aren't emailed.
-That needs the ``realm-management`` role ``manage-events`` on ``fgv-admin``; without it the import logs a warning and the users are emailed.
 
 [[keycloak]]
 == Keycloak
@@ -265,8 +254,8 @@ $ ./gradlew build              # all of the above, plus this documentation
 [[test_credentials]]
 == Test credentials
 
-The following test users are created when sample data is imported (see <<sample_data>>), with the password in ``SAMPLE_USER_PASSWORD`` (``s3cr3t-s3cr3t`` in the ``local`` profile, the same as Spexregister's; every other environment must set it).
-``admin@fgv.nu`` and ``user@fgv.nu`` are Spexregister's sample users, which are the same in every FGV application; the others are Nyuppsättning's own, since they stand for its roles.
+The following test users come from fgv-infra-deploy's ``bin/seed-users.sh`` (``sample-users.tsv``), with their roles on ``fgv-revival``; the password is ``s3cr3t-s3cr3t`` locally and its ``secrets/SAMPLE_USER_PASSWORD`` on staging.
+``admin@fgv.nu`` and ``user@fgv.nu`` are the same in every FGV application; the others stand for Nyuppsättning's roles.
 
 |===
 |Username|In Nyuppsättning

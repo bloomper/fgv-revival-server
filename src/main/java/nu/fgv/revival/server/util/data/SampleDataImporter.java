@@ -16,7 +16,6 @@
 
 package nu.fgv.revival.server.util.data;
 
-import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.audit.AuditSource;
 import nu.fgv.revival.server.budget.BudgetCategory;
@@ -45,20 +44,11 @@ import nu.fgv.revival.server.spex.SpexipediaClient;
 import nu.fgv.revival.server.spex.SpexregisterClient;
 import nu.fgv.revival.server.util.security.SecurityUtil;
 import org.jspecify.annotations.Nullable;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.ClientResource;
-import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.sql.Connection;
@@ -69,7 +59,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -81,15 +70,13 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * Replaces all data with sample revivals built on Spexregister's sample data. The spex come from Spexregister's API.
- * Spexregister's sample user {@value #ADMIN} becomes super admin and must exist, which keeps the import away from real
- * environments. The other users have one purpose each and are created in Keycloak when missing; Spexregister's import
- * deletes them along with all other users.
+ * Replaces all data with sample revivals built on Spexipedia's sample spex. The users are fgv-infra-deploy's sample
+ * users (bin/seed-users.sh), with their roles there ({@value #ADMIN} is super admin); they are recorded here by their
+ * fixed Keycloak ids, and each has one purpose.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -104,11 +91,16 @@ public class SampleDataImporter {
     static final String DIRECTEUR = "directeur" + SAMPLE_USER_DOMAIN;
     static final String DIRECTEUR_2 = "directeur2" + SAMPLE_USER_DOMAIN;
     static final String STEERING_GROUP = "steering-group" + SAMPLE_USER_DOMAIN;
-    // Spexregister's sample user, given only USER here
+    // Has only USER here
     static final String USER = "user" + SAMPLE_USER_DOMAIN;
     static final String INVITED = "invited" + SAMPLE_USER_DOMAIN;
     static final String PARTICIPANT = "participant" + SAMPLE_USER_DOMAIN;
     static final String HELPER = "helper" + SAMPLE_USER_DOMAIN;
+    /**
+     * By email: the fixed Keycloak id and the name, as fgv-infra-deploy's sample-users.tsv has them. {@value #INVITED} is
+     * only invited, so it has no account.
+     */
+    static final Map<String, String[]> SAMPLE_USERS = sampleUsers();
     static final String OPERATION = "sampleDataImport";
     static final int NUMBER_OF_SAMPLES_REVIVALS = 2 * RevivalStatus.values().length;
     /**
@@ -137,19 +129,28 @@ public class SampleDataImporter {
     private static final Set<RevivalStatus> PLAYED = EnumSet.of(RevivalStatus.CLOSING, RevivalStatus.SETTLING, RevivalStatus.ARCHIVED);
 
     private final SpexipediaClient spexipediaClient;
-    private final Keycloak keycloak;
-    private final String keycloakRealm;
-    private final String sampleUserPassword;
     private final Random rnd = new SecureRandom();
 
-    public SampleDataImporter(final SpexipediaClient spexipediaClient,
-                              final Keycloak keycloak,
-                              @Value("${fgv-revival.keycloak.realm}") final String keycloakRealm,
-                              @Value("${fgv-revival.data.sample-user-password}") final String sampleUserPassword) {
+    public SampleDataImporter(final SpexipediaClient spexipediaClient) {
         this.spexipediaClient = spexipediaClient;
-        this.keycloak = keycloak;
-        this.keycloakRealm = keycloakRealm;
-        this.sampleUserPassword = sampleUserPassword;
+    }
+
+    private static Map<String, String[]> sampleUsers() {
+        final Map<String, String[]> users = new LinkedHashMap<>();
+
+        users.put(ADMIN, new String[]{"00000000-0000-4000-8000-000000000001", "Admin Exempel"});
+        users.put(OBSERVER, new String[]{"00000000-0000-4000-8000-000000000011", "Observer Exempel"});
+        users.put(DIRECTEUR, new String[]{"00000000-0000-4000-8000-000000000012", "Directeur Exempel"});
+        users.put(DIRECTEUR_2, new String[]{"00000000-0000-4000-8000-000000000013", "Directeur 2 Exempel"});
+        users.put(STEERING_GROUP, new String[]{"00000000-0000-4000-8000-000000000014", "Steering group Exempel"});
+        users.put(steeringGroupWith(SeededCapability.FINANCE), new String[]{"00000000-0000-4000-8000-000000000015", "Steering group finance Exempel"});
+        users.put(steeringGroupWith(SeededCapability.CATERING), new String[]{"00000000-0000-4000-8000-000000000016", "Steering group catering Exempel"});
+        users.put(steeringGroupWith(SeededCapability.STAFFING), new String[]{"00000000-0000-4000-8000-000000000017", "Steering group staffing Exempel"});
+        users.put(steeringGroupWith(SeededCapability.COMMS), new String[]{"00000000-0000-4000-8000-000000000018", "Steering group comms Exempel"});
+        users.put(PARTICIPANT, new String[]{"00000000-0000-4000-8000-000000000019", "Participant Exempel"});
+        users.put(HELPER, new String[]{"00000000-0000-4000-8000-000000000020", "Helper Exempel"});
+        users.put(USER, new String[]{"00000000-0000-4000-8000-000000000003", "User Exempel"});
+        return users;
     }
 
     static String steeringGroupWith(final SeededCapability capability) {
@@ -165,23 +166,9 @@ public class SampleDataImporter {
         }
     }
 
-    private static void grantClientRoles(final RealmResource realm,
-                                         final ClientResource client,
-                                         final String clientUuid,
-                                         final UserRepresentation user,
-                                         final String... roles) {
-        final List<RoleRepresentation> representations = Arrays.stream(roles)
-                .map(role -> client.roles().get(role).toRepresentation())
-                .toList();
-
-        realm.users().get(user.getId()).roles().clientLevel(clientUuid).add(representations);
-    }
-
-    private static SamplePerson insertPerson(final JdbcClient jdbcClient, final UserRepresentation user) {
+    private static SamplePerson insertPerson(final JdbcClient jdbcClient, final String externalId, final String email,
+                                             final String displayName) {
         final KeyHolder keyHolder = new GeneratedKeyHolder();
-        final String displayName = Stream.of(user.getFirstName(), user.getLastName())
-                .filter(StringUtils::hasText)
-                .collect(Collectors.joining(" "));
 
         jdbcClient
                 .sql("""
@@ -190,13 +177,13 @@ public class SampleDataImporter {
                         VALUES
                             (:externalId, :email, :emailVerified, :displayName)
                         """)
-                .param("externalId", user.getId())
-                .param("email", CallerService.normalizedEmail(user.getEmail()))
-                .param("emailVerified", Boolean.TRUE.equals(user.isEmailVerified()))
-                .param("displayName", displayName.isEmpty() ? null : displayName)
+                .param("externalId", externalId)
+                .param("email", CallerService.normalizedEmail(email))
+                .param("emailVerified", true)
+                .param("displayName", displayName)
                 .update(keyHolder);
 
-        return new SamplePerson(Objects.requireNonNull(keyHolder.getKey()).longValue(), user.getId());
+        return new SamplePerson(Objects.requireNonNull(keyHolder.getKey()).longValue(), externalId);
     }
 
     /**
@@ -424,12 +411,6 @@ public class SampleDataImporter {
                         .update());
     }
 
-    private static UserRepresentation spexregisterUser(final RealmResource realm, final String email) {
-        return realm.users().searchByEmail(email, true).stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Keycloak has no user " + email + "; import Spexregister's sample data first"));
-    }
-
     public void importSampleData(final Connection connection) {
         final JdbcClient jdbcClient = JdbcClient.create(new SingleConnectionDataSource(connection, true));
         final long started = System.nanoTime();
@@ -438,8 +419,7 @@ public class SampleDataImporter {
         timed("Emptied the tables", () -> purgeAllRelevantTables(jdbcClient));
 
         final List<SpexDto> spex = timedResult("Read the spex from Spexregister", this::originalSpex);
-        final RealmResource realm = keycloak.realm(keycloakRealm);
-        final Map<String, SamplePerson> people = timedResult("Created the sample users", () -> NotificationSuspender.whileSuspended(realm, () -> createSampleUsers(jdbcClient, realm)));
+        final Map<String, SamplePerson> people = timedResult("Recorded the sample users", () -> createSampleUsers(jdbcClient));
 
         final List<SampleGuide.Version> guide = timedResult("Created the guide", () -> SampleGuide.insert(jdbcClient, people.get(ADMIN).id(), people.get(ADMIN).externalId()));
 
@@ -609,69 +589,16 @@ public class SampleDataImporter {
         }
     }
 
-    private Map<String, SamplePerson> createSampleUsers(final JdbcClient jdbcClient, final RealmResource realm) {
-        final ClientResource client = realm.clients().get(realm.clients().findByClientId(SecurityUtil.CLIENT_ID).getFirst().getId());
-        final String clientUuid = client.toRepresentation().getId();
-        final UserRepresentation admin = spexregisterUser(realm, ADMIN);
-        final Map<String, UserRepresentation> users = new LinkedHashMap<>();
-
-        users.put(ADMIN, admin);
-        users.put(OBSERVER, sampleUser(realm, OBSERVER, "Observer"));
-        users.put(DIRECTEUR, sampleUser(realm, DIRECTEUR, "Directeur"));
-        users.put(DIRECTEUR_2, sampleUser(realm, DIRECTEUR_2, "Directeur 2"));
-        users.put(STEERING_GROUP, sampleUser(realm, STEERING_GROUP, "Steering group"));
-        Arrays.stream(SeededCapability.values()).forEach(capability ->
-                users.put(steeringGroupWith(capability), sampleUser(realm, steeringGroupWith(capability), "Steering group " + capability.name().toLowerCase(Locale.ROOT))));
-        users.put(PARTICIPANT, sampleUser(realm, PARTICIPANT, "Participant"));
-        users.put(HELPER, sampleUser(realm, HELPER, "Helper"));
-        users.put(USER, spexregisterUser(realm, USER));
-
+    /**
+     * fgv-infra-deploy's sample users (bin/seed-users.sh, sample-users.tsv), which have their roles on this client there,
+     * as people here, by their fixed Keycloak ids: no Keycloak call, so the import does not depend on any other
+     * application's.
+     */
+    private static Map<String, SamplePerson> createSampleUsers(final JdbcClient jdbcClient) {
         final Map<String, SamplePerson> people = new LinkedHashMap<>();
 
-        users.forEach((email, user) -> {
-            switch (email) {
-                case ADMIN -> grantClientRoles(realm, client, clientUuid, user, "USER", "SUPER_ADMIN");
-                case OBSERVER -> grantClientRoles(realm, client, clientUuid, user, "USER", "OBSERVER");
-                default -> grantClientRoles(realm, client, clientUuid, user, "USER");
-            }
-            people.put(email, insertPerson(jdbcClient, user));
-        });
-
+        SAMPLE_USERS.forEach((email, user) -> people.put(email, insertPerson(jdbcClient, user[0], email, user[1])));
         return people;
-    }
-
-    private UserRepresentation sampleUser(final RealmResource realm, final String email, final String firstName) {
-        final List<UserRepresentation> existing = realm.users().searchByEmail(email, true);
-
-        if (!existing.isEmpty()) {
-            return existing.getFirst();
-        }
-
-        final CredentialRepresentation credential = new CredentialRepresentation();
-        final UserRepresentation user = new UserRepresentation();
-
-        credential.setType(CredentialRepresentation.PASSWORD);
-        if (!StringUtils.hasText(sampleUserPassword)) {
-            throw new IllegalStateException("SAMPLE_USER_PASSWORD must be set to import sample data");
-        }
-        credential.setValue(sampleUserPassword);
-        credential.setTemporary(false);
-        user.setUsername(email);
-        user.setEmail(email);
-        user.setFirstName(firstName);
-        user.setEnabled(true);
-        user.setEmailVerified(true);
-        user.setCredentials(List.of(credential));
-
-        try (final Response response = realm.users().create(user)) {
-            if (response.getStatus() != HttpStatus.CREATED.value()) {
-                throw new IllegalStateException("Could not create user " + email + " in Keycloak");
-            }
-
-            final String path = response.getLocation().getPath();
-
-            return realm.users().get(path.substring(path.lastIndexOf('/') + 1)).toRepresentation();
-        }
     }
 
     /**
