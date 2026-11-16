@@ -170,13 +170,15 @@ public class RevivalGraphqlApi {
     }
 
     @SchemaMapping(typeName = "Revival", field = "createdBy")
-    public @Nullable String createdBy(final RevivalDto revival, final Locale locale) {
+    public String createdBy(final RevivalDto revival, final Locale locale) {
         return personNames.bySubject(revival.createdBy(), locale);
     }
 
     @SchemaMapping(typeName = "Revival", field = "lastModifiedBy")
     public @Nullable String lastModifiedBy(final RevivalDto revival, final Locale locale) {
-        return personNames.bySubject(revival.lastModifiedBy(), locale);
+        final String subject = revival.lastModifiedBy();
+
+        return subject == null ? null : personNames.bySubject(subject, locale);
     }
 
     @SchemaMapping(typeName = "RevivalStatusChange", field = "changedBy")

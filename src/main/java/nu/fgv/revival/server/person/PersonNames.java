@@ -18,7 +18,6 @@ package nu.fgv.revival.server.person;
 
 import nu.fgv.revival.server.util.Locales;
 import nu.fgv.revival.server.util.security.SecurityUtil;
-import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,10 +55,7 @@ public class PersonNames {
      * The name for a Keycloak subject stored in {@code created_by}, {@code last_modified_by} or {@code revinfo}.
      */
     @Transactional(readOnly = true)
-    public @Nullable String bySubject(final @Nullable String subject, final Locale locale) {
-        if (subject == null) {
-            return null;
-        }
+    public String bySubject(final String subject, final Locale locale) {
         if (SecurityUtil.SYSTEM.equals(subject)) {
             return messageSource.getMessage("person.system", null, "System", Locales.supported(locale));
         }
