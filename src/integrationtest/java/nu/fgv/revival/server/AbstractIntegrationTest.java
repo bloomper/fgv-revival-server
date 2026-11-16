@@ -106,7 +106,7 @@ public abstract class AbstractIntegrationTest {
     protected static final String CLIENT_ID = "fgv-revival";
     protected static final String MCP_CLIENT_ID = "fgv-revival-mcp";
     protected static final String UNBOUND_MCP_CLIENT_ID = "fgv-revival-mcp-unbound";
-    protected static final String SPEXREGISTER_MCP_CLIENT_ID = "spexregister-mcp";
+    protected static final String SPEXREGISTER_MCP_CLIENT_ID = "fgv-spexregister-mcp";
     protected static final long ALI_BABA = 1L;
     protected static final long NOBEL = 2L;
     protected static final long SNORRE = 3L;
@@ -246,7 +246,7 @@ public abstract class AbstractIntegrationTest {
             createUser(realm, DIRECTEUR_2, "David", "Directeur", CLIENT_ID, List.of("USER"));
             createUser(realm, STEERING_GROUP, "Stina", "Styrgrupp", CLIENT_ID, List.of("USER"));
             createUser(realm, PLAIN_USER, "Ulla", "Användare", CLIENT_ID, List.of("USER"));
-            createUser(realm, SPEXREGISTER_ONLY, "Sven", "Spexare", "spexregister", List.of("USER"));
+            createUser(realm, SPEXREGISTER_ONLY, "Sven", "Spexare", "fgv-spexregister", List.of("USER"));
             createUser(realm, PARTICIPANT, "Pia", "Deltagare", CLIENT_ID, List.of("USER"));
             createUser(realm, HELPER, "Hugo", "Springare", CLIENT_ID, List.of("USER"));
         }
