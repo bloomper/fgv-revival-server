@@ -18,6 +18,7 @@
 package nu.fgv.revival.server.maintenance;
 
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import nu.fgv.revival.server.mailing.MailingReminders;
 import nu.fgv.revival.server.participant.ParticipantRetention;
 import org.jspecify.annotations.Nullable;
@@ -60,11 +61,13 @@ public class MaintenanceJobs {
     }
 
     @Scheduled(cron = "${revival.jobs.participant-retention.cron-expression}", zone = "${revival.time-zone}")
+    @SchedulerLock(name = "participant-retention", lockAtMostFor = "PT30M")
     void participantRetention() {
         run(MaintenanceJob.PARTICIPANT_RETENTION);
     }
 
     @Scheduled(cron = "${revival.jobs.mailing-reminders.cron-expression}", zone = "${revival.time-zone}")
+    @SchedulerLock(name = "mailing-reminders", lockAtMostFor = "PT30M")
     void mailingReminders() {
         run(MaintenanceJob.MAILING_REMINDERS);
     }
