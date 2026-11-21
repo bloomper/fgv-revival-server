@@ -17,6 +17,11 @@
 package nu.fgv.revival.server.guide;
 
 import org.junit.jupiter.api.Test;
+import org.openpdf.text.Anchor;
+import org.openpdf.text.Element;
+import org.openpdf.text.Paragraph;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,5 +82,23 @@ class GuideMarkdownTest {
     void toHtmlKeepsOnlyWebAndMailLinksAndUnwrapsHeadings() {
         assertThat(markdown.toHtml("# Rubrik\n\n[klicka](javascript:alert(1)) [mejla](mailto:styrgrupp@example.org)"))
                 .isEqualTo("<p>Rubrik</p><p>klicka <a href=\"mailto:styrgrupp@example.org\">mejla</a></p>");
+    }
+
+    @Test
+    void toPdfElementsKeepOnlyWebAndMailLinks() {
+        final List<Element> elements = markdown.toPdfElements(
+                "[klicka](javascript:alert(1)) [sidan](https://example.org/a) [mejla](mailto:styrgrupp@example.org)",
+                GuideMarkdown.PdfFonts.helvetica(10));
+
+        assertThat(elements).hasSize(1);
+
+        final Paragraph paragraph = (Paragraph) elements.getFirst();
+        final List<String> links = paragraph.stream()
+                .filter(Anchor.class::isInstance)
+                .map(element -> ((Anchor) element).getReference())
+                .toList();
+
+        assertThat(links).containsExactly("https://example.org/a", "mailto:styrgrupp@example.org");
+        assertThat(paragraph.getContent()).contains("klicka");
     }
 }
