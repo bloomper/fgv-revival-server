@@ -806,10 +806,6 @@ public class AccessPolicy {
         require(canRunMaintenanceJobs(caller));
     }
 
-    public void requireWorkAssignedChecklistItems(final Caller caller, final Revival revival) {
-        require(canWorkAssignedChecklistItems(caller, revival));
-    }
-
     public void requireManageCatalogs(final Caller caller) {
         require(canManageCatalogs(caller));
     }
