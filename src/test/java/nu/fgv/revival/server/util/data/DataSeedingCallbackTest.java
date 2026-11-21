@@ -19,10 +19,12 @@ package nu.fgv.revival.server.util.data;
 import org.flywaydb.core.api.callback.Context;
 import org.flywaydb.core.api.callback.Event;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 import java.sql.Connection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -36,10 +38,11 @@ class DataSeedingCallbackTest {
 
     private final SampleDataImporter sampleDataImporter = mock(SampleDataImporter.class);
     private final Context context = mock(Context.class);
+    private final MockEnvironment environment = new MockEnvironment();
 
     @Test
     void onlySupportsAfterMigrate() {
-        final DataSeedingCallback callback = new DataSeedingCallback(true, sampleDataImporter);
+        final DataSeedingCallback callback = new DataSeedingCallback(true, sampleDataImporter, environment);
 
         assertThat(callback.supports(Event.AFTER_MIGRATE, context)).isTrue();
         assertThat(callback.supports(Event.BEFORE_MIGRATE, context)).isFalse();
@@ -48,7 +51,7 @@ class DataSeedingCallbackTest {
 
     @Test
     void doesNothingWhenDisabled() {
-        new DataSeedingCallback(false, sampleDataImporter).handle(Event.AFTER_MIGRATE, context);
+        new DataSeedingCallback(false, sampleDataImporter, environment).handle(Event.AFTER_MIGRATE, context);
 
         verifyNoInteractions(sampleDataImporter);
     }
@@ -59,8 +62,26 @@ class DataSeedingCallbackTest {
 
         when(context.getConnection()).thenReturn(connection);
 
-        new DataSeedingCallback(true, sampleDataImporter).handle(Event.AFTER_MIGRATE, context);
+        new DataSeedingCallback(true, sampleDataImporter, environment).handle(Event.AFTER_MIGRATE, context);
 
         verify(sampleDataImporter).importSampleData(connection);
+    }
+
+    @Test
+    void refusesSampleDataInProduction() {
+        environment.setActiveProfiles("production");
+
+        assertThatThrownBy(() -> new DataSeedingCallback(true, sampleDataImporter, environment).handle(Event.AFTER_MIGRATE, context))
+                .isInstanceOf(IllegalStateException.class);
+        verifyNoInteractions(sampleDataImporter);
+    }
+
+    @Test
+    void startsInProductionWithoutSampleData() {
+        environment.setActiveProfiles("production");
+
+        new DataSeedingCallback(false, sampleDataImporter, environment).handle(Event.AFTER_MIGRATE, context);
+
+        verifyNoInteractions(sampleDataImporter);
     }
 }

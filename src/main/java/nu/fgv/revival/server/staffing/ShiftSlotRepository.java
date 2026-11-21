@@ -16,6 +16,9 @@
 
 package nu.fgv.revival.server.staffing;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 
 import java.util.Collection;
@@ -37,6 +40,14 @@ public interface ShiftSlotRepository extends Repository<ShiftSlot, Long> {
     void flush();
 
     Optional<ShiftSlot> findById(Long id);
+
+    /**
+     * The slot with its row locked until the transaction ends, so that two people signing up for the last place at
+     * the same moment are let in one after the other.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT slot FROM ShiftSlot slot WHERE slot.id = :id")
+    Optional<ShiftSlot> findByIdForUpdate(Long id);
 
     List<ShiftSlot> findAllById(Iterable<Long> ids);
 

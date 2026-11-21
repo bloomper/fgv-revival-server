@@ -20,10 +20,13 @@ import org.flywaydb.core.api.callback.Callback;
 import org.flywaydb.core.api.callback.Context;
 import org.flywaydb.core.api.callback.Event;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 /**
- * Imports sample data after the migrations when {@code revival.data.import-sample-data} is set.
+ * Imports sample data after the migrations when {@code revival.data.import-sample-data} is set. The sample data
+ * replaces everything, so it is refused in the {@code production} profile.
  *
  * @author Anders Jacobsson
  * @since 1.0
@@ -33,11 +36,14 @@ public class DataSeedingCallback implements Callback {
 
     private final boolean importSampleData;
     private final SampleDataImporter sampleDataImporter;
+    private final Environment environment;
 
     public DataSeedingCallback(@Value("${revival.data.import-sample-data:false}") final boolean importSampleData,
-                               final SampleDataImporter sampleDataImporter) {
+                               final SampleDataImporter sampleDataImporter,
+                               final Environment environment) {
         this.importSampleData = importSampleData;
         this.sampleDataImporter = sampleDataImporter;
+        this.environment = environment;
     }
 
     @Override
@@ -53,6 +59,9 @@ public class DataSeedingCallback implements Callback {
     @Override
     public void handle(final Event event, final Context context) {
         if (importSampleData) {
+            if (environment.acceptsProfiles(Profiles.of("production"))) {
+                throw new IllegalStateException("Refusing to import sample data in the production profile");
+            }
             sampleDataImporter.importSampleData(context.getConnection());
         }
     }

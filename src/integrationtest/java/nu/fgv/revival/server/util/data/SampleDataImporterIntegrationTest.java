@@ -278,12 +278,13 @@ class SampleDataImporterIntegrationTest extends AbstractIntegrationTest {
     void fillsEveryKindOfData() throws SQLException {
         importSampleDataAndActivity();
 
-        // Every table but the audit tables, and the positions of materials, which come from Spexregister
+        // Every table but the audit tables, the positions of materials, which come from Spexregister, and the scheduled
+        // jobs' locks, which are no data
         final List<String> empty = jdbcClient.sql("""
                         SELECT table_name FROM information_schema.tables
                         WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                         AND table_name NOT LIKE '%\\_audit' AND table_name NOT LIKE 'flyway%'
-                        AND table_name <> 'material_position'
+                        AND table_name NOT IN ('material_position', 'shedlock')
                         """)
                 .query(String.class)
                 .list()

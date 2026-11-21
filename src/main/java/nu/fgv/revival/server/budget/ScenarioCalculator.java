@@ -122,7 +122,14 @@ public final class ScenarioCalculator {
 
         final BigDecimal needed = cost.subtract(otherIncome);
 
-        return needed.signum() <= 0 ? 0 : needed.divide(price, 0, RoundingMode.CEILING).intValueExact();
+        if (needed.signum() <= 0) {
+            return 0;
+        }
+
+        final BigDecimal tickets = needed.divide(price, 0, RoundingMode.CEILING);
+
+        // More tickets than a count can hold is no answer: a cost in the billions against a price of a few öre
+        return tickets.compareTo(BigDecimal.valueOf(Integer.MAX_VALUE)) > 0 ? null : tickets.intValueExact();
     }
 
     private static <T> @Nullable T or(final @Nullable T value, final @Nullable T fallback) {

@@ -167,13 +167,4 @@ public class ExternalIds {
         });
         return result;
     }
-
-    /**
-     * @param type an entity type with a {@code uuid} attribute
-     * @param id   its internal id, or null
-     * @return its external id, or null when no internal id is given
-     */
-    public @Nullable UUID uuidOfNullable(final Class<?> type, final @Nullable Long id) {
-        return id == null ? null : uuidOf(type, id);
-    }
 }

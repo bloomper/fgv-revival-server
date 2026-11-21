@@ -139,6 +139,15 @@ class ScenarioCalculatorTest {
     }
 
     @Test
+    void aBreakEvenBeyondWhatACountHoldsIsNone() {
+        final ScenarioResultDto result = ScenarioCalculator.calculate(List.of(line(COST, BudgetCategoryRole.VENUE, "1", "50000000")), null, null,
+                new ScenarioParameters(null, null, kr("0.01"), null, null, null, null, null));
+
+        assertThat(result.breakEvenShowTickets()).isNull();
+        assertThat(result.result()).isEqualTo(kr("-50000000"));
+    }
+
+    @Test
     void withoutAShowTicketPriceThereIsNoBreakEven() {
         final ScenarioResultDto result = ScenarioCalculator.calculate(List.of(line(COST, BudgetCategoryRole.VENUE, "1", "1000")), null, null,
                 ScenarioParameters.none());

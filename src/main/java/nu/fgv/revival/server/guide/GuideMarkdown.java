@@ -182,8 +182,8 @@ public class GuideMarkdown {
     }
 
     /**
-     * Guide Markdown as PDF elements: paragraphs, nested bullet and numbered lists, bold, italics and links. Everything
-     * else is its plain text, and images are dropped, so building a PDF never fetches a URL.
+     * Guide Markdown as PDF elements: paragraphs, nested bullet and numbered lists, bold, italics and links to web and
+     * mail addresses. Everything else is its plain text, and images are dropped, so building a PDF never fetches a URL.
      */
     public List<Element> toPdfElements(final String markdown, final PdfFonts fonts) {
         final List<Element> elements = new ArrayList<>();
@@ -253,11 +253,18 @@ public class GuideMarkdown {
                 case final StrongEmphasis _ -> inline(node, target, fonts, true, emphasis);
                 case final Emphasis _ -> inline(node, target, fonts, strong, true);
                 case final Link link -> {
-                    final Anchor anchor = new Anchor("", fonts.link());
+                    final String destination = link.getDestination() == null ? "" : link.getDestination().strip();
 
-                    anchor.setReference(link.getDestination());
-                    inline(link, anchor, new PdfFonts(fonts.link(), fonts.link(), fonts.link(), fonts.link(), fonts.link()), strong, emphasis);
-                    target.add(anchor);
+                    if (SAFE_LINK.matcher(destination).matches()) {
+                        final Anchor anchor = new Anchor("", fonts.link());
+
+                        anchor.setReference(destination);
+                        inline(link, anchor, new PdfFonts(fonts.link(), fonts.link(), fonts.link(), fonts.link(), fonts.link()), strong, emphasis);
+                        target.add(anchor);
+                    } else {
+                        // As in the email and on the web: any other link is shown as its text
+                        inline(link, target, fonts, strong, emphasis);
+                    }
                 }
                 case final Image _ -> {
                     // Dropped: the server never fetches an image URL
