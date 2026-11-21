@@ -100,7 +100,10 @@ management:
 
 server:
   port: 8080
-  forward-headers-strategy: framework
+  request:
+    header:
+      forwarded:
+        strategy: framework
   tomcat:
     max-swallow-size: 12MB
 
