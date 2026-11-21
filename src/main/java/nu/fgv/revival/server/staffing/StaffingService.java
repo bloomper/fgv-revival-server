@@ -345,7 +345,8 @@ public class StaffingService {
     @Transactional
     public ShiftSlotDto signUp(final Long slotId, final Locale locale) {
         final Caller caller = callerService.current();
-        final ShiftSlot slot = slotRepository.findById(slotId).orElseThrow(() -> new ResourceNotFoundException(ShiftSlot.class, slotId));
+        // Locked, so that the places left are counted for one person at a time
+        final ShiftSlot slot = slotRepository.findByIdForUpdate(slotId).orElseThrow(() -> new ResourceNotFoundException(ShiftSlot.class, slotId));
         final ParticipantAccess.Own own = participantAccess.own(caller, slot.getRevivalId());
         final Participant participant = own.participant();
         final Event event = activeEvent(slot);
