@@ -23,8 +23,8 @@ services:
     #ports:
     #  - "3307:3306"
     volumes:
-      - fgv_revival_mysql_data:/var/lib/mysql
-      - fgv_revival_mysql_log:/var/log/mysql
+      - ./.docker/mysql/data:/var/lib/mysql
+      - ./.docker/mysql/log:/var/log/mysql
     secrets:
       - FGV_REVIVAL_MYSQL_ROOT_PASSWORD
       - FGV_REVIVAL_MYSQL_USER_PASSWORD
@@ -64,7 +64,7 @@ services:
       revival-mysql:
         condition: service_healthy
     volumes:
-      - fgv_revival_api_log:/data/log_data
+      - ${API_DATA:-./.docker/api}/log_data:/data/log_data
     networks:
       - default
       - fgv
@@ -73,26 +73,6 @@ services:
         target: MYSQL_API_USER_PASSWORD
       - API_KEYCLOAK_ADMIN_CLIENT_SECRET
       - API_KEYCLOAK_SERVICE_CLIENT_SECRET
-
-volumes:
-  fgv_revival_mysql_data:
-    driver: local
-    driver_opts:
-      type: none
-      device: .docker/fgv-revival-mysql/data
-      o: bind
-  fgv_revival_mysql_log:
-    driver: local
-    driver_opts:
-      type: none
-      device: .docker/fgv-revival-mysql/log
-      o: bind
-  fgv_revival_api_log:
-    driver: local
-    driver_opts:
-      type: none
-      device: .docker/fgv-revival-api/log_data
-      o: bind
 
 networks:
   fgv:
