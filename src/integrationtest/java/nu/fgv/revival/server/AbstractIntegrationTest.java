@@ -198,6 +198,7 @@ public abstract class AbstractIntegrationTest {
         registry.add("revival.spexregister.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
         // Spexipedia's operations have names of their own, so one stand-in answers both
         registry.add("revival.spexipedia.graphql-url", () -> SPEXREGISTER.baseUrl() + "/api/graphql");
+        registry.add("revival.medlemskap.graphql-url", () -> SPEXREGISTER.baseUrl() + "/medlemskap/graphql");
         registry.add("spring.mail.host", () -> "localhost");
         registry.add("spring.mail.port", () -> MAIL.getSmtp().getPort());
     }

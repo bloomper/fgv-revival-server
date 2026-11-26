@@ -67,10 +67,6 @@ public class SpexregisterClient {
      */
     public static final String REGISTER = "REGISTER";
     /**
-     * The membership type FGV's memberships are recorded with.
-     */
-    public static final String FGV_MEMBERSHIP = "FGV";
-    /**
      * The vocal type for an actor whose vocal part is not known.
      */
     public static final String UNKNOWN_VOCAL = "UNKNOWN";
@@ -146,10 +142,6 @@ public class SpexregisterClient {
     private static final String ACTOR_CREATE = """
             mutation ActorCreate($spexareId: ID!, $activityId: ID!, $taskActivityId: ID!, $vocalId: ID!, $input: ActorCreate!) {
                 actorCreate(spexareId: $spexareId, activityId: $activityId, taskActivityId: $taskActivityId, vocalId: $vocalId, input: $input) { id }
-            }""";
-    private static final String MEMBERSHIP_CREATE = """
-            mutation MembershipCreate($spexareId: ID!, $typeId: ID!, $input: MembershipCreate!) {
-                membershipCreate(spexareId: $spexareId, typeId: $typeId, input: $input) { id }
             }""";
     private static final long LOG_INTERVAL_MILLIS = 60_000;
 
@@ -429,17 +421,6 @@ public class SpexregisterClient {
                 .variable("taskActivityId", taskActivityId)
                 .variable("vocalId", vocalId)
                 .variable("input", input), "actorCreate");
-    }
-
-    /**
-     * Records the spexare's {@value #FGV_MEMBERSHIP} membership for the year. Spexregister refuses a second one for the
-     * same year with {@link SpexregisterCallException#EXISTS}.
-     */
-    public String createMembership(final String spexareId, final int year, final String actingPerson) {
-        return created(actingFor(actingPerson).document(MEMBERSHIP_CREATE)
-                .variable("spexareId", spexareId)
-                .variable("typeId", FGV_MEMBERSHIP)
-                .variable("input", Map.of("year", String.valueOf(year))), "membershipCreate");
     }
 
     private String created(final org.springframework.graphql.client.GraphQlClient.RequestSpec request, final String field) {

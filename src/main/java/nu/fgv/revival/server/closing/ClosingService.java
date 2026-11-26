@@ -26,6 +26,7 @@ import nu.fgv.revival.server.decisionlog.LogEntry;
 import nu.fgv.revival.server.decisionlog.LogEntrySummaryDto;
 import nu.fgv.revival.server.decisionlog.LogEntryType;
 import nu.fgv.revival.server.guide.suggestion.GuideSuggestionStatus;
+import nu.fgv.revival.server.medlemskap.MedlemskapClient;
 import nu.fgv.revival.server.member.AccessPolicy;
 import nu.fgv.revival.server.person.Caller;
 import nu.fgv.revival.server.person.CallerService;
@@ -64,10 +65,11 @@ public class ClosingService {
     private final CallerService callerService;
     private final AccessPolicy accessPolicy;
     private final EntityManager entityManager;
+    private final MedlemskapClient medlemskap;
 
     public ClosingService(final RevivalRepository revivalRepository, final BudgetService budgetService, final BudgetSettingsRepository settingsRepository,
                           final SyncService syncService, final RevivalAnonymization anonymization, final CallerService callerService,
-                          final AccessPolicy accessPolicy, final EntityManager entityManager) {
+                          final AccessPolicy accessPolicy, final EntityManager entityManager, final MedlemskapClient medlemskap) {
         this.revivalRepository = revivalRepository;
         this.budgetService = budgetService;
         this.settingsRepository = settingsRepository;
@@ -76,6 +78,7 @@ public class ClosingService {
         this.callerService = callerService;
         this.accessPolicy = accessPolicy;
         this.entityManager = entityManager;
+        this.medlemskap = medlemskap;
     }
 
     /**
@@ -118,6 +121,26 @@ public class ClosingService {
                 .getSingleResult();
 
         return new ClosingStatusDto(totals.actualResult(), loan, repaid, surplus, revival.getMembershipYear(), memberships.intValue(),
-                suggestions.intValue(), syncService.lastRun(revivalId), revival.getAnonymizedAt(), anonymization.automaticOn(revival).orElse(null));
+                membershipPayment(revivalId), suggestions.intValue(), syncService.lastRun(revivalId), revival.getAnonymizedAt(), anonymization.automaticOn(revival).orElse(null));
+    }
+
+    /**
+     * The request for the revival's memberships as Medlemskap has it now; none when none was made or Medlemskap cannot be
+     * asked, since the closing view must not depend on it.
+     */
+    private ClosingDtos.@Nullable MembershipPaymentDto membershipPayment(final Long revivalId) {
+        final List<String> requestIds = syncService.paymentRequestIds(revivalId);
+
+        if (requestIds.isEmpty()) {
+            return null;
+        }
+        try {
+            final MedlemskapClient.PaymentRequest request = medlemskap.status(requestIds.getFirst());
+
+            return new ClosingDtos.MembershipPaymentDto(request.reference(), request.amount(), request.paid(), request.status(), request.included(),
+                    request.payee().swishNumber(), request.payee().bankgiro(), request.payee().bankAccount(), request.payee().name());
+        } catch (final MedlemskapClient.MedlemskapCallException _) {
+            return null;
+        }
     }
 }

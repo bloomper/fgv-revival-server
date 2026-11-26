@@ -41,7 +41,7 @@ public enum SyncOperation {
      */
     ACTOR,
     /**
-     * {@code membershipCreate} for the year, when the revival paid it.
+     * One payment request in Medlemskap for the participants whose membership the revival pays, once per revival.
      */
-    MEMBERSHIP
+    PAYMENT
 }

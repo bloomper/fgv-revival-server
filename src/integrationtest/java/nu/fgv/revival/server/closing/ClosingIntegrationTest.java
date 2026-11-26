@@ -54,7 +54,7 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
     private static final String PREVIEW = """
             query($id: ID!) {
                 syncPreview(revivalId: $id) {
-                    hash spexregisterRevivalExists membershipYear
+                    hash spexregisterRevivalExists membershipYear payment { year participants exists }
                     participants { participant { id displayName } operations { operation detail exists } }
                     excluded { id displayName }
                     lastRun { id status }
@@ -86,6 +86,23 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
     }
 
+    /**
+     * Medlemskap's GraphQL API, which WireMock serves on its own path.
+     */
+    private static StubMapping stubMedlemskap(final String operation, final String body) {
+        return SPEXREGISTER.stubFor(post(urlEqualTo("/medlemskap/graphql")).withRequestBody(containing(operation))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
+    }
+
+    private static int medlemskapCalls(final String operation) {
+        return SPEXREGISTER.countRequestsMatching(postRequestedFor(urlEqualTo("/medlemskap/graphql")).withRequestBody(containing(operation)).build()).getCount();
+    }
+
+    private static final String PAYMENT_REQUEST = """
+            {"requestId": "req-1", "reference": "FGV28AB3K4", "amount": 200, "paid": 0, "status": "OPEN", "included": 1, "existing": %s,
+             "alreadyMembers": [], "alreadyRequested": [],
+             "payee": {"swishNumber": "1234567890", "bankgiro": "123-4567", "bankAccount": null, "name": "FGV"}}""";
+
     private static int calls(final String operation) {
         return SPEXREGISTER.countRequestsMatching(postRequestedFor(urlEqualTo("/api/graphql")).withRequestBody(containing(operation)).build()).getCount();
     }
@@ -113,7 +130,9 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         stub("SpexActivityCreate", "{\"data\": {\"spexActivityCreate\": {\"id\": \"71\"}}}");
         stub("TaskActivityCreate", "{\"data\": {\"taskActivityCreate\": {\"id\": \"72\"}}}");
         stub("ActorCreate", "{\"data\": {\"actorCreate\": {\"id\": \"73\"}}}");
-        stub("MembershipCreate", "{\"data\": {\"membershipCreate\": {\"id\": \"74\"}}}");
+        stubMedlemskap("revivalFeeLevels", "{\"data\": {\"revivalFeeLevels\": [{\"id\": \"fee-1\", \"year\": 2028, \"amount\": 200}]}}");
+        stubMedlemskap("createRevivalPaymentRequest", "{\"data\": {\"createRevivalPaymentRequest\": " + PAYMENT_REQUEST.formatted(false) + "}}");
+        stubMedlemskap("query Status", "{\"data\": {\"revivalPaymentRequest\": " + PAYMENT_REQUEST.formatted(true) + "}}");
 
         final List<String> added = execute(STEERING_GROUP, "mutation($id: ID!) { participantsAddSpexare(revivalId: $id, spexareIds: [7, 8]) { id } }",
                 Map.of("id", revival)).path("participantsAddSpexare[*].id").entityList(String.class).get();
@@ -196,8 +215,13 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                 .path("syncRun.failures[0].reason").entity(String.class).isEqualTo("REFUSED")
                 .path("syncRun.failures[0].participant.displayName").entity(String.class).isEqualTo("Bertil Bengtsson");
         assertThat(jdbcClient.sql("SELECT spexregister_revival_id FROM revival WHERE id = ?").param(revival).query(Long.class).single()).isEqualTo(500L);
-        SPEXREGISTER.verify(postRequestedFor(urlEqualTo("/api/graphql")).withRequestBody(containing("MembershipCreate"))
-                .withHeader("X-Acting-Person", equalTo("Dana%20Directeur%20%28via%20Nyupps%C3%A4ttning%29")));
+        // One payment request, for Anna alone, asked for in the name of the person who started the sync
+        assertThat(medlemskapCalls("createRevivalPaymentRequest")).isEqualTo(1);
+        SPEXREGISTER.verify(postRequestedFor(urlEqualTo("/medlemskap/graphql")).withRequestBody(containing("createRevivalPaymentRequest"))
+                .withRequestBody(matchingJsonPath("$.variables.spexareIds[0]", equalTo("7")))
+                .withRequestBody(matchingJsonPath("$.variables.feeLevelId", equalTo("fee-1")))
+                .withRequestBody(matchingJsonPath("$.variables.key", containing("revival-"))));
+        assertThat(calls("MembershipCreate")).isZero();
 
         // Spexregister now has what the first run wrote; resuming writes only Bertil's task
         SPEXREGISTER.removeStub(refused);
@@ -210,7 +234,8 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         execute(DIRECTEUR, PREVIEW, Map.of("id", revival))
                 .path("syncPreview.spexregisterRevivalExists").entity(Boolean.class).isEqualTo(true)
                 .path("syncPreview.lastRun.status").entity(String.class).isEqualTo("FAILED")
-                .path("syncPreview.participants[0].operations[*].exists").entityList(Boolean.class).containsExactly(true, true, true, true)
+                .path("syncPreview.participants[0].operations[*].exists").entityList(Boolean.class).containsExactly(true, true, true)
+                .path("syncPreview.payment.exists").entity(Boolean.class).isEqualTo(true)
                 .path("syncPreview.participants[1].operations[*].exists").entityList(Boolean.class).containsExactly(true, false);
 
         final EntityId second = start(DIRECTEUR, hash(DIRECTEUR));
@@ -219,7 +244,8 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
         execute(DIRECTEUR, RUN, Map.of("id", second)).path("syncRun.total").entity(Integer.class).isEqualTo(1);
         assertThat(calls("SpexRevivalCreate")).isEqualTo(1);
         assertThat(calls("SpexActivityCreate")).isEqualTo(2);
-        assertThat(calls("MembershipCreate")).isEqualTo(1);
+        // The request was made once, not again when the sync resumed
+        assertThat(medlemskapCalls("createRevivalPaymentRequest")).isEqualTo(1);
         assertThat(calls("ActorCreate")).isEqualTo(1);
 
         // Nothing left to write: a run with no steps is done at once
@@ -230,10 +256,13 @@ class ClosingIntegrationTest extends AbstractIntegrationTest {
                   {"id": "8", "activities": [{"id": "80", "spexActivity": {"id": "81", "spex": {"id": "500"}},
                     "taskActivities": [{"id": "82", "task": {"id": "TRUMPET"}, "actors": []}]}]}]}}""");
         execute(DIRECTEUR, START, Map.of("id", revival, "hash", hash(DIRECTEUR))).path("syncStart.status").entity(String.class).isEqualTo("DONE");
-        execute(DIRECTEUR, "query($id: ID!) { revival(id: $id) { closing { lastSync { status } membershipsPaid membershipYear } } }", Map.of("id", revival))
+        execute(DIRECTEUR, "query($id: ID!) { revival(id: $id) { closing { lastSync { status } membershipsPaid membershipYear membershipPayment { reference amount status included bankgiro swishNumber } } } }", Map.of("id", revival))
                 .path("revival.closing.lastSync.status").entity(String.class).isEqualTo("DONE")
                 .path("revival.closing.membershipsPaid").entity(Integer.class).isEqualTo(1)
-                .path("revival.closing.membershipYear").entity(Integer.class).isEqualTo(2028);
+                .path("revival.closing.membershipYear").entity(Integer.class).isEqualTo(2028)
+                .path("revival.closing.membershipPayment.reference").entity(String.class).isEqualTo("FGV28AB3K4")
+                .path("revival.closing.membershipPayment.amount").entity(Integer.class).isEqualTo(200)
+                .path("revival.closing.membershipPayment.bankgiro").entity(String.class).isEqualTo("123-4567");
     }
 
     @Test

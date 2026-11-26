@@ -136,7 +136,10 @@ public class SyncService {
                         participant.operations().stream().map(operation -> new SyncOperationPreviewDto(operation.operation(), operation.detail(),
                                 operation.exists())).toList())).toList(),
                 plan.excluded().stream().map(participant -> ParticipantRef.of(names.get(participant.getId()))).toList(),
-                revival.getMembershipYear(), lastRun(revivalId));
+                revival.getMembershipYear(), plan.payment() == null || revival.getMembershipYear() == null ? null
+                        : new ClosingDtos.SyncPaymentPreviewDto(revival.getMembershipYear(), SyncPlanner.payers(plan.participants().stream()
+                        .map(SyncPlanner.ParticipantPlan::participant).toList()).size(), plan.payment().exists()),
+                lastRun(revivalId));
     }
 
     /**
@@ -221,6 +224,14 @@ public class SyncService {
             throw new ResourceNotFoundException(SyncRun.class, id);
         }
         return SyncRunDto.of(run, stepRepository.findByRunIdOrderByIdAsc(id));
+    }
+
+    /**
+     * The ids of the revival's payment requests in Medlemskap, the latest first. No caller check: callers have checked the revival.
+     */
+    @Transactional(readOnly = true)
+    public List<String> paymentRequestIds(final Long revivalId) {
+        return stepRepository.paymentRequestIds(revivalId, List.of(SyncStepStatus.DONE, SyncStepStatus.EXISTED));
     }
 
     /**

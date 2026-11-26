@@ -94,6 +94,23 @@ public class SpexregisterClientConfig {
     }
 
     /**
+     * Medlemskap's GraphQL API, with the same service account (it holds {@code REVIVAL} on {@code fgv-membership}).
+     */
+    @Bean
+    public HttpSyncGraphQlClient medlemskapGraphQlClient(@Value("${revival.medlemskap.graphql-url}") final String url,
+                                                         final OAuth2AuthorizedClientManager spexregisterAuthorizedClientManager) {
+        return HttpSyncGraphQlClient.builder(RestClient.builder()
+                        .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults()
+                                .withConnectTimeout(TIMEOUT)
+                                .withReadTimeout(TIMEOUT)))
+                        .requestInterceptor(new OAuth2ClientHttpRequestInterceptor(spexregisterAuthorizedClientManager))
+                        .defaultRequest(request -> request.attributes(clientRegistrationId(REGISTRATION_ID)))
+                        .build())
+                .url(url)
+                .build();
+    }
+
+    /**
      * For Spexipedia's poster images, which are public: no token.
      */
     @Bean

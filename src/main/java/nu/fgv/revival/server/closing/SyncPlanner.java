@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.springframework.util.StringUtils.hasText;
@@ -47,9 +46,9 @@ import static org.springframework.util.StringUtils.hasText;
  * Works out what the sync would write for a revival, from its participants and what Spexregister already has, read
  * fresh. Participants are those who answered yes, are participants (not helpers) and are not removed; only spexare can
  * be written, so pending people are listed as excluded. For each: the participation in Spexregister's revival, the task
- * for their position, the actor for an ensemble role, and the FGV membership when the revival paid it. A membership
- * counts as existing when an earlier run wrote or found it, since Spexregister does not let the application read
- * memberships. The hash covers what would be written, in a stable order, so a start can tell whether the preview the
+ * for their position and the actor for an ensemble role. The FGV memberships the revival pays are one payment request in
+ * Medlemskap for them all, which counts as existing when an earlier run made it for the same people (its key says who).
+ * The hash covers what would be written, in a stable order, so a start can tell whether the preview the
  * caller confirmed is still what would be done.
  *
  * @author Anders Jacobsson
@@ -93,8 +92,7 @@ public class SyncPlanner {
 
     private static List<Operation> operations(final Participant participant, final SpexregisterClient.@Nullable ActivityDetail activity,
                                               final Map<String, SpexareDirectory.Position> positions,
-                                              final Map<String, SpexareDirectory.VocalPart> vocalParts, final @Nullable Integer membershipYear,
-                                              final boolean membershipRecorded) {
+                                              final Map<String, SpexareDirectory.VocalPart> vocalParts) {
         final Long id = participant.getId();
         final List<Operation> operations = new ArrayList<>();
 
@@ -116,9 +114,6 @@ public class SyncPlanner {
                 operations.add(new Operation(id, SyncOperation.ACTOR, truncate(detail), task != null && !task.allActors().isEmpty(),
                         id + "/" + taskId + "/" + role + "/" + Objects.requireNonNullElse(vocal, SpexregisterClient.UNKNOWN_VOCAL)));
             }
-        }
-        if (participant.isMembershipPaid() && membershipYear != null) {
-            operations.add(new Operation(id, SyncOperation.MEMBERSHIP, String.valueOf(membershipYear), membershipRecorded, id + "/" + membershipYear));
         }
         return List.copyOf(operations);
     }
@@ -175,19 +170,18 @@ public class SyncPlanner {
         final Map<String, SpexregisterClient.SpexareActivities> activities = remoteRevival == null ? Map.of() : activities(spexare, actingPerson);
         final Map<String, SpexareDirectory.Position> positions = positions();
         final Map<String, SpexareDirectory.VocalPart> vocalParts = vocalParts();
-        final Set<Long> memberships = memberships(spexare, revival.getMembershipYear());
+        final @Nullable Operation payment = payment(revival, spexare);
         final List<ParticipantPlan> plans = new ArrayList<>();
 
         for (final Participant participant : spexare) {
             final SpexregisterClient.@Nullable ActivityDetail activity = activityFor(activities.get(participant.getSpexareId()), remoteRevival);
 
-            plans.add(new ParticipantPlan(participant, operations(participant, activity, positions, vocalParts, revival.getMembershipYear(),
-                    memberships.contains(participant.getId()))));
+            plans.add(new ParticipantPlan(participant, operations(participant, activity, positions, vocalParts)));
         }
 
-        final Plan unhashed = new Plan(revival.getId(), remoteRevival, revivalOperation, List.copyOf(plans), List.copyOf(excluded), "");
+        final Plan unhashed = new Plan(revival.getId(), remoteRevival, revivalOperation, payment, List.copyOf(plans), List.copyOf(excluded), "");
 
-        return new Plan(revival.getId(), remoteRevival, revivalOperation, unhashed.participants(), unhashed.excluded(), hash(unhashed.planned()));
+        return new Plan(revival.getId(), remoteRevival, revivalOperation, payment, unhashed.participants(), unhashed.excluded(), hash(unhashed.planned()));
     }
 
     /**
@@ -223,13 +217,40 @@ public class SyncPlanner {
         return directory.vocalPartsOrEmpty();
     }
 
-    private Set<Long> memberships(final List<Participant> participants, final @Nullable Integer year) {
-        final List<Long> paid = participants.stream().filter(Participant::isMembershipPaid).map(Participant::getId).toList();
+    /**
+     * The spexare whose membership the revival pays: participants the revival has marked, who are spexare.
+     */
+    public static List<String> payers(final List<Participant> participants) {
+        return participants.stream().filter(Participant::isMembershipPaid).map(Participant::getSpexareId).filter(Objects::nonNull).sorted().distinct().toList();
+    }
 
-        if (year == null || paid.isEmpty()) {
-            return Set.of();
+    /**
+     * What Medlemskap is asked for: the revival, the year and who. A different set of people is a different request, so
+     * people added later are asked for, and Medlemskap leaves out those already covered.
+     */
+    public static String paymentKey(final Revival revival, final int year, final List<String> spexareIds) {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            spexareIds.forEach(id -> digest.update((id + "\n").getBytes(StandardCharsets.UTF_8)));
+            return "revival-%s-%d-%s".formatted(revival.getSpexId(), year, HexFormat.of().formatHex(digest.digest()).substring(0, 12));
+        } catch (final NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
-        return Set.copyOf(stepRepository.membershipsRecorded(paid, String.valueOf(year), List.of(SyncStepStatus.DONE, SyncStepStatus.EXISTED)));
+    }
+
+    private @Nullable Operation payment(final Revival revival, final List<Participant> spexare) {
+        final Integer year = revival.getMembershipYear();
+        final List<String> payers = payers(spexare);
+
+        if (year == null || payers.isEmpty()) {
+            return null;
+        }
+
+        final String key = paymentKey(revival, year, payers);
+
+        return new Operation(null, SyncOperation.PAYMENT, key, stepRepository.paymentRequested(revival.getId(), key,
+                List.of(SyncStepStatus.DONE, SyncStepStatus.EXISTED)), key);
     }
 
     /**
@@ -246,12 +267,12 @@ public class SyncPlanner {
      * {@code revival} is the {@link SyncOperation#REVIVAL} operation; {@code spexregisterRevivalId} is Spexregister's
      * revival when it exists.
      */
-    public record Plan(Long revivalId, @Nullable String spexregisterRevivalId, Operation revival,
+    public record Plan(Long revivalId, @Nullable String spexregisterRevivalId, Operation revival, @Nullable Operation payment,
                        List<ParticipantPlan> participants,
                        List<Participant> excluded, String hash) {
 
         /**
-         * Everything that would be written, the revival first, then per participant in operation order.
+         * Everything that would be written, the revival first, then per participant in operation order, then the payment request.
          */
         public List<Operation> planned() {
             final List<Operation> planned = new ArrayList<>();
@@ -260,6 +281,9 @@ public class SyncPlanner {
                 planned.add(revival);
             }
             participants.forEach(participant -> participant.operations().stream().filter(operation -> !operation.exists()).forEach(planned::add));
+            if (payment != null && !payment.exists()) {
+                planned.add(payment);
+            }
             return planned;
         }
     }

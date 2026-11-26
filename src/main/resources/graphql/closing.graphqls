@@ -9,8 +9,8 @@ enum SyncOperation {
     TASK
     "actorCreate with role and vocal part."
     ACTOR
-    "membershipCreate for the year, when the revival paid it."
-    MEMBERSHIP
+    "One payment request in Medlemskap for the memberships the revival pays."
+    PAYMENT
 }
 
 enum SyncStepStatus {
@@ -43,7 +43,7 @@ extend type Mutation {
     """
     syncStart(revivalId: ID!, previewHash: String!): SyncRun!
 
-    "Directeur (CLOSING or SETTLING) or SUPER_ADMIN. The year the revival pays FGV membership for, and for whom."
+    "Directeur (CLOSING or SETTLING) or SUPER_ADMIN. The year the revival pays FGV membership for, and for whom. The sync then asks Medlemskap for one payment request that covers them."
     membershipSet(input: MembershipSetInput!): [Participant!]!
 
     """
@@ -67,6 +67,8 @@ type SyncPreview {
     "Participants who answered YES but are pending people (did not consent): left out."
     excluded: [ParticipantRef!]!
     membershipYear: Year
+    "The payment request for the memberships the revival pays, when there are any."
+    payment: SyncPaymentPreview
     "The latest run, if any."
     lastRun: SyncRun
 }
@@ -74,6 +76,29 @@ type SyncPreview {
 type SyncParticipantPreview {
     participant: ParticipantRef!
     operations: [SyncOperationPreview!]!
+}
+
+type SyncPaymentPreview {
+    year: Year!
+    "How many memberships the request covers"
+    participants: Int!
+    "Already asked for these people, so nothing more will be requested."
+    exists: Boolean!
+}
+
+"What Medlemskap says of the request for the revival's memberships: the treasurer matches the payment there."
+type MembershipPayment {
+    "The payment reference: the message of the Swish or bank payment."
+    reference: String!
+    amount: Int!
+    paid: Int!
+    "OPEN, REPORTED, MATCHED or CANCELLED"
+    status: String!
+    included: Int!
+    swishNumber: String
+    bankgiro: String
+    bankAccount: String
+    payeeName: String
 }
 
 type SyncOperationPreview {
@@ -121,6 +146,8 @@ type ClosingStatus {
     surplusDecision: LogEntrySummary
     membershipYear: Year
     membershipsPaid: Int!
+    "Medlemskap's payment request for them, once the sync has asked for it; null when Medlemskap cannot be asked."
+    membershipPayment: MembershipPayment
     "Guide suggestions from this revival."
     suggestions: Int!
     lastSync: SyncRun
