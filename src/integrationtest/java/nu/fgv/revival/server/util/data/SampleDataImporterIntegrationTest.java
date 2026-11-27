@@ -17,6 +17,7 @@
 package nu.fgv.revival.server.util.data;
 
 import java.util.Map;
+
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.representations.idm.PartialImportRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;

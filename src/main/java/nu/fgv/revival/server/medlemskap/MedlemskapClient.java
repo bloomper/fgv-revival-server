@@ -63,10 +63,12 @@ public class MedlemskapClient {
     public record FeeLevel(String id, @Nullable Integer year, int amount) {
     }
 
-    public record Payee(@Nullable String swishNumber, @Nullable String bankgiro, @Nullable String bankAccount, @Nullable String name) {
+    public record Payee(@Nullable String swishNumber, @Nullable String bankgiro, @Nullable String bankAccount,
+                        @Nullable String name) {
     }
 
-    public record PaymentRequest(String requestId, String reference, int amount, int paid, String status, int included, boolean existing,
+    public record PaymentRequest(String requestId, String reference, int amount, int paid, String status, int included,
+                                 boolean existing,
                                  List<String> alreadyMembers, List<String> alreadyRequested, Payee payee) {
     }
 

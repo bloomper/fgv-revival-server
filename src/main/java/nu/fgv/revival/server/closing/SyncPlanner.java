@@ -267,7 +267,8 @@ public class SyncPlanner {
      * {@code revival} is the {@link SyncOperation#REVIVAL} operation; {@code spexregisterRevivalId} is Spexregister's
      * revival when it exists.
      */
-    public record Plan(Long revivalId, @Nullable String spexregisterRevivalId, Operation revival, @Nullable Operation payment,
+    public record Plan(Long revivalId, @Nullable String spexregisterRevivalId, Operation revival,
+                       @Nullable Operation payment,
                        List<ParticipantPlan> participants,
                        List<Participant> excluded, String hash) {
 
