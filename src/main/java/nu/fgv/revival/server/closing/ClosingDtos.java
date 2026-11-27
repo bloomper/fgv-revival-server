@@ -54,7 +54,8 @@ public final class ClosingDtos {
      * much has been paid.
      */
     public record MembershipPaymentDto(String reference, int amount, int paid, String status, int included,
-                                       @Nullable String swishNumber, @Nullable String bankgiro, @Nullable String bankAccount,
+                                       @Nullable String swishNumber, @Nullable String bankgiro,
+                                       @Nullable String bankAccount,
                                        @Nullable String payeeName) {
     }
 
@@ -84,7 +85,8 @@ public final class ClosingDtos {
     public record ClosingStatusDto(@Nullable BigDecimal actualResult, @Nullable BigDecimal loanAmount,
                                    boolean loanRepaid,
                                    @Nullable LogEntrySummaryDto surplusDecision, @Nullable Integer membershipYear,
-                                   int membershipsPaid, @Nullable MembershipPaymentDto membershipPayment, int suggestions,
+                                   int membershipsPaid, @Nullable MembershipPaymentDto membershipPayment,
+                                   int suggestions,
                                    @Nullable SyncRunDto lastSync, @Nullable Instant anonymizedAt,
                                    @Nullable LocalDate autoAnonymizeOn) {
     }

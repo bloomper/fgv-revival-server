@@ -137,8 +137,8 @@ public class SyncService {
                                 operation.exists())).toList())).toList(),
                 plan.excluded().stream().map(participant -> ParticipantRef.of(names.get(participant.getId()))).toList(),
                 revival.getMembershipYear(), plan.payment() == null || revival.getMembershipYear() == null ? null
-                        : new ClosingDtos.SyncPaymentPreviewDto(revival.getMembershipYear(), SyncPlanner.payers(plan.participants().stream()
-                        .map(SyncPlanner.ParticipantPlan::participant).toList()).size(), plan.payment().exists()),
+                : new ClosingDtos.SyncPaymentPreviewDto(revival.getMembershipYear(), SyncPlanner.payers(plan.participants().stream()
+                .map(SyncPlanner.ParticipantPlan::participant).toList()).size(), plan.payment().exists()),
                 lastRun(revivalId));
     }
 
