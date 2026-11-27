@@ -163,18 +163,11 @@ class SpexregisterClientTest {
     @Test
     void writeErrorsAreClassified() {
         server.expect(requestTo(URL))
-                .andExpect(jsonPath("$.variables.typeId").value("FGV"))
-                .andRespond(withSuccess("""
-                                {"data": {"membershipCreate": null}, "errors": [{"message": "Exists", "extensions": {"classification": "CONFLICT"}}]}""",
-                        MediaType.APPLICATION_JSON));
-        server.expect(requestTo(URL))
                 .andRespond(withSuccess("""
                                 {"data": {"taskActivityCreate": null}, "errors": [{"message": "No", "extensions": {"classification": "NOT_FOUND"}}]}""",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo(URL)).andRespond(withServerError());
 
-        assertThatThrownBy(() -> client.createMembership("7", 2028, ACTING)).isInstanceOfSatisfying(SpexregisterClient.SpexregisterCallException.class,
-                e -> assertThat(e.code()).isEqualTo(SpexregisterClient.SpexregisterCallException.EXISTS));
         assertThatThrownBy(() -> client.createTaskActivity("7", "70", "ROLE", ACTING)).isInstanceOfSatisfying(
                 SpexregisterClient.SpexregisterCallException.class, e -> assertThat(e.code()).isEqualTo(SpexregisterClient.SpexregisterCallException.NOT_FOUND));
         assertThatThrownBy(() -> client.createActivity("7", ACTING)).isInstanceOfSatisfying(SpexregisterClient.SpexregisterCallException.class,

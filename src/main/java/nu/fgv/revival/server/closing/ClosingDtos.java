@@ -40,7 +40,22 @@ public final class ClosingDtos {
     public record SyncPreviewDto(UUID revivalId, String hash, boolean spexregisterRevivalExists,
                                  List<SyncParticipantPreviewDto> participants,
                                  List<ParticipantRef> excluded, @Nullable Integer membershipYear,
-                                 @Nullable SyncRunDto lastRun) {
+                                 @Nullable SyncPaymentPreviewDto payment, @Nullable SyncRunDto lastRun) {
+    }
+
+    /**
+     * The payment request for the memberships the revival pays: for how many, and whether it was made already.
+     */
+    public record SyncPaymentPreviewDto(int year, int participants, boolean exists) {
+    }
+
+    /**
+     * What Medlemskap says of the request for the revival's memberships: what to pay, to whom, with what message, and how
+     * much has been paid.
+     */
+    public record MembershipPaymentDto(String reference, int amount, int paid, String status, int included,
+                                       @Nullable String swishNumber, @Nullable String bankgiro, @Nullable String bankAccount,
+                                       @Nullable String payeeName) {
     }
 
     public record SyncParticipantPreviewDto(ParticipantRef participant, List<SyncOperationPreviewDto> operations) {
@@ -69,7 +84,7 @@ public final class ClosingDtos {
     public record ClosingStatusDto(@Nullable BigDecimal actualResult, @Nullable BigDecimal loanAmount,
                                    boolean loanRepaid,
                                    @Nullable LogEntrySummaryDto surplusDecision, @Nullable Integer membershipYear,
-                                   int membershipsPaid, int suggestions,
+                                   int membershipsPaid, @Nullable MembershipPaymentDto membershipPayment, int suggestions,
                                    @Nullable SyncRunDto lastSync, @Nullable Instant anonymizedAt,
                                    @Nullable LocalDate autoAnonymizeOn) {
     }

@@ -32,13 +32,20 @@ public interface SyncStepRepository extends JpaRepository<SyncStep, Long> {
     List<SyncStep> findByRunIdOrderByIdAsc(Long runId);
 
     /**
-     * The participants of a revival whose membership for the year an earlier run wrote or found: Spexregister does not
-     * let the application read memberships, so these steps are what tells that one exists.
+     * Whether an earlier run asked Medlemskap for the payment request with this key (the step's detail) for the revival.
      */
     @Query("""
-            SELECT DISTINCT s.participantId FROM SyncStep s
-            WHERE s.operation = nu.fgv.revival.server.closing.SyncOperation.MEMBERSHIP AND s.detail = :year AND s.status IN :statuses
-            AND s.participantId IN :participantIds""")
-    List<Long> membershipsRecorded(@Param("participantIds") Collection<Long> participantIds, @Param("year") String year,
-                                   @Param("statuses") Collection<SyncStepStatus> statuses);
+            SELECT COUNT(s) > 0 FROM SyncStep s
+            WHERE s.operation = nu.fgv.revival.server.closing.SyncOperation.PAYMENT AND s.detail = :key AND s.status IN :statuses
+            AND s.runId IN (SELECT r.id FROM SyncRun r WHERE r.revivalId = :revivalId)""")
+    boolean paymentRequested(@Param("revivalId") Long revivalId, @Param("key") String key, @Param("statuses") Collection<SyncStepStatus> statuses);
+
+    /**
+     * The id of the revival's latest payment request in Medlemskap, if one was made.
+     */
+    @Query("""
+            SELECT s.remoteId FROM SyncStep s
+            WHERE s.operation = nu.fgv.revival.server.closing.SyncOperation.PAYMENT AND s.remoteId IS NOT NULL AND s.status IN :statuses
+            AND s.runId IN (SELECT r.id FROM SyncRun r WHERE r.revivalId = :revivalId) ORDER BY s.id DESC""")
+    List<String> paymentRequestIds(@Param("revivalId") Long revivalId, @Param("statuses") Collection<SyncStepStatus> statuses);
 }

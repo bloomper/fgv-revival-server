@@ -47,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -109,7 +110,6 @@ class SyncPlannerTest {
         when(directory.positions()).thenReturn(List.of(new SpexareDirectory.Position("ROLE", "Roll", "Ensemble", true),
                 new SpexareDirectory.Position("TRUMPET", "Trumpet", "Orkester", false)));
         when(directory.vocalPartsOrEmpty()).thenReturn(Map.of("B1", new SpexareDirectory.VocalPart("B1", "Bas 1")));
-        when(stepRepository.membershipsRecorded(anyCollection(), anyString(), anyCollection())).thenReturn(List.of());
     }
 
     private void participants(final Participant... participants) {
@@ -136,8 +136,12 @@ class SyncPlannerTest {
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(SyncOperation.PARTICIPATION, null, false),
                         org.assertj.core.groups.Tuple.tuple(SyncOperation.TASK, "Roll", false),
-                        org.assertj.core.groups.Tuple.tuple(SyncOperation.ACTOR, "Kalifen (Bas 1)", false),
-                        org.assertj.core.groups.Tuple.tuple(SyncOperation.MEMBERSHIP, "2028", false));
+                        org.assertj.core.groups.Tuple.tuple(SyncOperation.ACTOR, "Kalifen (Bas 1)", false));
+        // The memberships the revival pays are one request for everyone marked, asked for last
+        assertThat(plan.payment()).isNotNull();
+        assertThat(plan.payment().detail()).startsWith("revival-10-2028-");
+        assertThat(plan.payment().exists()).isFalse();
+        assertThat(plan.planned()).extracting(SyncPlanner.Operation::operation).last().isEqualTo(SyncOperation.PAYMENT);
         assertThat(plan.planned()).extracting(SyncPlanner.Operation::operation).first().isEqualTo(SyncOperation.REVIVAL);
         // Nothing to look for in Spexregister's activities while its revival does not exist
         verify(client, never()).spexareActivities(anyCollection(), any());
@@ -152,7 +156,7 @@ class SyncPlannerTest {
                 new SpexareActivities("7", List.of(new ActivityDetail("70", new SpexActivityRef("71", new IdRef(String.valueOf(REMOTE_REVIVAL))),
                         List.of(new TaskActivity("72", new IdRef("ROLE"), List.of(new Actor("73", "Kalifen", new IdRef("B1")))))))),
                 new SpexareActivities("8", List.of(new ActivityDetail("80", new SpexActivityRef("81", new IdRef("1")), List.of())))));
-        when(stepRepository.membershipsRecorded(anyCollection(), anyString(), anyCollection())).thenReturn(List.of(1L));
+        when(stepRepository.paymentRequested(eq(1L), anyString(), anyCollection())).thenReturn(true);
 
         final SyncPlanner.Plan plan = planner.plan(revival, ACTING);
 

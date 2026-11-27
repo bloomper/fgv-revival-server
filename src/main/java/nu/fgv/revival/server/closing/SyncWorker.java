@@ -20,7 +20,10 @@ import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import nu.fgv.revival.server.audit.AuditContext;
 import nu.fgv.revival.server.audit.AuditSource;
+import nu.fgv.revival.server.medlemskap.MedlemskapClient;
 import nu.fgv.revival.server.participant.Participant;
+import nu.fgv.revival.server.participant.ParticipantKind;
+import nu.fgv.revival.server.participant.ParticipantResponse;
 import nu.fgv.revival.server.participant.ParticipantRepository;
 import nu.fgv.revival.server.revival.Revival;
 import nu.fgv.revival.server.revival.RevivalRepository;
@@ -77,6 +80,7 @@ public class SyncWorker implements DisposableBean {
     private final RevivalRepository revivalRepository;
     private final SpexregisterClient client;
     private final SpexipediaClient spexipedia;
+    private final MedlemskapClient medlemskap;
     private final SpexareDirectory directory;
     /**
      * How long a new revival may take to reach Spexregister from Spexipedia's change feed.
@@ -89,7 +93,7 @@ public class SyncWorker implements DisposableBean {
 
     public SyncWorker(final SyncRunRepository runRepository, final SyncStepRepository stepRepository, final ParticipantRepository participantRepository,
                       final RevivalRepository revivalRepository, final SpexregisterClient client, final SpexipediaClient spexipedia,
-                      final SpexareDirectory directory,
+                      final MedlemskapClient medlemskap, final SpexareDirectory directory,
                       final EntityManager entityManager, final PlatformTransactionManager transactionManager, final Clock clock) {
         this.runRepository = runRepository;
         this.stepRepository = stepRepository;
@@ -97,6 +101,7 @@ public class SyncWorker implements DisposableBean {
         this.revivalRepository = revivalRepository;
         this.client = client;
         this.spexipedia = spexipedia;
+        this.medlemskap = medlemskap;
         this.directory = directory;
         this.entityManager = entityManager;
         this.transactions = new TransactionTemplate(transactionManager);
@@ -173,6 +178,11 @@ public class SyncWorker implements DisposableBean {
                     byParticipant.computeIfAbsent(step.getParticipantId(), _ -> new ArrayList<>()).add(step);
                 }
             }
+            for (final SyncStep step : steps) {
+                if (step.getOperation() == SyncOperation.PAYMENT) {
+                    paymentStep(step, revival, actingPerson, origin);
+                }
+            }
             if (remoteRevival != null) {
                 for (final Map.Entry<Long, List<SyncStep>> participant : byParticipant.entrySet()) {
                     participantSteps(participant.getKey(), participant.getValue(), remoteRevival, actingPerson, origin);
@@ -182,6 +192,36 @@ public class SyncWorker implements DisposableBean {
             log.warn("Sync run {} stopped: {}", runId, e.getClass().getSimpleName());
         } finally {
             finish(runId, origin);
+        }
+    }
+
+    /**
+     * One payment request in Medlemskap for the participants the revival pays for. The step's detail is the request's
+     * key, so a step that is run again finds the request made before it failed.
+     */
+    private void paymentStep(final SyncStep step, final Revival revival, final String actingPerson, final AuditContext.Origin origin) {
+        try {
+            final @Nullable Integer year = revival.getMembershipYear();
+            final List<String> payers = SyncPlanner.payers(inTransaction(origin, () -> participantRepository.findByRevivalIdAndRemovedAtIsNullOrderByIdAsc(revival.getId()))
+                    .stream().filter(participant -> participant.getKind() == ParticipantKind.PARTICIPANT && participant.getResponse() == ParticipantResponse.YES).toList());
+
+            if (year == null || payers.isEmpty() || step.getDetail() == null) {
+                record(step, SyncStepStatus.FAILED, null, MedlemskapClient.MedlemskapCallException.NOT_FOUND, origin);
+                return;
+            }
+
+            final MedlemskapClient.@Nullable FeeLevel fee = medlemskap.feeLevels(year).stream().findFirst().orElse(null);
+
+            if (fee == null) {
+                record(step, SyncStepStatus.FAILED, null, "NO_FEE", origin);
+                return;
+            }
+
+            final MedlemskapClient.PaymentRequest request = medlemskap.request(step.getDetail(), "Nyuppsättning " + revival.getYear(), payers, fee.id(), actingPerson);
+
+            record(step, request.existing() ? SyncStepStatus.EXISTED : SyncStepStatus.DONE, request.requestId(), null, origin);
+        } catch (final MedlemskapClient.MedlemskapCallException e) {
+            record(step, SyncStepStatus.FAILED, null, e.code(), origin);
         }
     }
 
@@ -311,21 +351,8 @@ public class SyncWorker implements DisposableBean {
                                 record(step, SyncStepStatus.DONE, String.valueOf(actor), null, origin);
                             }
                         }
-                        case MEMBERSHIP -> {
-                            try {
-                                final String membership = client.createMembership(spexareId, Integer.parseInt(Objects.requireNonNull(step.getDetail())),
-                                        actingPerson);
-
-                                record(step, SyncStepStatus.DONE, String.valueOf(membership), null, origin);
-                            } catch (final SpexregisterClient.SpexregisterCallException e) {
-                                if (!SpexregisterClient.SpexregisterCallException.EXISTS.equals(e.code())) {
-                                    throw e;
-                                }
-                                record(step, SyncStepStatus.EXISTED, null, null, origin);
-                            }
-                        }
-                        case REVIVAL -> {
-                            // Handled before the participants
+                        case REVIVAL, PAYMENT -> {
+                            // Handled outside the participants
                         }
                     }
                 } catch (final SpexregisterClient.SpexregisterCallException e) {

@@ -140,6 +140,9 @@ revival:
   # The source of spex, tasks and revivals; Nyuppsättning creates revivals there (REVIVAL on fgv-spexipedia)
   spexipedia:
     graphql-url: ${API_SPEXIPEDIA_GRAPHQL_URL:https://api.spexipedia.fgv.local.nu:8443/api/graphql}
+  # Where FGV's memberships are kept; the revival's membership fees are requested there (REVIVAL on fgv-membership)
+  medlemskap:
+    graphql-url: ${API_MEDLEMSKAP_GRAPHQL_URL:https://api.membership.fgv.local.nu:8443/api/graphql}
   swish:
     # Swish's pre-filled QR code API, which needs no agreement
     qr-url: ${API_SWISH_QR_URL:https://mpc.getswish.net/qrg-swish/api/v1/prefilled}
